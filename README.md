@@ -7,6 +7,7 @@ A comprehensive chatbot application built using Next.js, TypeScript, Tailwind CS
 1. [Introduction](#introduction)
 1. [Features](#features)
 1. [Technologies](#technologies)
+1. [Themes](#app-themes)
 
 ## Introduction
 
