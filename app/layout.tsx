@@ -21,7 +21,9 @@ export default function RootLayout({
     <StoreProvider>
       <ThemeProvider>
         <html lang="en">
-          <body className={`bg-base-100 text-base-content ${inter.className}`}>
+          <body
+            className={`main bg-base-100 text-base-content ${inter.className}`}
+          >
             {children}
             <Theme />
           </body>

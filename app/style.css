@@ -1,0 +1,8 @@
+::-webkit-scrollbar {
+  height: 1px;
+  width: 0px;
+}
+
+.main {
+  scrollbar-width: 1px;
+}
