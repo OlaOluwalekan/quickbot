@@ -1,9 +1,11 @@
 "use client";
 
-import { ChangeEvent, useState } from "react";
+import { ChangeEvent, useEffect, useState } from "react";
 import InputWithIcon from "../ui/inputs/InputWithIcon";
 import { FaEnvelope, FaLock, FaUser } from "react-icons/fa6";
 import BasicButton from "../ui/button/BasicButton";
+import { register } from "@/utils/actions/register";
+import Alert from "../alert/Alert";
 
 const RegisterForm = () => {
   const [formData, setFormData] = useState({
@@ -12,13 +14,34 @@ const RegisterForm = () => {
     password: "",
     confirmPassword: "",
   });
+  const [response, setResponse] = useState({
+    message: "",
+    success: false,
+    data: null,
+  });
+
+  useEffect(() => {
+    let interval = setTimeout(() => {
+      setResponse({ message: "", success: false, data: null });
+    }, 3000);
+
+    return () => clearTimeout(interval);
+  }, [response]);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const handleSubmit = (formData: FormData) => {
+    setResponse({ message: "", success: false, data: null });
+
+    register(formData).then((res) => {
+      setResponse(res);
+    });
+  };
+
   return (
-    <form>
+    <form action={handleSubmit}>
       <InputWithIcon
         type="email"
         placeholder="Email"
@@ -55,6 +78,9 @@ const RegisterForm = () => {
         value={formData.confirmPassword}
         onChange={handleChange}
       />
+      {response.message && (
+        <Alert message={response.message} success={response.success} />
+      )}
       <BasicButton
         type="submit"
         size="full"
