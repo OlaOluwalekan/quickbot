@@ -8,6 +8,11 @@ A comprehensive chatbot application built using Next.js, TypeScript, Tailwind CS
 1. [Features](#features)
 1. [Technologies](#technologies)
 1. [Themes](#app-themes)
+1. [Installation](#installation)
+   - [Prerequisites](#prerequisites)
+   - [Steps](#steps)
+1. [Usage](#usage)
+   - [User Registration and Authentication](#user-registration-and-authentication)
 
 ## Introduction
 
@@ -15,24 +20,43 @@ This chatbot app is designed to provide intelligent responses to user queries us
 
 ## Features
 
-- User authentication using [NextAuth](https://authjs.dev/)
+- Secure user authentication using [NextAuth](https://authjs.dev/)
 - AI powered response using [Google Gemini API](https://ai.google.dev/gemini-api/docs)
-- State management with [Redux Toolkit](https://redux-toolkit.js.org/introduction/getting-started)
+- Efficient state management with [Redux Toolkit](https://redux-toolkit.js.org/introduction/getting-started)
 - Database management using [Prisma ORM](https://www.prisma.io/) and [MongoDB](https://www.mongodb.com/)
 - Responsive UI with [Tailwind CSS](https://tailwindcss.com/) and [Daisy UI components](https://daisyui.com/)
 - Built with [TypeScript](https://typescriptlang.org/) for type safety
+- Automated email notifications with [SendGrid](https://sendgrid.com/)
 
 ## Technologies
 
-- [**Next.js**](https://nextjs.org/): React framework for server-side rendering and static site generation
-- [**TypeScript**](https://typescriptlang.org/): JavaScript with static typing
-- [**Tailwind CSS**](https://tailwindcss.com/): Utility-first CSS framework
-- [**Daisy UI**](https://daisyui.com/): Popular component library for Tailwind CSS
-- [**NextAuth (or Auth.js)**](https://authjs.dev/): Free and open source authentication for the web
-- [**Prisma ORM**](https://www.prisma.io/): Next-generation ORM for TypeScript and JavaScript
-- [**MongoDB**](https://www.mongodb.com/): NoSQL database for storing data
-- [**Google Gemini**](https://ai.google.dev/gemini-api/docs): API for generating AI responses
-- [**Redux Toolkit**](https://redux-toolkit.js.org/introduction/getting-started): State management for React applications
+- **Frontend:**
+
+  - [**Next.js**](https://nextjs.org/): React framework for server-side rendering and static site generation
+  - [**TypeScript**](https://typescriptlang.org/): JavaScript with static typing
+  - [**Tailwind CSS**](https://tailwindcss.com/): Utility-first CSS framework
+  - [**Daisy UI**](https://daisyui.com/): Popular component library for Tailwind CSS
+
+- **Backend:**
+
+  - [**NextAuth (or Auth.js)**](https://authjs.dev/): Free and open source authentication for the web
+  - [**Prisma ORM**](https://www.prisma.io/): Next-generation ORM for TypeScript and JavaScript
+  - [**NodeJS**](https://nodejs.org): A JavaScript runtime environment for running JavaScript on the server
+
+- **Database:**
+
+  - [**MongoDB**](https://www.mongodb.com/): NoSQL database for storing data
+
+- **API:**
+
+  - [**Google Gemini**](https://ai.google.dev/gemini-api/docs): API for generating AI responses
+
+- **State Management:**
+
+  - [**Redux Toolkit**](https://redux-toolkit.js.org/introduction/getting-started): State management for React applications
+
+- **Email:**
+  - [**SendGrid**](https://sendgrid.com/): Seamless email sending
 
 ## App Themes
 
@@ -137,3 +161,67 @@ The app contains for themes - [Light](#light) (the main theme), [Cupcake](#cupca
         <span>accent</span>
     </div>
 </div>
+
+## Installation
+
+### Prerequisites
+
+Ensure that the following are installed:
+
+- Node.js (v14.x or higher)
+- npm (v6.x or higher)
+- MongoDB (v4.x or higher)
+
+### Steps
+
+1. **Clone the repository**
+
+   ```bash
+   git clone https://github.com/OlaOluwalekan/quickbot.git
+   cd chat-bot-app
+   ```
+
+1. Install dependencies
+   ```bash
+   npm install
+   ```
+1. Set up environment variables
+   Create a .env file in the root directory and add the following variables:
+
+   ```env
+   DATABASE_URL=
+
+   AUTH_SECRET=
+
+   GITHUB_CLIENT_ID=
+   GITHUB_CLIENT_SECRET=
+
+   GOOGLE_CLIENT_ID=
+   GOOGLE_CLIENT_SECRET=
+
+   GEMINI_API_KEY=
+
+   EMAIL_SERVER=
+
+   DOMAIN=
+   ```
+
+1. Run database migration
+   ```bash
+   npx prisma migrate dev --name init
+   npm prisma db push
+   ```
+1. Start the development server
+   ```bash
+   npm run dev
+   ```
+
+Open [http://localhost:3000]([http://localhost:3000) with your browser to see the result.
+
+## Usage
+
+## User Registration and Authentication
+
+- **Sign Up**: New users can sign up using their email and password.
+- **Log In**: Registered users can log in to access the chat bot features.
+- **Secure Sessions**: User sessions are securely managed by NextAuth.
