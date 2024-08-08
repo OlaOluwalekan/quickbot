@@ -1,6 +1,12 @@
 "use server";
 
+import { db } from "../db";
+import { sendVerificationEmail } from "../emails/send-verification-email";
 import ActionResponse from "../response";
+import { RegisterSchema } from "../schema/auth.shema";
+import { generateVerificationToken } from "./token";
+import { getUserByEmail } from "./user";
+import bcrypt from "bcryptjs";
 
 export const register = async (formData: FormData) => {
   const email = formData.get("email");
@@ -17,11 +23,44 @@ export const register = async (formData: FormData) => {
   if (!password) {
     return ActionResponse.error("Password is required", null);
   }
+  if (!confirmPassword) {
+    return ActionResponse.error("You need to confirm your password", null);
+  }
 
-  return ActionResponse.success("Registration successful", {
-    email,
-    name,
-    password,
-    confirmPassword,
-  });
+  try {
+    // VALIDATE INPUTS
+    RegisterSchema.parse({ email, name, password, confirmPassword });
+
+    if (password !== confirmPassword) {
+      return ActionResponse.error("Passwords do not match", null);
+    }
+
+    // CHECK FOR EXISTING EMAIL ADDRESS
+    const existingUser = await getUserByEmail(email as string);
+    if (existingUser) {
+      return ActionResponse.error("Email already exists", null);
+    }
+
+    // HASH THE PASSWORD
+    const hashedPassword = await bcrypt.hash(password as string, 10);
+
+    // CREATE NEW USER
+    const newUser = await db.user.create({
+      data: {
+        email: email as string,
+        name: name as string,
+        password: hashedPassword,
+      },
+    });
+
+    // GENERATE VERIFICATION TOKEN
+    const verificationToken = await generateVerificationToken(email as string);
+
+    // SEND VERIFICATION EMAIL
+    sendVerificationEmail(email as string, verificationToken.token);
+
+    return ActionResponse.success("Registration successful", newUser);
+  } catch (error: any) {
+    return ActionResponse.error(JSON.parse(error?.message)[0].message, null);
+  }
 };

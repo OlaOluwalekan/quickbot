@@ -1,11 +1,13 @@
 "use client";
 
-import { ChangeEvent, useEffect, useState } from "react";
+import { ChangeEvent, useEffect, useState, useTransition } from "react";
 import InputWithIcon from "../ui/inputs/InputWithIcon";
 import { FaEnvelope, FaLock, FaUser } from "react-icons/fa6";
 import BasicButton from "../ui/button/BasicButton";
 import { register } from "@/utils/actions/register";
 import Alert from "../alert/Alert";
+import { useRouter } from "next/navigation";
+import { encryptToken } from "@/utils/cryptography";
 
 const RegisterForm = () => {
   const [formData, setFormData] = useState({
@@ -19,6 +21,9 @@ const RegisterForm = () => {
     success: false,
     data: null,
   });
+  const [isPending, startTransition] = useTransition();
+  const router = useRouter();
+  // const [redirectParam, setRedirectParam] = useState("");
 
   useEffect(() => {
     let interval = setTimeout(() => {
@@ -35,13 +40,27 @@ const RegisterForm = () => {
   const handleSubmit = (formData: FormData) => {
     setResponse({ message: "", success: false, data: null });
 
-    register(formData).then((res) => {
-      setResponse(res);
+    startTransition(() => {
+      register(formData).then((res) => {
+        setResponse(res);
+        if (res.success) {
+          const accountId = encryptToken(res.data.email);
+          // const accountId = res.data.email;
+          router.push(`/auth/registered?accountId=${accountId}`);
+          // setRedirectParam(accountId);
+        }
+      });
     });
   };
 
+  // useEffect(() => {
+  //   if (redirectParam) {
+  //     router.push(`/auth/registered?accountId=${redirectParam}"`);
+  //   }
+  // }, [redirectParam]);
+
   return (
-    <form action={handleSubmit}>
+    <form action={handleSubmit} noValidate>
       <InputWithIcon
         type="email"
         placeholder="Email"
@@ -84,9 +103,8 @@ const RegisterForm = () => {
       <BasicButton
         type="submit"
         size="full"
-        // text={isPending ? "Loading..." : "Register"}
-        text="Register"
-        // disabled={isPending}
+        text={isPending ? "Loading..." : "Register"}
+        disabled={isPending}
         theme="primary"
       />
     </form>

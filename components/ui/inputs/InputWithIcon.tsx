@@ -9,6 +9,7 @@ const InputWithIcon = ({
   id,
   value,
   onChange,
+  readonly,
 }: InputWithIconsProps) => {
   return (
     <label
@@ -17,15 +18,23 @@ const InputWithIcon = ({
         type === "hidden" && "hidden"
       )}
     >
-      <span className="input-icon text-primary">{icons}</span>
+      <span
+        className={clsx(
+          "input-icon",
+          readonly ? "text-gray-500 opacity-50" : "text-primary opacity-100"
+        )}
+      >
+        {icons}
+      </span>
       <input
         type={type}
-        className="grow"
+        className={clsx("grow", readonly && "opacity-50 text-gray-500")}
         placeholder={placeholder}
         name={name}
         id={id}
         value={value}
         onChange={onChange}
+        readOnly={readonly}
       />
     </label>
   );
