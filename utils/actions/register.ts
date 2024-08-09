@@ -57,7 +57,7 @@ export const register = async (formData: FormData) => {
     const verificationToken = await generateVerificationToken(email as string);
 
     // SEND VERIFICATION EMAIL
-    sendVerificationEmail(email as string, verificationToken.token);
+    await sendVerificationEmail(email as string, verificationToken.token);
 
     return ActionResponse.success("Registration successful", newUser);
   } catch (error: any) {
@@ -74,7 +74,7 @@ export const resendVerificationEmail = async (formData: FormData) => {
 
   try {
     const verificationToken = await generateVerificationToken(email as string);
-    sendVerificationEmail(email as string, verificationToken.token);
+    await sendVerificationEmail(email as string, verificationToken.token);
 
     return ActionResponse.success("Verification email sent", null);
   } catch (error: any) {

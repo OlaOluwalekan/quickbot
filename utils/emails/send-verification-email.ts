@@ -2,8 +2,8 @@
 
 import sendMail from "./send-email";
 
-export const sendVerificationEmail = (email: string, token: string) => {
-  sendMail(
+export const sendVerificationEmail = async (email: string, token: string) => {
+  await sendMail(
     email,
     "Verify Your Email",
     `
