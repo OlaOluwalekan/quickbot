@@ -64,3 +64,20 @@ export const register = async (formData: FormData) => {
     return ActionResponse.error(JSON.parse(error?.message)[0].message, null);
   }
 };
+
+export const resendVerificationEmail = async (formData: FormData) => {
+  const email = formData.get("email");
+
+  if (!email) {
+    return ActionResponse.error("Email is required", null);
+  }
+
+  try {
+    const verificationToken = await generateVerificationToken(email as string);
+    sendVerificationEmail(email as string, verificationToken.token);
+
+    return ActionResponse.success("Verification email sent", null);
+  } catch (error: any) {
+    return ActionResponse.error(JSON.parse(error.message), null);
+  }
+};

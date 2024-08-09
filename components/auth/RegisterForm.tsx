@@ -44,8 +44,8 @@ const RegisterForm = () => {
       register(formData).then((res) => {
         setResponse(res);
         if (res.success) {
-          const accountId = encryptToken(res.data.email);
-          // const accountId = res.data.email;
+          // const accountId = encryptToken(res.data.email);
+          const accountId = res.data.email;
           router.push(`/auth/registered?accountId=${accountId}`);
           // setRedirectParam(accountId);
         }
