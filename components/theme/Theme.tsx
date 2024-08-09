@@ -17,7 +17,7 @@ const Theme = () => {
   };
 
   return (
-    <div className="fixed bottom-5 left-3">
+    <div className="fixed bottom-20 right-3 flex flex-col justify-end items-end">
       {themeIsOpen && (
         <div className="flex flex-col w-[150px] bg-primary justify-center items-center shadow-lg p-2 rounded-md">
           {themeData.map((item) => {

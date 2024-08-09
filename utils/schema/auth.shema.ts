@@ -27,3 +27,13 @@ export const RegisterSchema = z
     confirmPassword: z.string(),
   })
   .required();
+
+export const LoginSchema = z.object({
+  email: z
+    .string()
+    .email()
+    .regex(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, {
+      message: "invalid email address",
+    }),
+  password: z.string(),
+});
