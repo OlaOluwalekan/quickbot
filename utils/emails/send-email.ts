@@ -1,3 +1,5 @@
+"use server";
+
 import nodemailer, { Transporter } from "nodemailer";
 
 const sendMail = (email: string, subject: string, message: string) => {

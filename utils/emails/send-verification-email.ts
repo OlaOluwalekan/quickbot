@@ -1,3 +1,5 @@
+"use server";
+
 import sendMail from "./send-email";
 
 export const sendVerificationEmail = (email: string, token: string) => {
