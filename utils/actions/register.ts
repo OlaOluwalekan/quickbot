@@ -57,9 +57,12 @@ export const register = async (formData: FormData) => {
     const verificationToken = await generateVerificationToken(email as string);
 
     // SEND VERIFICATION EMAIL
-    await sendVerificationEmail(email as string, verificationToken.token);
+    // await sendVerificationEmail(email as string, verificationToken.token);
 
-    return ActionResponse.success("Registration successful", newUser);
+    return ActionResponse.success("Registration successful", {
+      ...newUser,
+      token: verificationToken.token,
+    });
   } catch (error: any) {
     return ActionResponse.error(JSON.parse(error?.message)[0].message, null);
   }
@@ -74,10 +77,10 @@ export const resendVerificationEmail = async (formData: FormData) => {
 
   try {
     const verificationToken = await generateVerificationToken(email as string);
-    await sendVerificationEmail(email as string, verificationToken.token);
 
-    return ActionResponse.success("Verification email sent", null);
+    return ActionResponse.success("Verification email sent", verificationToken);
   } catch (error: any) {
-    return ActionResponse.error(JSON.parse(error.message), null);
+    console.log(error);
+    return ActionResponse.error("Error Occurred", null);
   }
 };

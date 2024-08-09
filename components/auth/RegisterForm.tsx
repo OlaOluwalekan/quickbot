@@ -8,6 +8,7 @@ import { register } from "@/utils/actions/register";
 import Alert from "../alert/Alert";
 import { useRouter } from "next/navigation";
 import { encryptToken } from "@/utils/cryptography";
+import axios from "axios";
 
 const RegisterForm = () => {
   const [formData, setFormData] = useState({
@@ -42,9 +43,14 @@ const RegisterForm = () => {
 
     startTransition(() => {
       register(formData).then((res) => {
+        console.log(res);
+
         setResponse(res);
         if (res.success) {
-          // const accountId = encryptToken(res.data.email);
+          axios.post("/api/email/send-verification-email", {
+            email: res.data.email,
+            token: res.data.token,
+          });
           const accountId = res.data.email;
           router.push(`/auth/registered?accountId=${accountId}`);
           // setRedirectParam(accountId);

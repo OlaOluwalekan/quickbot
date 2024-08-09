@@ -2,12 +2,19 @@
 
 import { getUserByEmail } from "@/utils/actions/user";
 import { useRouter } from "next/navigation";
-import { ChangeEvent, useEffect, useState, useTransition } from "react";
+import {
+  ChangeEvent,
+  FormEvent,
+  useEffect,
+  useState,
+  useTransition,
+} from "react";
 import InputWithIcon from "../ui/inputs/InputWithIcon";
 import { FaEnvelope } from "react-icons/fa6";
 import BasicButton from "../ui/button/BasicButton";
 import { resendVerificationEmail } from "@/utils/actions/register";
 import Alert from "../alert/Alert";
+import axios from "axios";
 
 const Registered = ({ accountId: email }: { accountId: string | null }) => {
   const router = useRouter();
@@ -53,6 +60,12 @@ const Registered = ({ accountId: email }: { accountId: string | null }) => {
     startSendingEmail(() => {
       resendVerificationEmail(formData).then((res) => {
         setResponse(res);
+        if (res.success) {
+          axios.post("/api/email/send-verification-email", {
+            email,
+            token: res.data.token,
+          });
+        }
       });
     });
   };
