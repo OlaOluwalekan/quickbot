@@ -1,10 +1,12 @@
 "use server";
 
 import { db } from "../db";
-import { sendVerificationEmail } from "../emails/send-verification-email";
 import ActionResponse from "../response";
 import { RegisterSchema } from "../schema/auth.shema";
-import { generateVerificationToken } from "./token";
+import {
+  generateVerificationToken,
+  getVerificationTokenByToken,
+} from "./token";
 import { getUserByEmail } from "./user";
 import bcrypt from "bcryptjs";
 
@@ -56,9 +58,6 @@ export const register = async (formData: FormData) => {
     // GENERATE VERIFICATION TOKEN
     const verificationToken = await generateVerificationToken(email as string);
 
-    // SEND VERIFICATION EMAIL
-    // await sendVerificationEmail(email as string, verificationToken.token);
-
     return ActionResponse.success("Registration successful", {
       ...newUser,
       token: verificationToken.token,
@@ -82,5 +81,39 @@ export const resendVerificationEmail = async (formData: FormData) => {
   } catch (error: any) {
     console.log(error);
     return ActionResponse.error("Error Occurred", null);
+  }
+};
+
+export const verifyEmail = async (token: string) => {
+  try {
+    const existingToken = await getVerificationTokenByToken(token);
+    if (!existingToken) {
+      return ActionResponse.error("Invalid token", null);
+    }
+
+    const existingUser = await getUserByEmail(existingToken.email);
+
+    const hasExpired = new Date(existingToken.expires) < new Date();
+    if (hasExpired) {
+      return ActionResponse.error("Token has expired", existingUser);
+    }
+
+    if (!existingUser) {
+      return ActionResponse.error("User not found", null);
+    }
+
+    const updatedUser = await db.user.update({
+      where: {
+        id: existingUser.id,
+      },
+      data: {
+        emailVerified: new Date(),
+        email: existingToken.email,
+      },
+    });
+
+    return ActionResponse.success("Email verified successfully", updatedUser);
+  } catch (error) {
+    return ActionResponse.error("Something went wrong. Try again later", null);
   }
 };

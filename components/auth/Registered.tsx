@@ -16,6 +16,8 @@ import { resendVerificationEmail } from "@/utils/actions/register";
 import Alert from "../alert/Alert";
 import axios from "axios";
 
+const RESEND_SECONDS = 15;
+
 const Registered = ({ accountId: email }: { accountId: string | null }) => {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
@@ -27,16 +29,24 @@ const Registered = ({ accountId: email }: { accountId: string | null }) => {
     success: false,
     data: null,
   });
+  const [count, setCount] = useState(0);
 
   if (!email) {
     router.push("/auth/register");
     return;
   }
 
+  const handleResendClick = () => {
+    setCount(RESEND_SECONDS);
+  };
+
   useEffect(() => {
     startTransition(() => {
       getUserByEmail(email).then((data) => {
         if (data) {
+          if (data.emailVerified) {
+            router.push("/auth/login");
+          }
           setUser(data);
           setUserEmail(data.email as string);
         } else {
@@ -45,6 +55,19 @@ const Registered = ({ accountId: email }: { accountId: string | null }) => {
       });
     });
   }, []);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout | undefined;
+    if (count > 0) {
+      interval = setInterval(() => {
+        setCount(count - 1);
+      }, 1000);
+    } else {
+      clearInterval(interval);
+    }
+
+    return () => clearInterval(interval);
+  }, [count]);
 
   useEffect(() => {
     let interval = setTimeout(() => {
@@ -61,10 +84,14 @@ const Registered = ({ accountId: email }: { accountId: string | null }) => {
       resendVerificationEmail(formData).then((res) => {
         setResponse(res);
         if (res.success) {
-          axios.post("/api/email/send-verification-email", {
-            email,
-            token: res.data.token,
-          });
+          axios
+            .post("/api/email/send-verification-email", {
+              email,
+              token: res.data.token,
+            })
+            .then(() => {
+              handleResendClick();
+            });
         }
       });
     });
@@ -103,10 +130,16 @@ const Registered = ({ accountId: email }: { accountId: string | null }) => {
       )}
       <BasicButton
         type="submit"
-        text={sendingEmail ? "Sending Email..." : "Resend Email"}
+        text={
+          sendingEmail
+            ? "Sending Email..."
+            : count > 0
+            ? `Resend in ${count}s`
+            : "Resend Email"
+        }
         size="full"
         theme="primary"
-        disabled={isPending || sendingEmail}
+        disabled={isPending || sendingEmail || count > 0}
       />
     </form>
   );
