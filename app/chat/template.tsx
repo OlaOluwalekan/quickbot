@@ -7,13 +7,13 @@ import { ReactNode } from "react";
 
 const Template = async ({ children }: { children: ReactNode }) => {
   const session = await auth();
-  console.log(session?.user);
+  console.log("SESSION USER:", session?.user);
 
   return (
     <div className="h-screen flex flex-col">
       <ChatMobileHeader />
       <div className="flex flex-grow">
-        <Sidebar />
+        <Sidebar data={session?.user} />
         <div className="w-full h-full flex flex-col bg-green-200">
           <ChatDesktopHeader />
           <div className="flex flex-col flex-grow bg-primary md:pt-3 md:pb-2 md:pr-2">

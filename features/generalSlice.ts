@@ -11,6 +11,7 @@ const initialState: GeneralSliceInit = {
       | "black") || "light",
   themeIsOpen: false,
   mobileNavIsOpen: false,
+  profileDialogIsOpen: false,
 };
 
 const generalSlice = createSlice({
@@ -27,10 +28,17 @@ const generalSlice = createSlice({
     toggleMobileNavOpen: (state, { payload }: { payload: boolean }) => {
       state.mobileNavIsOpen = payload;
     },
+    toggleProfileDialogOpen: (state, { payload }: { payload: boolean }) => {
+      state.profileDialogIsOpen = payload;
+    },
   },
 });
 
-export const { changeTheme, toggleThemeOpen, toggleMobileNavOpen } =
-  generalSlice.actions;
+export const {
+  changeTheme,
+  toggleThemeOpen,
+  toggleMobileNavOpen,
+  toggleProfileDialogOpen,
+} = generalSlice.actions;
 
 export default generalSlice.reducer;
