@@ -27,7 +27,7 @@ model User {
   password      String?
   role          UserRole  @default(USER)
   accounts      Account[]
-  // caht          Chat[]
+  chat          Chat[]
 }
 
 model Account {
@@ -56,4 +56,24 @@ model VerificationToken {
   expires       DateTime
 
   @@unique([email, token])
+}
+
+model Chat {
+  id              String    @id @default(auto()) @map("_id") @db.ObjectId
+  title           String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  createdBy       String    @db.ObjectId
+  response        Response[]
+
+  user User @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+}
+
+model Response {
+  id              String    @id @default(auto()) @map("_id") @db.ObjectId
+  chatId          String    @db.ObjectId
+  question        String
+  response        String
+  createdAt       DateTime  @default(now())
+  chat            Chat      @relation(fields: [chatId], references: [id], onDelete: Cascade)
 }

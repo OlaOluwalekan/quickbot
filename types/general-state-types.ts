@@ -3,4 +3,5 @@ export interface GeneralSliceInit {
   themeIsOpen: boolean;
   mobileNavIsOpen: boolean;
   profileDialogIsOpen: boolean;
+  aiResponse: string;
 }

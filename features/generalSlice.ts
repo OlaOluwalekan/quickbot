@@ -12,6 +12,7 @@ const initialState: GeneralSliceInit = {
   themeIsOpen: false,
   mobileNavIsOpen: false,
   profileDialogIsOpen: false,
+  aiResponse: "",
 };
 
 const generalSlice = createSlice({
@@ -31,6 +32,9 @@ const generalSlice = createSlice({
     toggleProfileDialogOpen: (state, { payload }: { payload: boolean }) => {
       state.profileDialogIsOpen = payload;
     },
+    setAIResponse: (state, { payload }: { payload: string }) => {
+      state.aiResponse = payload;
+    },
   },
 });
 
@@ -39,6 +43,7 @@ export const {
   toggleThemeOpen,
   toggleMobileNavOpen,
   toggleProfileDialogOpen,
+  setAIResponse,
 } = generalSlice.actions;
 
 export default generalSlice.reducer;

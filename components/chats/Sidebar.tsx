@@ -10,8 +10,9 @@ import { FaBarsStaggered } from "react-icons/fa6";
 import { useDispatch, useSelector } from "react-redux";
 import ChatList from "./ChatList";
 import UserProfile from "./user-profile/UserProfile";
+import { ChatProps } from "@/types/chats";
 
-const Sidebar = ({ data }: { data: any }) => {
+const Sidebar = ({ data, chats }: { data: any; chats: ChatProps[] }) => {
   const { mobileNavIsOpen } = useSelector((store: RootState) => store.general);
   const dispatch = useDispatch();
 
@@ -44,7 +45,7 @@ const Sidebar = ({ data }: { data: any }) => {
         </section>
         <div className="divider my-0"></div>
         <div className="h-[calc(100%-75px)] flex flex-col">
-          <ChatList />
+          <ChatList chats={chats} />
           <UserProfile data={data} />
         </div>
       </div>

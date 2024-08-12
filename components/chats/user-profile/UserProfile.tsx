@@ -12,7 +12,6 @@ const UserProfile = ({ data }: { data: any }) => {
     (store: RootState) => store.general
   );
   const dispatch = useDispatch();
-  console.log(data);
 
   return (
     <div className="w-full relative px-1 md:mb-1">

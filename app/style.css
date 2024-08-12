@@ -1,8 +1,16 @@
 ::-webkit-scrollbar {
   height: 1px;
-  width: 0px;
 }
 
-.main {
-  scrollbar-width: 1px;
+.sidebar-chat-container {
+  background: green;
+}
+
+.sidebar-chat-container::-webkit-scrollbar-button {
+  height: 0;
+  width: 0;
+}
+
+.sidebar-chat-container::-webkit-scrollbar-track {
+  background-color: rebeccapurple;
 }

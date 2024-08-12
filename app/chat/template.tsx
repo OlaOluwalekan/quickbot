@@ -3,17 +3,25 @@ import ChatDesktopHeader from "@/components/chats/ChatDesktopHeader";
 import ChatInput from "@/components/chats/ChatInput";
 import ChatMobileHeader from "@/components/chats/ChatMobileHeader";
 import Sidebar from "@/components/chats/Sidebar";
+import { ChatProps } from "@/types/chats";
+import { getChats } from "@/utils/actions/chat";
 import { ReactNode } from "react";
 
 const Template = async ({ children }: { children: ReactNode }) => {
   const session = await auth();
+  let chats: ChatProps[] = [];
+  if (session?.user?.id) {
+    const chatResponse = await getChats(session?.user?.id);
+    chats = chatResponse.data.chats;
+  }
   console.log("SESSION USER:", session?.user);
+  console.log("CHATS:", chats);
 
   return (
     <div className="h-screen flex flex-col">
-      <ChatMobileHeader />
+      <ChatMobileHeader title="" />
       <div className="flex flex-grow">
-        <Sidebar data={session?.user} />
+        <Sidebar data={session?.user} chats={chats} />
         <div className="w-full h-full flex flex-col bg-green-200">
           <ChatDesktopHeader />
           <div className="flex flex-col flex-grow bg-primary md:pt-3 md:pb-2 md:pr-2">

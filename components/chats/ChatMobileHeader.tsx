@@ -4,7 +4,7 @@ import { toggleMobileNavOpen } from "@/features/generalSlice";
 import { FaBarsStaggered } from "react-icons/fa6";
 import { useDispatch } from "react-redux";
 
-const ChatMobileHeader = () => {
+const ChatMobileHeader = ({ title }: { title: string }) => {
   const dispatch = useDispatch();
 
   return (
@@ -17,7 +17,7 @@ const ChatMobileHeader = () => {
           >
             <FaBarsStaggered />
           </button>
-          <h2 className="text-xl">New Chat</h2>
+          <h2 className="text-xl">{title ? title : "New Chat"}</h2>
         </div>
       </div>
     </header>
