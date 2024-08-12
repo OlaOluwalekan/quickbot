@@ -5,3 +5,11 @@ export interface ChatProps {
   createdAt: Date | string;
   updatedAt: Date | string;
 }
+
+export interface ResponseProps {
+  id: string;
+  chatId: string;
+  question: string;
+  response: string;
+  createdAt: Date | string;
+}

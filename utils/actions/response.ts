@@ -38,8 +38,6 @@ export const getResponseFromAI = async (formData: FormData, page: string) => {
     });
   }
 
-  // console.log("CHAT ID:", chatId);
-
   try {
     const response = await getGeminiChatResponse(prompt as string, history);
     await createResponse(chatId, prompt as string, response.data.text);

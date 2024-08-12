@@ -1,3 +1,5 @@
+"use client";
+
 import { ChatProps } from "@/types/chats";
 import Chat from "./Chat";
 
