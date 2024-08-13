@@ -1,11 +1,13 @@
 "use client";
 
 import { ResponseProps } from "@/types/chats";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useTransition } from "react";
 import Response from "./Response";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/store";
 import InlineLoading from "../loading/InlineLoading";
+import { getChatById } from "@/utils/actions/chat";
+import { setCurrentPageId, setCurrentPageTitle } from "@/features/generalSlice";
 
 const ResponseList = ({
   data,
@@ -16,6 +18,17 @@ const ResponseList = ({
 }) => {
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const { loadingResponse } = useSelector((store: RootState) => store.general);
+  const [pending, startTransition] = useTransition();
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    startTransition(() => {
+      getChatById(data[0].chatId).then((res) => {
+        dispatch(setCurrentPageTitle(res.data.chat.title));
+        dispatch(setCurrentPageId(res.data.chat.id));
+      });
+    });
+  }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });

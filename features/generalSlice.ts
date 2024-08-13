@@ -15,6 +15,8 @@ const initialState: GeneralSliceInit = {
   aiResponse: "",
   loadingResponse: false,
   codeTheme: "light",
+  currentPageTitle: "New Chat",
+  currentPageId: null,
 };
 
 const generalSlice = createSlice({
@@ -43,6 +45,12 @@ const generalSlice = createSlice({
     setCodeTheme: (state, { payload }: { payload: "dark" | "light" }) => {
       state.codeTheme = payload;
     },
+    setCurrentPageTitle: (state, { payload }: { payload: string }) => {
+      state.currentPageTitle = payload;
+    },
+    setCurrentPageId: (state, { payload }: { payload: string | null }) => {
+      state.currentPageId = payload;
+    },
   },
 });
 
@@ -54,6 +62,8 @@ export const {
   setAIResponse,
   setLoadingResponse,
   setCodeTheme,
+  setCurrentPageTitle,
+  setCurrentPageId,
 } = generalSlice.actions;
 
 export default generalSlice.reducer;

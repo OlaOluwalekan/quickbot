@@ -1,25 +1,23 @@
 "use client";
 
 import { toggleMobileNavOpen } from "@/features/generalSlice";
+import { RootState } from "@/store";
 import { ChatProps } from "@/types/chats";
 import clsx from "clsx";
 import Link from "next/link";
-import { useState } from "react";
 import { FaEllipsisV } from "react-icons/fa";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 
 const Chat = ({ chat }: { chat: ChatProps }) => {
   const dispatch = useDispatch();
-  //   console.log(window.location.pathname);
+  const { currentPageId } = useSelector((store: RootState) => store.general);
 
   return (
     <div className="w-full">
       <div
         className={clsx(
-          "w-full flex items-center gap-2 px-2 text-primary-content hover:bg-accent"
-          // window.location.pathname.split("/").pop() === chat.id
-          //   ? "bg-accent"
-          //   : ""
+          "w-full flex items-center gap-2 px-2 text-primary-content hover:bg-accent",
+          currentPageId === chat.id ? "bg-accent" : ""
         )}
       >
         <Link

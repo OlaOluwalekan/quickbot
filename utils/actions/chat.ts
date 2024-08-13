@@ -1,3 +1,5 @@
+"use server";
+
 import { revalidatePath } from "next/cache";
 import { getGeminiResponse } from "../ai-models/gemini";
 import { db } from "../db";
@@ -37,5 +39,19 @@ export const getChats = async (userId: string) => {
     return ActionResponse.success("Chats retrieved successfully", { chats });
   } catch (error) {
     return ActionResponse.error("Failed to retrieve chats", null);
+  }
+};
+
+export const getChatById = async (chatId: string) => {
+  try {
+    const chat = await db.chat.findUnique({
+      where: {
+        id: chatId,
+      },
+    });
+
+    return ActionResponse.success("Chat retrieved successfully", { chat });
+  } catch (error) {
+    return ActionResponse.error("Failed to retrieve chat", null);
   }
 };

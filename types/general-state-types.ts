@@ -6,4 +6,6 @@ export interface GeneralSliceInit {
   aiResponse: string;
   loadingResponse: boolean;
   codeTheme: "dark" | "light";
+  currentPageTitle: string;
+  currentPageId: string | null;
 }

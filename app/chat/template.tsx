@@ -19,7 +19,7 @@ const Template = async ({ children }: { children: ReactNode }) => {
 
   return (
     <div className="h-screen flex flex-col">
-      <ChatMobileHeader title="" />
+      <ChatMobileHeader />
       <div className="flex flex-grow">
         <Sidebar data={session?.user} chats={chats} />
         <div className="w-full h-full flex flex-col bg-green-200">
