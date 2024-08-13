@@ -1,5 +1,3 @@
-import { auth } from "@/auth";
-
 const ChatPage = async () => {
   return (
     <div className="flex flex-col justify-center items-center h-full">

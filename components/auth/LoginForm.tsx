@@ -75,7 +75,7 @@ const LoginForm = () => {
       <BasicButton
         type="submit"
         size="full"
-        text={isPending ? "Loading..." : "Register"}
+        text={isPending ? "Loading..." : "Login"}
         disabled={isPending}
         theme="primary"
       />
