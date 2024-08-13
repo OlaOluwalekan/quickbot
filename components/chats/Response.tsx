@@ -5,7 +5,7 @@ import React from "react";
 import UserImage from "./UserImage";
 import { format } from "date-fns";
 import { FaRobot } from "react-icons/fa6";
-import ResponseMD from "./ResponseMD";
+import ResponseMD from "./markdown/ResponseMD";
 
 const Response = ({
   response,
@@ -49,7 +49,7 @@ const Response = ({
         </div>
         <div className="chat-footer opacity-50">Seen at 12:46</div>
       </div>
-      <div className="divider"></div>
+      <div className="divider my-2"></div>
     </div>
   );
 };

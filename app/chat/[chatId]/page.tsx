@@ -7,7 +7,6 @@ const SingleChatPage = async ({ params }: { params: { chatId: string } }) => {
   const session = await auth();
   const responsesRes = await getResponses(params.chatId);
   const responses = responsesRes.data.responses;
-  // console.log("RES", responses);
 
   return (
     <div className="h-full">

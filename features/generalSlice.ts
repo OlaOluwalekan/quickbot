@@ -13,6 +13,8 @@ const initialState: GeneralSliceInit = {
   mobileNavIsOpen: false,
   profileDialogIsOpen: false,
   aiResponse: "",
+  loadingResponse: false,
+  codeTheme: "light",
 };
 
 const generalSlice = createSlice({
@@ -35,6 +37,12 @@ const generalSlice = createSlice({
     setAIResponse: (state, { payload }: { payload: string }) => {
       state.aiResponse = payload;
     },
+    setLoadingResponse: (state, { payload }: { payload: boolean }) => {
+      state.loadingResponse = payload;
+    },
+    setCodeTheme: (state, { payload }: { payload: "dark" | "light" }) => {
+      state.codeTheme = payload;
+    },
   },
 });
 
@@ -44,6 +52,8 @@ export const {
   toggleMobileNavOpen,
   toggleProfileDialogOpen,
   setAIResponse,
+  setLoadingResponse,
+  setCodeTheme,
 } = generalSlice.actions;
 
 export default generalSlice.reducer;

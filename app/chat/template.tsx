@@ -26,7 +26,7 @@ const Template = async ({ children }: { children: ReactNode }) => {
           <ChatDesktopHeader />
           <div className="flex flex-col flex-grow bg-primary md:pt-3 md:pb-2 md:pr-2">
             <section className="flex flex-grow flex-col bg-base-100 md:rounded-lg">
-              <section className="flex flex-grow flex-col w-[90%] mx-auto max-w-[800px]">
+              <section className="flex flex-grow flex-col w-[90%] mx-auto max-w-[800px] relative">
                 <section className="h-[calc(100vh-125px)] md:h-[calc(100vh-151px)]">
                   {children}
                 </section>

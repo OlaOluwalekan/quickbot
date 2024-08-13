@@ -1,6 +1,6 @@
 "use client";
 
-import { setAIResponse } from "@/features/generalSlice";
+import { setAIResponse, setLoadingResponse } from "@/features/generalSlice";
 import { RootState } from "@/store";
 import { getResponseFromAI } from "@/utils/actions/response";
 import clsx from "clsx";
@@ -14,12 +14,8 @@ const ChatInput = ({ userId }: { userId: string }) => {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const dispatch = useDispatch();
-  const { aiResponse } = useSelector((store: RootState) => store.general);
+  // const { aiResponse } = useSelector((store: RootState) => store.general);
   const [text, setText] = useState("");
-
-  useEffect(() => {
-    console.log(aiResponse);
-  }, [aiResponse]);
 
   const handleChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
     setText(e.target.value);
@@ -34,6 +30,7 @@ const ChatInput = ({ userId }: { userId: string }) => {
 
   const handleSubmit = (formData: FormData) => {
     startTransition(() => {
+      dispatch(setLoadingResponse(true));
       getResponseFromAI(formData, window.location.pathname).then((res) => {
         if (res.success) {
           dispatch(setAIResponse(res.data.text));
@@ -44,12 +41,16 @@ const ChatInput = ({ userId }: { userId: string }) => {
         if (res?.data.chatId && window.location.pathname === "/chat") {
           router.push(`/chat/${res.data.chatId}`);
         }
+        dispatch(setLoadingResponse(false));
       });
     });
   };
 
   return (
-    <form className="w-full my-3 relative" action={handleSubmit}>
+    <form
+      className="w-full my-3 absolute bottom-0 left-0 right-0 mx-auto"
+      action={handleSubmit}
+    >
       <input type="hidden" value={userId} id="id" name="id" />
       <textarea
         onChange={handleChange}

@@ -4,4 +4,6 @@ export interface GeneralSliceInit {
   mobileNavIsOpen: boolean;
   profileDialogIsOpen: boolean;
   aiResponse: string;
+  loadingResponse: boolean;
+  codeTheme: "dark" | "light";
 }
