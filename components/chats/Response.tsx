@@ -23,7 +23,7 @@ const Response = ({
         <div className="chat-header">
           You
           <time className="text-xs opacity-50 ml-2">
-            {format(response.createdAt, "dd/mm/yyyy HH:mm a")}
+            {format(response.createdAt, "MMM dd, yyyy HH:mm a")}
           </time>
         </div>
         <div className="chat-bubble chat-bubble-primary">
@@ -41,7 +41,7 @@ const Response = ({
         <div className="chat-header">
           Quickbot
           <time className="text-xs opacity-50 ml-2">
-            {format(response.createdAt, "dd/mm/yyyy HH:mm a")}
+            {format(response.createdAt, "MMM dd, yyyy HH:mm a")}
           </time>
         </div>
         <div className="markdown chat-bubble bg-base-100 text-base-content w-[90%] whitespace-pre-wrap break-words">
