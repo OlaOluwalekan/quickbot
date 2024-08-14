@@ -76,7 +76,7 @@ const ChatInput = ({ userId }: { userId: string }) => {
       <button
         type="submit"
         className={clsx(
-          "absolute bottom-2.5 m-auto right-2 w-[30px] h-[30px] rounded text-primary-content flex justify-center items-center",
+          "absolute bottom-2.5 md:bottom-4 m-auto right-2 w-[30px] h-[30px] rounded text-primary-content flex justify-center items-center",
           isPending || text.trim() === ""
             ? "bg-gray-600 cursor-not-allowed opacity-50"
             : "bg-primary hover:bg-accent cursor-pointer opacity-100"

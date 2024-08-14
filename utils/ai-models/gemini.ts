@@ -1,10 +1,13 @@
 "use server";
 
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import {
+  FunctionDeclarationSchemaType,
+  GoogleGenerativeAI,
+} from "@google/generative-ai";
 import ActionResponse from "../response";
 
 const gemini = new GoogleGenerativeAI(process.env.GEMINI_API_KEY as string);
-const model = gemini.getGenerativeModel({ model: "gemini-1.5-flash" });
+let model = gemini.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 export const getGeminiResponse = async (prompt: string) => {
   try {
@@ -30,7 +33,37 @@ export const getGeminiChatResponse = async (
     return ActionResponse.success("responded", { text });
   } catch (error) {
     console.log(error);
-    return ActionResponse.error("failed to respond", { error });
+    return ActionResponse.error("failed to respond", null);
+  }
+};
+
+export const getGeminiJSONResponse = async (prompt: string) => {
+  try {
+    model = gemini.getGenerativeModel({
+      model: "gemini-1.5-pro",
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: FunctionDeclarationSchemaType.ARRAY,
+          items: {
+            type: FunctionDeclarationSchemaType.OBJECT,
+            properties: {
+              category: { type: FunctionDeclarationSchemaType.STRING },
+              prompt: {
+                type: FunctionDeclarationSchemaType.STRING,
+              },
+            },
+          },
+        },
+      },
+    });
+    let result = await model.generateContent(prompt);
+    return ActionResponse.success("responded", {
+      result: result.response.text(),
+    });
+  } catch (error) {
+    console.log(error);
+    return ActionResponse.error("failed to respond", null);
   }
 };
 

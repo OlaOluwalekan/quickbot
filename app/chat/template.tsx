@@ -14,7 +14,7 @@ const Template = async ({ children }: { children: ReactNode }) => {
     const chatResponse = await getChats(session?.user?.id);
     chats = chatResponse.data.chats;
   }
-  console.log("SESSION USER:", session?.user);
+  // console.log("SESSION USER:", session?.user);
   // console.log("CHATS:", chats);
 
   return (
