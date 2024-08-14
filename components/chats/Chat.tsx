@@ -28,7 +28,6 @@ const Chat = ({ chat }: { chat: ChatProps }) => {
     useSelector((store: RootState) => store.general);
 
   const handleClick = (e: MouseEvent<HTMLButtonElement>) => {
-    // console.log(e.currentTarget.className.includes(`a-modal`));
     if (
       e.currentTarget.className.includes(`a-modal`) &&
       dialogData?.id !== chat.id
@@ -41,18 +40,6 @@ const Chat = ({ chat }: { chat: ChatProps }) => {
     const target = e.currentTarget.getBoundingClientRect();
     dispatch(setChatMenuClass(`${target.top - 50}px`));
   };
-
-  // useEffect(() => {
-  //   if (chatMenuIsOpen) {
-  //     dispatch(setDialogData(chat));
-  //   } else {
-  //     dispatch(setDialogData(null));
-  //   }
-  // }, [chatMenuIsOpen]);
-
-  // useEffect(() => {
-  //   console.log(dialogData);
-  // }, [dialogData]);
 
   return (
     <div className="w-full">

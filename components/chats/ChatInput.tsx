@@ -1,6 +1,10 @@
 "use client";
 
-import { setAIResponse, setLoadingResponse } from "@/features/generalSlice";
+import {
+  setAIResponse,
+  setChatInputHeight,
+  setLoadingResponse,
+} from "@/features/generalSlice";
 import { RootState } from "@/store";
 import { getResponseFromAI } from "@/utils/actions/response";
 import clsx from "clsx";
@@ -14,7 +18,6 @@ const ChatInput = ({ userId }: { userId: string }) => {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const dispatch = useDispatch();
-  // const { aiResponse } = useSelector((store: RootState) => store.general);
   const [text, setText] = useState("");
 
   const handleChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
@@ -25,6 +28,13 @@ const ChatInput = ({ userId }: { userId: string }) => {
       if (textRef.current.scrollHeight > 48) {
         textRef.current.style.lineHeight = "20px";
       }
+
+      let numHeight = parseInt(textRef.current.style.height);
+      dispatch(
+        setChatInputHeight(
+          numHeight < 184 ? textRef.current.style.height : "195px"
+        )
+      );
     }
   };
 
@@ -36,6 +46,7 @@ const ChatInput = ({ userId }: { userId: string }) => {
           dispatch(setAIResponse(res.data.text));
           if (textRef.current) {
             textRef.current.value = "";
+            textRef.current.style.height = "48px";
           }
         }
         if (res?.data.chatId && window.location.pathname === "/chat") {
@@ -59,13 +70,13 @@ const ChatInput = ({ userId }: { userId: string }) => {
         id="question"
         rows={1}
         placeholder="Ask Quick"
-        className="w-full resize-none h-[48px] max-h-[200px] overflow-y-auto text-base py-3 pl-3 pr-8 rounded-lg bg-base-200 border-1 border-primary placeholder:text-base-300"
+        className="w-full resize-none h-[48px] max-h-[200px] overflow-y-auto text-base py-3 pl-3 pr-8 rounded-lg bg-base-200 border-1 border-primary placeholder:text-base-300 scrollbar-thin"
         defaultValue={text}
       ></textarea>
       <button
         type="submit"
         className={clsx(
-          "absolute top-0 bottom-0 m-auto right-2 w-[30px] h-[30px] rounded text-primary-content flex justify-center items-center",
+          "absolute bottom-2.5 m-auto right-2 w-[30px] h-[30px] rounded text-primary-content flex justify-center items-center",
           isPending || text.trim() === ""
             ? "bg-gray-600 cursor-not-allowed opacity-50"
             : "bg-primary hover:bg-accent cursor-pointer opacity-100"

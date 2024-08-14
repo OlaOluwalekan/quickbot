@@ -23,6 +23,7 @@ const initialState: GeneralSliceInit = {
   dialogData: null,
   editPopUpIsOpen: false,
   deletePopUpIsOpen: false,
+  chatInputHeight: "48px",
 };
 
 const generalSlice = createSlice({
@@ -72,6 +73,9 @@ const generalSlice = createSlice({
     setDeletePopUpOpen: (state, { payload }: { payload: boolean }) => {
       state.deletePopUpIsOpen = payload;
     },
+    setChatInputHeight: (state, { payload }: { payload: string }) => {
+      state.chatInputHeight = payload;
+    },
   },
 });
 
@@ -90,6 +94,7 @@ export const {
   setDialogData,
   setEditPopUpOpen,
   setDeletePopUpOpen,
+  setChatInputHeight,
 } = generalSlice.actions;
 
 export default generalSlice.reducer;

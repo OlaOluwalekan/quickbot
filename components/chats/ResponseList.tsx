@@ -17,7 +17,9 @@ const ResponseList = ({
   image: string | null;
 }) => {
   const bottomRef = useRef<HTMLDivElement | null>(null);
-  const { loadingResponse } = useSelector((store: RootState) => store.general);
+  const { loadingResponse, chatInputHeight } = useSelector(
+    (store: RootState) => store.general
+  );
   const [pending, startTransition] = useTransition();
   const dispatch = useDispatch();
 
@@ -32,10 +34,15 @@ const ResponseList = ({
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [data]);
+  }, [data, chatInputHeight]);
 
   return (
-    <div className="h-full py-2 overflow-auto scrollbar-none">
+    <div
+      className="pt-2 pb-5 overflow-auto scrollbar-none flex flex-col"
+      style={{
+        height: `calc(100% - ${chatInputHeight} + 50px)`,
+      }}
+    >
       {data.map((response) => {
         return <Response key={response.id} response={response} image={image} />;
       })}

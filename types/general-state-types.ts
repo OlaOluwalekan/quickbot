@@ -15,4 +15,5 @@ export interface GeneralSliceInit {
   dialogData: ChatProps | null;
   editPopUpIsOpen: boolean;
   deletePopUpIsOpen: boolean;
+  chatInputHeight: string;
 }

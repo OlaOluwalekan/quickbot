@@ -9,6 +9,7 @@ import CustomOl from "./CustomOl";
 import { convertToHTML } from "@/utils/matkdown";
 import CustomUl from "./CustomUl";
 import CustomLi from "./CustomLi";
+import CustomLink from "./CustomLink";
 
 interface CodeProps {
   inline?: boolean;
@@ -55,6 +56,11 @@ const ResponseMD = ({ response }: { response: string }) => {
             <p {...props} className="mb-0">
               {children}
             </p>
+          );
+        },
+        a({ href, children, ...props }) {
+          return (
+            <CustomLink href={href as string} children={children} {...props} />
           );
         },
       }}
