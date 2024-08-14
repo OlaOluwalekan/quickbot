@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  toggleChatMenuOpen,
   toggleProfileDialogOpen,
   toggleThemeOpen,
 } from "@/features/generalSlice";
@@ -28,6 +29,7 @@ const ThemeProvider = ({ children }: { children: ReactNode }) => {
 
     dispatch(toggleThemeOpen(false));
     dispatch(toggleProfileDialogOpen(false));
+    dispatch(toggleChatMenuOpen(false));
   };
 
   useEffect(() => {

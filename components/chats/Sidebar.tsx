@@ -1,20 +1,37 @@
 "use client";
 
-import { toggleMobileNavOpen } from "@/features/generalSlice";
+import {
+  toggleChatMenuOpen,
+  toggleMobileNavOpen,
+} from "@/features/generalSlice";
 import { RootState } from "@/store";
 import clsx from "clsx";
 import Link from "next/link";
-import { MouseEvent } from "react";
+import { MouseEvent, useEffect } from "react";
 import { BiSolidMessageSquareAdd } from "react-icons/bi";
 import { FaBarsStaggered } from "react-icons/fa6";
 import { useDispatch, useSelector } from "react-redux";
 import ChatList from "./ChatList";
 import UserProfile from "./user-profile/UserProfile";
 import { ChatProps } from "@/types/chats";
+import ChatMenu from "./ChatMenu";
+import EditPopup from "./EditPopup";
+import DeletePopup from "./DeletePopup";
 
 const Sidebar = ({ data, chats }: { data: any; chats: ChatProps[] }) => {
-  const { mobileNavIsOpen } = useSelector((store: RootState) => store.general);
+  const {
+    mobileNavIsOpen,
+    chatMenuIsOpen,
+    editPopUpIsOpen,
+    deletePopUpIsOpen,
+  } = useSelector((store: RootState) => store.general);
   const dispatch = useDispatch();
+
+  useEffect(() => {
+    if (!mobileNavIsOpen) {
+      dispatch(toggleChatMenuOpen(false));
+    }
+  }, [mobileNavIsOpen]);
 
   return (
     <div
@@ -39,13 +56,17 @@ const Sidebar = ({ data, chats }: { data: any; chats: ChatProps[] }) => {
           <Link
             href="/chat"
             className="flex gap-2 items-center text-primary-content hover:bg-accent p-2 rounded"
+            onClick={() => dispatch(toggleMobileNavOpen(false))}
           >
             New Chat <BiSolidMessageSquareAdd />
           </Link>
         </section>
         <div className="divider my-0"></div>
-        <div className="h-[calc(100%-75px)] flex flex-col">
+        <div className="h-[calc(100%-75px)] flex flex-col relative">
           <ChatList chats={chats} />
+          {chatMenuIsOpen && <ChatMenu />}
+          {editPopUpIsOpen && <EditPopup />}
+          {deletePopUpIsOpen && <DeletePopup />}
           <UserProfile data={data} />
         </div>
       </div>

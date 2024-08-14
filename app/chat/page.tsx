@@ -1,7 +1,9 @@
+import TemplatePrompts from "@/components/chats/TemplatePrompts";
+
 const ChatPage = async () => {
   return (
     <div className="flex flex-col justify-center items-center h-full">
-      ChatPage
+      <TemplatePrompts />
     </div>
   );
 };

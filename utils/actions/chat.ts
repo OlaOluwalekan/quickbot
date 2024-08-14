@@ -55,3 +55,36 @@ export const getChatById = async (chatId: string) => {
     return ActionResponse.error("Failed to retrieve chat", null);
   }
 };
+
+export const updateChatTitle = async (chatId: string, title: string) => {
+  try {
+    const updatedChat = await db.chat.update({
+      where: {
+        id: chatId,
+      },
+      data: {
+        title,
+      },
+    });
+    revalidatePath("/chat");
+    return ActionResponse.success("Chat title updated successfully", {
+      updatedChat,
+    });
+  } catch (error) {
+    return ActionResponse.error("Failed to update chat title", null);
+  }
+};
+
+export const deleteChat = async (chatId: string) => {
+  try {
+    await db.chat.delete({
+      where: {
+        id: chatId,
+      },
+    });
+    revalidatePath("/chat");
+    return ActionResponse.success("Chat deleted successfully", null);
+  } catch (error) {
+    return ActionResponse.error("Failed to delete chat", null);
+  }
+};

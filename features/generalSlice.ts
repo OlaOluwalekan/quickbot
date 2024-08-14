@@ -1,4 +1,5 @@
 import { GeneralSliceInit } from "@/types";
+import { ChatProps } from "@/types/chats";
 import { addToLocalStorage, getFromLocalStorage } from "@/utils/local-storage";
 import { createSlice } from "@reduxjs/toolkit";
 
@@ -17,6 +18,11 @@ const initialState: GeneralSliceInit = {
   codeTheme: "light",
   currentPageTitle: "New Chat",
   currentPageId: null,
+  chatMenuIsOpen: false,
+  chatMenuClass: "",
+  dialogData: null,
+  editPopUpIsOpen: false,
+  deletePopUpIsOpen: false,
 };
 
 const generalSlice = createSlice({
@@ -51,6 +57,21 @@ const generalSlice = createSlice({
     setCurrentPageId: (state, { payload }: { payload: string | null }) => {
       state.currentPageId = payload;
     },
+    toggleChatMenuOpen: (state, { payload }: { payload: boolean }) => {
+      state.chatMenuIsOpen = payload;
+    },
+    setChatMenuClass: (state, { payload }: { payload: string }) => {
+      state.chatMenuClass = payload;
+    },
+    setDialogData: (state, { payload }: { payload: ChatProps | null }) => {
+      state.dialogData = payload;
+    },
+    setEditPopUpOpen: (state, { payload }: { payload: boolean }) => {
+      state.editPopUpIsOpen = payload;
+    },
+    setDeletePopUpOpen: (state, { payload }: { payload: boolean }) => {
+      state.deletePopUpIsOpen = payload;
+    },
   },
 });
 
@@ -64,6 +85,11 @@ export const {
   setCodeTheme,
   setCurrentPageTitle,
   setCurrentPageId,
+  toggleChatMenuOpen,
+  setChatMenuClass,
+  setDialogData,
+  setEditPopUpOpen,
+  setDeletePopUpOpen,
 } = generalSlice.actions;
 
 export default generalSlice.reducer;
