@@ -6,6 +6,7 @@ import { useDispatch, useSelector } from "react-redux";
 import UserImage from "../UserImage";
 import { toggleProfileDialogOpen } from "@/features/generalSlice";
 import ProfileDialog from "./ProfileDialog";
+import { formatNumber } from "@/utils/format";
 
 const UserProfile = ({ data }: { data: any }) => {
   const { profileDialogIsOpen } = useSelector(
@@ -27,9 +28,14 @@ const UserProfile = ({ data }: { data: any }) => {
         }
       >
         <UserImage image={data?.image} />
-        <p className="whitespace-nowrap overflow-hidden text-ellipsis">
-          {data?.name}
-        </p>
+        <article className="flex flex-grow items-center justify-between gap-2">
+          <p className="whitespace-nowrap overflow-hidden text-ellipsis">
+            {data?.name}
+          </p>
+          <span className="text-xs flex bg-success/70 px-1 py-0.5 rounded-sm">
+            {formatNumber(data.token)}
+          </span>
+        </article>
       </button>
     </div>
   );
