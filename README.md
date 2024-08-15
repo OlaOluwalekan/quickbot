@@ -13,6 +13,11 @@ A comprehensive chatbot application built using Next.js, TypeScript, Tailwind CS
    - [Steps](#steps)
 1. [Usage](#usage)
    - [User Registration and Authentication](#user-registration-and-authentication)
+   - [Chat Interface](#chat-interface)
+1. [Contributing](#contributing)
+1. [Contacts](#contact)
+1. [FAQs](#faqs)
+1. [Acknowledgement](#acknowledgements)
 
 ## Introduction
 
@@ -201,9 +206,10 @@ Ensure that the following are installed:
 
    GEMINI_API_KEY=
 
-   EMAIL_SERVER=
-
    DOMAIN=
+
+   EMAIL_ADDRESS=
+   EMAIL_PASSWORD=
    ```
 
 1. Run database migration
@@ -223,5 +229,56 @@ Open [http://localhost:3000]([http://localhost:3000) with your browser to see th
 ## User Registration and Authentication
 
 - **Sign Up**: New users can sign up using their email and password.
-- **Log In**: Registered users can log in to access the chat bot features.
+- **Log In**: Registered users can log in to access the chat bot features. Users can either login using **credentials** i.e. email and password or can make use of **GitHub** or **Google** OAuth login.
 - **Secure Sessions**: User sessions are securely managed by NextAuth.
+
+## Chat Interface
+
+- **Chat**: Users can create a chat. A chat is supposed to be like a container which holds related (may not be related depending on use) user questions and responses from Quickbot. These chat are ordered from the the most recent. When a new chat is created, the chat is named as deemed fit by Quickbot. However, users can choose to rename their chat for easy identification. Users can also delete a chat completely. Chats deleted cannot be recovered.
+
+> <u>LOOK FORWARD</u>:
+> Upcoming feature is for users to be able to bookmark chats that are important for easy access. Also, users will be able to filter chats.
+
+- **Response**: A response is the result return by Quickbot after a user asked a question. Responses (and questions) are tokenized. The more the character and words in a response (and question), the more token it uses.
+
+- **Markdown rendering**: Responses are rendered as markdown for good presentation
+
+## Contributing
+
+Contributions are welcome! Please follow these steps:
+
+1. Fork the repository.
+1. Create a new branch (git checkout -b feature/your-feature-name).
+1. Commit your changes (git commit -m 'Add some feature').
+1. Push to the branch (git push origin feature/your-feature-name).
+1. Open a pull request.
+
+Please ensure your code adheres to the project's coding standards and conventions.
+
+## Contact
+
+For any inquiries or questions, please contact:
+
+- Name: Olalekan Bello
+- Email: olalekanbello534@gmail.com
+- Twitter(or X): [x.com/OlaOluwalekanMi](https://x.com/OlaOluwalekanMi)
+- Website: [bellsarena.com](https://bellsarena.com)
+
+## FAQs
+
+**What is the purpose of this project?**
+The chat bot app aims to provide users with an intuitive and interactive chat experience powered by advanced AI technologies.
+
+**How can I contribute to this project?**
+You can contribute by forking the repository, creating a new branch for your feature or bug fix, and submitting a pull request see [contributing](#contributing).
+
+**How do I set up the project locally?**
+Follow the [Installation](#installation) section to set up the project on your local machine.
+
+**Who maintains this project?**
+The project is maintained by Olalekan Bello. For any queries, you can reach out via [email](mailto:olalekanbello534@gmail.com) or [twitter](https://x.com/OlaOluwalekanMi).
+
+## Acknowledgements
+
+Thanks to the contributors of Next.js, Tailwind CSS, DaisyUI, and Google Generative AI API.
+Special thanks to the open-source community for their invaluable resources and support.
