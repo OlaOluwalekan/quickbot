@@ -27,6 +27,12 @@ const ChatInput = ({
   const [text, setText] = useState("");
   const { currentPageTitle } = useSelector((store: RootState) => store.general);
 
+  useEffect(() => {
+    if (textRef.current) {
+      textRef.current.style.height = "48px";
+    }
+  }, []);
+
   const handleChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
     setText(e.target.value);
     if (textRef.current) {
