@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import ResponseList from "@/components/chats/ResponseList";
+import NotFound from "@/components/not-found/NotFound";
 import { getResponses } from "@/utils/actions/response";
 import Link from "next/link";
 import React from "react";
@@ -11,15 +12,16 @@ const SingleChatPage = async ({ params }: { params: { chatId: string } }) => {
 
   if (!responses || responses.length === 0) {
     return (
-      <div className="w-full h-full flex flex-col gap-4 justify-center items-center">
-        No Response from Quickbot
-        <Link
-          href="/chat"
-          className="bg-primary text-primary-content px-5 py-2"
-        >
-          New Chat
-        </Link>
-      </div>
+      // <div className="w-full h-full flex flex-col gap-4 justify-center items-center">
+      //   No Response from Quickbot
+      //   <Link
+      //     href="/chat"
+      //     className="bg-primary text-primary-content px-5 py-2"
+      //   >
+      //     New Chat
+      //   </Link>
+      // </div>
+      <NotFound />
     );
   }
 

@@ -5,12 +5,13 @@ import {
   setChatInputHeight,
   setLoadingResponse,
 } from "@/features/generalSlice";
+import { RootState } from "@/store";
 import { getResponseFromAI } from "@/utils/actions/response";
 import clsx from "clsx";
 import { useRouter } from "next/navigation";
 import { ChangeEvent, useEffect, useRef, useState, useTransition } from "react";
 import { FaPaperPlane } from "react-icons/fa6";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 
 const ChatInput = ({
   userId,
@@ -24,6 +25,7 @@ const ChatInput = ({
   const router = useRouter();
   const dispatch = useDispatch();
   const [text, setText] = useState("");
+  const { currentPageTitle } = useSelector((store: RootState) => store.general);
 
   const handleChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
     setText(e.target.value);
@@ -66,7 +68,10 @@ const ChatInput = ({
 
   return (
     <form
-      className="w-full my-3 absolute bottom-0 left-0 right-0 mx-auto"
+      className={clsx(
+        "w-full my-3 absolute bottom-0 left-0 right-0 mx-auto",
+        currentPageTitle === "" && "hidden"
+      )}
       action={handleSubmit}
     >
       <input type="hidden" value={userId} id="id" name="id" />

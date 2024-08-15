@@ -18,7 +18,7 @@ const ProfileDialog = ({ data }: { data: any }) => {
       </p>
       <hr />
       <Link
-        href="/chat/settings"
+        href="/settings"
         className="p-2 rounded-lg my-1.5 flex justify-start items-center gap-3 hover:bg-primary"
       >
         <FaGear />
