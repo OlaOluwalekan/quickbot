@@ -10,17 +10,9 @@ import { RootState } from "@/store";
 import { ChatProps } from "@/types/chats";
 import clsx from "clsx";
 import Link from "next/link";
-import { MouseEvent, useEffect } from "react";
+import { MouseEvent } from "react";
 import { FaEllipsisV } from "react-icons/fa";
 import { useDispatch, useSelector } from "react-redux";
-
-const chat1 = {
-  id: "id1",
-  title: "title1",
-  createdBy: "createdBy1",
-  createdAt: "createdAt1",
-  updatedAt: "UpdatedAt1",
-};
 
 const Chat = ({ chat }: { chat: ChatProps }) => {
   const dispatch = useDispatch();
