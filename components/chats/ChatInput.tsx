@@ -5,15 +5,20 @@ import {
   setChatInputHeight,
   setLoadingResponse,
 } from "@/features/generalSlice";
-import { RootState } from "@/store";
 import { getResponseFromAI } from "@/utils/actions/response";
 import clsx from "clsx";
 import { useRouter } from "next/navigation";
 import { ChangeEvent, useEffect, useRef, useState, useTransition } from "react";
 import { FaPaperPlane } from "react-icons/fa6";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 
-const ChatInput = ({ userId }: { userId: string }) => {
+const ChatInput = ({
+  userId,
+  existingToken,
+}: {
+  userId: string;
+  existingToken: number;
+}) => {
   const textRef = useRef<HTMLTextAreaElement>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
@@ -41,19 +46,21 @@ const ChatInput = ({ userId }: { userId: string }) => {
   const handleSubmit = (formData: FormData) => {
     startTransition(() => {
       dispatch(setLoadingResponse(true));
-      getResponseFromAI(formData, window.location.pathname).then((res) => {
-        if (res.success) {
-          dispatch(setAIResponse(res.data.text));
-          if (textRef.current) {
-            textRef.current.value = "";
-            textRef.current.style.height = "48px";
+      getResponseFromAI(formData, window.location.pathname, existingToken).then(
+        (res) => {
+          if (res.success) {
+            dispatch(setAIResponse(res.data.text));
+            if (textRef.current) {
+              textRef.current.value = "";
+              textRef.current.style.height = "48px";
+            }
           }
+          if (res?.data.chatId && window.location.pathname === "/chat") {
+            router.push(`/chat/${res.data.chatId}`);
+          }
+          dispatch(setLoadingResponse(false));
         }
-        if (res?.data.chatId && window.location.pathname === "/chat") {
-          router.push(`/chat/${res.data.chatId}`);
-        }
-        dispatch(setLoadingResponse(false));
-      });
+      );
     });
   };
 

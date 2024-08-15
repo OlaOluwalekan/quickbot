@@ -5,8 +5,13 @@ import { getGeminiChatResponse, getGeminiResponse } from "../ai-models/gemini";
 import { db } from "../db";
 import ActionResponse from "../response";
 import { createChat } from "./chat";
+import { createTokenUsage, updateUserToken } from "./response-token";
 
-export const getResponseFromAI = async (formData: FormData, page: string) => {
+export const getResponseFromAI = async (
+  formData: FormData,
+  page: string,
+  existingToken: number
+) => {
   const prompt = formData.get("question");
   const id = formData.get("id");
 
@@ -15,6 +20,10 @@ export const getResponseFromAI = async (formData: FormData, page: string) => {
 
   if (!prompt) {
     return ActionResponse.error("Prompt is required", null);
+  }
+
+  if (existingToken <= 0) {
+    return ActionResponse.error("You are out of token, Please purchase", null);
   }
 
   if (page === "/chat") {
@@ -40,7 +49,14 @@ export const getResponseFromAI = async (formData: FormData, page: string) => {
 
   try {
     const response = await getGeminiChatResponse(prompt as string, history);
-    await createResponse(chatId, prompt as string, response.data.text);
+    const res = await createResponse(
+      chatId,
+      prompt as string,
+      response.data.text
+    );
+    const tokenUsed: number = response.data.tokenCount;
+    await createTokenUsage(id as string, tokenUsed, res.data.res);
+    await updateUserToken(id as string, existingToken - tokenUsed);
     revalidatePath("/chat");
     revalidatePath(`/chat/${chatId}`);
     return ActionResponse.success("responded", {
@@ -71,7 +87,7 @@ const createResponse = async (
   response: string
 ) => {
   try {
-    await db.response.create({
+    const res = await db.response.create({
       data: {
         chatId,
         question,
@@ -87,7 +103,7 @@ const createResponse = async (
         updatedAt: new Date(),
       },
     });
-    return ActionResponse.success("Created response", null);
+    return ActionResponse.success("Created response", { res });
   } catch (error) {
     return ActionResponse.error("Failed to create response", null);
   }

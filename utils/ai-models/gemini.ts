@@ -9,6 +9,18 @@ import ActionResponse from "../response";
 const gemini = new GoogleGenerativeAI(process.env.GEMINI_API_KEY as string);
 let model = gemini.getGenerativeModel({ model: "gemini-1.5-flash" });
 
+export const countGeminiTokensUsed = async (prompt: string) => {
+  try {
+    const tokenCount = await model.countTokens(prompt);
+    return ActionResponse.success("Counted tokens", {
+      tokenCount: tokenCount.totalTokens,
+    });
+  } catch (error) {
+    console.log(error);
+    return ActionResponse.error("failed to respond", null);
+  }
+};
+
 export const getGeminiResponse = async (prompt: string) => {
   try {
     const response = model.generateContent(prompt);
@@ -17,7 +29,7 @@ export const getGeminiResponse = async (prompt: string) => {
     return ActionResponse.success("responded", { text });
   } catch (error) {
     console.log(error);
-    return ActionResponse.error("failed to respond", { error });
+    return ActionResponse.error("failed to respond", null);
   }
 };
 
@@ -26,11 +38,19 @@ export const getGeminiChatResponse = async (
   history: any[] = []
 ) => {
   try {
+    // const tokenCount = await countGeminiTokensUsed(prompt);
     const chat = model.startChat({ history });
     const result = await chat.sendMessage(prompt);
     const response = await result.response;
     const text = response.text();
-    return ActionResponse.success("responded", { text });
+    const tokenCount = response.usageMetadata?.totalTokenCount;
+    // console.log(
+    //   "TOKEN USED:",
+    //   tokenCount.data.tokenCount,
+    //   response.usageMetadata
+    // );
+
+    return ActionResponse.success("responded", { text, tokenCount });
   } catch (error) {
     console.log(error);
     return ActionResponse.error("failed to respond", null);

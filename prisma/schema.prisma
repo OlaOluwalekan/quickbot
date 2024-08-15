@@ -25,6 +25,7 @@ model User {
   emailVerified DateTime?
   image         String?
   password      String?
+  tokens        Int       @default(10000)
   role          UserRole  @default(USER)
   accounts      Account[]
   chat          Chat[]
@@ -76,4 +77,19 @@ model Response {
   response        String
   createdAt       DateTime  @default(now())
   chat            Chat      @relation(fields: [chatId], references: [id], onDelete: Cascade)
+}
+
+model TokenUsage {
+  id            String      @id @default(auto()) @map("_id") @db.ObjectId
+  userId        String      @db.ObjectId
+  responseId    String      @db.ObjectId
+  token         Int
+  usedAt        DateTime    @default(now())
+}
+
+model TemplatePrompt {
+  id            String      @id @default(auto()) @map("_id") @db.ObjectId
+  prompt        String
+  category      String
+  createAt      DateTime    @default(now())
 }

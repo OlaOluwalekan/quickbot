@@ -30,7 +30,10 @@ const Template = async ({ children }: { children: ReactNode }) => {
                 <section className="h-[calc(100vh-125px)] w-full md:h-[calc(100vh-151px)] flex flex-col">
                   {children}
                 </section>
-                <ChatInput userId={session?.user?.id as string} />
+                <ChatInput
+                  userId={session?.user?.id as string}
+                  existingToken={(session?.user as any).token}
+                />
               </section>
             </section>
           </div>

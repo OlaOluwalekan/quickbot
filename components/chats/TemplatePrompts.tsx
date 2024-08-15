@@ -16,9 +16,11 @@ import { useRouter } from "next/navigation";
 const TemplatePrompts = ({
   data,
   userId,
+  existingToken,
 }: {
   data: { prompt: string; category: string }[];
   userId: string;
+  existingToken: number;
 }) => {
   const dispatch = useDispatch();
   const { loadingResponse, chatInputHeight } = useSelector(
@@ -35,15 +37,17 @@ const TemplatePrompts = ({
   const handleSubmit = (formData: FormData) => {
     startTransition(() => {
       dispatch(setLoadingResponse(true));
-      getResponseFromAI(formData, window.location.pathname).then((res) => {
-        if (res.success) {
-          dispatch(setAIResponse(res.data.text));
+      getResponseFromAI(formData, window.location.pathname, existingToken).then(
+        (res) => {
+          if (res.success) {
+            dispatch(setAIResponse(res.data.text));
+          }
+          if (res?.data.chatId) {
+            router.push(`/chat/${res.data.chatId}`);
+          }
+          dispatch(setLoadingResponse(false));
         }
-        if (res?.data.chatId) {
-          router.push(`/chat/${res.data.chatId}`);
-        }
-        dispatch(setLoadingResponse(false));
-      });
+      );
     });
   };
 
