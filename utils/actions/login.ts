@@ -20,6 +20,16 @@ export const login = async (formData: FormData) => {
 
   const existingUser = await getUserByEmail(email as string);
 
+  if (!existingUser || !existingUser.email) {
+    return ActionResponse.error("User does not exist", null);
+  }
+
+  if (!existingUser.password) {
+    return ActionResponse.error(
+      "This account uses a different login method",
+      existingUser
+    );
+  }
   if (!existingUser?.emailVerified) {
     return ActionResponse.error("Email is not verified", existingUser);
   }

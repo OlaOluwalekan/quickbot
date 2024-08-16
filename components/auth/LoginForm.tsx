@@ -39,8 +39,8 @@ const LoginForm = () => {
     startTransition(() => {
       login(formData).then((res) => {
         setResponse(res);
-        if (res.message === "email not verified") {
-          router.push("/auth/registered");
+        if (res.message.includes("not verified")) {
+          router.push(`/auth/registered?accountId=${res.data.email}`);
         }
         if (res.success) {
           router.push("/chat");
