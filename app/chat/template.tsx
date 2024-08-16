@@ -12,7 +12,11 @@ const Template = async ({ children }: { children: ReactNode }) => {
   let chats: ChatProps[] = [];
   if (session?.user?.id) {
     const chatResponse = await getChats(session?.user?.id);
-    chats = chatResponse.data.chats;
+    if (chatResponse.data) {
+      chats = chatResponse.data.chats;
+    } else {
+      chats = [];
+    }
   }
   // console.log("SESSION USER:", session?.user);
   // console.log("CHATS:", chats);

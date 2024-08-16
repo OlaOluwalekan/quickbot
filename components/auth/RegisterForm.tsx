@@ -7,7 +7,6 @@ import BasicButton from "../ui/button/BasicButton";
 import { register } from "@/utils/actions/register";
 import Alert from "../alert/Alert";
 import { useRouter } from "next/navigation";
-import { encryptToken } from "@/utils/cryptography";
 import axios from "axios";
 
 const RegisterForm = () => {
@@ -24,7 +23,6 @@ const RegisterForm = () => {
   });
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
-  // const [redirectParam, setRedirectParam] = useState("");
 
   useEffect(() => {
     let interval = setTimeout(() => {
@@ -53,17 +51,10 @@ const RegisterForm = () => {
           });
           const accountId = res.data.email;
           router.push(`/auth/registered?accountId=${accountId}`);
-          // setRedirectParam(accountId);
         }
       });
     });
   };
-
-  // useEffect(() => {
-  //   if (redirectParam) {
-  //     router.push(`/auth/registered?accountId=${redirectParam}"`);
-  //   }
-  // }, [redirectParam]);
 
   return (
     <form action={handleSubmit} noValidate>
