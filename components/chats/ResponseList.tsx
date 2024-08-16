@@ -17,7 +17,7 @@ const ResponseList = ({
   image: string | null;
 }) => {
   const bottomRef = useRef<HTMLDivElement | null>(null);
-  const { loadingResponse, chatInputHeight } = useSelector(
+  const { loadingResponse, chatInputHeight, currentPageTitle } = useSelector(
     (store: RootState) => store.general
   );
   const [pending, startTransition] = useTransition();
@@ -31,6 +31,10 @@ const ResponseList = ({
       });
     });
   }, []);
+
+  useEffect(() => {
+    document.title = currentPageTitle;
+  }, [currentPageTitle]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
