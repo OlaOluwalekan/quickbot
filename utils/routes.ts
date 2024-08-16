@@ -4,6 +4,7 @@ export const authRoutes = [
   "/auth/login",
   "/auth/register",
   "/auth/verify",
+  "/auth/verify/verification",
   "/auth/registered",
 ];
 
