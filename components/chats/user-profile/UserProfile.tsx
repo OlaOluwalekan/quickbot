@@ -33,7 +33,7 @@ const UserProfile = ({ data }: { data: any }) => {
             {data?.name}
           </p>
           <span className="text-xs flex bg-success/70 px-1 py-0.5 rounded-sm">
-            {formatNumber(data.token)}
+            {formatNumber(data.token)} tokens
           </span>
         </article>
       </button>
