@@ -7,7 +7,6 @@ import {
 } from "@/features/generalSlice";
 import { RootState } from "@/store";
 import clsx from "clsx";
-import { useEffect } from "react";
 import { FaPenAlt } from "react-icons/fa";
 import { FaTrash } from "react-icons/fa6";
 import { useDispatch, useSelector } from "react-redux";
@@ -29,7 +28,7 @@ const ChatMenu = () => {
   return (
     <div
       className={clsx(
-        "w-36 bg-accent text-accent-content rounded absolute right-[-130px]",
+        "w-36 bg-accent text-accent-content rounded absolute right-[-130px] small:right-[10px]",
         chatMenuClass
       )}
       style={{

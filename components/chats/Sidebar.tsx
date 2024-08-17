@@ -42,7 +42,7 @@ const Sidebar = ({ data, chats }: { data: any; chats: ChatProps[] }) => {
       onClick={() => dispatch(toggleMobileNavOpen(false))}
     >
       <div
-        className="w-[300px] bg-primary h-full shadow-xl md:shadow-none"
+        className="w-[300px] bg-primary h-full shadow-xl md:shadow-none small:w-full"
         onClick={(e: MouseEvent<HTMLDivElement>) => e.stopPropagation()}
       >
         <section className="px-3 py-2 flex justify-between items-center">

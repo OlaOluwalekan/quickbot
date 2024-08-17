@@ -26,8 +26,10 @@ const ResponseList = ({
   useEffect(() => {
     startTransition(() => {
       getChatById(data[0].chatId).then((res) => {
-        dispatch(setCurrentPageTitle(res.data.chat.title));
-        dispatch(setCurrentPageId(res.data.chat.id));
+        if (res.success) {
+          dispatch(setCurrentPageTitle(res.data.chat.title));
+          dispatch(setCurrentPageId(res.data.chat.id));
+        }
       });
     });
   }, []);

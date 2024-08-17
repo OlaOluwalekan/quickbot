@@ -50,6 +50,12 @@ export const getChatById = async (chatId: string) => {
       },
     });
 
+    // console.log("UNAUTHORIZED", chat?.createdBy, userId);
+
+    // if (chat?.createdBy !== userId) {
+    //   return ActionResponse.error("Unauthorized", null);
+    // }
+
     return ActionResponse.success("Chat retrieved successfully", { chat });
   } catch (error) {
     return ActionResponse.error("Failed to retrieve chat", null);

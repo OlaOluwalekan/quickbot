@@ -6,7 +6,7 @@ const CustomLi = ({ children, ...props }: { children: ReactNode }) => {
   );
 
   return (
-    <li {...props} className="py-0 my-0">
+    <li {...props} className="py-0 my-0 text-justify w-full">
       {cleanChildren}
     </li>
   );

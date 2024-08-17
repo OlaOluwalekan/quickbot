@@ -9,7 +9,7 @@ const CustomUl = ({ children, ...props }: { children: ReactNode }) => {
     <ul
       style={{
         listStyleType: "square",
-        padding: "0 10px",
+        // padding: "0 10px",
       }}
       {...props}
     >
