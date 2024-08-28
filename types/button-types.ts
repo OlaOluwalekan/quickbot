@@ -6,6 +6,7 @@ interface ButtonBase {
   theme?: "primary" | "outline" | "base";
   disabled?: boolean;
   onClick?: (event: MouseEvent<HTMLButtonElement>) => void;
+  title?: string;
 }
 
 export interface BasicBtnProps extends ButtonBase {

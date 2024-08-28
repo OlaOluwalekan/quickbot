@@ -4,6 +4,7 @@ import "./globals.css";
 import StoreProvider from "@/providers/StoreProvider";
 import ThemeProvider from "@/providers/ThemeProvider";
 import Theme from "@/components/theme/Theme";
+import { Toaster } from "react-hot-toast";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -27,6 +28,7 @@ export default function RootLayout({
           >
             {children}
             <Theme />
+            <Toaster />
           </body>
         </html>
       </ThemeProvider>
