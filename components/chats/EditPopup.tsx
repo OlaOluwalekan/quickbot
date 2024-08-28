@@ -43,7 +43,7 @@ const EditPopup = () => {
       <form
         action={handleSubmit}
         onClick={(e: MouseEvent) => e.stopPropagation()}
-        className="w-[90%] max-w-[600px] bg-base-100 px-3 py-5 rounded-md shadow-lg"
+        className="w-[90%] max-w-[600px] bg-base-200 px-3 py-5 rounded-md shadow-lg"
       >
         <h3 className="text-base-content text-center font-semibold">
           Edit Chat Title

@@ -8,8 +8,8 @@ const Logout = ({ styleClass }: { styleClass?: string }) => {
   return (
     <button
       className={clsx(
-        "py-2 my-1 flex justify-start items-center gap-3 rounded-lg",
-        styleClass ? styleClass : "w-full px-2 hover:bg-error"
+        "flex justify-start items-center gap-3 rounded-lg",
+        styleClass ? styleClass : "w-full px-2 py-2 my-1 hover:bg-error"
       )}
       onClick={() => signOut()}
     >

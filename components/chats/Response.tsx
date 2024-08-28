@@ -89,7 +89,7 @@ const Response = ({
       </div>
 
       <div className="chat chat-start small:w-full small:relative">
-        <div className="chat-image avatar small:absolute small:bottom-[5px] z-10">
+        <div className="chat-image avatar small:absolute small:bottom-[5px]">
           <div className="w-10 small:w-7 rounded-full flex justify-center items-center">
             <FaRobot className="text-4xl small:text-2xl" />
           </div>

@@ -11,7 +11,7 @@ const PopupOverlay = ({
 }) => {
   return (
     <div
-      className="fixed top-0 left-0 w-screen h-screen bg-black/60 flex justify-center items-center z-20"
+      className="fixed top-0 left-0 w-screen h-screen bg-black/60 flex justify-center items-center z-20 backdrop-filter backdrop-blur-sm"
       onClick={onClick}
     >
       {children}

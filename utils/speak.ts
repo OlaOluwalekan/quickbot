@@ -1,6 +1,5 @@
-const synth = window.speechSynthesis;
-
 export const readAloud = (text: string, cb: (speaking: boolean) => void) => {
+  const synth = window.speechSynthesis;
   if ("speechSynthesis" in window) {
     if (synth.speaking) {
       console.error("Speech synthesis is already speaking.");
@@ -25,6 +24,7 @@ export const readAloud = (text: string, cb: (speaking: boolean) => void) => {
 };
 
 export const handleStop = (cb: (speaking: boolean) => void) => {
+  const synth = window.speechSynthesis;
   if (synth.speaking) {
     synth.cancel();
     cb(false);
