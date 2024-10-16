@@ -5,6 +5,15 @@ import Logo from "../logo/Logo";
 import Link from "next/link";
 import OAuthCard from "./OAuthCard";
 
+/**
+ * This component wraps login and register authentication
+ * @param children - The login or register form it wraps
+ * @param page - Specifies the current page the use is on
+ * @param headerText - The text to be displayed on the form head
+ * @param backText - The text to be displayed on the form back link
+ * @param backLink - The link to go to on back click, either register or login
+ * @returns
+ */
 const AuthCard = ({
   children,
   page,
@@ -34,9 +43,13 @@ const AuthCard = ({
               {backLink} here
             </Link>
           </article>
+
+          {/* divider */}
           <div className="divider divider-secondary text-base-content my-2">
             Or Login With
           </div>
+
+          {/* OAuth Login Section - GitHub and Google */}
           <section>
             <OAuthCard />
           </section>

@@ -1,6 +1,19 @@
 import { InputWithIconsProps } from "@/types/input-types";
 import clsx from "clsx";
 
+/**
+ * typical input with icon
+ * @param {Object} props - The component properties
+ * @param {string} props.type - input type e.g. email, password, text, etc
+ * @param {string} props.placeholder - input placeholder
+ * @param {ReactNode} props.icon - input icon - React component
+ * @param {string} props.name - input name used mainly for server action and onChange handler
+ * @param {string} props.id - input id
+ * @param {string | number} props.value - input value
+ * @param {ReactEventHandler} props.onChange - callback on change event handler
+ * @param {boolean} props.readonly - whether input is read-only or not
+ * @returns {JSX.Element} styled input with icon
+ */
 const InputWithIcon = ({
   type,
   placeholder,
@@ -10,7 +23,7 @@ const InputWithIcon = ({
   value,
   onChange,
   readonly,
-}: InputWithIconsProps) => {
+}: InputWithIconsProps): JSX.Element => {
   return (
     <label
       className={clsx(
@@ -18,6 +31,7 @@ const InputWithIcon = ({
         type === "hidden" && "hidden"
       )}
     >
+      {/* icon */}
       <span
         className={clsx(
           "input-icon",
@@ -26,6 +40,8 @@ const InputWithIcon = ({
       >
         {icons}
       </span>
+
+      {/* input */}
       <input
         type={type}
         className={clsx("grow", readonly && "opacity-50 text-gray-500")}

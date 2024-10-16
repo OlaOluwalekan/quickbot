@@ -9,7 +9,11 @@ import Alert from "../alert/Alert";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 
-const RegisterForm = () => {
+/**
+ * Register form
+ * @returns {JSX.Element} styled register form
+ */
+const RegisterForm = (): JSX.Element => {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -24,6 +28,7 @@ const RegisterForm = () => {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
+  // used to clear the response passed to the alert toast after 3s (3000ms)
   useEffect(() => {
     let interval = setTimeout(() => {
       setResponse({ message: "", success: false, data: null });
@@ -32,24 +37,29 @@ const RegisterForm = () => {
     return () => clearTimeout(interval);
   }, [response]);
 
+  // handles input change events
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  // handle form submission event - server action is used to register new user
   const handleSubmit = (formData: FormData) => {
     setResponse({ message: "", success: false, data: null });
 
+    // handle state updates
     startTransition(() => {
       register(formData).then((res) => {
         console.log(res);
 
         setResponse(res);
         if (res.success) {
+          // send email on successful user registration
           axios.post("/api/email/send-verification-email", {
             email: res.data.email,
             token: res.data.token,
           });
           const accountId = res.data.email;
+          // redirect to registered page for user to await verification email
           router.push(`/auth/registered?accountId=${accountId}`);
         }
       });
@@ -58,6 +68,7 @@ const RegisterForm = () => {
 
   return (
     <form action={handleSubmit} noValidate>
+      {/* email input */}
       <InputWithIcon
         type="email"
         placeholder="Email"
@@ -67,6 +78,8 @@ const RegisterForm = () => {
         value={formData.email}
         onChange={handleChange}
       />
+
+      {/* name input */}
       <InputWithIcon
         type="text"
         placeholder="Name"
@@ -76,6 +89,8 @@ const RegisterForm = () => {
         value={formData.name}
         onChange={handleChange}
       />
+
+      {/* password input */}
       <InputWithIcon
         type="password"
         placeholder="Password"
@@ -85,6 +100,8 @@ const RegisterForm = () => {
         value={formData.password}
         onChange={handleChange}
       />
+
+      {/* password confirmation input */}
       <InputWithIcon
         type="password"
         placeholder="Confirm Password"
@@ -94,9 +111,13 @@ const RegisterForm = () => {
         value={formData.confirmPassword}
         onChange={handleChange}
       />
+
+      {/* alert toast message - disappears after 3s */}
       {response.message && (
         <Alert message={response.message} success={response.success} />
       )}
+
+      {/* submit button */}
       <BasicButton
         type="submit"
         size="full"

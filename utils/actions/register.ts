@@ -10,7 +10,15 @@ import {
 import { getUserByEmail } from "./user";
 import bcrypt from "bcryptjs";
 
-export const register = async (formData: FormData) => {
+/**
+ * Registers a new user with the provided form data.
+ *
+ * @param {FormData} formData - The form data containing user registration details.
+ * @returns {Promise<ActionResponse>} - A promise that resolves to an ActionResponse indicating the result of the registration attempt.
+ */
+export const register = async (
+  formData: FormData
+): Promise<ActionResponse<any>> => {
   const email = formData.get("email");
   const name = formData.get("name");
   const password = formData.get("password");
@@ -60,7 +68,7 @@ export const register = async (formData: FormData) => {
 
     return ActionResponse.success("Registration successful", {
       ...newUser,
-      token: verificationToken.token,
+      token: verificationToken?.token,
     });
   } catch (error: any) {
     return ActionResponse.error(JSON.parse(error?.message)[0].message, null);

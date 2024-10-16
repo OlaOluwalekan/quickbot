@@ -7,7 +7,14 @@ interface respType {
   success: boolean;
 }
 
-const Alert = ({ message, success }: respType) => {
+/**
+ * toast alert component
+ * @param {Object} props - properties of component
+ * @param {string} props.message - the message of the alert
+ * @param {boolean} props.success - whether the response is successful or not
+ * @returns {JSX.Element} styled alert component
+ */
+const Alert = ({ message, success }: respType): JSX.Element => {
   return (
     <div
       role="alert"

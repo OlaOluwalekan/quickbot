@@ -21,8 +21,6 @@ const Home = () => {
             Unlock the power of instant assistance with <AppName />, your
             friendly AI chatbot designed to streamline your tasks and boost
             productivity.
-            {/* Whether you need quick answers, assistance with tasks,
-            or just a friendly chat, <AppName /> is here to help 24/7 */}
           </p>
           <LinkButton
             href="/auth/register"

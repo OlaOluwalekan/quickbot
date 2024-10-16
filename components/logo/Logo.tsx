@@ -7,9 +7,16 @@ import { sizeClass } from "./logo.config";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
 
-const Logo = ({ size }: LogoProps) => {
+/**
+ * Web app logo
+ * @param {Object} props - component properties
+ * @param {string} props.size - size of the logo - icon, text, small, normal, medium or large
+ * @returns {JSX.Element} styled logo component
+ */
+const Logo = ({ size }: LogoProps): JSX.Element => {
   const { theme } = useSelector((store: RootState) => store.general);
 
+  // image src attribute based on user selected theme
   const imageSrc = clsx({
     "/logo-light.png": theme === "light",
     "/logo-cupcake.png": theme === "cupcake",
@@ -29,7 +36,3 @@ const Logo = ({ size }: LogoProps) => {
 };
 
 export default Logo;
-
-{
-  /* <a target="_blank" href="https://icons8.com/icon/HRqoDlVZAD8t/bot">Bot</a> icon by <a target="_blank" href="https://icons8.com">Icons8</a> */
-}

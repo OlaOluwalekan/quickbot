@@ -6,7 +6,12 @@ import { FaGithub } from "react-icons/fa6";
 import { DEFAULT_LOGIN_REDIRECT } from "@/utils/routes";
 import { signIn } from "next-auth/react";
 
-const OAuthCard = () => {
+/**
+ * OAuth card to manage OAuth login with GitHub and Google
+ * @returns {JSX.Element} styled AuthCard Component
+ */
+const OAuthCard = (): JSX.Element => {
+  // handles OAuth button clicked to login user
   const handleClick = (provider: "google" | "github") => {
     signIn(provider, {
       callbackUrl: DEFAULT_LOGIN_REDIRECT,
