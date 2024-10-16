@@ -75,6 +75,12 @@ export const register = async (
   }
 };
 
+/**
+ * Resends a verification email to the user with the provided email address.
+ *
+ * @param {formData} formData - The form data containing the user's email address.
+ * @returns A promise that resolves to an ActionResponse indicating the success or failure of the operation.
+ */
 export const resendVerificationEmail = async (formData: FormData) => {
   const email = formData.get("email");
 
@@ -92,6 +98,11 @@ export const resendVerificationEmail = async (formData: FormData) => {
   }
 };
 
+/**
+ * Verifies an email using a provided token.
+ * @param token - The verification token to be validated.
+ * @returns A promise that resolves to an ActionResponse indicating the result of the verification process.
+ */
 export const verifyEmail = async (token: string) => {
   try {
     const existingToken = await getVerificationTokenByToken(token);

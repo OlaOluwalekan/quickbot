@@ -11,9 +11,13 @@ import BasicButton from "../ui/button/BasicButton";
 import LinkButton from "../ui/button/LinkButton";
 import axios from "axios";
 
-const RESEND_SECONDS = 15;
+const RESEND_SECONDS = 15; // number of seconds to wait before resending verification email
 
-const VerificationForm = () => {
+/**
+ * verification form - form in page where user email is actually verified
+ * @returns {JSX.Element} verification form component
+ */
+const VerificationForm = (): JSX.Element => {
   const params = useSearchParams();
   const token = params.get("token");
   const [isPending, startTransition] = useTransition();
@@ -26,13 +30,16 @@ const VerificationForm = () => {
   const [userEmail, setUserEmail] = useState("");
   const [count, setCount] = useState(0);
 
+  // reset count
   const handleResendClick = () => {
     setCount(RESEND_SECONDS);
   };
 
+  // handle state update on page load
   useEffect(() => {
     setResponse({ message: "", success: false, data: null });
     startTransition(() => {
+      // verify user email
       verifyEmail(token as string).then((res) => {
         // console.log(res);
         if (!res.success && res.data) {
@@ -43,6 +50,7 @@ const VerificationForm = () => {
     });
   }, []);
 
+  // handle resending of verification email
   const handleSubmit = (formData: FormData) => {
     setResponse({ message: "", success: false, data: null });
 
@@ -65,7 +73,10 @@ const VerificationForm = () => {
 
   return (
     <div className="h-screen flex flex-col justify-center items-center gap-2">
+      {/* while page is loading and awaiting verification */}
       {isPending && <div className="text-center">Please wait...</div>}
+
+      {/* display response from email verification */}
       {!isPending && (
         <div
           className={clsx(
@@ -83,8 +94,11 @@ const VerificationForm = () => {
           </p>
         </div>
       )}
+
+      {/* display form if email is not verified yet and verification is not successful */}
       {!isPending && !response.success && response.data && (
         <form className="w-[90%] mx-auto max-w-[500px]" action={handleSubmit}>
+          {/* email input */}
           <InputWithIcon
             type="email"
             placeholder="Email"
@@ -96,6 +110,8 @@ const VerificationForm = () => {
             }
             readonly={true}
           />
+
+          {/* submit button */}
           <BasicButton
             type="submit"
             text={
@@ -111,6 +127,8 @@ const VerificationForm = () => {
           />
         </form>
       )}
+
+      {/* back to register link */}
       {!isPending && !response.data && (
         <LinkButton
           size="large"
@@ -119,6 +137,8 @@ const VerificationForm = () => {
           theme="primary"
         />
       )}
+
+      {/* login link */}
       {response.success && (
         <div>
           <LinkButton
