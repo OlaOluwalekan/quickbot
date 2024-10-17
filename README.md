@@ -27,6 +27,10 @@ A comprehensive chatbot application built using Next.js, TypeScript, Tailwind CS
 
 This chatbot app is designed to provide intelligent responses to user queries using Google's Generative AI API. It supports user authentication, state management, and a responsive UI design. One of my primary motivation for this project is to learn how to integrate AI functionalities into my react project. Then I thought of it of building something similar to AI chat bots but with additional features. While using ChatGPT or Google Bard, It is usually difficult to search for a specific question or response in the midst of many responses, hence I though I could add the search functionality to my chat bot.
 
+Below is a diagram depicting the flow of the application
+
+![Flow Diagram](/public/archi-diagram.jpeg)
+
 ## Features
 
 - Secure user authentication using [NextAuth](https://authjs.dev/)
