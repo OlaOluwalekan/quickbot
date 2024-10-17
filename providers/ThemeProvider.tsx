@@ -13,10 +13,11 @@ const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const { theme } = useSelector((store: RootState) => store.general);
   const dispatch = useDispatch();
 
+  // this is used to close open dialogs whenever a user clicks the document/page
   const handleDocumentClick = (e: MouseEvent) => {
-    // console.log(e.target);
     let targetElement = e.target as HTMLElement;
 
+    // checks if the clicked element has a class of a-modal and closes all modal if id does not
     while (targetElement) {
       if (
         targetElement.classList &&

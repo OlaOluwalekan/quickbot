@@ -8,7 +8,5 @@ export const convertToHTML = async (markdown: string) => {
     .use(html)
     .process(markdown);
 
-  //   console.log(processedContent);
-
   return processedContent.toString();
 };

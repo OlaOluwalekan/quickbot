@@ -29,11 +29,13 @@ const TemplatePrompts = ({
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
+  // reset the page title when navigated to general chat page
   useEffect(() => {
     dispatch(setCurrentPageTitle("New Chat"));
     dispatch(setCurrentPageId(null));
   }, []);
 
+  // handle clicking of a template prompt to get ai response
   const handleSubmit = (formData: FormData) => {
     startTransition(() => {
       dispatch(setLoadingResponse(true));

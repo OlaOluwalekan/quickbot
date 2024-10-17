@@ -11,7 +11,9 @@ const Theme = () => {
   );
   const dispatch = useDispatch();
 
-  const handleThemeClick = (name: string) => {
+  const handleThemeClick = (
+    name: "cupcake" | "dracula" | "light" | "black"
+  ) => {
     dispatch(changeTheme(name));
     dispatch(toggleThemeOpen(false));
   };
@@ -21,8 +23,6 @@ const Theme = () => {
       {themeIsOpen && (
         <div className="flex flex-col w-[150px] bg-primary justify-center items-center shadow-lg p-2 rounded-md">
           {themeData.map((item) => {
-            // console.log(themeMap[item.name].icon());
-
             return (
               <button
                 key={item.name}

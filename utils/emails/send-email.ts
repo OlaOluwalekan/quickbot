@@ -2,7 +2,20 @@
 
 import nodemailer, { Transporter } from "nodemailer";
 
-const sendMail = async (email: string, subject: string, message: string) => {
+/**
+ * Sends an email using the specified email address, subject, and message.
+ * Utilizes the nodemailer library to send emails through a Gmail account.
+ *
+ * @param {string} email - The recipient's email address.
+ * @param {string} subject - The subject line of the email.
+ * @param {string} message - The HTML content of the email.
+ * @returns {Promise<void>} - A promise that resolves when the email is sent successfully.
+ */
+const sendMail = async (
+  email: string,
+  subject: string,
+  message: string
+): Promise<void> => {
   try {
     const transporter: Transporter = nodemailer.createTransport({
       service: "gmail",

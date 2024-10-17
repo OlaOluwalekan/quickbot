@@ -112,6 +112,7 @@ export const verifyEmail = async (token: string) => {
 
     const existingUser = await getUserByEmail(existingToken.email);
 
+    // checks token expiry
     const hasExpired = new Date(existingToken.expires) < new Date();
     if (hasExpired) {
       return ActionResponse.error("Token has expired", existingUser);

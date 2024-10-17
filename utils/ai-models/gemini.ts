@@ -6,10 +6,21 @@ import {
 } from "@google/generative-ai";
 import ActionResponse from "../response";
 
+// initialize a new instance of the Google generative AI service
 const gemini = new GoogleGenerativeAI(process.env.GEMINI_API_KEY as string);
+// create a model
 let model = gemini.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-export const countGeminiTokensUsed = async (prompt: string) => {
+/**
+ * Asynchronously counts the number of tokens used in a given prompt using the Gemini model.
+ *
+ * @param {string} prompt - The input string for which the token count is to be calculated.
+ * @returns {Promise<ActionResponse>} A promise that resolves to an ActionResponse object
+ * indicating success with the token count or an error if the operation fails.
+ */
+export const countGeminiTokensUsed = async (
+  prompt: string
+): Promise<ActionResponse<any>> => {
   try {
     const tokenCount = await model.countTokens(prompt);
     return ActionResponse.success("Counted tokens", {
@@ -21,7 +32,16 @@ export const countGeminiTokensUsed = async (prompt: string) => {
   }
 };
 
-export const getGeminiResponse = async (prompt: string) => {
+/**
+ * Asynchronously generates a response using the Gemini model based on the provided prompt.
+ *
+ * @param {string} prompt - The input string for which the response is to be generated.
+ * @returns {Promise<ActionResponse>} A promise that resolves to an ActionResponse object
+ * indicating success with the generated text or an error if the operation fails.
+ */
+export const getGeminiResponse = async (
+  prompt: string
+): Promise<ActionResponse<any>> => {
   try {
     const response = model.generateContent(prompt);
     const result = (await response).response;
@@ -33,22 +53,24 @@ export const getGeminiResponse = async (prompt: string) => {
   }
 };
 
+/**
+ * Asynchronously generates a chat response using the Gemini model based on the provided prompt and chat history.
+ *
+ * @param {string} prompt - The input string for which the chat response is to be generated.
+ * @param {any[]} history - An optional array representing the chat history to provide context for the response.
+ * @returns {Promise<ActionResponse>} A promise that resolves to an ActionResponse object
+ * indicating success with the generated text and token count, or an error if the operation fails.
+ */
 export const getGeminiChatResponse = async (
   prompt: string,
   history: any[] = []
-) => {
+): Promise<ActionResponse<any>> => {
   try {
-    // const tokenCount = await countGeminiTokensUsed(prompt);
     const chat = model.startChat({ history });
     const result = await chat.sendMessage(prompt);
     const response = await result.response;
     const text = response.text();
     const tokenCount = response.usageMetadata?.totalTokenCount;
-    // console.log(
-    //   "TOKEN USED:",
-    //   tokenCount.data.tokenCount,
-    //   response.usageMetadata
-    // );
 
     return ActionResponse.success("responded", { text, tokenCount });
   } catch (error) {
@@ -57,7 +79,16 @@ export const getGeminiChatResponse = async (
   }
 };
 
-export const getGeminiJSONResponse = async (prompt: string) => {
+/**
+ * Asynchronously generates a JSON response using the Gemini model based on the provided prompt.
+ *
+ * @param {string} prompt - The input string for which the JSON response is to be generated.
+ * @returns {Promise<ActionResponse>} A promise that resolves to an ActionResponse object
+ * indicating success with the generated JSON text or an error if the operation fails.
+ */
+export const getGeminiJSONResponse = async (
+  prompt: string
+): Promise<ActionResponse<any>> => {
   try {
     model = gemini.getGenerativeModel({
       model: "gemini-1.5-pro",
@@ -86,18 +117,3 @@ export const getGeminiJSONResponse = async (prompt: string) => {
     return ActionResponse.error("failed to respond", null);
   }
 };
-
-// export const getGeminiStreamResponse = async (prompt: string) => {
-//   try {
-//     const result = await model.generateContentStream(prompt);
-
-//     for await (const chunk of result.stream) {
-//       const chunkText = chunk.text();
-//     }
-//     return null;
-//   } catch (error) {
-//     console.log(error);
-
-//     return { error: "something went wrong" };
-//   }
-// };

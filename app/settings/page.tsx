@@ -8,8 +8,8 @@ import LinkButton from "@/components/ui/button/LinkButton";
 import { SessionProps } from "@/types/user";
 
 const SettingsPage = async () => {
+  // get authenticated user session
   const session = await auth();
-  // console.log("USER:", session?.user);
 
   return (
     <div className="flex justify-center items-center h-screen">
