@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Sixtyfour, Irish_Grover } from "next/font/google";
+import { Irish_Grover, Inter } from "next/font/google";
 
 interface TypingEffectProps {
   texts: string[];
@@ -10,7 +10,7 @@ interface TypingEffectProps {
   pauseDuration?: number; // Pause between typing and backspacing (in ms)
 }
 
-const sixtyFour = Sixtyfour({ subsets: ["latin"], weight: "400" });
+const inter = Inter({ subsets: ["latin"], weight: "400" });
 const irish = Irish_Grover({ subsets: ["latin"], weight: "400" });
 
 const TypingText = ({
@@ -79,19 +79,16 @@ const TypingText = ({
   }, []);
 
   return (
-    <div className="text-4xl flex items-center gap-1">
-      <h2 className={`font-semibold inline ${irish.className}`}>
-        {displayedText}
-      </h2>
-
+    <h2 className={`font-semibold inline text-4xl ${irish.className}`}>
+      {displayedText}
       <span
         className={`inline text-3xl ${
           cursorVisible ? "opacity-50" : "opacity-0"
-        }`}
+        } ${inter.className}`}
       >
         |
       </span>
-    </div>
+    </h2>
   );
 };
 

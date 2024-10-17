@@ -2,6 +2,7 @@ import AppName from "@/components/logo/AppName";
 import Logo from "@/components/logo/Logo";
 import LinkButton from "@/components/ui/button/LinkButton";
 import TypingText from "@/components/ui/text/TypingText";
+import { typingTextHeroData } from "@/data/typintText";
 
 const Home = () => {
   return (
@@ -9,14 +10,7 @@ const Home = () => {
       <div></div>
       <div className="flex w-[90%] flex-col md:flex-row justify-center items-center gap-3">
         <div className="flex flex-col justify-center items-center md:items-start">
-          <TypingText
-            texts={[
-              "Need Response?",
-              "Get Response",
-              "Need a Companion",
-              "Quick is your Companion",
-            ]}
-          />
+          <TypingText texts={typingTextHeroData} />
           <p className="w-[90%] text-center text-base-content my-5 max-w-[700px] md:text-start">
             Unlock the power of instant assistance with <AppName />, your
             friendly AI chatbot designed to streamline your tasks and boost
