@@ -1,5 +1,7 @@
 # QUICKBOT
 
+![Quickbot](/public/logo-light.png)
+
 A comprehensive chatbot application built using Next.js, TypeScript, Tailwind CSS, Next-Auth for authentication, Prisma ORM, MongoDB, Google Generative AI API for AI responses, and Redux Toolkit for state management.
 
 ## Table of Contents
@@ -155,10 +157,24 @@ Open [http://localhost:3000]([http://localhost:3000) with your browser to see th
 Contributions are welcome! Please follow these steps:
 
 1. Fork the repository.
-1. Create a new branch (git checkout -b feature/your-feature-name).
-1. Commit your changes (git commit -m 'Add some feature').
-1. Push to the branch (git push origin feature/your-feature-name).
-1. Open a pull request.
+2. Clone your forked version of the repository
+   ```bash
+    git clone https://github/your-username/quickbot.git
+   ```
+3. Create a new branch.
+   ```bash
+    git checkout -b feature/your-feature-name
+   ```
+4. Add the contributions.
+5. Commit your changes.
+   ```bash
+    git commit -m 'Add some feature'
+   ```
+6. Push to the branch.
+   ```bash
+    git push origin feature/your-feature-name
+   ```
+7. Open a pull request.
 
 Please ensure your code adheres to the project's coding standards and conventions.
 
