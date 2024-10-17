@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { Sixtyfour, Irish_Grover } from "next/font/google";
-import Image from "next/image";
 
 interface TypingEffectProps {
   texts: string[];
@@ -84,28 +83,14 @@ const TypingText = ({
       <h2 className={`font-semibold inline ${irish.className}`}>
         {displayedText}
       </h2>
-      {/* <Image
-        src="/cursor.png"
-        width={30}
-        height={30}
-        alt="Cursor"
-        className={`inline ${cursorVisible ? "opacity-100" : "opacity-0"}`}
-      /> */}
 
       <span
-        // style={{ opacity: 1 }}
         className={`inline text-3xl ${
           cursorVisible ? "opacity-50" : "opacity-0"
         }`}
       >
         |
       </span>
-      {/* {cursorVisible && (
-        // <span style={{ opacity: 1 }} className="text-3xl">
-        //   |
-        // </span>
-        
-      )} */}
     </div>
   );
 };

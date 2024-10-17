@@ -32,6 +32,7 @@ describe("Chat component", () => {
       </Provider>
     );
 
+    // renders the chat title correctly
     expect(screen.getByText("Test Chat")).toBeInTheDocument();
   });
 
