@@ -1,7 +1,7 @@
 "use client";
 
 import { ResponseProps } from "@/types/chats";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import UserImage from "./UserImage";
 import { format } from "date-fns";
 import { FaCopy, FaRegCircleStop, FaRobot } from "react-icons/fa6";
@@ -11,6 +11,7 @@ import clsx from "clsx";
 import { MdLibraryAddCheck } from "react-icons/md";
 import { handleStop, readAloud } from "@/utils/speak";
 import { marked } from "marked";
+import TypingText from "../ui/text/TypingText";
 
 const Response = ({
   response,
@@ -47,7 +48,6 @@ const Response = ({
 
   const handleReadClicked = () => {
     const text = parseMarkdownToText(response.response);
-    // console.log(text);
 
     if (isReadingAloud) {
       handleStop(setIsReadingAloud);
@@ -55,10 +55,6 @@ const Response = ({
       readAloud(text, setIsReadingAloud);
     }
   };
-
-  // useEffect(() => {
-  //   console.log(isReadingAloud);
-  // }, [isReadingAloud]);
 
   return (
     <div>

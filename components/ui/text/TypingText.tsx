@@ -2,22 +2,24 @@
 
 import { useEffect, useState } from "react";
 import { Irish_Grover, Inter } from "next/font/google";
+import clsx from "clsx";
 
 interface TypingEffectProps {
   texts: string[];
   typingSpeed?: number; // Optional, default typing speed in milliseconds.
   backspaceSpeed?: number; // Speed for deleting each character
   pauseDuration?: number; // Pause between typing and backspacing (in ms)
+  mainStyleClass?: string;
+  cursorStyleClass?: string;
 }
-
-const inter = Inter({ subsets: ["latin"], weight: "400" });
-const irish = Irish_Grover({ subsets: ["latin"], weight: "400" });
 
 const TypingText = ({
   texts,
   typingSpeed = 100,
   backspaceSpeed = 50,
   pauseDuration = 3000,
+  mainStyleClass,
+  cursorStyleClass,
 }: TypingEffectProps) => {
   const [displayedText, setDisplayedText] = useState<string>("");
   const [cursorVisible, setCursorVisible] = useState<boolean>(true);
@@ -79,12 +81,13 @@ const TypingText = ({
   }, []);
 
   return (
-    <h2 className={`font-semibold inline text-4xl ${irish.className}`}>
+    <h2 className={clsx(mainStyleClass)}>
       {displayedText}
       <span
-        className={`inline text-3xl ${
+        className={clsx(
+          cursorStyleClass,
           cursorVisible ? "opacity-50" : "opacity-0"
-        } ${inter.className}`}
+        )}
       >
         |
       </span>
@@ -93,3 +96,16 @@ const TypingText = ({
 };
 
 export default TypingText;
+
+// return (
+//   <h2 className={`font-semibold inline text-4xl ${irish.className}`}>
+//     {displayedText}
+//     <span
+//       className={`inline text-3xl ${
+//         cursorVisible ? "opacity-50" : "opacity-0"
+//       } ${inter.className}`}
+//     >
+//       |
+//     </span>
+//   </h2>
+// );
