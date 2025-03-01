@@ -1,11 +1,11 @@
-"use client";
+'use client'
 
-import { LogoProps } from "@/types/logo-types";
-import clsx from "clsx";
-import Image from "next/image";
-import { sizeClass } from "./logo.config";
-import { useSelector } from "react-redux";
-import { RootState } from "@/store";
+import { LogoProps } from '@/types/logo-types'
+import clsx from 'clsx'
+import Image from 'next/image'
+import { sizeClass } from './logo.config'
+import { useSelector } from 'react-redux'
+import { RootState } from '@/store'
 
 /**
  * Web app logo
@@ -14,25 +14,25 @@ import { RootState } from "@/store";
  * @returns {JSX.Element} styled logo component
  */
 const Logo = ({ size }: LogoProps): JSX.Element => {
-  const { theme } = useSelector((store: RootState) => store.general);
+  const { theme } = useSelector((store: RootState) => store.general)
 
   // image src attribute based on user selected theme
   const imageSrc = clsx({
-    "/logo-light.png": theme === "light",
-    "/logo-cupcake.png": theme === "cupcake",
-    "/logo-dracula.png": theme === "dracula",
-    "/logo-black.png": theme === "black",
-  });
+    '/logo-light.png': theme === 'light',
+    '/logo-cupcake.png': theme === 'cupcake',
+    '/logo-dracula.png': theme === 'dracula',
+    '/logo-black.png': theme === 'black',
+  })
 
   return (
     <Image
-      width="196"
-      height="248"
+      width='196'
+      height='248'
       src={imageSrc}
-      alt="Logo"
+      alt='Logo'
       className={clsx(sizeClass(size))}
     />
-  );
-};
+  )
+}
 
-export default Logo;
+export default Logo

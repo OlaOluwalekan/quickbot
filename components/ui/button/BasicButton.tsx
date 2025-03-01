@@ -1,6 +1,6 @@
-import { BasicBtnProps } from "@/types";
-import clsx from "clsx";
-import { sizeClass, themeClass } from "./button.config";
+import { BasicBtnProps } from '@/types'
+import clsx from 'clsx'
+import { sizeClass, themeClass } from './button.config'
 
 /**
  * Basic button
@@ -26,15 +26,16 @@ const BasicButton = ({
       type={type}
       className={clsx(
         sizeClass(size),
-        themeClass(theme as "base" | "primary" | "outline"),
-        disabled && "cursor-not-allowed opacity-50",
-        "btn py-2 rounded"
+        themeClass(theme as 'base' | 'primary' | 'outline'),
+        disabled && 'cursor-not-allowed opacity-50',
+        'rounded',
+        size === 'small' ? 'py-1' : 'py-2'
       )}
       title={title}
     >
       {text}
     </button>
-  );
-};
+  )
+}
 
-export default BasicButton;
+export default BasicButton

@@ -10,9 +10,9 @@ export const sizeClass = (size: string) =>
 
 export const themeClass = (theme: 'primary' | 'outline' | 'base') =>
   clsx({
-    'bg-primary text-primary-content hover:bg-accent hover:text-accent-content':
+    'bg-primary border-primary border-2 text-primary-content hover:bg-accent hover:text-accent-content':
       theme === 'primary',
-    'border-2 border-primary text-primary hover:bg-primary hover:text-primary-content':
+    'border-2 border-primary bg-primary/0 text-primary hover:bg-primary hover:text-primary-content hover-border-none':
       theme === 'outline',
     'border-2 border-base-200 bg-base-100 text-base-content hover:bg-base-200':
       theme === 'base',
