@@ -1,4 +1,4 @@
-// import { auth } from '@/auth'
+import { auth } from '@/auth'
 // import ResponseList from '@/components/chats/ResponseList'
 // import NotFound from '@/components/not-found/NotFound'
 // import { getChatById } from '@/utils/actions/chat'
@@ -11,9 +11,9 @@ const SingleChatPage = async ({
   params: Promise<{ chatId: string }>
 }) => {
   // get logged in user session
-  // const session = await auth()
+  const session = await auth()
   const chatId = (await params).chatId
-  console.log('chatId=> ', chatId)
+  console.log('session=> ', session)
 
   // get all responses in a particular chat by the chatId
   // const responsesRes = await getResponses(chatId)
