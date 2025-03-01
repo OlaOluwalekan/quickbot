@@ -5,11 +5,16 @@ import { getChatById } from '@/utils/actions/chat'
 import { getResponses } from '@/utils/actions/response'
 import React from 'react'
 
-const SingleChatPage = async ({ params }: { params: { chatId: string } }) => {
+const SingleChatPage = async ({
+  params,
+}: {
+  params: Promise<{ chatId: string }>
+}) => {
   // get logged in user session
   const session = await auth()
+  const chatId = (await params).chatId
   // get all responses in a particular chat by the chatId
-  const responsesRes = await getResponses(params.chatId)
+  const responsesRes = await getResponses(chatId)
 
   // return error page if request is unsuccessful
   if (!responsesRes.data) {
