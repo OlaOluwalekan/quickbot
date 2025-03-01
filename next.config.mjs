@@ -12,10 +12,10 @@ const nextConfig = {
       },
     ],
   },
-  webpack: (config) => {
-    config.externals = [...config.externals, 'bcryptjs']
-    return config
-  },
+  // webpack: (config) => {
+  //   config.externals = [...config.externals, 'bcryptjs']
+  //   return config
+  // },
 }
 
 export default nextConfig
