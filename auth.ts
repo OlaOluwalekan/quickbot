@@ -1,8 +1,8 @@
-import { PrismaAdapter } from "@auth/prisma-adapter";
-import NextAuth from "next-auth";
-import { db } from "./utils/db";
-import authConfig from "./auth.config";
-import { getUserById } from "./utils/actions/user";
+import { PrismaAdapter } from '@auth/prisma-adapter'
+import NextAuth from 'next-auth'
+import { db } from './utils/db'
+import authConfig from './auth.config'
+import { getUserById } from './utils/actions/user'
 
 export const {
   handlers: { GET, POST },
@@ -25,14 +25,14 @@ export const {
      * If both conditions are met, it returns true, allowing the sign-in. Otherwise, it returns false.
      */
     async signIn({ user, account }) {
-      if (account?.provider !== "credentials") {
-        return true;
+      if (account?.provider !== 'credentials') {
+        return true
       }
-      const existingUser = await getUserById(user.id as string);
+      const existingUser = await getUserById(user.id as string)
       if (!existingUser || !existingUser.emailVerified) {
-        return false;
+        return false
       }
-      return true;
+      return true
     },
     /**
      * Updates the session object with user details based on the provided token.
@@ -50,14 +50,14 @@ export const {
      */
     async session({ token, session }) {
       if (token.sub && session.user) {
-        session.user.id = token.sub;
-        const existingUser = await getUserById(session.user.id);
+        session.user.id = token.sub
+        const existingUser = await getUserById(session.user.id)
         if (existingUser) {
-          (session.user as any).token = existingUser.tokens;
-          session.user.name = existingUser.name;
+          ;(session.user as any).token = existingUser.tokens
+          session.user.name = existingUser.name
         }
       }
-      return session;
+      return session
     },
     /**
      * Asynchronously processes a JSON Web Token (JWT).
@@ -67,12 +67,12 @@ export const {
      * @returns {Promise<Object>} The processed token object.
      */
     async jwt({ token }) {
-      if (!token.sub) return token;
+      if (!token.sub) return token
 
-      return token;
+      return token
     },
   },
   adapter: PrismaAdapter(db),
-  session: { strategy: "jwt" },
+  session: { strategy: 'jwt' },
   ...authConfig,
-});
+})
