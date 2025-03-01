@@ -3,15 +3,19 @@ const nextConfig = {
   images: {
     remotePatterns: [
       {
-        protocol: "https",
-        hostname: "lh3.googleusercontent.com",
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
       },
       {
-        protocol: "https",
-        hostname: "avatars.githubusercontent.com",
+        protocol: 'https',
+        hostname: 'avatars.githubusercontent.com',
       },
     ],
   },
-};
+  webpack: (config) => {
+    config.externals = [...config.externals, 'bcryptjs']
+    return config
+  },
+}
 
-export default nextConfig;
+export default nextConfig
