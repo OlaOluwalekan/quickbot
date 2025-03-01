@@ -1,19 +1,20 @@
-import AuthCard from "@/components/auth/AuthCard";
-import LoginForm from "@/components/auth/LoginForm";
+import AuthCard from '@/components/auth/AuthCard'
+import AuthWrapper from '@/components/auth/AuthWrapper'
+import LoginForm from '@/components/auth/LoginForm'
 
 const LoginPage = () => {
   return (
-    <div className="flex justify-center items-center min-h-screen bg-base-100">
+    <AuthWrapper>
       <AuthCard
-        page="Login"
-        headerText="Welcome back. Provide your login details"
-        backText="No Account"
-        backLink="register"
+        page='Login'
+        headerText='Welcome back. Provide your login details'
+        backText='No Account'
+        backLink='register'
       >
         <LoginForm />
       </AuthCard>
-    </div>
-  );
-};
+    </AuthWrapper>
+  )
+}
 
-export default LoginPage;
+export default LoginPage
