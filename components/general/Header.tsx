@@ -1,8 +1,8 @@
 import Link from 'next/link'
 import AppName from '../logo/AppName'
 import Logo from '../logo/Logo'
-import BasicButton from '../ui/button/BasicButton'
 import clsx from 'clsx'
+import LinkButton from '../ui/button/LinkButton'
 
 const navLink = [
   {
@@ -44,8 +44,20 @@ const Header = () => {
       </div>
 
       <div className='hidden gap-2 md:flex'>
-        <BasicButton size='small' type='button' text='Signup' theme='outline' />
-        <BasicButton size='small' type='button' text='Login' theme='primary' />
+        <LinkButton
+          size='small'
+          type='button'
+          text='Signup'
+          theme='outline'
+          href='/auth/register'
+        />
+        <LinkButton
+          size='small'
+          type='button'
+          text='Login'
+          theme='primary'
+          href='/auth/login'
+        />
       </div>
     </div>
   )
