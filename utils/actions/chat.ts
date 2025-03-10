@@ -62,9 +62,19 @@ export const getChats = async (
       },
     })
 
-    const grouped = Object.groupBy(chats, (chat) => {
-      return chat.updatedAt.toISOString().split('T')[0]
-    })
+    // const grouped = Object.groupBy(chats, (chat) => {
+    //   return chat.updatedAt.toISOString().split('T')[0]
+    // })
+    const grouped = chats.reduce(
+      (acc: { [key: string]: typeof chats }, chat) => {
+        if (acc[chat.updatedAt.toISOString().split('T')[0]] == null) {
+          acc[chat.updatedAt.toISOString().split('T')[0]] = [chat]
+        }
+        acc[chat.updatedAt.toISOString().split('T')[0]].push(chat)
+        return acc
+      },
+      {}
+    )
 
     const dates = Object.keys(grouped).sort((a, b) => {
       return new Date(b).getTime() - new Date(a).getTime()

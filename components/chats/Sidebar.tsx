@@ -34,10 +34,28 @@ const Sidebar = ({
     deletePopUpIsOpen,
   } = useSelector((store: RootState) => store.general)
   const dispatch = useDispatch()
-  const grouped: Record<string, ChatProps[]> = Object.groupBy(chats, (chat) => {
-    return new Date(chat.updatedAt).toISOString().split('T')[0]
-  }) as Record<string, ChatProps[]>
-  console.log('GGG=>', grouped)
+
+  const grouped: Record<string, ChatProps[]> = chats.reduce(
+    (acc: Record<string, ChatProps[]>, chat) => {
+      const dateKey = (
+        chat.updatedAt instanceof Date
+          ? chat.updatedAt
+          : new Date(chat.updatedAt)
+      )
+        .toISOString()
+        .split('T')[0]
+      if (acc[dateKey] == null) {
+        acc[dateKey] = []
+      }
+      acc[dateKey].push(chat)
+      return acc
+    },
+    {}
+  ) as Record<string, ChatProps[]>
+  // const grouped: Record<string, ChatProps[]> = Object.groupBy(chats, (chat) => {
+  //   return new Date(chat.updatedAt).toISOString().split('T')[0]
+  // }) as Record<string, ChatProps[]>
+  // console.log('GGG=>', grouped)
 
   useEffect(() => {
     if (!mobileNavIsOpen) {
