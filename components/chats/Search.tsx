@@ -5,17 +5,22 @@ import { ChangeEvent, useEffect, useState } from 'react'
 import clsx from 'clsx'
 import { searchChat } from '@/utils/actions/chat'
 import { ChatProps, ResponseProps } from '@/types/chats'
-import Link from 'next/link'
-import { getSnippetWithHighlight } from '@/utils/search'
 import { ChatSearchResult, ResponseSearchResult } from './SearchResult'
 import { usePathname } from 'next/navigation'
+import { useDispatch, useSelector } from 'react-redux'
+import { RootState } from '@/store'
+import { setSearchResultIsOpen } from '@/features/generalSlice'
 
 const Search = ({ userId }: { userId: string }) => {
   const [searchText, setSearchText] = useState('')
   const [results, setResults] = useState<(ChatProps | ResponseProps)[]>([])
   const pathname = usePathname()
   const path = pathname.split('/')
-  console.log(path)
+  const { searchResultIsOpen } = useSelector(
+    (store: RootState) => store.general
+  )
+  const dispatch = useDispatch()
+  // console.log(path)
 
   const lastPath = path[path.length - 1]
   let chatId = ''
@@ -34,20 +39,27 @@ const Search = ({ userId }: { userId: string }) => {
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    console.log({ searchOption, searchText })
-
-    // handle search logic here
   }
 
-  useEffect(() => {
+  const search = () => {
+    if (searchText) {
+      dispatch(setSearchResultIsOpen(true))
+    } else {
+      dispatch(setSearchResultIsOpen(false))
+      setResults([])
+    }
     searchChat(searchText, searchOption, userId, chatId).then((res) => {
       setResults(res)
     })
+  }
+
+  useEffect(() => {
+    search()
   }, [searchText, searchOption])
 
   return (
     <div>
-      <form className='flex' onSubmit={handleSubmit}>
+      <form className='a-modal flex' onSubmit={handleSubmit}>
         <label
           className={clsx(
             'input input-bordered flex items-center gap-2 rounded-tr-none rounded-br-none'
@@ -69,6 +81,7 @@ const Search = ({ userId }: { userId: string }) => {
             placeholder='Search'
             value={searchText}
             onChange={handleChange}
+            onFocus={search}
           />
         </label>
         <select
@@ -80,7 +93,7 @@ const Search = ({ userId }: { userId: string }) => {
         </select>
       </form>
 
-      {searchText && (
+      {searchResultIsOpen && (
         <div className='absolute z-20 bg-base-200 text-base-content w-[90vw] mx-auto left-0 right-0 top-16 px-4 py-3 shadow-xl rounded-md text-sm max-h-[400px] overflow-auto scrollbar-thin'>
           {results.length == 0 ? (
             <div>No match</div>

@@ -18,7 +18,7 @@ export const ChatSearchResult = ({
   return (
     <Link
       href={`/chat/${result.id}`}
-      className='px-2 py-1 hover:bg-base-300/30 block'
+      className='px-2 py-3 hover:bg-base-300/30 block'
       onClick={() => setSearchText('')}
       dangerouslySetInnerHTML={{ __html: render }}
     ></Link>
