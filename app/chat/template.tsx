@@ -11,12 +11,16 @@ const Template = async ({ children }: { children: ReactNode }) => {
   // get authenticated user session
   const session = await auth()
   let chats: ChatProps[] = []
+  let dates: string[] = []
+  let grouped: Record<string, ChatProps[]> = {}
 
   // get chats created by the user by the userId
   if (session?.user?.id) {
     const chatResponse = await getChats(session?.user?.id)
     if (chatResponse.data) {
       chats = chatResponse.data.chats
+      dates = chatResponse.data.dates
+      grouped = chatResponse.data.grouped
     } else {
       chats = []
     }
@@ -28,7 +32,7 @@ const Template = async ({ children }: { children: ReactNode }) => {
       <ChatMobileHeader userId={session?.user?.id as string} />
       <div className='flex flex-grow'>
         {/* sidebar containing list of all chats created by a user */}
-        <Sidebar data={session?.user} chats={chats} />
+        <Sidebar data={session?.user} chats={chats} dates={dates} />
         <div className='w-full h-full flex flex-col bg-primary pt-1'>
           {/* header displayed on larger screens */}
           <ChatDesktopHeader userId={session?.user?.id as string} />

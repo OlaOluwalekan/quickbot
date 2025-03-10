@@ -1,4 +1,12 @@
-import numeral from "numeral";
+import numeral from 'numeral'
+import {
+  formatDistanceToNow,
+  isToday,
+  isYesterday,
+  isThisWeek,
+  isThisMonth,
+  format,
+} from 'date-fns'
 
 /**
  * Formats a given number according to the specified format string.
@@ -10,8 +18,27 @@ import numeral from "numeral";
  */
 export const formatNumber = (
   number: number,
-  formatStr: string = "0,0"
+  formatStr: string = '0,0'
 ): string => {
-  const result = numeral(number).format(formatStr);
-  return result;
-};
+  const result = numeral(number).format(formatStr)
+  return result
+}
+
+export const formatCustomDate = (dateString: string) => {
+  const date = new Date(dateString)
+
+  if (isToday(date)) {
+    return 'Today'
+  } else if (isYesterday(date)) {
+    return 'Yesterday'
+  } else if (isThisWeek(date)) {
+    return formatDistanceToNow(date, { addSuffix: true }) // "3 days ago"
+  } else if (isThisMonth(date)) {
+    return format(date, 'MMMM d') // "March 5"
+  } else {
+    return format(date, 'MMMM d, yyyy') // "January 10, 2023"
+  }
+}
+
+// Usage
+// console.log(formatCustomDate('2024-03-05')); // e.g., "3 days ago"

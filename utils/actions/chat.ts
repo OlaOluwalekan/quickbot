@@ -61,7 +61,21 @@ export const getChats = async (
         updatedAt: 'desc',
       },
     })
-    return ActionResponse.success('Chats retrieved successfully', { chats })
+
+    const grouped = Object.groupBy(chats, (chat) => {
+      return chat.updatedAt.toISOString().split('T')[0]
+    })
+
+    const dates = Object.keys(grouped).sort((a, b) => {
+      return new Date(b).getTime() - new Date(a).getTime()
+    })
+    // console.log('grouped', grouped)
+
+    return ActionResponse.success('Chats retrieved successfully', {
+      chats,
+      dates,
+      grouped,
+    })
   } catch (error) {
     return ActionResponse.error('Failed to retrieve chats', null)
   }
