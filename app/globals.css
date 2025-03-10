@@ -2,3 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 /* @import "./style.css"; */
+
+.bg-yellow {
+  background-color: rgb(199, 143, 1);
+}

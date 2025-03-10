@@ -1,5 +1,5 @@
-import { InputWithIconsProps } from "@/types/input-types";
-import clsx from "clsx";
+import { InputWithIconsProps } from '@/types/input-types'
+import clsx from 'clsx'
 
 /**
  * typical input with icon
@@ -27,15 +27,15 @@ const InputWithIcon = ({
   return (
     <label
       className={clsx(
-        "input input-bordered flex items-center gap-2 my-2",
-        type === "hidden" && "hidden"
+        'input input-bordered flex items-center gap-2 my-2',
+        type === 'hidden' && 'hidden'
       )}
     >
       {/* icon */}
       <span
         className={clsx(
-          "input-icon",
-          readonly ? "text-gray-500 opacity-50" : "text-primary opacity-100"
+          'input-icon',
+          readonly ? 'text-gray-500 opacity-50' : 'text-primary opacity-100'
         )}
       >
         {icons}
@@ -44,7 +44,7 @@ const InputWithIcon = ({
       {/* input */}
       <input
         type={type}
-        className={clsx("grow", readonly && "opacity-50 text-gray-500")}
+        className={clsx('grow', readonly && 'opacity-50 text-gray-500')}
         placeholder={placeholder}
         name={name}
         id={id}
@@ -53,7 +53,7 @@ const InputWithIcon = ({
         readOnly={readonly}
       />
     </label>
-  );
-};
+  )
+}
 
-export default InputWithIcon;
+export default InputWithIcon
