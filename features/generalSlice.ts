@@ -1,15 +1,11 @@
 import { GeneralSliceInit } from '@/types'
 import { ChatProps } from '@/types/chats'
+import { ThemeProps } from '@/types/theme.interface'
 import { addToLocalStorage, getFromLocalStorage } from '@/utils/local-storage'
 import { createSlice } from '@reduxjs/toolkit'
 
 const initialState: GeneralSliceInit = {
-  theme:
-    (getFromLocalStorage('theme') as
-      | 'cupcake'
-      | 'dracula'
-      | 'light'
-      | 'black') || 'light',
+  theme: (getFromLocalStorage('theme') as ThemeProps) || 'light',
   themeIsOpen: false,
   mobileNavIsOpen: false,
   profileDialogIsOpen: false,
@@ -31,7 +27,7 @@ const generalSlice = createSlice({
   initialState,
   name: 'general',
   reducers: {
-    changeTheme: (state, { payload }) => {
+    changeTheme: (state, { payload }: { payload: ThemeProps }) => {
       state.theme = payload
       addToLocalStorage('theme', payload)
     },

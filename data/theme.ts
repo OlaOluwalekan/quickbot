@@ -1,3 +1,4 @@
+import { ThemeProps } from '@/types/theme.interface'
 import { FaMoon, FaSun } from 'react-icons/fa6'
 
 // maps theme name to icon
@@ -12,7 +13,7 @@ export const themeMap: { [key: string]: { icon: any } } = {
 
 // theme data
 export const themeData: {
-  name: 'light' | 'dark'
+  name: ThemeProps
   icon: any
 }[] = [
   {
