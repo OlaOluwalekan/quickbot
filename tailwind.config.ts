@@ -27,28 +27,6 @@ const config: Config = {
     },
   },
   plugins: [require('daisyui'), require('tailwind-scrollbar')],
-  // daisyui: {
-  //   themes: [
-  //     {
-  //       dark: {
-  //         primary: '#2d2d31',
-  //         'primary-content': '#ffffff',
-  //         secondary: '#1a1a1d',
-  //         'secondary-content': '#ffffff',
-  //         'base-100': '#000000',
-  //         'base-content': '#e1e0e2',
-  //         'base-200': '#1f1d1f',
-  //         'base-200-content': '#f0d9f5',
-  //         'base-300': '#454045',
-  //         'base-300-content': '#cdbad0',
-  //         neutral: '#392c40',
-  //         'neutral-content': '#cfccd0',
-  //         accent: '#40404c',
-  //         'accent-content': '#dcdce2',
-  //       },
-  //     },
-  //   ],
-  // },
 }
 
 export default config

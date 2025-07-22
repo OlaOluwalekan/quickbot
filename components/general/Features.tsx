@@ -25,7 +25,7 @@ const features = [
 
 const Features = () => {
   return (
-    <div className='flex flex-col gap-4 justify-center items-center md:flex-row py-2'>
+    <div className='flex flex-col gap-4 justify-center items-center md:flex-row py-2 text-base-content dark:text-dark-base-content'>
       {features.map((feature) => (
         <Feature key={feature.id} {...feature} />
       ))}

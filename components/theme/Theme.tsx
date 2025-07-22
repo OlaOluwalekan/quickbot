@@ -38,7 +38,7 @@ const Theme = () => {
         </div>
       )}
       <button
-        className='a-modal p-3 bg-primary rounded-md text-primary-content mt-2 hover:bg-accent'
+        className='a-modal p-3 bg-primary rounded-md text-primary-content mt-2 hover:bg-accent cursor-pointer'
         onClick={() => dispatch(toggleThemeOpen(!themeIsOpen))}
       >
         {themeMap[theme].icon()}

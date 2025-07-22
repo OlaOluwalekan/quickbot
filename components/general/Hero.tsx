@@ -13,10 +13,10 @@ const Hero = () => {
     <div className='flex flex-col justify-center items-center'>
       <TypingText
         texts={typingTextHeroData}
-        mainStyleClass={`font-semibold inline text-4xl ${irish.className}`}
+        className={`font-semibold inline text-4xl text-base-content dark:text-dark-base-content ${irish.className}`}
         cursorStyleClass={`inline text-3xl ${inter.className}`}
       />
-      <p className='w-[90%] text-center text-base-content my-5 max-w-[700px] md'>
+      <p className='w-[90%] text-center text-base-content dark:text-dark-base-content my-5 max-w-[700px] md'>
         Revolutionize Your conversation. Unlock the power of instant assistance
         with <AppName />, your companion AI chatbot designed to streamline your
         tasks and boost productivity.
