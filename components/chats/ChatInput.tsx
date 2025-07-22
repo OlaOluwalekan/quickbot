@@ -1,110 +1,110 @@
-"use client";
+'use client'
 
 import {
   setAIResponse,
   setChatInputHeight,
   setLoadingResponse,
-} from "@/features/generalSlice";
-import { RootState } from "@/store";
-import { getResponseFromAI } from "@/utils/actions/response";
-import clsx from "clsx";
-import { useRouter } from "next/navigation";
-import { ChangeEvent, useEffect, useRef, useState, useTransition } from "react";
-import { FaPaperPlane } from "react-icons/fa6";
-import { useDispatch, useSelector } from "react-redux";
+} from '@/features/generalSlice'
+import { RootState } from '@/store'
+import { getResponseFromAI } from '@/utils/actions/response'
+import clsx from 'clsx'
+import { useRouter } from 'next/navigation'
+import { ChangeEvent, useEffect, useRef, useState, useTransition } from 'react'
+import { FaPaperPlane } from 'react-icons/fa6'
+import { useDispatch, useSelector } from 'react-redux'
 
 const ChatInput = ({
   userId,
   existingToken,
 }: {
-  userId: string;
-  existingToken: number;
+  userId: string
+  existingToken: number
 }) => {
-  const textRef = useRef<HTMLTextAreaElement>(null);
-  const [isPending, startTransition] = useTransition();
-  const router = useRouter();
-  const dispatch = useDispatch();
-  const [text, setText] = useState("");
-  const { currentPageTitle } = useSelector((store: RootState) => store.general);
+  const textRef = useRef<HTMLTextAreaElement>(null)
+  const [isPending, startTransition] = useTransition()
+  const router = useRouter()
+  const dispatch = useDispatch()
+  const [text, setText] = useState('')
+  const { currentPageTitle } = useSelector((store: RootState) => store.general)
 
   useEffect(() => {
     if (textRef.current) {
-      textRef.current.style.height = "48px";
+      textRef.current.style.height = '48px'
     }
-  }, []);
+  }, [])
 
   const handleChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
-    setText(e.target.value);
+    setText(e.target.value)
     if (textRef.current) {
-      textRef.current.style.height = "48px";
-      textRef.current.style.height = `${textRef.current.scrollHeight}px`;
+      textRef.current.style.height = '48px'
+      textRef.current.style.height = `${textRef.current.scrollHeight}px`
       if (textRef.current.scrollHeight > 48) {
-        textRef.current.style.lineHeight = "20px";
+        textRef.current.style.lineHeight = '20px'
       }
 
-      let numHeight = parseInt(textRef.current.style.height);
+      let numHeight = parseInt(textRef.current.style.height)
       dispatch(
         setChatInputHeight(
-          numHeight < 184 ? textRef.current.style.height : "195px"
+          numHeight < 184 ? textRef.current.style.height : '195px'
         )
-      );
+      )
     }
-  };
+  }
 
   const handleSubmit = (formData: FormData) => {
     startTransition(() => {
-      dispatch(setLoadingResponse(true));
+      dispatch(setLoadingResponse(true))
       getResponseFromAI(formData, window.location.pathname, existingToken).then(
         (res) => {
           if (res.success) {
-            dispatch(setAIResponse(res.data.text));
+            dispatch(setAIResponse(res.data.text))
             if (textRef.current) {
-              textRef.current.value = "";
-              textRef.current.style.height = "48px";
+              textRef.current.value = ''
+              textRef.current.style.height = '48px'
             }
           }
-          if (res?.data.chatId && window.location.pathname === "/chat") {
-            router.push(`/chat/${res.data.chatId}`);
+          if (res?.data.chatId && window.location.pathname === '/chat') {
+            router.push(`/chat/${res.data.chatId}`)
           }
-          dispatch(setLoadingResponse(false));
+          dispatch(setLoadingResponse(false))
         }
-      );
-    });
-  };
+      )
+    })
+  }
 
   return (
     <form
       className={clsx(
-        "w-full my-3 absolute bottom-0 left-0 right-0 mx-auto",
-        currentPageTitle === "" && "hidden"
+        'w-full my-3 absolute bottom-0 left-0 right-0 mx-auto rounded-md overflow-hidden',
+        currentPageTitle === '' && 'hidden'
       )}
       action={handleSubmit}
     >
-      <input type="hidden" value={userId} id="id" name="id" />
+      <input type='hidden' value={userId} id='id' name='id' />
       <textarea
         onChange={handleChange}
         ref={textRef}
-        name="question"
-        id="question"
+        name='question'
+        id='question'
         rows={1}
-        placeholder="Ask Quick"
-        className="w-full resize-none h-[48px] max-h-[200px] overflow-y-auto text-base py-3 pl-3 pr-8 rounded-lg bg-base-200 border-1 border-primary placeholder:text-base-300 scrollbar-thin"
+        placeholder='Ask Quick'
+        className='w-full resize-none h-[48px] max-h-[200px] overflow-y-auto scrollbar-none text-base py-3 pl-3 pr-8 rounded-lg bg-base-200 dark:bg-dark-base-200 border-1 border-primary placeholder:text-base-300 scrollbar-thin focus:outline-none'
         defaultValue={text}
       ></textarea>
       <button
-        type="submit"
+        type='submit'
         className={clsx(
-          "absolute bottom-2.5 md:bottom-4 m-auto right-2 w-[30px] h-[30px] rounded text-primary-content flex justify-center items-center",
-          isPending || text.trim() === ""
-            ? "bg-gray-600 cursor-not-allowed opacity-50"
-            : "bg-primary hover:bg-accent cursor-pointer opacity-100"
+          'absolute bottom-2.5 md:bottom-4 m-auto right-2 w-[30px] h-[30px] rounded text-primary-content flex justify-center items-center',
+          isPending || text.trim() === ''
+            ? 'bg-gray-600 cursor-not-allowed opacity-50'
+            : 'bg-primary hover:bg-accent cursor-pointer opacity-100'
         )}
-        disabled={isPending || text.trim() === ""}
+        disabled={isPending || text.trim() === ''}
       >
         <FaPaperPlane />
       </button>
     </form>
-  );
-};
+  )
+}
 
-export default ChatInput;
+export default ChatInput

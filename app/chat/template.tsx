@@ -37,7 +37,7 @@ const Template = async ({ children }: { children: ReactNode }) => {
           {/* header displayed on larger screens */}
           <ChatDesktopHeader userId={session?.user?.id as string} />
           <div className='flex flex-col flex-grow bg-primary md:pt-3 md:pb-2 md:pr-2'>
-            <section className='flex flex-grow flex-col bg-base-100 md:rounded-lg'>
+            <section className='flex flex-grow flex-col bg-base-100 dark:bg-dark-base-100 md:rounded-lg'>
               <section className='flex flex-grow flex-col items-end w-[90%] mx-auto max-w-[800px] relative'>
                 {/* children */}
                 <section className='h-[calc(100vh-125px)] w-full md:h-[calc(100vh-151px)] flex flex-col'>

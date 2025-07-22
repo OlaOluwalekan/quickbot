@@ -74,7 +74,7 @@ const TemplatePrompts = ({
                 />
                 <button
                   type='submit'
-                  className='w-[200px] h-[100px] border-base-200 border-2 px-2 py-2 flex flex-col rounded hover:bg-base-200'
+                  className='w-[200px] h-[100px] bg-base-200 text-base-content dark:bg-dark-base-200 dark:text-dark-base-content border-base-200 border-2 px-2 py-2 flex flex-col rounded hover:bg-base-300 dark:hover:bg-dark-base-300 cursor-pointer'
                 >
                   <span className='text-xs flex w-fit px-1 bg-secondary/50 rounded-sm'>
                     {item.domain || 'general'}
