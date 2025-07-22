@@ -27,14 +27,13 @@ const InputWithIcon = ({
   return (
     <label
       className={clsx(
-        'input input-bordered flex items-center gap-2 my-2',
+        'bg-base-100 dark:bg-dark-base-100 px-3 py-2.5 rounded-md flex items-center gap-2 my-2 focus-within:border-2 focus-within:border-primary',
         type === 'hidden' && 'hidden'
       )}
     >
       {/* icon */}
       <span
         className={clsx(
-          'input-icon',
           readonly ? 'text-gray-500 opacity-50' : 'text-primary opacity-100'
         )}
       >
@@ -44,7 +43,10 @@ const InputWithIcon = ({
       {/* input */}
       <input
         type={type}
-        className={clsx('grow', readonly && 'opacity-50 text-gray-500')}
+        className={clsx(
+          'grow focus:outline-none text-base-content dark:text-dark-base-content',
+          readonly && 'opacity-50 text-gray-500'
+        )}
         placeholder={placeholder}
         name={name}
         id={id}

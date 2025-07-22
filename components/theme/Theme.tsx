@@ -18,7 +18,7 @@ const Theme = () => {
   }
 
   return (
-    <div className='fixed bottom-20 right-3 flex flex-col justify-end items-end'>
+    <div className='fixed bottom-20 right-3 flex flex-col justify-end items-end z-30'>
       {themeIsOpen && (
         <div className='flex flex-col w-[150px] bg-primary justify-center items-center shadow-lg p-2 rounded-md'>
           {themeData.map((item) => {
