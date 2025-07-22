@@ -65,7 +65,6 @@
     "jest-environment-jsdom": "^29.7.0",
     "next-router-mock": "^0.9.13",
     "prisma": "^5.17.0",
-    "tailwind-scrollbar": "^3.1.0",
     "ts-jest": "^29.1.5",
     "ts-node": "^10.9.2",
     "typescript": "^5"
