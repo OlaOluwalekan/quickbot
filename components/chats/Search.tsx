@@ -62,7 +62,7 @@ const Search = ({ userId }: { userId: string }) => {
       <form className='a-modal flex' onSubmit={handleSubmit}>
         <label
           className={clsx(
-            'input input-bordered flex items-center gap-2 rounded-tr-none rounded-br-none'
+            'flex items-center bg-base-100 dark:bg-dark-base-100 rounded-md gap-2 rounded-tr-none rounded-br-none px-3 py-2'
           )}
         >
           {/* icon */}
@@ -76,7 +76,7 @@ const Search = ({ userId }: { userId: string }) => {
           <input
             type='text'
             className={clsx(
-              'grow text-base-content focus:outline-none text-sm'
+              'grow text-base-content dark:text-dark-base-content focus:outline-none text-sm'
             )}
             placeholder='Search'
             value={searchText}
@@ -85,7 +85,7 @@ const Search = ({ userId }: { userId: string }) => {
           />
         </label>
         <select
-          className='select select-bordered w-full max-w-xs text-base-content rounded-tl-none rounded-bl-none text-sm'
+          className='w-full max-w-xs bg-base-100 dark:bg-dark-base-100 text-base-content dark:text-dark-base-content rounded-md rounded-tl-none rounded-bl-none text-sm'
           onChange={(e) => setSearchOption(e.target.value)}
         >
           {chatId && <option value='this chat'>This Chat</option>}
