@@ -1,7 +1,7 @@
 import { ChatProps } from './chats'
 
 export interface GeneralSliceInit {
-  theme: 'cupcake' | 'dracula' | 'light' | 'black'
+  theme: 'light' | 'dark'
   themeIsOpen: boolean
   mobileNavIsOpen: boolean
   profileDialogIsOpen: boolean
