@@ -19,9 +19,7 @@ const Logo = ({ size }: LogoProps): JSX.Element => {
   // image src attribute based on user selected theme
   const imageSrc = clsx({
     '/logo-light.png': theme === 'light',
-    '/logo-cupcake.png': theme === 'cupcake',
-    '/logo-dracula.png': theme === 'dracula',
-    '/logo-black.png': theme === 'black',
+    '/logo-black.png': theme === 'dark',
   })
 
   return (

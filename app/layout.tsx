@@ -20,18 +20,19 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <StoreProvider>
-      <ThemeProvider>
-        <html lang='en'>
-          <body
-            className={`main bg-base-100 text-base-content ${inter.className}`}
-          >
+    <html lang='en'>
+      <body
+        suppressHydrationWarning
+        className={`main bg-base-100 text-base-content ${inter.className}`}
+      >
+        <StoreProvider>
+          <ThemeProvider>
             {children}
             <Theme />
             <Toaster />
-          </body>
-        </html>
-      </ThemeProvider>
-    </StoreProvider>
+          </ThemeProvider>
+        </StoreProvider>
+      </body>
+    </html>
   )
 }
