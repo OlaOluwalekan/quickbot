@@ -13,9 +13,9 @@ const ChatMobileHeader = ({ userId }: { userId: string }) => {
   return (
     <header className='bg-primary text-primary-content md:hidden'>
       <div className='w-[90%] mx-auto flex justify-between items-center py-3'>
-        <div className='w-full flex gap-3'>
+        <div className='w-full flex gap-3 items-center'>
           <button
-            className='text-lg'
+            className='text-lg cursor-pointer hover:bg-accent p-2 rounded-md'
             onClick={() => dispatch(toggleMobileNavOpen(true))}
           >
             <FaBarsStaggered />

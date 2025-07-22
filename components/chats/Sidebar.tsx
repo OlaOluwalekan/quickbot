@@ -77,7 +77,7 @@ const Sidebar = ({
       >
         <section className='px-3 py-2 flex justify-between items-center'>
           <button
-            className='text-primary-content text-lg md:hidden'
+            className='text-primary-content text-lg cursor-pointer p-2 hover:bg-accent rounded-md md:hidden'
             onClick={() => dispatch(toggleMobileNavOpen(false))}
           >
             <FaBarsStaggered />
@@ -91,8 +91,8 @@ const Sidebar = ({
             New Chat <BiSolidMessageSquareAdd />
           </Link>
         </section>
-        <div className='divider my-0'></div>
-        <div className='h-[calc(100%-75px)] flex flex-col relative'>
+        <div className='w-full h-0.5 bg-secondary/30 dark:bg-dark-secondary/30'></div>
+        <div className='h-[calc(100%-75px)] flex flex-col relative mt-1'>
           <ChatList chats={chats} dates={dates} grouped={grouped} />
           {chatMenuIsOpen && <ChatMenu />}
           {editPopUpIsOpen && <EditPopup />}

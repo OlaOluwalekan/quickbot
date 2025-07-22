@@ -1,8 +1,47 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-/* @import "./style.css"; */
+@import 'tailwindcss';
+@plugin "tailwind-scrollbar";
 
-.bg-yellow {
-  background-color: rgb(199, 143, 1);
+/* @custom-variant dark (&:where(.dark, .dark *)); */
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
+@theme {
+  /* GENERAL */
+  --color-error: #f5365c;
+  --color-success: #21ba45;
+  --color-warning: #f1c40f;
+  --color-info: #3182ce;
+  --color-light: #ffffff;
+  --color-dark: #212121;
+
+  /* LIGHT MODE */
+  --color-primary: #5b16fc;
+  --color-primary-content: #ffffff;
+  --color-secondary: #10c4e3;
+  --color-secondary-content: #090476;
+  --color-base-100: #f3f5fd;
+  --color-base-content: #0a029e;
+  --color-base-200: #cdcdce;
+  --color-base-200-content: #363636;
+  --color-base-300: #8c8c8d;
+  --color-base-300-content: #efeff5;
+  --color-neutral: #0f7eba;
+  --color-neutral-content: #eaedf8;
+  --color-accent: #32049c;
+  --color-accent-content: #e7dffa;
+
+  /* DARK MODE */
+  --color-dark-primary: #2d2d31;
+  --color-dark-primary-content: #ffffff;
+  --color-dark-secondary: #1a1a1d;
+  --color-dark-secondary-content: #ffffff;
+  --color-dark-base-100: #000000;
+  --color-dark-base-content: #e1e0e2;
+  --color-dark-base-200: #1f1d1f;
+  --color-dark-base-200-content: #f0d9f5;
+  --color-dark-base-300: #454045;
+  --color-dark-base-300-content: #cdbad0;
+  --color-dark-neutral: #392c40;
+  --color-dark-neutral-content: #cfccd0;
+  --color-dark-accent: #40404c;
+  --color-dark-accent-content: #dcdce2;
 }

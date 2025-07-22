@@ -35,7 +35,11 @@ const Header = () => {
         <section className='flex gap-2'>
           {navLink.map((link) => {
             return (
-              <Link href={link.link} key={link.id} className={clsx('text-sm')}>
+              <Link
+                href={link.link}
+                key={link.id}
+                className={clsx('text-sm text-primary hover:underline')}
+              >
                 {link.name}
               </Link>
             )

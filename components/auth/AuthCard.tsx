@@ -22,30 +22,27 @@ const AuthCard = ({
   backLink,
 }: AuthCardProps) => {
   return (
-    <div className='py-6 w-[90%] h-full flex flex-col items-center justify-center bg-base-100/60'>
+    <div className='py-6 w-[90%] h-full flex flex-col items-center justify-center bg-base-100/60 dark:bg-dark-base-100/60 text-base-content dark:text-dark-base-content'>
       <div className='flex flex-col w-full items-center justify-center'>
-        <h2 className='text-2xl font-bold text-base-content my-1 md:text-5xl'>
-          {page}
-        </h2>
-        <p className='my-1 md:text-xl text-base-content'>{headerText}</p>
+        <h2 className='text-2xl font-bold my-1 md:text-5xl'>{page}</h2>
+        <p className='my-1 md:text-xl'>{headerText}</p>
       </div>
       <div className='w-full flex justify-center items-center'>
         {/* CARD CHILDREN */}
         <div className='w-[90%] max-w-[400px] p-1'>
           {children}
-          <article className='flex justify-center items-center text-sm my-2 gap-1 text-base-content'>
+          <article className='flex justify-center items-center text-sm my-2 gap-1'>
             {backText}?
-            <Link
-              href={`/auth/${backLink}`}
-              className='underline text-base-content capitalize'
-            >
+            <Link href={`/auth/${backLink}`} className='underline capitalize'>
               {backLink} here
             </Link>
           </article>
 
           {/* divider */}
-          <div className='divider divider-secondary text-base-content my-4 text-sm'>
-            Or Login With
+          <div className='my-4 text-sm flex items-center'>
+            <div className='h-0.5 bg-secondary dark:bg-dark-secondary w-full'></div>
+            <div className='w-full text-center'>Or Login With</div>
+            <div className='h-0.5 bg-secondary dark:bg-dark-secondary w-full'></div>
           </div>
 
           {/* OAuth Login Section - GitHub and Google */}
