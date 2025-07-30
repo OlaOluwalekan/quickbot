@@ -6,9 +6,9 @@ import NavLinks from './NavLinks'
 const Header = () => {
   return (
     <div className='flex tablet:justify-between items-center py-4 px-6 gap-3'>
-      <section className='flex gap-0.5 items-center w-full'>
-        <Logo size='icon' />
-        <AppName />
+      <section className='flex items-center w-full'>
+        <Logo size={30} animate />
+        <AppName className='ml-[-8px] text-lg text-teal-green' />
       </section>
 
       <div className='w-full flex flex-grow'>

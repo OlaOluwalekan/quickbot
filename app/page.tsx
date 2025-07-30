@@ -8,7 +8,7 @@ const Home = () => {
       <div className='w-full'>
         <Header />
       </div>
-      <div className='flex grow w-[90%] mx-auto flex-col justify-center items-center gap-3'>
+      <div className='flex grow w-full mx-auto flex-col justify-center items-center gap-3'>
         {/* HERO */}
         <Hero />
 
