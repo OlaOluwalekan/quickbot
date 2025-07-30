@@ -21,11 +21,13 @@ const BasicButton = ({
   theme,
   title,
 }: BasicBtnProps): JSX.Element => {
+  const defaultClass = 'w-full py-2 px-4 rounded text-center'
+
   return (
     <button
       type={type}
       className={clsx(
-        sizeClass(size),
+        defaultClass,
         themeClass(theme as 'base' | 'primary' | 'outline'),
         disabled
           ? 'cursor-not-allowed opacity-50'
