@@ -1,18 +1,12 @@
 import { LinkBtnProps } from '@/types'
 import clsx from 'clsx'
 import Link from 'next/link'
-import { sizeClass, themeClass } from './button.config'
 
-const LinkButton = ({ size, text, theme, href }: LinkBtnProps) => {
+const LinkButton = ({ text, className, href }: LinkBtnProps) => {
+  const defaultClass = 'w-full py-2 px-4 rounded text-center'
+
   return (
-    <Link
-      href={href}
-      className={clsx(
-        sizeClass(size),
-        themeClass(theme as 'base' | 'primary' | 'outline'),
-        'btn py-2 rounded text-center'
-      )}
-    >
+    <Link href={href} className={clsx(defaultClass, className)}>
       {text}
     </Link>
   )

@@ -4,13 +4,14 @@ interface ButtonBase {
   type?: 'submit' | 'button' | 'reset'
   text?: string
   theme?: 'primary' | 'outline' | 'base'
+  className?: string
   disabled?: boolean
   onClick?: (event: MouseEvent<HTMLButtonElement>) => void
   title?: string
 }
 
 export interface BasicBtnProps extends ButtonBase {
-  size: 'small' | 'medium' | 'large' | 'full'
+  size?: 'small' | 'medium' | 'large' | 'full'
 }
 
 export interface LinkBtnProps extends BasicBtnProps {

@@ -23,7 +23,7 @@ export default function RootLayout({
     <html lang='en'>
       <body
         suppressHydrationWarning
-        className={`main bg-base-100 text-base-content dark:bg-dark-base-100 dark:text-dark-base-content ${inter.className}`}
+        className={`main bg-base-light text-black-main dark:bg-base-dark dark:text-white-main ${inter.className}`}
       >
         <StoreProvider>
           <ThemeProvider>

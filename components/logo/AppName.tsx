@@ -1,7 +1,11 @@
-const AppName = () => {
-  return (
-    <span className="text-base-content underline font-bold">QuickBot</span>
-  );
-};
+import clsx from 'clsx'
 
-export default AppName;
+const AppName = ({ className }: { className?: string }) => {
+  return (
+    <span className={clsx('text-base-content font-bold', className)}>
+      Airacter
+    </span>
+  )
+}
+
+export default AppName
