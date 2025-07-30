@@ -1,5 +1,5 @@
 import { GeneralSliceInit } from '@/types'
-import { ChatProps } from '@/types/chats'
+import { ChatProps } from '@/types/chats.interface'
 import { ThemeProps } from '@/types/theme.interface'
 import { addToLocalStorage, getFromLocalStorage } from '@/utils/local-storage'
 import { createSlice } from '@reduxjs/toolkit'

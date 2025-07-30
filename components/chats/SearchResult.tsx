@@ -1,4 +1,4 @@
-import { ChatProps, ResponseProps } from '@/types/chats'
+import { ChatProps, ResponseProps } from '@/types/chats.interface'
 import { getChatById } from '@/utils/actions/chat'
 import { getSnippetWithHighlight } from '@/utils/search'
 import Link from 'next/link'

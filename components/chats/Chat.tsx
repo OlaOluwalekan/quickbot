@@ -7,7 +7,7 @@ import {
   toggleMobileNavOpen,
 } from '@/features/generalSlice'
 import { RootState } from '@/store'
-import { ChatProps } from '@/types/chats'
+import { ChatProps } from '@/types/chats.interface'
 import clsx from 'clsx'
 import Link from 'next/link'
 import { MouseEvent } from 'react'

@@ -7,7 +7,6 @@ import { usePathname } from 'next/navigation'
 
 const NavLinks = () => {
   const pathname = usePathname()
-  //   console.log('Current Pathname:', pathname)
   const isActive = (link: string) => pathname === link
 
   return (
@@ -19,7 +18,7 @@ const NavLinks = () => {
               href={link.link}
               key={link.id}
               className={clsx(
-                'text-sm text-primary hover:underline',
+                'text-sm hover:underline',
                 isActive(link.link) && 'underline'
               )}
             >

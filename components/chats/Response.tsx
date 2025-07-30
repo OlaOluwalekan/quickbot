@@ -1,6 +1,6 @@
 'use client'
 
-import { ResponseProps } from '@/types/chats'
+import { ResponseProps } from '@/types/chats.interface'
 import React, { useState } from 'react'
 import UserImage from './UserImage'
 import { format } from 'date-fns'

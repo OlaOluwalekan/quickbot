@@ -3,7 +3,7 @@ import ChatDesktopHeader from '@/components/chats/ChatDesktopHeader'
 import ChatInput from '@/components/chats/ChatInput'
 import ChatMobileHeader from '@/components/chats/ChatMobileHeader'
 import Sidebar from '@/components/chats/Sidebar'
-import { ChatProps } from '@/types/chats'
+import { ChatProps } from '@/types/chats.interface'
 import { getChats } from '@/utils/actions/chat'
 import { ReactNode } from 'react'
 

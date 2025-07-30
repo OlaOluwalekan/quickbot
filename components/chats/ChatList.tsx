@@ -1,6 +1,6 @@
 'use client'
 
-import { ChatProps } from '@/types/chats'
+import { ChatProps } from '@/types/chats.interface'
 import Chat from './Chat'
 import { formatCustomDate } from '@/utils/format'
 

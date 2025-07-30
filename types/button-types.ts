@@ -1,4 +1,4 @@
-import { MouseEvent } from 'react'
+import { MouseEvent, ReactNode } from 'react'
 
 interface ButtonBase {
   type?: 'submit' | 'button' | 'reset'
@@ -8,6 +8,7 @@ interface ButtonBase {
   disabled?: boolean
   onClick?: (event: MouseEvent<HTMLButtonElement>) => void
   title?: string
+  children?: ReactNode
 }
 
 export interface BasicBtnProps extends ButtonBase {

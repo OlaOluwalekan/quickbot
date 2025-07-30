@@ -1,4 +1,4 @@
-import { ChatProps } from './chats'
+import { ChatProps } from './chats.interface'
 
 export interface GeneralSliceInit {
   theme: 'light' | 'dark'
