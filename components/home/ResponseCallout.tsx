@@ -1,3 +1,5 @@
+'use client'
+
 import { ResponseCalloutProps } from '@/types/chats.interface'
 import { format } from 'date-fns'
 import ResponseMD from '../chats/markdown/ResponseMD'
