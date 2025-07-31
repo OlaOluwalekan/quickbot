@@ -53,7 +53,7 @@ const ResponseMD = ({ response }: { response: string }) => {
         },
         p({ children, ...props }) {
           return (
-            <p {...props} className='mb-0'>
+            <p {...props} className='my-1'>
               {children}
             </p>
           )
@@ -64,16 +64,22 @@ const ResponseMD = ({ response }: { response: string }) => {
           )
         },
         h1({ children, ...props }) {
-          return <h2 className='text-4xl font-semibold'>{children}</h2>
+          return <h1 className='text-4xl font-semibold'>{children}</h1>
         },
         h2({ children, ...props }) {
           return <h2 className='text-3xl font-semibold'>{children}</h2>
         },
         h3({ children, ...props }) {
-          return <h2 className='text-2xl font-semibold'>{children}</h2>
+          return <h3 className='text-2xl font-semibold'>{children}</h3>
         },
         h4({ children, ...props }) {
-          return <h2 className='text-xl font-semibold'>{children}</h2>
+          return <h4 className='text-xl font-semibold'>{children}</h4>
+        },
+        h5({ children, ...props }) {
+          return <h5 className='text-lg font-semibold'>{children}</h5>
+        },
+        h6({ children, ...props }) {
+          return <h6 className='text-base font-semibold'>{children}</h6>
         },
       }}
     >

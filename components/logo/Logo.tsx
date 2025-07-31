@@ -13,6 +13,7 @@ const Logo = ({ size = 48, animate = false }: LogoProps): JSX.Element => {
   const scale = 0.035
   const bigScale = scale * 5
   const duration = '2s'
+  const sample = 2
 
   return (
     <div>
@@ -45,10 +46,9 @@ const Logo = ({ size = 48, animate = false }: LogoProps): JSX.Element => {
                     animation: draw3 ${duration} linear infinite;
                   }
                   .bubble {
-                    // stroke-dasharray: ${size * bigScale};
-                    // stroke-dashoffset: ${size * bigScale};
-                    opacity: 1
-                    // animation: pulse
+                    stroke-dasharray: ${sample};
+                    stroke-dashoffset: ${sample};
+                    animation: draw 10s linear infinite;
                   }
 
                   @keyframes draw1 {
@@ -110,6 +110,18 @@ const Logo = ({ size = 48, animate = false }: LogoProps): JSX.Element => {
                       stroke-dashoffset: 0;
                     }
                   }
+
+                  @keyframes draw {
+                    0% {
+                      stroke-dashoffset: ${sample};
+                    }
+                    50% {
+                      stroke-dashoffset: 0;
+                    }
+                    100% {
+                      stroke-dashoffset: ${-1 * sample};
+                    }
+                  }
                 `}
             </style>
           </defs>
@@ -119,7 +131,12 @@ const Logo = ({ size = 48, animate = false }: LogoProps): JSX.Element => {
           d='M 1.04679,1.66 0.96,1.61 1.16,1.26 h 0.3 a 0.09983,0.09983 0 0 0 0.1,-0.1 v -0.7 a 0.09983,0.09983 0 0 0 -0.1,-0.1 h -1 a 0.09983,0.09983 0 0 0 -0.1,0.1 v 0.7 a 0.09983,0.09983 0 0 0 0.1,0.1 h 0.45 v 0.1 H 0.46 a 0.199965,0.199965 0 0 1 -0.2,-0.2 v -0.7 a 0.19994,0.19994 0 0 1 0.2,-0.2 h 1 a 0.19994,0.19994 0 0 1 0.2,0.2 v 0.7 a 0.199965,0.199965 0 0 1 -0.2,0.2 H 1.21823 Z'
           id='path4'
           fill='#20b2aa'
-          className={clsx(animate && 'bubble animate-pulse')}
+          // stroke='#08736e'
+          strokeWidth={size < 40 ? 0.005 : 0.02}
+          className={clsx(
+            animate && 'bubble',
+            'stroke-teal-dark dark:stroke-teal-light'
+          )}
         />
 
         <path

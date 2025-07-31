@@ -29,8 +29,11 @@
   --color-light-grey: #f3f4f6;
   --color-medium-grey: #6b7280;
   --color-purple: #9370db;
+  --color-purple-dark: oklch(0.381 0.176 304.987);
   --color-whitish: #f8f9fa;
+  --color-teal-light: oklch(0.953 0.051 180.801);
   --color-teal-green: #20b2aa;
+  --color-teal-dark: oklch(0.277 0.046 192.524);
 
   /* LIGHT MODE */
   --color-primary: #5b16fc;

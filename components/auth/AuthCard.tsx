@@ -22,7 +22,7 @@ const AuthCard = ({
   backLink,
 }: AuthCardProps) => {
   return (
-    <div className='py-6 w-[90%] h-full flex flex-col items-center justify-center bg-base-100/60 dark:bg-dark-base-100/60 text-base-content dark:text-dark-base-content'>
+    <div className='py-6 w-[90%] flex flex-col items-center justify-center bg-base-100/60 dark:bg-dark-base-100/60 text-base-content dark:text-dark-base-content'>
       <div className='flex flex-col w-full items-center justify-center'>
         <h2 className='text-2xl font-bold my-1 md:text-5xl'>{page}</h2>
         <p className='my-1 md:text-xl'>{headerText}</p>

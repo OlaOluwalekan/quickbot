@@ -1,4 +1,4 @@
-import Features from '@/components/general/Features'
+import Features from '@/components/home/Features'
 import Header from '@/components/general/Header'
 import Hero from '@/components/home/Hero'
 

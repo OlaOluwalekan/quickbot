@@ -14,3 +14,33 @@ export const homeSamplePrompts = {
 1. Evening: Sunset picnic at Overlook Point`,
   ],
 }
+
+export const authSamplePrompts = {
+  prompt: `Give me a short inspirational birthday, new year and wedding greetings.`,
+  character: 'Friend',
+  responses: [
+    `
+Absolutely! Here are short and inspirational greetings for each occasion:
+
+---
+
+🎂 **Birthday:**
+**"May your year ahead be filled with bold steps, bright moments, and the courage to chase what truly matters. Happy Birthday!"**
+
+---
+
+🎉 **New Year:**
+**"A new year, a fresh start — may you grow stronger, dream bigger, and shine even brighter in the days to come."**
+
+---
+
+💍 **Wedding:**
+**"May your love deepen with each passing day, and your life together be filled with joy, strength, and shared purpose."**
+
+---
+
+Let me know if you'd like a more casual or poetic tone!
+
+    `,
+  ],
+}

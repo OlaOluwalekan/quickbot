@@ -38,7 +38,7 @@ const Hero = () => {
         </div>
 
         {/* Hero Image */}
-        <div className='w-full py-4 border-[1px] border-light-grey dark:border-light-grey/30 shadow-xl dark:shadow-gray-900 rounded-2xl dark:bg-eerie-black flex flex-col h-[300px] overflow-hidden'>
+        <div className='w-full py-4 border-[1px] border-light-grey dark:border-light-grey/30 shadow-xl dark:shadow-gray-900 rounded-2xl dark:bg-eerie-black flex flex-col h-[300px] overflow-hidden text-sm'>
           <div className='px-4 h-full overflow-auto scrollbar-none hover:scrollbar-thin flex flex-col gap-3'>
             <PromptCallout prompt={prompt} time={new Date()} />
 

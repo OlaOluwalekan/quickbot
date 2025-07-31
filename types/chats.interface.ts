@@ -1,3 +1,5 @@
+import { ReactNode } from 'react'
+
 export interface ChatProps {
   id: string
   title: string
@@ -17,10 +19,13 @@ export interface ResponseProps {
 export interface PromptCalloutProps {
   prompt: string
   time: Date
+  className?: string
 }
 
 export interface ResponseCalloutProps {
   response: string
   character: string
   time: Date
+  className?: string
+  animate?: boolean
 }

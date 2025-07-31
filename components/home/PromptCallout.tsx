@@ -1,12 +1,13 @@
 import { PromptCalloutProps } from '@/types/chats.interface'
+import clsx from 'clsx'
 import { format } from 'date-fns'
 
-const PromptCallout = ({ prompt, time }: PromptCalloutProps) => {
+const PromptCallout = ({ prompt, time, className }: PromptCalloutProps) => {
   const formattedTime = format(new Date(time), 'hh:mm a')
 
   return (
-    <div className='w-full flex justify-end'>
-      <div className='text-sm  w-[90%] max-w-[400px]'>
+    <div className={clsx('w-full flex justify-end', className)}>
+      <div className='w-[90%] max-w-[400px]'>
         <article className='bg-purple text-white-main px-2 py-2.5 rounded-lg rounded-br-none'>
           <p>{prompt}</p>
         </article>
