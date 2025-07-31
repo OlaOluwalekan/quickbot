@@ -10,7 +10,7 @@ const PromptCallout = ({ prompt, time }: PromptCalloutProps) => {
         <article className='bg-purple text-white-main px-2 py-2.5 rounded-lg rounded-br-none'>
           <p>{prompt}</p>
         </article>
-        <article className='text-xs flex gap-1 text-medium-grey justify-end'>
+        <article className='text-xs flex gap-1 text-medium-grey justify-end mt-1'>
           <span>You</span>
           <span>{formattedTime}</span>
         </article>

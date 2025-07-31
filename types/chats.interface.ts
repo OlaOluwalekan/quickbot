@@ -21,5 +21,6 @@ export interface PromptCalloutProps {
 
 export interface ResponseCalloutProps {
   response: string
+  character: string
   time: Date
 }

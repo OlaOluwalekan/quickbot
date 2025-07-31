@@ -63,6 +63,18 @@ const ResponseMD = ({ response }: { response: string }) => {
             <CustomLink href={href as string} children={children} {...props} />
           )
         },
+        h1({ children, ...props }) {
+          return <h2 className='text-4xl font-semibold'>{children}</h2>
+        },
+        h2({ children, ...props }) {
+          return <h2 className='text-3xl font-semibold'>{children}</h2>
+        },
+        h3({ children, ...props }) {
+          return <h2 className='text-2xl font-semibold'>{children}</h2>
+        },
+        h4({ children, ...props }) {
+          return <h2 className='text-xl font-semibold'>{children}</h2>
+        },
       }}
     >
       {response}

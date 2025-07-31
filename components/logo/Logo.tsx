@@ -1,6 +1,6 @@
 'use client'
 
-import { LogoProps } from '@/types/logo-types'
+import { LogoProps } from '@/types/logo.interface'
 import clsx from 'clsx'
 
 /**
