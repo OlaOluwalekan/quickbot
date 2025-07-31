@@ -22,19 +22,21 @@ const InputWithIcon = ({
   id,
   value,
   onChange,
-  readonly,
+  readonly = false,
 }: InputWithIconsProps): JSX.Element => {
   return (
     <label
       className={clsx(
-        'bg-base-100 dark:bg-dark-base-100 px-3 py-2.5 rounded-md flex items-center gap-2 my-2 focus-within:border-2 focus-within:border-primary',
+        'px-3 border-dove-grey dark:border-medium-grey border-[1px] py-2.5 rounded-md flex items-center gap-2 focus-within:border-2',
         type === 'hidden' && 'hidden'
       )}
     >
       {/* icon */}
       <span
         className={clsx(
-          readonly ? 'text-gray-500 opacity-50' : 'text-primary opacity-100'
+          readonly
+            ? 'text-medium-grey opacity-50'
+            : 'text-teal-green opacity-100'
         )}
       >
         {icons}
@@ -44,8 +46,8 @@ const InputWithIcon = ({
       <input
         type={type}
         className={clsx(
-          'grow focus:outline-none text-base-content dark:text-dark-base-content',
-          readonly && 'opacity-50 text-gray-500'
+          'grow focus:outline-none',
+          readonly && 'opacity-50 text-medium-grey'
         )}
         placeholder={placeholder}
         name={name}

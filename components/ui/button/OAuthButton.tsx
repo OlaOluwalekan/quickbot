@@ -1,13 +1,13 @@
 import { OAuthBtnProps } from '@/types'
 
-const OAuthButton = ({ icon, onClick }: OAuthBtnProps) => {
+const OAuthButton = ({ icon, text, onClick }: OAuthBtnProps) => {
   return (
     <button
       type='button'
-      className='flex justify-center items-center text-2xl w-full py-3 border-2 border-base-300 rounded cursor-pointer hover:bg-base-100 dark:hover:bg-dark-base-100'
+      className='flex justify-center items-center gap-2 w-full py-2 border-[1px] border-dove-grey dark:border-medium-grey rounded-lg cursor-pointer text-sm hover:bg-light-grey dark:hover:bg-eerie-black'
       onClick={onClick}
     >
-      {icon}
+      {icon} <span>{text}</span>
     </button>
   )
 }

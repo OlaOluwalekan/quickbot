@@ -4,6 +4,7 @@ import { AuthCardProps } from '@/types/auth'
 import Logo from '../logo/Logo'
 import Link from 'next/link'
 import OAuthCard from './OAuthCard'
+import { appName } from '@/data/app'
 
 /**
  * This component wraps login and register authentication
@@ -22,34 +23,42 @@ const AuthCard = ({
   backLink,
 }: AuthCardProps) => {
   return (
-    <div className='py-6 w-[90%] flex flex-col items-center justify-center bg-base-100/60 dark:bg-dark-base-100/60 text-base-content dark:text-dark-base-content'>
-      <div className='flex flex-col w-full items-center justify-center'>
-        <h2 className='text-2xl font-bold my-1 md:text-5xl'>{page}</h2>
-        <p className='my-1 md:text-xl'>{headerText}</p>
+    <div className='flex flex-col gap-3 items-center justify-center'>
+      {/* Auth Header */}
+      <div className='flex flex-col gap-3 w-full items-center justify-center'>
+        <Link href='/' className='laptop:hidden'>
+          <Logo size={40} />
+        </Link>
+        <h3 className='text-2xl laptop:text-3xl font-semibold'>
+          {page} to {appName}
+        </h3>
+        <p className='text-sm text-center'>{headerText}</p>
       </div>
-      <div className='w-full flex justify-center items-center'>
-        {/* CARD CHILDREN */}
-        <div className='w-[90%] max-w-[400px] p-1'>
-          {children}
-          <article className='flex justify-center items-center text-sm my-2 gap-1'>
-            {backText}?
-            <Link href={`/auth/${backLink}`} className='underline capitalize'>
-              {backLink} here
-            </Link>
-          </article>
 
-          {/* divider */}
-          <div className='my-4 text-sm flex items-center'>
-            <div className='h-0.5 bg-secondary dark:bg-dark-secondary w-full'></div>
-            <div className='w-full text-center'>Or Login With</div>
-            <div className='h-0.5 bg-secondary dark:bg-dark-secondary w-full'></div>
-          </div>
+      {/* OAuth Login Section - GitHub and Google */}
+      <section className='w-full'>
+        <OAuthCard />
+      </section>
 
-          {/* OAuth Login Section - GitHub and Google */}
-          <section>
-            <OAuthCard />
-          </section>
-        </div>
+      {/* divider */}
+      <div className='w-full text-sm grid grid-cols-[2fr_0.5fr_2fr] items-center'>
+        <div className='h-[1px] shadow-sm w-full bg-dove-grey'></div>
+        <div className='w-full text-center'>or</div>
+        <div className='h-[1px] shadow-sm w-full bg-dove-grey'></div>
+      </div>
+
+      {/* CARD CHILDREN */}
+      <div className='w-full'>{children}</div>
+
+      {/* Auth Footer */}
+      <div className='flex justify-center items-center text-sm my-2 gap-1'>
+        {backText}?
+        <Link
+          href={`/auth/${backLink}`}
+          className='underline capitalize text-lemon'
+        >
+          {backLink}
+        </Link>
       </div>
     </div>
   )

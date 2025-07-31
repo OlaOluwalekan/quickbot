@@ -35,8 +35,10 @@ const AuthWrapper = ({ children }: { children: ReactNode }) => {
         </div>
       </div>
       <div className='absolute w-full h-full top-0 left-0 laptop:relative bg-eerie-black/30 laptop:bg-white-main laptop:dark:bg-black backdrop-blur-xs laptop:backdrop-blur-none flex justify-center items-center'>
-        <section className='w-full overflow-auto flex justify-center'>
-          {children}
+        <section className='w-full max-h-[500px] flex justify-center'>
+          <div className='bg-white-main dark:bg-black-main w-[90%] max-w-[500px] px-5 py-5 overflow-auto scrollbar-none rounded-xl'>
+            {children}
+          </div>
         </section>
       </div>
     </div>

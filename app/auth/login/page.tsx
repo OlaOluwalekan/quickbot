@@ -7,8 +7,8 @@ const LoginPage = () => {
     <AuthWrapper>
       <AuthCard
         page='Login'
-        headerText='Welcome back. Provide your login details'
-        backText='No Account'
+        headerText='Start conversing with your smart AI assistant'
+        backText={`Don't have an account`}
         backLink='register'
       >
         <LoginForm />
