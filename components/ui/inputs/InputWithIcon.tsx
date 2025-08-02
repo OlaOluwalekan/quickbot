@@ -28,7 +28,8 @@ const InputWithIcon = ({
     <label
       className={clsx(
         'px-3 border-dove-grey dark:border-medium-grey border-[1px] py-2.5 rounded-md flex items-center gap-2 focus-within:border-2',
-        type === 'hidden' && 'hidden'
+        type === 'hidden' && 'hidden',
+        readonly && 'cursor-not-allowed'
       )}
     >
       {/* icon */}

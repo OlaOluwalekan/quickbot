@@ -51,8 +51,6 @@ const RegisterForm = (): JSX.Element => {
     // handle state updates
     startTransition(() => {
       register(formData).then((res) => {
-        console.log(res)
-
         setResponse(res)
         if (res.success) {
           // send email on successful user registration

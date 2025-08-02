@@ -4,6 +4,7 @@ import './globals.css'
 import StoreProvider from '@/providers/StoreProvider'
 import ThemeProvider from '@/providers/ThemeProvider'
 import { Toaster } from 'react-hot-toast'
+import Loader from '@/components/general/Loader'
 
 const montserrat = Montserrat({ subsets: ['latin'] })
 
@@ -26,7 +27,7 @@ export default function RootLayout({
       >
         <StoreProvider>
           <ThemeProvider>
-            {children}
+            <Loader>{children}</Loader>
             <Toaster />
           </ThemeProvider>
         </StoreProvider>

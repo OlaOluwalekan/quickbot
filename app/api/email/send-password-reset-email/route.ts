@@ -1,4 +1,4 @@
-import { sendVerificationEmail } from '@/utils/emails/send-verification-email'
+import { sendPasswordResetEmail } from '@/utils/emails/send-password-reset-email'
 import { NextResponse } from 'next/server'
 
 export async function POST(request: Request) {
@@ -6,8 +6,8 @@ export async function POST(request: Request) {
   const data = await request.json()
 
   try {
-    // send verification email to users during registration
-    await sendVerificationEmail(data.email, data.token)
+    // send password reset email to user
+    await sendPasswordResetEmail(data.email, data.token)
     return NextResponse.json({ message: 'Email sent' })
   } catch (error) {
     return NextResponse.json({ error: 'something went wrong' })

@@ -1,6 +1,6 @@
-"use server";
+'use server'
 
-import nodemailer, { Transporter } from "nodemailer";
+import nodemailer, { Transporter } from 'nodemailer'
 
 /**
  * Sends an email using the specified email address, subject, and message.
@@ -18,26 +18,26 @@ const sendMail = async (
 ): Promise<void> => {
   try {
     const transporter: Transporter = nodemailer.createTransport({
-      service: "gmail",
+      service: 'gmail',
       secure: true,
       auth: {
         user: process.env.EMAIL_ADDRESS,
         pass: process.env.EMAIL_PASSWORD,
       },
-    });
+    })
 
     const emailOptions = {
       from: process.env.EMAIL_ADDRESS,
       to: email,
       subject: subject,
       html: message,
-    };
+    }
 
-    const info = await transporter.sendMail(emailOptions);
-    console.log("MAIL SENT: " + info.response);
+    const info = await transporter.sendMail(emailOptions)
+    console.log('MAIL SENT: ' + info.response)
   } catch (error) {
-    console.error("Error sending email:", error);
+    console.error('Error sending email:', error)
   }
-};
+}
 
-export default sendMail;
+export default sendMail
