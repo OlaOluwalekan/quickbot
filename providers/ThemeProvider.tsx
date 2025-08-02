@@ -7,8 +7,13 @@ import {
   toggleThemeOpen,
 } from '@/features/generalSlice'
 import { RootState } from '@/store'
+import dynamic from 'next/dynamic'
 import { ReactNode, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
+
+const NoSSRTheme = dynamic(() => import('@/components/theme/Theme'), {
+  ssr: false,
+})
 
 const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const { theme } = useSelector((store: RootState) => store.general)
@@ -46,7 +51,12 @@ const ThemeProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
   }, [theme])
-  return <>{children}</>
+  return (
+    <>
+      {children}
+      <NoSSRTheme />
+    </>
+  )
 }
 
 export default ThemeProvider

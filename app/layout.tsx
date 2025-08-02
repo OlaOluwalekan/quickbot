@@ -1,12 +1,10 @@
 import type { Metadata } from 'next'
-import { Inter, Montserrat } from 'next/font/google'
+import { Montserrat } from 'next/font/google'
 import './globals.css'
 import StoreProvider from '@/providers/StoreProvider'
 import ThemeProvider from '@/providers/ThemeProvider'
-import Theme from '@/components/theme/Theme'
 import { Toaster } from 'react-hot-toast'
 
-// const inter = Inter({ subsets: ['latin'] })
 const montserrat = Montserrat({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
@@ -29,7 +27,6 @@ export default function RootLayout({
         <StoreProvider>
           <ThemeProvider>
             {children}
-            <Theme />
             <Toaster />
           </ThemeProvider>
         </StoreProvider>

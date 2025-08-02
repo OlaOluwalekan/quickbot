@@ -1,40 +1,43 @@
-"use client";
+'use client'
 
-import Image from "next/image";
-import LinkButton from "../ui/button/LinkButton";
-import { useEffect } from "react";
-import { useDispatch } from "react-redux";
-import { setCurrentPageTitle } from "@/features/generalSlice";
+import Image from 'next/image'
+import LinkButton from '../ui/button/LinkButton'
+import { useEffect } from 'react'
+import { useDispatch } from 'react-redux'
+import { setCurrentPageTitle } from '@/features/generalSlice'
 
 const NotFound = () => {
-  const dispatch = useDispatch();
+  const dispatch = useDispatch()
 
   useEffect(() => {
-    dispatch(setCurrentPageTitle(""));
-  }, []);
+    dispatch(setCurrentPageTitle(''))
+  }, [])
 
   return (
-    <div className="w-full h-full flex flex-col justify-center items-center gap-5">
-      <div className="w-[90%] max-w-[500px]">
+    <div className='w-full flex flex-col justify-center items-center gap-2 overflow-auto scrollbar-thin py-8'>
+      <div className='w-[80%] max-w-[400px]'>
         <Image
-          width="196"
-          height="248"
-          src="/404.png"
-          alt="Logo"
-          className="w-full"
+          width='196'
+          height='248'
+          src='/404.svg'
+          alt='Logo'
+          className='w-full'
         />
       </div>
-      <div className="flex flex-col justify-center items-center gap-2">
-        <p className="text-xl font-semibold">
-          Sorry! This page cannot be found
-        </p>
-        <p>It has either been removed or does not exist</p>
+      <div className='flex flex-col justify-center items-center gap-2 mt-[-60px] w-[90%] max-w-[600px] text-center'>
+        <h3 className='text-6xl font-bold laptop:text-9xl'>Oops!</h3>
+        <p className='text-lg font-semibold'>Sorry! Can't talk here</p>
+        <p>This page has either been removed or does not exist</p>
       </div>
       <div>
-        <LinkButton size="medium" text="Back Home" href="/" theme="primary" />
+        <LinkButton
+          text='Back Home'
+          href='/'
+          className='bg-lemon text-white-main'
+        />
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default NotFound;
+export default NotFound
