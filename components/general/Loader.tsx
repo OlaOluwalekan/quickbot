@@ -1,6 +1,8 @@
 'use client'
 
+import Image from 'next/image'
 import { ReactNode, useEffect, useState } from 'react'
+import FullLoader from '../loading/FullLoader'
 
 const Loader = ({ children }: { children: ReactNode }) => {
   // start “not ready” so we can show a loader
@@ -12,12 +14,7 @@ const Loader = ({ children }: { children: ReactNode }) => {
   }, [])
 
   if (!ready) {
-    // Show whatever placeholder you like
-    return (
-      <div className='fixed inset-0 flex items-center justify-center bg-gray-50'>
-        <span>Initializing…</span>
-      </div>
-    )
+    return <FullLoader />
   }
 
   return <div>{children}</div>

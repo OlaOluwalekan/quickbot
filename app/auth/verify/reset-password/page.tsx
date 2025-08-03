@@ -1,10 +1,11 @@
 import AuthWrapper from '@/components/auth/AuthWrapper'
 import PasswordResetForm from '@/components/auth/PasswordResetForm'
+import FullLoader from '@/components/loading/FullLoader'
 import { Suspense } from 'react'
 
 const ResetPasswordPage = () => {
   return (
-    <Suspense fallback={<div>Loading from suspense...</div>}>
+    <Suspense fallback={<FullLoader text='Just a moment' />}>
       <AuthWrapper>
         <PasswordResetForm />
       </AuthWrapper>

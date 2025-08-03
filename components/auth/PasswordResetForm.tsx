@@ -9,6 +9,7 @@ import Alert from '../alert/Alert'
 import BasicButton from '../ui/button/BasicButton'
 import LinkButton from '../ui/button/LinkButton'
 import { CiLock } from 'react-icons/ci'
+import InlineLoading from '../loading/InlineLoading'
 
 const PasswordResetForm = () => {
   const params = useSearchParams()
@@ -94,7 +95,9 @@ const PasswordResetForm = () => {
   return (
     <div>
       {isPending ? (
-        <div>Loading..., Wait Please!</div>
+        <div>
+          <InlineLoading />
+        </div>
       ) : !token ? (
         <div className='flex flex-col gap-3'>
           <p className='text-center'>
