@@ -37,16 +37,32 @@ const Chat = ({ chat }: { chat: ChatProps }) => {
     <div className='w-full'>
       <div
         className={clsx(
-          'w-full flex items-center gap-2 px-2 text-primary-content hover:bg-accent',
-          currentPageId === chat.id ? 'bg-accent' : ''
+          'w-full flex items-center gap-2 px-2 rounded-lg hover:bg-orange/20 py-2',
+          currentPageId === chat.id
+            ? 'border-l-lemon border-l-4 bg-teal-green/20'
+            : ''
         )}
       >
         <Link
           href={`/chat/${chat.id}`}
-          className='w-[90%] flex text-nowrap overflow-x-scroll text-ellipsis scrollbar-none leading-10'
+          className='w-[90%] flex flex-col gap-1'
           onClick={() => dispatch(toggleMobileNavOpen(false))}
         >
-          {chat.title}
+          <p className='text-nowrap overflow-x-scroll scrollbar-none text-sm'>
+            {chat.title}
+          </p>
+          <article className='text-[10px] flex gap-0.5'>
+            {['1', '2', '3'].map((no) => {
+              return (
+                <span
+                  key={no}
+                  className='flex px-2 py-0 rounded-sm text-teal-green border-[1px] border-lemon'
+                >
+                  tag {no}
+                </span>
+              )
+            })}
+          </article>
         </Link>
         <button onClick={handleClick} className={clsx('a-modal', chat.id)}>
           <FaEllipsisV />

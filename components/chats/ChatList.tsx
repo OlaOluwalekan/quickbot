@@ -22,9 +22,9 @@ const ChatList = ({
       ) : (
         dates.map((date) => {
           return (
-            <div key={date}>
-              <div className='text-primary-content text-xs px-2'>
-                <article className='bg-base-100/30 text-base-content w-fit mb-1 px-2 py-0.5 rounded'>
+            <div key={date} className='px-2'>
+              <div className='text-xs'>
+                <article className='mb-1 py-0.5 uppercase'>
                   {formatCustomDate(date)}
                 </article>
               </div>

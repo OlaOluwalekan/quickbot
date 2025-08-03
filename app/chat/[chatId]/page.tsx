@@ -3,6 +3,7 @@ import ResponseList from '@/components/chats/ResponseList'
 import NotFound from '@/components/not-found/NotFound'
 import { getChatById } from '@/utils/actions/chat'
 import { getResponses } from '@/utils/actions/response'
+import { isValidMongoID } from '@/utils/idCheck'
 import React from 'react'
 
 const SingleChatPage = async ({
@@ -33,10 +34,18 @@ const SingleChatPage = async ({
   const chatResponse = await getChatById(responses[0].chatId)
   const chat = chatResponse.data.chat
 
+  if (!chat) {
+    return <NotFound />
+  }
+
   // if the chat is not created by the authenticated user, then return error
   // this will later be used while allowing sharing of chat information to other users
-  if (!chat || chat.createdBy !== session?.user?.id) {
-    return <NotFound />
+  if (chat.createdBy !== session?.user?.id) {
+    return (
+      <div className='w-full h-full flex justify-center items-center bg-pink-300'>
+        Access Denied
+      </div>
+    )
   }
 
   return (
@@ -45,7 +54,6 @@ const SingleChatPage = async ({
         data={responses}
         image={session?.user?.image as string | null}
       />
-      {/* {chatId} */}
     </div>
   )
 }
