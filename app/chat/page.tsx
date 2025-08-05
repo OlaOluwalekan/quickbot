@@ -1,6 +1,7 @@
 import { auth } from '@/auth'
 import TemplatePrompts from '@/components/chats/TemplatePrompts'
 import { getTrendingTopics } from '@/utils/actions/location'
+import Link from 'next/link'
 
 const ChatPage = async () => {
   // get authenticated user session

@@ -51,7 +51,7 @@ const SingleChatPage = async ({
 
   return (
     <div className='h-full'>
-      <div className='h-[calc(100vh-150px)] w-full overflow-auto'>
+      <div className='h-[calc(100vh-150px)] w-full overflow-auto scroll-smooth'>
         <div className='w-[90%] mx-auto'>
           <ResponseList
             data={responses}

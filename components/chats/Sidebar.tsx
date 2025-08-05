@@ -99,7 +99,7 @@ const Sidebar = ({
           {chatMenuIsOpen && <ChatMenu />}
           {editPopUpIsOpen && <EditPopup />}
           {deletePopUpIsOpen && <DeletePopup />}
-          <UserProfile data={userData} />
+          {/* <UserProfile data={userData} /> */}
         </div>
       </div>
     </div>

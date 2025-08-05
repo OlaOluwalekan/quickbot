@@ -1,15 +1,18 @@
 "use server";
 
-import {
-  FunctionDeclarationSchemaType,
-  GoogleGenerativeAI,
-} from "@google/generative-ai";
+// import {
+//   FunctionDeclarationSchemaType,
+//   GoogleGenerativeAI,
+// } from "@google/generative-ai";
+import {GoogleGenAI as GoogleGenerativeAI} from "@google/genai"
 import ActionResponse from "../response";
 
+const model = 'gemini-1.5-flash'
+
 // initialize a new instance of the Google generative AI service
-const gemini = new GoogleGenerativeAI(process.env.GEMINI_API_KEY as string);
+const gemini = new GoogleGenerativeAI({apiKey: process.env.GEMINI_API_KEY as string});
 // create a model
-let model = gemini.getGenerativeModel({ model: "gemini-1.5-flash" });
+// let model = gemini.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 /**
  * Asynchronously counts the number of tokens used in a given prompt using the Gemini model.
@@ -22,7 +25,11 @@ export const countGeminiTokensUsed = async (
   prompt: string
 ): Promise<ActionResponse<any>> => {
   try {
-    const tokenCount = await model.countTokens(prompt);
+    // const tokenCount = await model.countTokens(prompt);
+    const tokenCount = await gemini.models.countTokens({
+      model,
+      contents: prompt
+    })
     return ActionResponse.success("Counted tokens", {
       tokenCount: tokenCount.totalTokens,
     });
@@ -43,10 +50,14 @@ export const getGeminiResponse = async (
   prompt: string
 ): Promise<ActionResponse<any>> => {
   try {
-    const response = model.generateContent(prompt);
-    const result = (await response).response;
-    const text = result.text();
-    return ActionResponse.success("responded", { text });
+    const response = await gemini.models.generateContent({
+      model,
+      contents: prompt
+    })
+    // const response = model.generateContent(prompt);
+    // const result = (await response).response;
+    // const text = result.text();
+    return ActionResponse.success("responded", { text: response.text });
   } catch (error) {
     console.log(error);
     return ActionResponse.error("failed to respond", null);
@@ -66,13 +77,16 @@ export const getGeminiChatResponse = async (
   history: any[] = []
 ): Promise<ActionResponse<any>> => {
   try {
-    const chat = model.startChat({ history });
-    const result = await chat.sendMessage(prompt);
-    const response = await result.response;
-    const text = response.text();
+    const existingChat = gemini.chats.create({
+      model,
+      history,
+    })
+    const response = await existingChat.sendMessage({
+      message: prompt
+    })
     const tokenCount = response.usageMetadata?.totalTokenCount;
 
-    return ActionResponse.success("responded", { text, tokenCount });
+    return ActionResponse.success("responded", { text: response.text, tokenCount });
   } catch (error) {
     console.log(error);
     return ActionResponse.error("failed to respond", null);
@@ -86,34 +100,34 @@ export const getGeminiChatResponse = async (
  * @returns {Promise<ActionResponse>} A promise that resolves to an ActionResponse object
  * indicating success with the generated JSON text or an error if the operation fails.
  */
-export const getGeminiJSONResponse = async (
-  prompt: string
-): Promise<ActionResponse<any>> => {
-  try {
-    model = gemini.getGenerativeModel({
-      model: "gemini-1.5-pro",
-      generationConfig: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: FunctionDeclarationSchemaType.ARRAY,
-          items: {
-            type: FunctionDeclarationSchemaType.OBJECT,
-            properties: {
-              category: { type: FunctionDeclarationSchemaType.STRING },
-              prompt: {
-                type: FunctionDeclarationSchemaType.STRING,
-              },
-            },
-          },
-        },
-      },
-    });
-    let result = await model.generateContent(prompt);
-    return ActionResponse.success("responded", {
-      result: result.response.text(),
-    });
-  } catch (error) {
-    console.log(error);
-    return ActionResponse.error("failed to respond", null);
-  }
-};
+// export const getGeminiJSONResponse = async (
+//   prompt: string
+// ): Promise<ActionResponse<any>> => {
+//   try {
+//     model = gemini.getGenerativeModel({
+//       model: "gemini-1.5-pro",
+//       generationConfig: {
+//         responseMimeType: "application/json",
+//         responseSchema: {
+//           type: FunctionDeclarationSchemaType.ARRAY,
+//           items: {
+//             type: FunctionDeclarationSchemaType.OBJECT,
+//             properties: {
+//               category: { type: FunctionDeclarationSchemaType.STRING },
+//               prompt: {
+//                 type: FunctionDeclarationSchemaType.STRING,
+//               },
+//             },
+//           },
+//         },
+//       },
+//     });
+//     let result = await model.generateContent(prompt);
+//     return ActionResponse.success("responded", {
+//       result: result.response.text(),
+//     });
+//   } catch (error) {
+//     console.log(error);
+//     return ActionResponse.error("failed to respond", null);
+//   }
+// };

@@ -40,7 +40,7 @@ const CustomCode = ({
 
   return (
     <div className='text-sm flex flex-col bg-eerie-black rounded-lg'>
-      <section className='flex justify-between items-center px-3'>
+      <section className='flex justify-between items-center px-3 text-white-main'>
         <span>{language}</span>
         {/* <article className='flex gap-4 items-center'> */}
         <button

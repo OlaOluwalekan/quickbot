@@ -33,9 +33,9 @@ const Template = async ({ children }: { children: ReactNode }) => {
 
       <div className='w-full h-full relative'>
         {/* CHAT HEADER */}
-        <ChatHeader />
+        <ChatHeader userData={session?.user} />
 
-        <div className='w-full h-[calc(100vh-50px)]'>
+        <div className='w-full h-[calc(100vh-60px)]'>
           <div className='mx-auto'>{children}</div>
         </div>
       </div>

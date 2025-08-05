@@ -116,12 +116,36 @@ model Bookmark {
   @@unique([userId, chatId])
 }
 
+model roleMetadata {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  tone           String
+  formality      String
+  emojiUsage     String
+  responseLength String
+  allowedTopics  String[]
+
+  // back-relation: one metadata → many TemplateRole
+  templateRoles TemplateRole[]
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
 model TemplateRole {
-  id              String   @id @default(auto()) @map("_id") @db.ObjectId
-  roleType        String // e.g. "assistant", "user"
-  roleDescription String
-  createdAt       DateTime @default(now())
-  createdBy       String   @db.ObjectId
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  roleId      String // e.g. "assistant", "user"
+  roleLabel   String
+  defaultName String
+  gender      Gender   @default(MALE)
+  basePrompt  String
+  createdAt   DateTime @default(now())
+  createdBy   String   @db.ObjectId
+
+  // forward relation to metadata
+  metadataId String       @db.ObjectId
+  metadata   roleMetadata @relation(fields: [metadataId], references: [id])
 
   aiRoles Character[] // back-relation to AiRole
 }
@@ -129,10 +153,12 @@ model TemplateRole {
 model Character {
   id              String       @id @default(auto()) @map("_id") @db.ObjectId
   name            String
+  customPrompt    String
   customRole      Boolean      @default(false) // for user‑created roles
-  roleId          String       @db.ObjectId
-  role            TemplateRole @relation(fields: [roleId], references: [id])
-  voice           String? // e.g. voice identifier
+  templateRoleId  String       @db.ObjectId
+  templateRole    TemplateRole @relation(fields: [templateRoleId], references: [id])
+  voice           String? // e.g. voice identifier\
+  gender          Gender       @default(MALE)
   profileImageUrl String?
   isPublic        Boolean      @default(false) // for public roles
   createdBy       String       @db.ObjectId

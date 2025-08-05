@@ -1,7 +1,7 @@
 'use client'
 
 import { ResponseProps } from '@/types/chats.interface'
-import React, { useEffect, useRef, useTransition } from 'react'
+import React, { useEffect, useRef, useState, useTransition } from 'react'
 import Response from './Response'
 import { useDispatch, useSelector } from 'react-redux'
 import { RootState } from '@/store'
@@ -22,8 +22,14 @@ const ResponseList = ({
   )
   const [pending, startTransition] = useTransition()
   const dispatch = useDispatch()
+  const [urlFragment, setUrlFragment] = useState('#')
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash
+      setUrlFragment(hash)
+    }
+
     startTransition(() => {
       getChatById(data[0].chatId).then((res) => {
         if (res.success) {
@@ -38,9 +44,11 @@ const ResponseList = ({
     document.title = currentPageTitle
   }, [currentPageTitle])
 
-  // useEffect(() => {
-  //   bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  // }, [data, chatInputHeight])
+  useEffect(() => {
+    if (!urlFragment) {
+      bottomRef.current?.scrollIntoView({ behavior: 'instant' })
+    }
+  }, [data, chatInputHeight, urlFragment])
 
   return (
     <div
