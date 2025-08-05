@@ -1,8 +1,5 @@
 import { auth } from '@/auth'
-import ChatDesktopHeader from '@/components/chats/ChatDesktopHeader'
 import ChatHeader from '@/components/chats/ChatHeader'
-import ChatInput from '@/components/chats/ChatInput'
-import ChatMobileHeader from '@/components/chats/ChatMobileHeader'
 import Sidebar from '@/components/chats/Sidebar'
 import { ChatProps } from '@/types/chats.interface'
 import { getChats } from '@/utils/actions/chat'
