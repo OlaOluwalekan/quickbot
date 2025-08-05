@@ -1,4 +1,5 @@
 import { auth } from '@/auth'
+import ChatInput from '@/components/chats/ChatInput'
 import ResponseList from '@/components/chats/ResponseList'
 import NotFound from '@/components/not-found/NotFound'
 import { getChatById } from '@/utils/actions/chat'
@@ -50,10 +51,17 @@ const SingleChatPage = async ({
 
   return (
     <div className='h-full'>
-      <ResponseList
-        data={responses}
-        image={session?.user?.image as string | null}
-      />
+      <div className='h-[calc(100vh-150px)] w-full overflow-auto'>
+        <div className='w-[90%] mx-auto'>
+          <ResponseList
+            data={responses}
+            image={session?.user?.image as string | null}
+          />
+        </div>
+      </div>
+      <div className=''>
+        <ChatInput userId={session?.user?.id as string} existingToken={10000} />
+      </div>
     </div>
   )
 }

@@ -8,7 +8,6 @@ import { RootState } from '@/store'
 import clsx from 'clsx'
 import Link from 'next/link'
 import { MouseEvent, useEffect } from 'react'
-import { BiSolidMessageSquareAdd } from 'react-icons/bi'
 import { FaBarsStaggered } from 'react-icons/fa6'
 import { useDispatch, useSelector } from 'react-redux'
 import ChatList from './ChatList'
@@ -73,7 +72,7 @@ const Sidebar = ({
       onClick={() => dispatch(toggleMobileNavOpen(false))}
     >
       <div
-        className='w-full base:w-[300px] bg-whitish dark:bg-eerie-black h-full shadow-xl laptop:shadow-none'
+        className='w-full base:w-[300px] bg-platinum dark:bg-eerie-black h-full shadow-xl laptop:shadow-none'
         onClick={(e: MouseEvent<HTMLDivElement>) => e.stopPropagation()}
       >
         <section className='px-3 py-2 flex justify-between items-center'>

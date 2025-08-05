@@ -11,7 +11,7 @@ const CustomOl = ({ children, ...props }: { children: ReactNode }) => {
       style={{
         listStyleType: 'revert',
       }}
-      className='pl-3.5 py-0 my-0'
+      className='pl-4 py-0 my-0'
     >
       {cleanChildren}
     </ol>

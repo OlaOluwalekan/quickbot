@@ -31,12 +31,12 @@ const Template = async ({ children }: { children: ReactNode }) => {
     <div className='h-screen w-screen flex overflow-hidden'>
       <Sidebar userData={session?.user} chats={chats} dates={dates} />
 
-      <div className='w-full h-full'>
+      <div className='w-full h-full relative'>
         {/* CHAT HEADER */}
         <ChatHeader />
 
-        <div className='w-full h-[calc(100vh-50px)] overflow-auto'>
-          <div className='w-[90%] mx-auto'>{children}</div>
+        <div className='w-full h-[calc(100vh-50px)]'>
+          <div className='mx-auto'>{children}</div>
         </div>
       </div>
     </div>

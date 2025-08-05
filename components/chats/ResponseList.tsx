@@ -38,13 +38,13 @@ const ResponseList = ({
     document.title = currentPageTitle
   }, [currentPageTitle])
 
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [data, chatInputHeight])
+  // useEffect(() => {
+  //   bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  // }, [data, chatInputHeight])
 
   return (
     <div
-      className='pt-2 pb-5 overflow-auto scrollbar-none flex flex-col'
+      className='w-full pt-2 pb-5 overflow-auto scrollbar-none flex flex-col'
       style={{
         height: `calc(100% - ${chatInputHeight} + 50px)`,
       }}

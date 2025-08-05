@@ -24,6 +24,7 @@ const ResponseMD = ({ response }: { response: string }) => {
 
   return (
     <ReactMarkdown
+      className='w-full overflow-hidden'
       remarkPlugins={[remarkGfm]}
       components={{
         code({ className, children, ...props }: CodeProps) {
@@ -53,9 +54,16 @@ const ResponseMD = ({ response }: { response: string }) => {
         },
         p({ children, ...props }) {
           return (
-            <p {...props} className='my-1'>
+            <p {...props} className='text-sm'>
               {children}
             </p>
+          )
+        },
+        strong({ children, ...props }) {
+          return (
+            <span {...props} className='text-sm font-semibold'>
+              {children}
+            </span>
           )
         },
         a({ href, children, ...props }) {

@@ -10,6 +10,8 @@ import { ReactNode, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { RootState } from '@/store'
 import { setCodeTheme } from '@/features/generalSlice'
+import { IoMdCheckmarkCircleOutline } from 'react-icons/io'
+import { AiOutlineCopy } from 'react-icons/ai'
 
 const CustomCode = ({
   language,
@@ -37,32 +39,27 @@ const CustomCode = ({
   }
 
   return (
-    <div className='mockup-code text-sm bg-primary text-primary-content'>
-      <section className='flex justify-between px-3'>
-        <span className='block'>{language}</span>
-        <article className='flex gap-4 items-center'>
-          <button
-            className='text-lg hover:text-base-200'
-            onClick={toggleCodeTheme}
-          >
-            {codeTheme === 'light' ? <FaMoon /> : <FaSun />}
-          </button>
-          <button
-            className={clsx(
-              'text-lg hover:text-base-200',
-              isCopied ? 'text-success' : 'text-base'
-            )}
-            onClick={() => handleCopyCode(children as string)}
-          >
-            {isCopied ? <MdLibraryAddCheck /> : <FaCopy />}
-          </button>
-        </article>
+    <div className='text-sm flex flex-col bg-eerie-black rounded-lg'>
+      <section className='flex justify-between items-center px-3'>
+        <span>{language}</span>
+        {/* <article className='flex gap-4 items-center'> */}
+        <button
+          className={clsx(
+            'cursor-pointer px-2 aspect-square rounded-full hover:bg-teal-green/40 hover:text-teal-green',
+            isCopied ? 'text-success' : 'text-base'
+          )}
+          onClick={() => handleCopyCode(children as string)}
+        >
+          {isCopied ? <IoMdCheckmarkCircleOutline /> : <AiOutlineCopy />}
+        </button>
+        {/* </article> */}
       </section>
+
       <SyntaxHighlighter
         {...props}
         PreTag='div'
         language={language}
-        style={codeTheme === 'light' ? oneLight : darcula}
+        style={darcula}
       >
         {String(children).replace(/\n$/, '')}
       </SyntaxHighlighter>

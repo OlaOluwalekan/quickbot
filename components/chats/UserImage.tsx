@@ -1,5 +1,5 @@
-import Image from "next/image";
-import { FaUserCircle } from "react-icons/fa";
+import Image from 'next/image'
+import { FaUserCircle } from 'react-icons/fa'
 
 const UserImage = ({ image }: { image: string | null }) => {
   return (
@@ -7,16 +7,16 @@ const UserImage = ({ image }: { image: string | null }) => {
       {image ? (
         <Image
           src={image}
-          alt="user photo"
+          alt='user photo'
           width={30}
           height={30}
-          className="rounded-[50%]"
+          className='rounded-[50%]'
         />
       ) : (
-        <FaUserCircle className="text-[30px]" />
+        <FaUserCircle className='text-[30px]' />
       )}
     </article>
-  );
-};
+  )
+}
 
-export default UserImage;
+export default UserImage
