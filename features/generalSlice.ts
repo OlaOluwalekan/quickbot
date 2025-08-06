@@ -21,6 +21,7 @@ const initialState: GeneralSliceInit = {
   deletePopUpIsOpen: false,
   chatInputHeight: '48px',
   searchResultIsOpen: false,
+  searchPopupIsOpen: false,
 }
 
 const generalSlice = createSlice({
@@ -76,6 +77,9 @@ const generalSlice = createSlice({
     setSearchResultIsOpen: (state, { payload }: { payload: boolean }) => {
       state.searchResultIsOpen = payload
     },
+    setSearchPopupIsOpen: (state, { payload }: { payload: boolean }) => {
+      state.searchPopupIsOpen = payload
+    },
   },
 })
 
@@ -96,6 +100,7 @@ export const {
   setDeletePopUpOpen,
   setChatInputHeight,
   setSearchResultIsOpen,
+  setSearchPopupIsOpen,
 } = generalSlice.actions
 
 export default generalSlice.reducer

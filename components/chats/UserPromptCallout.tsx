@@ -34,7 +34,7 @@ const UserPromptCallout = ({
 
         <section>
           <div className='flex gap-2 items-end'>
-            <div className='bg-purple dark:bg-purple-dark text-white-main py-3 px-3 rounded-lg whitespace-pre-wrap break-words'>
+            <div className='min-w-[200px] bg-purple dark:bg-purple-dark text-white-main py-3 px-3 rounded-lg whitespace-pre-wrap break-words'>
               {response.question}
             </div>
           </div>

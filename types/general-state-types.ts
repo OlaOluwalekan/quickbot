@@ -17,4 +17,5 @@ export interface GeneralSliceInit {
   deletePopUpIsOpen: boolean
   chatInputHeight: string
   searchResultIsOpen: boolean
+  searchPopupIsOpen: boolean
 }

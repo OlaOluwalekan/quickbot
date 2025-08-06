@@ -5,6 +5,7 @@ import { FaBarsStaggered } from 'react-icons/fa6'
 import { GoSearch } from 'react-icons/go'
 import { useDispatch } from 'react-redux'
 import UserProfile from './user-profile/UserProfile'
+import Link from 'next/link'
 
 const ChatHeader = ({ userData }: { userData: any }) => {
   const dispatch = useDispatch()
@@ -20,7 +21,10 @@ const ChatHeader = ({ userData }: { userData: any }) => {
             <FaBarsStaggered />
           </button>
 
-          <button className='flex gap-1 items-center bg-platinum dark:bg-eerie-black hover:bg-teal-green/40 tablet:hover:bg-platinum tablet:dark:hover:bg-eerie-black tablet:hover:text-black-main tablet:dark:hover:text-white-main hover:text-teal-green tablet:py-1 rounded-md cursor-pointer'>
+          <Link
+            href='/chat/search'
+            className='flex gap-1 items-center bg-platinum dark:bg-eerie-black hover:bg-teal-green/40 tablet:hover:bg-platinum tablet:dark:hover:bg-eerie-black tablet:hover:text-black-main tablet:dark:hover:text-white-main hover:text-teal-green tablet:py-1 rounded-md cursor-pointer'
+          >
             <span className='p-2 flex aspect-square'>
               <GoSearch />
             </span>
@@ -29,7 +33,7 @@ const ChatHeader = ({ userData }: { userData: any }) => {
               placeholder='Search...'
               className='focus:outline-none hidden tablet:block'
             />
-          </button>
+          </Link>
         </section>
 
         {/* USER ICON */}

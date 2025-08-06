@@ -44,7 +44,7 @@ const Chat = ({ chat }: { chat: ChatProps }) => {
         )}
       >
         <Link
-          href={`/chat/${chat.id}`}
+          href={`/chat/c/${chat.id}`}
           className='w-[90%] flex flex-col gap-1'
           onClick={() => dispatch(toggleMobileNavOpen(false))}
         >

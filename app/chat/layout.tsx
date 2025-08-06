@@ -5,7 +5,13 @@ import { ChatProps } from '@/types/chats.interface'
 import { getChats } from '@/utils/actions/chat'
 import { ReactNode } from 'react'
 
-const Template = async ({ children }: { children: ReactNode }) => {
+const Layout = async ({
+  children,
+  modal,
+}: {
+  children: ReactNode
+  modal: ReactNode
+}) => {
   // get authenticated user session
   const session = await auth()
   let chats: ChatProps[] = []
@@ -33,11 +39,14 @@ const Template = async ({ children }: { children: ReactNode }) => {
         <ChatHeader userData={session?.user} />
 
         <div className='w-full h-[calc(100vh-60px)]'>
-          <div className='mx-auto'>{children}</div>
+          <div className='mx-auto'>
+            {children}
+            {modal}
+          </div>
         </div>
       </div>
     </div>
   )
 }
 
-export default Template
+export default Layout
