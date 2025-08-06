@@ -22,7 +22,7 @@ const ChatHeader = ({ userData }: { userData: any }) => {
           </button>
 
           <Link
-            href='/chat/search'
+            href={`/chat/search`}
             className='flex gap-1 items-center bg-platinum dark:bg-eerie-black hover:bg-teal-green/40 tablet:hover:bg-platinum tablet:dark:hover:bg-eerie-black tablet:hover:text-black-main tablet:dark:hover:text-white-main hover:text-teal-green tablet:py-1 rounded-md cursor-pointer'
           >
             <span className='p-2 flex aspect-square'>

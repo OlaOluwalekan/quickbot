@@ -1,4 +1,5 @@
 import { auth } from '@/auth'
+import ChatClient from '@/components/chats/ChatClient'
 import ChatInput from '@/components/chats/ChatInput'
 import ResponseList from '@/components/chats/ResponseList'
 import NotFound from '@/components/not-found/NotFound'
@@ -57,6 +58,7 @@ const SingleChatPage = async ({
             image={session?.user?.image as string | null}
           />
         </div>
+        <ChatClient chatId={chatId} userId={session?.user?.id as string} />
       </div>
       <div className=''>
         <ChatInput userId={session?.user?.id as string} existingToken={10000} />

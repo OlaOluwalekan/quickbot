@@ -1,4 +1,5 @@
 import { auth } from '@/auth'
+import ChatClient from '@/components/chats/ChatClient'
 import TemplatePrompts from '@/components/chats/TemplatePrompts'
 import { getTrendingTopics } from '@/utils/actions/location'
 import Link from 'next/link'
@@ -43,6 +44,7 @@ const ChatPage = async () => {
 
   return (
     <div className='flex flex-col justify-center items-center h-full w-full'>
+      <ChatClient userId={session?.user?.id as string} chatId='' />
       <TemplatePrompts
         data={samplePrompts}
         userId={session?.user?.id as string}

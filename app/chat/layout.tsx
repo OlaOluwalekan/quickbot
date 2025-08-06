@@ -39,7 +39,7 @@ const Layout = async ({
         <ChatHeader userData={session?.user} />
 
         <div className='w-full h-[calc(100vh-60px)]'>
-          <div className='mx-auto'>
+          <div className='mx-auto h-full'>
             {children}
             {modal}
           </div>

@@ -1,5 +1,5 @@
 import { GeneralSliceInit } from '@/types'
-import { ChatProps } from '@/types/chats.interface'
+import { ChatProps, ResponseProps } from '@/types/chats.interface'
 import { ThemeProps } from '@/types/theme.interface'
 import { addToLocalStorage, getFromLocalStorage } from '@/utils/local-storage'
 import { createSlice } from '@reduxjs/toolkit'
@@ -22,6 +22,9 @@ const initialState: GeneralSliceInit = {
   chatInputHeight: '48px',
   searchResultIsOpen: false,
   searchPopupIsOpen: false,
+  currentChatId: '',
+  authUserId: '',
+  searchResult: [],
 }
 
 const generalSlice = createSlice({
@@ -80,6 +83,18 @@ const generalSlice = createSlice({
     setSearchPopupIsOpen: (state, { payload }: { payload: boolean }) => {
       state.searchPopupIsOpen = payload
     },
+    setCurrentChatId: (state, { payload }: { payload: string }) => {
+      state.currentChatId = payload
+    },
+    setAuthUserId: (state, { payload }: { payload: string }) => {
+      state.authUserId = payload
+    },
+    setSearchResult: (
+      state,
+      { payload }: { payload: (ChatProps | ResponseProps)[] }
+    ) => {
+      state.searchResult = payload
+    },
   },
 })
 
@@ -101,6 +116,9 @@ export const {
   setChatInputHeight,
   setSearchResultIsOpen,
   setSearchPopupIsOpen,
+  setCurrentChatId,
+  setAuthUserId,
+  setSearchResult,
 } = generalSlice.actions
 
 export default generalSlice.reducer

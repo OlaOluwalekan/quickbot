@@ -9,11 +9,11 @@ const SearchModal = ({ children }: { children: ReactNode }) => {
 
   return (
     <div
-      className='w-screen h-screen bg-black-main/30 backdrop-blur-xs flex justify-center items-center fixed top-0 left-0 z-30'
+      className='w-screen h-screen bg-black-main/30 flex justify-center items-center fixed top-0 left-0 z-30'
       onClick={(e) => router.back()}
     >
       <div
-        className='w-[90%] max-w-[500px] flex flex-col justify-center items-center bg-white-main dark:bg-eerie-black px-3 py-3'
+        className='w-[90%] max-w-[700px] flex flex-col justify-center items-center bg-platinum dark:bg-eerie-black px-3 py-3 rounded-xl'
         onClick={(e) => e.stopPropagation()}
       >
         <article className='w-full flex justify-end'>
