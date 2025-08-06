@@ -25,6 +25,7 @@ const initialState: GeneralSliceInit = {
   currentChatId: '',
   authUserId: '',
   searchResult: [],
+  searchText: '',
 }
 
 const generalSlice = createSlice({
@@ -95,6 +96,9 @@ const generalSlice = createSlice({
     ) => {
       state.searchResult = payload
     },
+    setSearchText: (state, { payload }: { payload: string }) => {
+      state.searchText = payload
+    },
   },
 })
 
@@ -119,6 +123,7 @@ export const {
   setCurrentChatId,
   setAuthUserId,
   setSearchResult,
+  setSearchText,
 } = generalSlice.actions
 
 export default generalSlice.reducer

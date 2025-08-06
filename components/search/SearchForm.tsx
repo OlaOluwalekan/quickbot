@@ -13,7 +13,7 @@ import {
 import { searchChat } from '@/utils/actions/chat'
 import { useDispatch, useSelector } from 'react-redux'
 import { RootState } from '@/store'
-import { setSearchResult } from '@/features/generalSlice'
+import { setSearchResult, setSearchText } from '@/features/generalSlice'
 
 const SearchForm = () => {
   const [searchFormData, setSearchFormData] = useState<{
@@ -40,6 +40,10 @@ const SearchForm = () => {
     inputRef.current?.focus()
     console.log(authUserId, currentChatId)
   }, [])
+
+  useEffect(() => {
+    dispatch(setSearchText(searchFormData.searchText))
+  }, [searchFormData.searchText])
 
   useEffect(() => {
     startSearching(() => {

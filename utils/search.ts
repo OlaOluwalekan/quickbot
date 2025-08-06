@@ -10,7 +10,7 @@ export /**
 function getSnippetWithHighlight(
   text: string,
   searchTerm: string,
-  snippetLength = 200
+  snippetLength = 100
 ) {
   // Create a regular expression for the search term (case-insensitive).
   const searchRegex = new RegExp(searchTerm, 'i')
@@ -74,7 +74,7 @@ function getSnippetWithHighlight(
   // (Using the same regex we defined.)
   snippet = snippet.replace(
     searchRegex,
-    (found: string) => `<span class="bg-yellow">${found}</span>`
+    (found: string) => `<span class="bg-yellow-300">${found}</span>`
   )
 
   return snippet

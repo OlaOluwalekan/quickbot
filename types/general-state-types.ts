@@ -21,4 +21,5 @@ export interface GeneralSliceInit {
   currentChatId: string
   authUserId: string
   searchResult: (ChatProps | ResponseProps)[]
+  searchText: string
 }
