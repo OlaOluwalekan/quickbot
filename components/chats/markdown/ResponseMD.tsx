@@ -11,6 +11,7 @@ import CustomUl from './CustomUl'
 import CustomLi from './CustomLi'
 import CustomLink from './CustomLink'
 import { useSearchParams } from 'next/navigation'
+import highlightText from './highlightText'
 
 interface CodeProps {
   inline?: boolean
@@ -22,27 +23,9 @@ const ResponseMD = ({ response }: { response: string }) => {
   const searchParams = useSearchParams()
   const searchQuery = searchParams.get('q')?.trim().toLowerCase() || ''
 
-  // console.log(searchQuery)
-
   useEffect(() => {
     convertToHTML(response)
   }, [])
-
-  const highlightText = (text: string | ReactNode): ReactNode => {
-    if (!searchQuery || typeof text !== 'string') return text
-
-    const parts = text.split(new RegExp(`(${searchQuery})`, 'gi'))
-
-    return parts.map((part, i) =>
-      part.toLowerCase() === searchQuery ? (
-        <mark key={i} className='bg-lemon rounded'>
-          {part}
-        </mark>
-      ) : (
-        part
-      )
-    )
-  }
 
   return (
     <ReactMarkdown
@@ -60,9 +43,18 @@ const ResponseMD = ({ response }: { response: string }) => {
           const language = match ? match[1] : 'shell'
 
           return isBlock ? (
-            <CustomCode language={language} children={children} props={props} />
+            <CustomCode
+              language={language}
+              children={children}
+              props={props}
+              search={searchQuery}
+            />
           ) : (
-            <InlineCode children={children} props={props} />
+            <InlineCode
+              children={children}
+              props={props}
+              search={searchQuery}
+            />
           )
         },
         ul({ children, ...props }) {
@@ -75,7 +67,9 @@ const ResponseMD = ({ response }: { response: string }) => {
           return (
             <CustomLi {...props}>
               {Children.map(children, (child) => {
-                return typeof child === 'string' ? highlightText(child) : child
+                return typeof child === 'string'
+                  ? highlightText(child, searchQuery)
+                  : child
               })}
             </CustomLi>
           )
@@ -84,7 +78,9 @@ const ResponseMD = ({ response }: { response: string }) => {
           return (
             <p {...props} className='text-sm'>
               {Children.map(children, (child) => {
-                return typeof child === 'string' ? highlightText(child) : child
+                return typeof child === 'string'
+                  ? highlightText(child, searchQuery)
+                  : child
               })}
             </p>
           )
@@ -93,21 +89,31 @@ const ResponseMD = ({ response }: { response: string }) => {
           return (
             <span {...props} className='text-sm font-semibold'>
               {Children.map(children, (child) => {
-                return typeof child === 'string' ? highlightText(child) : child
+                return typeof child === 'string'
+                  ? highlightText(child, searchQuery)
+                  : child
               })}
             </span>
           )
         },
         a({ href, children, ...props }) {
           return (
-            <CustomLink href={href as string} children={children} {...props} />
+            <CustomLink href={href as string} {...props}>
+              {Children.map(children, (child) => {
+                return typeof child === 'string'
+                  ? highlightText(child, searchQuery)
+                  : child
+              })}
+            </CustomLink>
           )
         },
         h1({ children, ...props }) {
           return (
             <h1 className='text-4xl font-semibold'>
               {Children.map(children, (child) => {
-                return typeof child === 'string' ? highlightText(child) : child
+                return typeof child === 'string'
+                  ? highlightText(child, searchQuery)
+                  : child
               })}
             </h1>
           )
@@ -116,7 +122,9 @@ const ResponseMD = ({ response }: { response: string }) => {
           return (
             <h2 className='text-3xl font-semibold'>
               {Children.map(children, (child) => {
-                return typeof child === 'string' ? highlightText(child) : child
+                return typeof child === 'string'
+                  ? highlightText(child, searchQuery)
+                  : child
               })}
             </h2>
           )
@@ -125,7 +133,9 @@ const ResponseMD = ({ response }: { response: string }) => {
           return (
             <h3 className='text-2xl font-semibold'>
               {Children.map(children, (child) => {
-                return typeof child === 'string' ? highlightText(child) : child
+                return typeof child === 'string'
+                  ? highlightText(child, searchQuery)
+                  : child
               })}
             </h3>
           )
@@ -134,7 +144,9 @@ const ResponseMD = ({ response }: { response: string }) => {
           return (
             <h4 className='text-xl font-semibold'>
               {Children.map(children, (child) => {
-                return typeof child === 'string' ? highlightText(child) : child
+                return typeof child === 'string'
+                  ? highlightText(child, searchQuery)
+                  : child
               })}
             </h4>
           )
@@ -143,7 +155,9 @@ const ResponseMD = ({ response }: { response: string }) => {
           return (
             <h5 className='text-lg font-semibold'>
               {Children.map(children, (child) => {
-                return typeof child === 'string' ? highlightText(child) : child
+                return typeof child === 'string'
+                  ? highlightText(child, searchQuery)
+                  : child
               })}
             </h5>
           )
@@ -152,7 +166,9 @@ const ResponseMD = ({ response }: { response: string }) => {
           return (
             <h6 className='text-base font-semibold'>
               {Children.map(children, (child) => {
-                return typeof child === 'string' ? highlightText(child) : child
+                return typeof child === 'string'
+                  ? highlightText(child, searchQuery)
+                  : child
               })}
             </h6>
           )

@@ -1,10 +1,5 @@
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import {
-  darcula,
-  oneLight,
-} from 'react-syntax-highlighter/dist/esm/styles/prism'
-import { FaCopy, FaMoon, FaSun } from 'react-icons/fa6'
-import { MdLibraryAddCheck } from 'react-icons/md'
+import { darcula } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import clsx from 'clsx'
 import { ReactNode, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
@@ -13,14 +8,26 @@ import { setCodeTheme } from '@/features/generalSlice'
 import { IoMdCheckmarkCircleOutline } from 'react-icons/io'
 import { AiOutlineCopy } from 'react-icons/ai'
 
+const highlightSearchInCode = (code: string, search: string): string => {
+  if (!search) return code
+  const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const regex = new RegExp(`(${escaped})`, 'gi')
+  return code.replace(
+    regex,
+    '<mark style="background-color: yellow;">$1</mark>'
+  )
+}
+
 const CustomCode = ({
   language,
   children,
   props,
+  search,
 }: {
   language: string
   children: ReactNode
   props: any
+  search?: string
 }) => {
   const [isCopied, setIsCopied] = useState(false)
   const { codeTheme } = useSelector((store: RootState) => store.general)
@@ -38,11 +45,15 @@ const CustomCode = ({
     }, 3000)
   }
 
+  const rawCode = String(children).replace(/\n$/, '')
+  const highlightedCode = search
+    ? highlightSearchInCode(rawCode, search)
+    : rawCode
+
   return (
     <div className='text-sm flex flex-col bg-eerie-black rounded-lg'>
       <section className='flex justify-between items-center px-3 text-white-main'>
         <span>{language}</span>
-        {/* <article className='flex gap-4 items-center'> */}
         <button
           className={clsx(
             'cursor-pointer px-2 aspect-square rounded-full hover:bg-teal-green/40 hover:text-teal-green',
@@ -60,9 +71,12 @@ const CustomCode = ({
         PreTag='div'
         language={language}
         style={darcula}
-      >
-        {String(children).replace(/\n$/, '')}
-      </SyntaxHighlighter>
+        children={highlightedCode}
+        wrapLines={true}
+        useInlineStyles={true}
+      />
+      {/* {String(children).replace(/\n$/, '')}
+      </SyntaxHighlighter> */}
     </div>
   )
 }
