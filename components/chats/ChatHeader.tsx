@@ -1,14 +1,20 @@
 'use client'
 
-import { toggleMobileNavOpen } from '@/features/generalSlice'
+import {
+  setSearchModalIsOpen,
+  toggleMobileNavOpen,
+} from '@/features/generalSlice'
 import { FaBarsStaggered } from 'react-icons/fa6'
 import { GoSearch } from 'react-icons/go'
-import { useDispatch } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import UserProfile from './user-profile/UserProfile'
 import Link from 'next/link'
+import { RootState } from '@/store'
+import Search from '../search/Search'
 
 const ChatHeader = ({ userData }: { userData: any }) => {
   const dispatch = useDispatch()
+  const { searchModalIsOpen } = useSelector((store: RootState) => store.general)
 
   return (
     <div className='border-b-[1px] border-platinum dark:border-eerie-black'>
@@ -21,8 +27,10 @@ const ChatHeader = ({ userData }: { userData: any }) => {
             <FaBarsStaggered />
           </button>
 
-          <Link
-            href={`/chat/search`}
+          <button
+            // href={`/chat/search`}
+            type='button'
+            onClick={() => dispatch(setSearchModalIsOpen(true))}
             className='flex gap-1 items-center bg-platinum dark:bg-eerie-black hover:bg-teal-green/40 tablet:hover:bg-platinum tablet:dark:hover:bg-eerie-black tablet:hover:text-black-main tablet:dark:hover:text-white-main hover:text-teal-green tablet:py-1 rounded-md cursor-pointer'
           >
             <span className='p-2 flex aspect-square'>
@@ -33,13 +41,15 @@ const ChatHeader = ({ userData }: { userData: any }) => {
               placeholder='Search...'
               className='focus:outline-none hidden tablet:block'
             />
-          </Link>
+          </button>
         </section>
 
         {/* USER ICON */}
         <div>
           <UserProfile data={userData} />
         </div>
+
+        {searchModalIsOpen && <Search />}
       </div>
     </div>
   )

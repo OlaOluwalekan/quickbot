@@ -25,6 +25,8 @@ export const formatNumber = (
 }
 
 export const formatCustomDate = (dateString: string) => {
+  // console.log(dateString)
+
   const date = new Date(dateString)
 
   if (isToday(date)) {
@@ -36,7 +38,10 @@ export const formatCustomDate = (dateString: string) => {
   } else if (isThisMonth(date)) {
     return format(date, 'MMMM d') // "March 5"
   } else {
+    // console.log('some=>', date)
+
     return format(date, 'MMMM d, yyyy') // "January 10, 2023"
+    // return 'far away'
   }
 }
 

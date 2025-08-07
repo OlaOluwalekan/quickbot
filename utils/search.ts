@@ -77,5 +77,5 @@ function getSnippetWithHighlight(
     (found: string) => `<span class="bg-yellow-300">${found}</span>`
   )
 
-  return snippet
+  return `${snippet}${text.length > snippetLength ? '...' : ''}`
 }

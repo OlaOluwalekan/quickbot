@@ -16,8 +16,7 @@ export interface GeneralSliceInit {
   editPopUpIsOpen: boolean
   deletePopUpIsOpen: boolean
   chatInputHeight: string
-  searchResultIsOpen: boolean
-  searchPopupIsOpen: boolean
+  searchModalIsOpen: boolean
   currentChatId: string
   authUserId: string
   searchResult: (ChatProps | ResponseProps)[]

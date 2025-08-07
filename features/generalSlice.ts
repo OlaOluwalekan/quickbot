@@ -20,8 +20,7 @@ const initialState: GeneralSliceInit = {
   editPopUpIsOpen: false,
   deletePopUpIsOpen: false,
   chatInputHeight: '48px',
-  searchResultIsOpen: false,
-  searchPopupIsOpen: false,
+  searchModalIsOpen: false,
   currentChatId: '',
   authUserId: '',
   searchResult: [],
@@ -78,11 +77,8 @@ const generalSlice = createSlice({
     setChatInputHeight: (state, { payload }: { payload: string }) => {
       state.chatInputHeight = payload
     },
-    setSearchResultIsOpen: (state, { payload }: { payload: boolean }) => {
-      state.searchResultIsOpen = payload
-    },
-    setSearchPopupIsOpen: (state, { payload }: { payload: boolean }) => {
-      state.searchPopupIsOpen = payload
+    setSearchModalIsOpen: (state, { payload }: { payload: boolean }) => {
+      state.searchModalIsOpen = payload
     },
     setCurrentChatId: (state, { payload }: { payload: string }) => {
       state.currentChatId = payload
@@ -118,8 +114,7 @@ export const {
   setEditPopUpOpen,
   setDeletePopUpOpen,
   setChatInputHeight,
-  setSearchResultIsOpen,
-  setSearchPopupIsOpen,
+  setSearchModalIsOpen,
   setCurrentChatId,
   setAuthUserId,
   setSearchResult,

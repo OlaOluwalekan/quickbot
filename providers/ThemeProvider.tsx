@@ -1,7 +1,6 @@
 'use client'
 
 import {
-  setSearchResultIsOpen,
   toggleChatMenuOpen,
   toggleProfileDialogOpen,
   toggleThemeOpen,
@@ -37,7 +36,6 @@ const ThemeProvider = ({ children }: { children: ReactNode }) => {
     dispatch(toggleThemeOpen(false))
     dispatch(toggleProfileDialogOpen(false))
     dispatch(toggleChatMenuOpen(false))
-    dispatch(setSearchResultIsOpen(false))
   }
 
   useEffect(() => {
