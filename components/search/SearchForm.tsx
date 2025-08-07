@@ -38,7 +38,7 @@ const SearchForm = () => {
 
   useEffect(() => {
     inputRef.current?.focus()
-    console.log(authUserId, currentChatId)
+    // console.log(authUserId, currentChatId)
   }, [])
 
   useEffect(() => {

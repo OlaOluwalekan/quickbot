@@ -8,6 +8,7 @@ import { RootState } from '@/store'
 import InlineLoading from '../loading/InlineLoading'
 import { getChatById } from '@/utils/actions/chat'
 import { setCurrentPageId, setCurrentPageTitle } from '@/features/generalSlice'
+import { useSearchParams } from 'next/navigation'
 
 const ResponseList = ({
   data,
@@ -23,6 +24,10 @@ const ResponseList = ({
   const [pending, startTransition] = useTransition()
   const dispatch = useDispatch()
   const [urlFragment, setUrlFragment] = useState('#')
+  const searchParams = useSearchParams()
+  const searchQuery = searchParams.get('q')
+
+  console.log(searchQuery)
 
   useEffect(() => {
     if (typeof window !== 'undefined') {

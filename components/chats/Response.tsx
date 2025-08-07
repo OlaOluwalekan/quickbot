@@ -14,8 +14,6 @@ const Response = ({
       <UserPromptCallout response={response} image={image} />
 
       <BotResponseCallout response={response} />
-
-      {/* <div className='divider my-2'></div> */}
     </div>
   )
 }

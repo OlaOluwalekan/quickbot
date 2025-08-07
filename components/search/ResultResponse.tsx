@@ -23,7 +23,7 @@ const ResultResponse = ({
 
   return (
     <Link
-      href={`/chat/c/${chatId}#${id}${searchText ? `?q=${searchText}` : ''}`}
+      href={`/chat/c/${chatId}${searchText ? `?q=${searchText}` : ''}#${id}`}
       onClick={() => dispatch(setSearchModalIsOpen(false))}
     >
       <div
