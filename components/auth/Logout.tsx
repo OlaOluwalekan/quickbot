@@ -10,7 +10,7 @@ import { BiLogOut } from "react-icons/bi";
  * @param {string} props.styleClass - tailwind css class to style the logout button
  * @returns {JSX.Element} logout button element
  */
-const Logout = ({ styleClass }: { styleClass?: string }): JSX.Element => {
+const Logout = ({ styleClass }: { styleClass?: string }): React.JSX.Element => {
   return (
     <button
       className={clsx(

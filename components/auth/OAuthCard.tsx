@@ -10,7 +10,7 @@ import { signIn } from 'next-auth/react'
  * OAuth card to manage OAuth login with GitHub and Google
  * @returns {JSX.Element} styled AuthCard Component
  */
-const OAuthCard = (): JSX.Element => {
+const OAuthCard = (): React.JSX.Element => {
   // handles OAuth button clicked to login user
   const handleClick = (provider: 'google' | 'github') => {
     signIn(provider, {

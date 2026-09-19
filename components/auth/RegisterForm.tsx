@@ -13,7 +13,7 @@ import axios from 'axios'
  * Register form
  * @returns {JSX.Element} styled register form
  */
-const RegisterForm = (): JSX.Element => {
+const RegisterForm = (): React.JSX.Element => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',

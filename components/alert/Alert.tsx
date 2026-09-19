@@ -14,12 +14,12 @@ interface respType {
  * @param {boolean} props.success - whether the response is successful or not
  * @returns {JSX.Element} styled alert component
  */
-const Alert = ({ message, success }: respType): JSX.Element => {
+const Alert = ({ message, success }: respType): React.JSX.Element => {
   return (
     <div
       role="alert"
       className={clsx(
-        "alert text-sm px-2 py-1 rounded my-2 text-base-100 gap-x-1 flex justify-center",
+        "text-sm px-2 py-1 rounded my-2 text-base-100 gap-x-1 flex justify-center",
         success ? "bg-success/55 text-success" : "bg-error/15 text-error"
       )}
     >

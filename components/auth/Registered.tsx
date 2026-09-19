@@ -23,7 +23,7 @@ const Registered = ({
   accountId: email,
 }: {
   accountId: string | null;
-}): JSX.Element | null => {
+}): React.JSX.Element | null => {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [userEmail, setUserEmail] = useState("");
@@ -37,11 +37,12 @@ const Registered = ({
   });
   const [count, setCount] = useState(0); // to count the number of seconds to wait to resent verification email
 
-  // check if email is in req params and redirect if not
-  if (!email) {
-    router.push("/auth/register");
-    return null;
-  }
+  useEffect(() => {
+    // check if email is in req params and redirect if not
+    if (!email) {
+      router.push("/auth/register");
+    }
+  }, [email, router]);
 
   // reset count
   const handleResendClick = () => {
@@ -50,25 +51,27 @@ const Registered = ({
 
   useEffect(() => {
     // handle state update on page load
-    startTransition(() => {
-      getUserByEmail(email).then((data) => {
-        if (data) {
-          // if email already verified, then redirect to login page
-          if (data.emailVerified) {
-            router.push("/auth/login");
+    if (email) {
+      startTransition(() => {
+        getUserByEmail(email).then((data) => {
+          if (data) {
+            // if email already verified, then redirect to login page
+            if (data.emailVerified) {
+              router.push("/auth/login");
+            }
+            setUser(data);
+            setUserEmail(data.email as string);
+          } else {
+            // if email does not exit in the database, redirect to registration page
+            setTimeout(() => {
+              router.push("/auth/register");
+            }, REDIRECT_MILLISECONDS);
           }
-          setUser(data);
-          setUserEmail(data.email as string);
-        } else {
-          // if email does not exit in the database, redirect to registration page
-          setTimeout(() => {
-            router.push("/auth/register");
-          }, REDIRECT_MILLISECONDS);
-        }
-        setPageIsLoading(false);
+          setPageIsLoading(false);
+        });
       });
-    });
-  }, []);
+    }
+  }, [email, router]);
 
   // handle countdown to resend verification email
   useEffect(() => {

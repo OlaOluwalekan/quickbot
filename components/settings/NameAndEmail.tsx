@@ -56,7 +56,7 @@ const NameAndEmail = ({ user }: { user: SessionProps }) => {
             }
           />
           {isPending ? (
-            <span className='loading loading-spinner loading-xs'></span>
+            <span className='animate-spin inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full' role='status' aria-label='loading'></span>
           ) : (
             <article className='flex gap-1'>
               <button
