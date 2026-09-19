@@ -8,7 +8,7 @@ const RegisterPage = () => {
     <AuthWrapper>
       <AuthCard
         page='Register'
-        headerText='Create your account in one simple click'
+        headerText='Create your account and start chatting with your AI assistant'
         backText='Already have an account'
         backLink='login'
       >

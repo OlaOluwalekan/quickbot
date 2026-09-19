@@ -1,12 +1,12 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { Montserrat } from 'next/font/google'
 import './globals.css'
 import StoreProvider from '@/providers/StoreProvider'
 import ThemeProvider from '@/providers/ThemeProvider'
-import Theme from '@/components/theme/Theme'
 import { Toaster } from 'react-hot-toast'
+import Loader from '@/components/general/Loader'
 
-const inter = Inter({ subsets: ['latin'] })
+const montserrat = Montserrat({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'Quickbot | Your daily companion',
@@ -23,12 +23,11 @@ export default function RootLayout({
     <html lang='en'>
       <body
         suppressHydrationWarning
-        className={`main bg-base-100 text-base-content dark:bg-dark-base-100 dark:text-dark-base-content ${inter.className}`}
+        className={`main bg-base-light text-black-main dark:bg-base-dark dark:text-white-main scroll-smooth ${montserrat.className}`}
       >
         <StoreProvider>
           <ThemeProvider>
-            {children}
-            <Theme />
+            <Loader>{children}</Loader>
             <Toaster />
           </ThemeProvider>
         </StoreProvider>

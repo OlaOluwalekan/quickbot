@@ -10,7 +10,10 @@ import { getResponseFromAI } from '@/utils/actions/response'
 import clsx from 'clsx'
 import { useRouter } from 'next/navigation'
 import { ChangeEvent, useEffect, useRef, useState, useTransition } from 'react'
-import { FaPaperPlane } from 'react-icons/fa6'
+import { RxPaperPlane } from 'react-icons/rx'
+import { ImAttachment } from 'react-icons/im'
+import { AiOutlineFileImage } from 'react-icons/ai'
+import { HiOutlineEmojiHappy } from 'react-icons/hi'
 import { useDispatch, useSelector } from 'react-redux'
 
 const ChatInput = ({
@@ -75,34 +78,56 @@ const ChatInput = ({
   return (
     <form
       className={clsx(
-        'w-full my-3 absolute bottom-0 left-0 right-0 mx-auto rounded-md overflow-hidden',
+        'w-[90%] max-w-[700px] my-3 absolute bottom-0 left-0 right-0 mx-auto rounded-md overflow-hidden flex flex-col gap-1',
         currentPageTitle === '' && 'hidden'
       )}
       action={handleSubmit}
     >
-      <input type='hidden' value={userId} id='id' name='id' />
-      <textarea
-        onChange={handleChange}
-        ref={textRef}
-        name='question'
-        id='question'
-        rows={1}
-        placeholder='Ask Quick'
-        className='w-full resize-none h-[48px] max-h-[200px] overflow-y-auto scrollbar-none text-base py-3 pl-3 pr-8 rounded-lg bg-base-200 dark:bg-dark-base-200 border-1 border-primary placeholder:text-base-300 scrollbar-thin focus:outline-none'
-        defaultValue={text}
-      ></textarea>
-      <button
-        type='submit'
-        className={clsx(
-          'absolute bottom-2.5 md:bottom-4 m-auto right-2 w-[30px] h-[30px] rounded text-primary-content flex justify-center items-center',
-          isPending || text.trim() === ''
-            ? 'bg-gray-600 cursor-not-allowed opacity-50'
-            : 'bg-primary hover:bg-accent cursor-pointer opacity-100'
-        )}
-        disabled={isPending || text.trim() === ''}
-      >
-        <FaPaperPlane />
-      </button>
+      <div>
+        <input type='hidden' value={userId} id='id' name='id' />
+        <textarea
+          onChange={handleChange}
+          ref={textRef}
+          name='question'
+          id='question'
+          rows={1}
+          placeholder='Ask Anything...'
+          className='w-full resize-none h-[48px] max-h-[100px] overflow-y-auto text-base py-3 pl-3 pr-8 rounded-lg bg-platinum dark:bg-eerie-black placeholder:text-medium-grey scrollbar-thin focus:outline-none scrollbar-track-teal-green/10 scrollbar-thumb-teal-green/20'
+          defaultValue={text}
+        ></textarea>
+      </div>
+
+      <div className='flex justify-between items-center'>
+        <section className='flex gap-1'>
+          <button className='px-1.5 aspect-square hover:bg-teal-green/35 hover:text-teal-green rounded-full cursor-pointer'>
+            <ImAttachment className='rotate-[-180deg]' />
+          </button>
+
+          <button className='px-1.5 aspect-square hover:bg-teal-green/35 hover:text-teal-green rounded-full cursor-pointer'>
+            <AiOutlineFileImage />
+          </button>
+
+          <button className='px-1.5 aspect-square hover:bg-teal-green/35 hover:text-teal-green rounded-full cursor-pointer'>
+            <HiOutlineEmojiHappy />
+          </button>
+        </section>
+
+        <section>
+          <button
+            type='submit'
+            className={clsx(
+              'flex gap-2 items-center rounded px-4 py-1 text-white-main',
+              isPending || text.trim() === ''
+                ? 'bg-medium-grey cursor-not-allowed opacity-15'
+                : 'bg-lemon hover:bg-teal-green cursor-pointer opacity-100'
+            )}
+            disabled={isPending || text.trim() === ''}
+          >
+            <RxPaperPlane />
+            Send
+          </button>
+        </section>
+      </div>
     </form>
   )
 }

@@ -1,4 +1,4 @@
-import { ChatProps } from './chats'
+import { ChatProps, ResponseProps } from './chats.interface'
 
 export interface GeneralSliceInit {
   theme: 'light' | 'dark'
@@ -16,5 +16,9 @@ export interface GeneralSliceInit {
   editPopUpIsOpen: boolean
   deletePopUpIsOpen: boolean
   chatInputHeight: string
-  searchResultIsOpen: boolean
+  searchModalIsOpen: boolean
+  currentChatId: string
+  authUserId: string
+  searchResult: (ChatProps | ResponseProps)[]
+  searchText: string
 }

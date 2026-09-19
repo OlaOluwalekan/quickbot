@@ -2,12 +2,14 @@
 
 import { ChangeEvent, useEffect, useState, useTransition } from 'react'
 import InputWithIcon from '../ui/inputs/InputWithIcon'
-import { FaEnvelope, FaLock, FaUser } from 'react-icons/fa6'
 import BasicButton from '../ui/button/BasicButton'
 import { register } from '@/utils/actions/register'
 import Alert from '../alert/Alert'
 import { useRouter } from 'next/navigation'
 import axios from 'axios'
+import { LuUserRound } from 'react-icons/lu'
+import { LiaEnvelope } from 'react-icons/lia'
+import { CiLock } from 'react-icons/ci'
 
 /**
  * Register form
@@ -49,8 +51,6 @@ const RegisterForm = (): JSX.Element => {
     // handle state updates
     startTransition(() => {
       register(formData).then((res) => {
-        console.log(res)
-
         setResponse(res)
         if (res.success) {
           // send email on successful user registration
@@ -67,12 +67,12 @@ const RegisterForm = (): JSX.Element => {
   }
 
   return (
-    <form action={handleSubmit} noValidate>
+    <form action={handleSubmit} noValidate className='flex flex-col gap-3'>
       {/* email input */}
       <InputWithIcon
         type='email'
         placeholder='Email'
-        icons={<FaEnvelope />}
+        icons={<LiaEnvelope />}
         name='email'
         id='email'
         value={formData.email}
@@ -83,7 +83,7 @@ const RegisterForm = (): JSX.Element => {
       <InputWithIcon
         type='text'
         placeholder='Name'
-        icons={<FaUser />}
+        icons={<LuUserRound />}
         name='name'
         id='name'
         value={formData.name}
@@ -94,7 +94,7 @@ const RegisterForm = (): JSX.Element => {
       <InputWithIcon
         type='password'
         placeholder='Password'
-        icons={<FaLock />}
+        icons={<CiLock />}
         name='password'
         id='password'
         value={formData.password}
@@ -105,7 +105,7 @@ const RegisterForm = (): JSX.Element => {
       <InputWithIcon
         type='password'
         placeholder='Confirm Password'
-        icons={<FaLock />}
+        icons={<CiLock />}
         name='confirmPassword'
         id='confirmPassword'
         value={formData.confirmPassword}
@@ -123,7 +123,7 @@ const RegisterForm = (): JSX.Element => {
         size='full'
         text={isPending ? 'Loading...' : 'Register'}
         disabled={isPending}
-        theme='primary'
+        className='bg-lemon'
       />
     </form>
   )

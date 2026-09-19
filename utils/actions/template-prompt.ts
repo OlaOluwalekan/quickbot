@@ -1,10 +1,9 @@
-"use server";
+'use server'
 
-import { getGeminiJSONResponse } from "../ai-models/gemini";
-import { db } from "../db";
-import ActionResponse from "../response";
+import { db } from '../db'
+import ActionResponse from '../response'
 
-let PROMPT = `List 4 short template prompts for a new chat`;
+let PROMPT = `List 4 short template prompts for a new chat`
 
 /**
  * Asynchronously creates multiple template prompts in the database and retrieves them.
@@ -18,15 +17,15 @@ export const createManyTemplatePrompts = async (prompts: any[]) => {
   try {
     await db.templatePrompt.createMany({
       data: prompts,
-    });
-    const templatePrompts = await db.templatePrompt.findMany({});
-    return ActionResponse.success("Fetched template prompts", {
+    })
+    const templatePrompts = await db.templatePrompt.findMany({})
+    return ActionResponse.success('Fetched template prompts', {
       templatePrompts,
-    });
+    })
   } catch (error) {
-    return ActionResponse.error("Failed to fetch template prompts", null);
+    return ActionResponse.error('Failed to fetch template prompts', null)
   }
-};
+}
 
 /**
  * Asynchronously deletes all template prompts from the database.
@@ -37,9 +36,9 @@ export const createManyTemplatePrompts = async (prompts: any[]) => {
  */
 export const deleteAllTemplatePrompts = async () => {
   try {
-    await db.templatePrompt.deleteMany({});
+    await db.templatePrompt.deleteMany({})
   } catch (error) {}
-};
+}
 
 /**
  * Asynchronously retrieves template prompts from the database.
@@ -49,41 +48,41 @@ export const deleteAllTemplatePrompts = async () => {
  *          On success, it includes the fetched template prompts.
  *          On failure, it includes an error message.
  */
-export const getTemplatePrompts = async () => {
-  try {
-    const prompts = await db.templatePrompt.findMany({});
+// export const getTemplatePrompts = async () => {
+//   try {
+//     const prompts = await db.templatePrompt.findMany({});
 
-    if (prompts.length === 0) {
-      const geminiJSONResponse = await getGeminiJSONResponse(PROMPT);
-      const response = JSON.parse(geminiJSONResponse.data.result);
-      const templatePrompts = (await createManyTemplatePrompts(response)).data
-        .templatePrompts;
-      return ActionResponse.success("Fetched template prompts", {
-        templatePrompts,
-      });
-    }
+//     if (prompts.length === 0) {
+//       const geminiJSONResponse = await getGeminiJSONResponse(PROMPT);
+//       const response = JSON.parse(geminiJSONResponse.data.result);
+//       const templatePrompts = (await createManyTemplatePrompts(response)).data
+//         .templatePrompts;
+//       return ActionResponse.success("Fetched template prompts", {
+//         templatePrompts,
+//       });
+//     }
 
-    const samplePrompt = prompts[0];
-    const dateCreated = new Date(samplePrompt.createAt);
-    const todaysDate = new Date();
+//     const samplePrompt = prompts[0];
+//     const dateCreated = new Date(samplePrompt.createAt);
+//     const todaysDate = new Date();
 
-    // check if the prompt is not created in the same day then delete and recreate the prompt
-    if (dateCreated.toDateString() !== todaysDate.toDateString()) {
-      await deleteAllTemplatePrompts();
+//     // check if the prompt is not created in the same day then delete and recreate the prompt
+//     if (dateCreated.toDateString() !== todaysDate.toDateString()) {
+//       await deleteAllTemplatePrompts();
 
-      const geminiJSONResponse = await getGeminiJSONResponse(PROMPT);
-      const response = JSON.parse(geminiJSONResponse.data.result);
-      const templatePrompts = (await createManyTemplatePrompts(response)).data
-        .templatePrompts;
-      return ActionResponse.success("Fetched template prompts", {
-        templatePrompts,
-      });
-    }
+//       const geminiJSONResponse = await getGeminiJSONResponse(PROMPT);
+//       const response = JSON.parse(geminiJSONResponse.data.result);
+//       const templatePrompts = (await createManyTemplatePrompts(response)).data
+//         .templatePrompts;
+//       return ActionResponse.success("Fetched template prompts", {
+//         templatePrompts,
+//       });
+//     }
 
-    return ActionResponse.success("Fetched template prompts", {
-      templatePrompts: prompts,
-    });
-  } catch (error) {
-    return ActionResponse.error("Failed to fetch template prompts", null);
-  }
-};
+//     return ActionResponse.success("Fetched template prompts", {
+//       templatePrompts: prompts,
+//     });
+//   } catch (error) {
+//     return ActionResponse.error("Failed to fetch template prompts", null);
+//   }
+// };

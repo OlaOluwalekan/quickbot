@@ -16,22 +16,22 @@ import { sizeClass, themeClass } from './button.config'
 const BasicButton = ({
   type,
   text,
-  size,
   disabled,
-  theme,
+  className,
   title,
 }: BasicBtnProps): JSX.Element => {
+  const defaultClass = 'w-full py-2 px-4 rounded text-center'
+
   return (
     <button
       type={type}
       className={clsx(
-        sizeClass(size),
-        themeClass(theme as 'base' | 'primary' | 'outline'),
+        defaultClass,
         disabled
           ? 'cursor-not-allowed opacity-50'
           : 'cursor-pointer opacity-100',
         'rounded',
-        size === 'small' ? 'py-1' : 'py-2'
+        className
       )}
       title={title}
     >

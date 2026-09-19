@@ -1,5 +1,5 @@
-import VerificationForm from "@/components/auth/VerificationForm";
-import React, { Suspense } from "react";
+import VerificationForm from '@/components/auth/VerificationForm'
+import { Suspense } from 'react'
 
 const VerificationPage = () => {
   return (
@@ -8,7 +8,7 @@ const VerificationPage = () => {
         <VerificationForm />
       </Suspense>
     </div>
-  );
-};
+  )
+}
 
-export default VerificationPage;
+export default VerificationPage

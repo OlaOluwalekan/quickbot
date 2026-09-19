@@ -1,0 +1,275 @@
+const FullLoader = ({ text }: { text?: string }) => {
+  return (
+    <div className='fixed inset-0 flex flex-col items-center justify-center'>
+      <div>
+        <svg
+          width='180'
+          height='180'
+          viewBox='0 0 180 180'
+          version='1.1'
+          id='svg1'
+          xmlns='http://www.w3.org/2000/svg'
+        >
+          <defs id='defs1'>
+            <style>
+              {`
+          .outer {
+        transform: scale(1);
+        transform-origin: center;
+        animation: pulse-outer 4s linear infinite;
+      }
+      .inner {
+        transform: scale(1);
+        transform-origin: center;
+        animation: pulse-inner 4s linear infinite;
+      }
+      .loader {
+        transform: rotate(0deg);
+        transform-origin: center;
+        animation: rotate 2s linear infinite;
+      }
+      .bar {
+        transform-box: fill-box;
+        transform-origin: center bottom;
+      }
+      .bar-1 {
+        animation: grow1 1s linear infinite;
+      }
+      .bar-2 {
+        animation: grow2 1s linear infinite;
+      }
+      .bar-3 {
+        animation: grow3 1s linear infinite;
+      }
+
+      @keyframes pulse-outer {
+        0% {
+          transform: scale(1);
+        }
+        25% {
+          transform: scale(0.8);
+        }
+        50% {
+          transform: scale(1);
+        }
+        75% {
+          transform: scale(0.2);
+        }
+        100% {
+          transform: scale(1);
+        }
+      }
+
+      @keyframes pulse-inner {
+        0% {
+          transform: scale(1);
+        }
+        30% {
+          transform: scale(0.9);
+        }
+        55% {
+          transform: scale(1);
+        }
+        80% {
+          transform: scale(0.3);
+        }
+        100% {
+          transform: scale(1);
+        }
+      }
+
+      @keyframes rotate {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      @keyframes grow1 {
+        0% {
+          transform: scaleY(1);
+        }
+        20% {
+          transform: scaleY(3);
+        }
+        80% {
+          transform: scaleY(0);
+        }
+        100% {
+          transform: scaleY(1);
+        }
+      }
+
+      @keyframes grow2 {
+        0% {
+          transform: scaleY(1);
+        }
+        50% {
+          transform: scaleY(0);
+        }
+        100% {
+          transform: scaleY(1);
+        }
+      }
+
+      @keyframes grow3 {
+        0% {
+          transform: scaleY(1);
+        }
+        50% {
+          transform: scaleY(0);
+        }
+        75% {
+          transform: scaleY(1.5);
+        }
+        100% {
+          transform: scaleY(1);
+        }
+      }
+        `}
+            </style>
+          </defs>
+
+          <g id='g6' className='all'>
+            <g id='g5' className='outer'>
+              {/* <!-- TEAL PERIMETER **************************************  --> */}
+              <circle
+                //     style='
+                // fill: none;
+
+                // stroke-dasharray: none;
+                // stroke-opacity: 0.30000001;'
+                id='path1'
+                cx='90'
+                cy='90'
+                r='68.456665'
+                fill='none'
+                className='perimeter'
+                stroke='#20b2aa'
+                strokeWidth={7.99255}
+                strokeOpacity={0.3}
+              />
+
+              {/* <!-- SPINNING ARC ***************************************** --> */}
+              <path
+                //       style='
+                //   fill: none;
+                //   stroke: #faad14;
+                //   stroke-width: 6.39404;
+                //   stroke-dasharray: none;
+                //   stroke-opacity: 1;
+                // '
+                id='circle1'
+                d='M 38.770666,44.592178 A 68.456665,68.456665 0 0 1 89.597321,21.544519'
+                className='loader'
+                fill='none'
+                stroke='#faad14'
+                strokeWidth={6.39404}
+              />
+            </g>
+
+            <g id='g4' className='inner'>
+              {/* <!-- INNER CIRCLE ************************************ --> */}
+              <circle
+                //       style='
+                //   fill: #20b2aa;
+                //   stroke: none;
+                //   stroke-width: 4.51284;
+                //   stroke-dasharray: none;
+                //   stroke-opacity: 1;
+                //   fill-opacity: 0.60000002;
+                // '
+                id='circle2'
+                cx='90'
+                cy='90'
+                r='38.652725'
+                className='inner-circle'
+                fill='#20b2aa'
+                stroke='transparent'
+                strokeWidth={4.51284}
+                fillOpacity={0.6}
+              />
+
+              <g
+                id='g3'
+                className='bars'
+                transform='translate(6.156002,0.55664062)'
+              >
+                {/* <!-- BAR 1 - PURPLE ********************************** --> */}
+                <rect
+                  //       style='
+                  //   fill: #9370db;
+                  //   fill-opacity: 1;
+                  //   stroke: none;
+                  //   stroke-width: 4;
+                  //   stroke-dasharray: none;
+                  //   stroke-opacity: 1;
+                  // '
+                  id='rect1'
+                  width='10'
+                  height='10'
+                  x='67.764999'
+                  y='94.443359'
+                  ry='0'
+                  rx='0'
+                  className='bar-1 bar'
+                  fill='#9370db'
+                  stroke='transparent'
+                  strokeWidth={4}
+                />
+
+                {/* <!-- BAR 2 - ORANGE ************************************** --> */}
+                <rect
+                  //       style='
+                  //   fill: #faad14;
+                  //   fill-opacity: 1;
+                  //   stroke: none;
+                  //   stroke-width: 4;
+                  //   stroke-dasharray: none;
+                  //   stroke-opacity: 1;
+                  // '
+                  id='rect2'
+                  width='10'
+                  height='30'
+                  x='78.859497'
+                  y='74.443359'
+                  ry='0'
+                  rx='0'
+                  className='bar-2 bar'
+                  fill='#faad14'
+                  stroke='transparent'
+                  strokeWidth={4}
+                />
+
+                {/* <!-- BAR 3 - LEMON ************************************** --> */}
+                <rect
+                  //       style='
+                  //   fill: #33d205;
+                  //   fill-opacity: 1;
+                  //   stroke: none;
+                  //   stroke-width: 4;
+                  //   stroke-dasharray: none;
+                  //   stroke-opacity: 1;
+                  // '
+                  id='rect3'
+                  width='10'
+                  height='20'
+                  x='89.922997'
+                  y='84.443359'
+                  ry='0'
+                  rx='0'
+                  className='bar-3 bar'
+                  fill='#33d205'
+                  stroke='transparent'
+                  strokeWidth={4}
+                />
+              </g>
+            </g>
+          </g>
+        </svg>
+      </div>
+      {text && <p className='text-center text-lg font-semibold'>{text}</p>}
+    </div>
+  )
+}
+
+export default FullLoader

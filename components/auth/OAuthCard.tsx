@@ -2,7 +2,7 @@
 
 import { FcGoogle } from 'react-icons/fc'
 import OAuthButton from '../ui/button/OAuthButton'
-import { FaGithub } from 'react-icons/fa6'
+import { FaGithub, FaGoogle } from 'react-icons/fa6'
 import { DEFAULT_LOGIN_REDIRECT } from '@/utils/routes'
 import { signIn } from 'next-auth/react'
 
@@ -19,9 +19,17 @@ const OAuthCard = (): JSX.Element => {
   }
 
   return (
-    <div className='flex justify-center items-center gap-5 text-primary'>
-      <OAuthButton icon={<FcGoogle />} onClick={() => handleClick('google')} />
-      <OAuthButton icon={<FaGithub />} onClick={() => handleClick('github')} />
+    <div className='flex flex-col justify-center items-center gap-5'>
+      <OAuthButton
+        icon={<FaGoogle />}
+        text='Continue with Google'
+        onClick={() => handleClick('google')}
+      />
+      <OAuthButton
+        icon={<FaGithub />}
+        text='Continue with GitHub'
+        onClick={() => handleClick('github')}
+      />
     </div>
   )
 }

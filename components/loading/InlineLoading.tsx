@@ -1,11 +1,11 @@
-import { BeatLoader } from "react-spinners";
+import { BeatLoader } from 'react-spinners'
 
 const InlineLoading = () => {
   return (
-    <div>
-      <BeatLoader color="#4338ca" />
+    <div className='w-full flex justify-center items-center'>
+      <BeatLoader color='#33d205' />
     </div>
-  );
-};
+  )
+}
 
-export default InlineLoading;
+export default InlineLoading

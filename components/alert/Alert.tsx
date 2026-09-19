@@ -1,10 +1,10 @@
-import clsx from "clsx";
-import { FaExclamationTriangle } from "react-icons/fa";
-import { IoCheckmarkDoneCircle } from "react-icons/io5";
+import clsx from 'clsx'
+import { FaExclamationTriangle } from 'react-icons/fa'
+import { IoCheckmarkDoneCircle } from 'react-icons/io5'
 
 interface respType {
-  message: string;
-  success: boolean;
+  message: string
+  success: boolean
 }
 
 /**
@@ -17,16 +17,22 @@ interface respType {
 const Alert = ({ message, success }: respType): JSX.Element => {
   return (
     <div
-      role="alert"
+      role='alert'
       className={clsx(
-        "alert text-sm px-2 py-1 rounded my-2 text-base-100 gap-x-1 flex justify-center",
-        success ? "bg-success/55 text-success" : "bg-error/15 text-error"
+        'alert text-sm px-2 py-1 rounded my-2 text-base-100 gap-x-1 flex justify-center items-center',
+        success ? 'bg-success/55 text-success' : 'bg-error/15 text-error'
       )}
     >
-      {success ? <IoCheckmarkDoneCircle /> : <FaExclamationTriangle />}
-      <span>{message}</span>
+      <section className='gap-x-1 flex justify-center items-center'>
+        <article className='min-w-6 flex justify-center items-center'>
+          {success ? <IoCheckmarkDoneCircle /> : <FaExclamationTriangle />}
+        </article>
+        <article>
+          <p>{message}</p>
+        </article>
+      </section>
     </div>
-  );
-};
+  )
+}
 
-export default Alert;
+export default Alert

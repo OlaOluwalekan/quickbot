@@ -1,5 +1,5 @@
 import { GeneralSliceInit } from '@/types'
-import { ChatProps } from '@/types/chats'
+import { ChatProps, ResponseProps } from '@/types/chats.interface'
 import { ThemeProps } from '@/types/theme.interface'
 import { addToLocalStorage, getFromLocalStorage } from '@/utils/local-storage'
 import { createSlice } from '@reduxjs/toolkit'
@@ -20,7 +20,11 @@ const initialState: GeneralSliceInit = {
   editPopUpIsOpen: false,
   deletePopUpIsOpen: false,
   chatInputHeight: '48px',
-  searchResultIsOpen: false,
+  searchModalIsOpen: false,
+  currentChatId: '',
+  authUserId: '',
+  searchResult: [],
+  searchText: '',
 }
 
 const generalSlice = createSlice({
@@ -73,8 +77,23 @@ const generalSlice = createSlice({
     setChatInputHeight: (state, { payload }: { payload: string }) => {
       state.chatInputHeight = payload
     },
-    setSearchResultIsOpen: (state, { payload }: { payload: boolean }) => {
-      state.searchResultIsOpen = payload
+    setSearchModalIsOpen: (state, { payload }: { payload: boolean }) => {
+      state.searchModalIsOpen = payload
+    },
+    setCurrentChatId: (state, { payload }: { payload: string }) => {
+      state.currentChatId = payload
+    },
+    setAuthUserId: (state, { payload }: { payload: string }) => {
+      state.authUserId = payload
+    },
+    setSearchResult: (
+      state,
+      { payload }: { payload: (ChatProps | ResponseProps)[] }
+    ) => {
+      state.searchResult = payload
+    },
+    setSearchText: (state, { payload }: { payload: string }) => {
+      state.searchText = payload
     },
   },
 })
@@ -95,7 +114,11 @@ export const {
   setEditPopUpOpen,
   setDeletePopUpOpen,
   setChatInputHeight,
-  setSearchResultIsOpen,
+  setSearchModalIsOpen,
+  setCurrentChatId,
+  setAuthUserId,
+  setSearchResult,
+  setSearchText,
 } = generalSlice.actions
 
 export default generalSlice.reducer
