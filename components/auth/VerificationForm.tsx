@@ -17,7 +17,7 @@ const RESEND_SECONDS = 15; // number of seconds to wait before resending verific
  * verification form - form in page where user email is actually verified
  * @returns {JSX.Element} verification form component
  */
-const VerificationForm = (): JSX.Element => {
+const VerificationForm = (): React.JSX.Element => {
   const params = useSearchParams();
   const token = params.get("token");
   const [isPending, startTransition] = useTransition();

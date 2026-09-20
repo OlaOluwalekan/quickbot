@@ -20,7 +20,7 @@ const BasicButton = ({
   disabled,
   theme,
   title,
-}: BasicBtnProps): JSX.Element => {
+}: BasicBtnProps): React.JSX.Element => {
   return (
     <button
       type={type}

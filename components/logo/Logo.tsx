@@ -13,7 +13,7 @@ import { RootState } from '@/store'
  * @param {string} props.size - size of the logo - icon, text, small, normal, medium or large
  * @returns {JSX.Element} styled logo component
  */
-const Logo = ({ size }: LogoProps): JSX.Element => {
+const Logo = ({ size }: LogoProps): React.JSX.Element => {
   const { theme } = useSelector((store: RootState) => store.general)
 
   // image src attribute based on user selected theme

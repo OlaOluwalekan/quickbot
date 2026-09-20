@@ -13,7 +13,7 @@ import Link from "next/link";
  * Login form
  * @returns {JSX.Element} styled login form
  */
-const LoginForm = (): JSX.Element => {
+const LoginForm = (): React.JSX.Element => {
   const [formData, setFormData] = useState({
     email: "",
     password: "",

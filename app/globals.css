@@ -5,6 +5,8 @@
 @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
 
 @theme {
+  --breakpoint-small: 400px;
+
   /* GENERAL */
   --color-error: #f5365c;
   --color-success: #21ba45;

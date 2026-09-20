@@ -10,7 +10,7 @@ const LinkButton = ({ size, text, theme, href }: LinkBtnProps) => {
       className={clsx(
         sizeClass(size),
         themeClass(theme as 'base' | 'primary' | 'outline'),
-        'btn py-2 rounded text-center'
+        'inline-flex items-center justify-center font-medium transition-colors py-2 rounded text-center cursor-pointer'
       )}
     >
       {text}

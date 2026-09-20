@@ -1,10 +1,10 @@
 "use server";
 
-import nodemailer, { Transporter } from "nodemailer";
+// import nodemailer, { Transporter } from "nodemailer";
 
 /**
  * Sends an email using the specified email address, subject, and message.
- * Utilizes the nodemailer library to send emails through a Gmail account.
+ * (Nodemailer commented out pending migration to Resend / Brevo)
  *
  * @param {string} email - The recipient's email address.
  * @param {string} subject - The subject line of the email.
@@ -17,6 +17,7 @@ const sendMail = async (
   message: string
 ): Promise<void> => {
   try {
+    /*
     const transporter: Transporter = nodemailer.createTransport({
       service: "gmail",
       secure: true,
@@ -35,9 +36,12 @@ const sendMail = async (
 
     const info = await transporter.sendMail(emailOptions);
     console.log("MAIL SENT: " + info.response);
+    */
+    console.log(`[Email placeholder] Sending email to: ${email} | Subject: ${subject}`);
   } catch (error) {
     console.error("Error sending email:", error);
   }
 };
 
 export default sendMail;
+

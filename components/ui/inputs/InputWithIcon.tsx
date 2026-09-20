@@ -23,7 +23,7 @@ const InputWithIcon = ({
   value,
   onChange,
   readonly,
-}: InputWithIconsProps): JSX.Element => {
+}: InputWithIconsProps): React.JSX.Element => {
   return (
     <label
       className={clsx(
