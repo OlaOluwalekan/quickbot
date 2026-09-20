@@ -13,16 +13,16 @@ describe("Home Component", () => {
     );
 
     // check that app name component is rendered correctly
-    expect(screen.getAllByText(/QuickBot/i)[0]).toBeInTheDocument();
+    expect(screen.getAllByText(/Owinta AI/i)[0]).toBeInTheDocument();
 
-    // check that the typing text component is rendered correctly with specific text
+    // check that the hero text is rendered correctly
     await waitFor(
-      () => expect(screen.getByText(/Talk, Learn, Solve – Instantly/i)).toBeInTheDocument(),
-      { timeout: 25000 }
+      () => expect(screen.getByText(/The Intelligent AI Chatbot/i)).toBeInTheDocument(),
+      { timeout: 5000 }
     );
 
-    // check that link button to register page is present
-    const registerLink = screen.getAllByRole("link", { name: /chat/i })[0];
-    expect(registerLink).toBeInTheDocument();
+    // check that link button to explore features is present
+    const exploreFeaturesLink = screen.getByRole("link", { name: /Explore Features/i });
+    expect(exploreFeaturesLink).toBeInTheDocument();
   });
 });

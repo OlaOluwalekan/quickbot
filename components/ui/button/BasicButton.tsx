@@ -30,7 +30,6 @@ const BasicButton = ({
         disabled
           ? 'cursor-not-allowed opacity-50'
           : 'cursor-pointer opacity-100',
-        'rounded',
         size === 'small' ? 'py-1' : 'py-2'
       )}
       title={title}

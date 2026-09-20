@@ -24,43 +24,43 @@ const navLink = [
 
 const Header = () => {
   return (
-    <div className='flex justify-between items-center py-4 px-6'>
-      <div className='flex gap-4 items-center'>
-        <section className='flex gap-2 items-center'>
+    <div className='flex justify-between items-center py-5 px-6 md:px-12 w-full max-w-[1200px] mx-auto'>
+      <div className='flex items-center gap-12'>
+        <Link href="/" className='flex gap-2 items-center'>
           <Logo size='icon' />
           <AppName />
-          {/* <h2>Quickbot</h2> */}
-        </section>
+        </Link>
 
-        <section className='flex gap-2'>
+        <nav className='hidden md:flex gap-8'>
           {navLink.map((link) => {
             return (
               <Link
                 href={link.link}
                 key={link.id}
-                className={clsx('text-sm text-primary hover:underline')}
+                className={clsx('text-[15px] font-medium text-base-content/80 hover:text-primary transition-colors dark:text-dark-base-content/80 dark:hover:text-dark-primary-content')}
               >
                 {link.name}
               </Link>
             )
           })}
-        </section>
+        </nav>
       </div>
 
-      <div className='hidden gap-2 md:flex'>
+      <div className='flex gap-4 items-center'>
+        <div className='hidden md:block'>
+          <Link
+            href='/auth/login'
+            className='text-[15px] font-medium text-base-content/80 hover:text-primary transition-colors mr-6 dark:text-dark-base-content/80 dark:hover:text-dark-primary-content'
+          >
+            Login
+          </Link>
+        </div>
         <LinkButton
-          size='small'
+          size='medium'
           type='button'
-          text='Signup'
-          theme='outline'
-          href='/auth/register'
-        />
-        <LinkButton
-          size='small'
-          type='button'
-          text='Login'
+          text='Sign Up'
           theme='primary'
-          href='/auth/login'
+          href='/auth/register'
         />
       </div>
     </div>
