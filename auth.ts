@@ -2,7 +2,9 @@ import { PrismaAdapter } from '@auth/prisma-adapter'
 import NextAuth from 'next-auth'
 import { db } from './utils/db'
 import authConfig from './auth.config'
-import { getUserById } from './utils/actions/user'
+import { getUserByEmail, getUserById } from './utils/actions/user'
+import Credentials from 'next-auth/providers/credentials'
+import { isMatch } from './utils/hash'
 
 export const {
   handlers: { GET, POST },
@@ -10,6 +12,30 @@ export const {
   signOut,
   auth,
 } = NextAuth({
+  ...authConfig,
+  adapter: PrismaAdapter(db),
+  session: { strategy: 'jwt' },
+  providers: [
+    ...authConfig.providers,
+    Credentials({
+      async authorize(credentials) {
+        const user = await getUserByEmail(credentials.email as string)
+        if (!user || !user.password) {
+          return null
+        }
+
+        const passwordMatch = await isMatch(
+          credentials.password as string,
+          user.password,
+        )
+        if (passwordMatch) {
+          return user
+        }
+
+        return null
+      },
+    }),
+  ],
   callbacks: {
     /**
      * Handles the sign-in process for a user.
@@ -72,7 +98,4 @@ export const {
       return token
     },
   },
-  adapter: PrismaAdapter(db),
-  session: { strategy: 'jwt' },
-  ...authConfig,
 })

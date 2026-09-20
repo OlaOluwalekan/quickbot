@@ -1,13 +1,12 @@
-version: '3.8'
 services:
-  db:
-    image: postgres:15
+  postgres:
+    image: postgres:16-alpine
     container_name: quickbot-postgres
-    restart: always
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: quickbot
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: quickbot_dev
+      PGDATA: /var/lib/postgresql/data/pgdata
     ports:
       - '5432:5432'
     volumes:

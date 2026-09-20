@@ -1,30 +1,12 @@
 import type { NextAuthConfig } from 'next-auth'
-import Credentials from 'next-auth/providers/credentials'
+// import Credentials from 'next-auth/providers/credentials'
 import Github from 'next-auth/providers/github'
 import Google from 'next-auth/providers/google'
-import { getUserByEmail } from './utils/actions/user'
-import { isMatch } from './utils/hash'
+// import { getUserByEmail } from './utils/actions/user'
+// import { isMatch } from './utils/hash'
 
 export default {
   providers: [
-    Credentials({
-      async authorize(credentials) {
-        const user = await getUserByEmail(credentials.email as string)
-        if (!user || !user.password) {
-          return null
-        }
-
-        const passwordMatch = await isMatch(
-          credentials.password as string,
-          user.password
-        )
-        if (passwordMatch) {
-          return user
-        }
-
-        return null
-      },
-    }),
     Github({
       clientId: process.env.GITHUB_CLIENT_ID,
       clientSecret: process.env.GITHUB_CLIENT_SECRET,
