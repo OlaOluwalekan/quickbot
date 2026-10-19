@@ -67,7 +67,21 @@ const generalSlice = createSlice({
       state.chatMenuClass = payload;
     },
     setDialogData: (state, { payload }: { payload: ChatProps | null }) => {
-      state.dialogData = payload;
+      if (!payload) {
+        state.dialogData = null;
+        return;
+      }
+      state.dialogData = {
+        ...payload,
+        createdAt:
+          payload.createdAt instanceof Date
+            ? payload.createdAt.toISOString()
+            : String(payload.createdAt),
+        updatedAt:
+          payload.updatedAt instanceof Date
+            ? payload.updatedAt.toISOString()
+            : String(payload.updatedAt),
+      };
     },
     setEditPopUpOpen: (state, { payload }: { payload: boolean }) => {
       state.editPopUpIsOpen = payload;
@@ -102,7 +116,13 @@ const generalSlice = createSlice({
     ) => {
       const exists = state.optimisticResponses.some((r) => r.id === payload.id);
       if (!exists) {
-        state.optimisticResponses.push(payload);
+        state.optimisticResponses.push({
+          ...payload,
+          createdAt:
+            payload.createdAt instanceof Date
+              ? payload.createdAt.toISOString()
+              : String(payload.createdAt),
+        });
       }
     },
     clearOptimisticResponses: (state) => {
