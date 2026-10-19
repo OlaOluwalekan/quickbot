@@ -44,7 +44,7 @@ describe("ChatInput Component", () => {
     );
 
     // Check if the textarea is rendered
-    const textarea = screen.getByPlaceholderText(/Ask Quick/i);
+    const textarea = screen.getByPlaceholderText(/Ask Klecx/i);
     expect(textarea).toBeInTheDocument();
 
     // check if the submit button is rendered
@@ -59,9 +59,9 @@ describe("ChatInput Component", () => {
       </Provider>
     );
 
-    const textarea = screen.getByPlaceholderText(/Ask Quick/i);
-    fireEvent.change(textarea, { target: { value: "Hello, QuickBot!" } });
-    expect(textarea).toHaveValue("Hello, QuickBot!");
+    const textarea = screen.getByPlaceholderText(/Ask Klecx/i);
+    fireEvent.change(textarea, { target: { value: "Hello, Klecx!" } });
+    expect(textarea).toHaveValue("Hello, Klecx!");
   });
 
   it("disables the submit button when textarea is empty", () => {
@@ -82,8 +82,8 @@ describe("ChatInput Component", () => {
       </Provider>
     );
 
-    const textarea = screen.getByPlaceholderText(/Ask Quick/i);
-    fireEvent.change(textarea, { target: { value: "Hello, QuickBot!" } });
+    const textarea = screen.getByPlaceholderText(/Ask Klecx/i);
+    fireEvent.change(textarea, { target: { value: "Hello, Klecx!" } });
     const button = screen.getByRole("button");
     expect(button).toBeEnabled();
   });
@@ -95,8 +95,8 @@ describe("ChatInput Component", () => {
       </Provider>
     );
 
-    const textarea = screen.getByPlaceholderText(/Ask Quick/i);
-    fireEvent.change(textarea, { target: { value: "Hello, QuickBot!" } });
+    const textarea = screen.getByPlaceholderText(/Ask Klecx/i);
+    fireEvent.change(textarea, { target: { value: "Hello, Klecx!" } });
     expect(textarea.style.height).toBe("0px");
   });
 });

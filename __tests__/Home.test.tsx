@@ -13,7 +13,7 @@ describe("Home Component", () => {
     );
 
     // check that app name component is rendered correctly
-    expect(screen.getAllByText(/QuickBot/i)[0]).toBeInTheDocument();
+    expect(screen.getAllByText(/Klecx/i)[0]).toBeInTheDocument();
 
     // check that the typing text component is rendered correctly with specific text
     await waitFor(
