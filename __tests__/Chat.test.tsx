@@ -67,6 +67,6 @@ describe("Chat component", () => {
     );
 
     const chatElement = screen.getByText("Test Chat").closest("div");
-    expect(chatElement).toHaveClass("bg-accent");
+    expect(chatElement).toHaveClass("bg-indigo-600/20");
   });
 });
