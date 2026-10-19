@@ -77,7 +77,24 @@ export const getResponseFromAI = async (
     );
 
     if (!response.success || !response.data) {
-      return ActionResponse.error("failed to respond", null);
+      const errorMessage =
+        response.message ||
+        "The AI service is currently unavailable. Please try again in a few moments.";
+      const errorText = `⚠️ ${errorMessage}`;
+
+      const res = await createResponse(chatId, prompt as string, errorText, {
+        type: "TEXT",
+      });
+
+      revalidatePath("/chat");
+      revalidatePath(`/chat/${chatId}`);
+
+      return ActionResponse.success("responded with error", {
+        text: errorText,
+        chatId,
+        response: res.data?.res,
+        isError: true,
+      });
     }
 
     const res = await createResponse(
@@ -105,8 +122,31 @@ export const getResponseFromAI = async (
       chatId,
       response: res.data?.res,
     });
-  } catch (error) {
-    return ActionResponse.error("failed to respond", { error });
+  } catch (error: any) {
+    const errorMsg =
+      error?.message ||
+      "An unexpected error occurred while communicating with the AI service. Please try again.";
+    const errorText = `⚠️ ${errorMsg}`;
+
+    try {
+      if (chatId) {
+        const res = await createResponse(chatId, prompt as string, errorText, {
+          type: "TEXT",
+        });
+        revalidatePath("/chat");
+        revalidatePath(`/chat/${chatId}`);
+        return ActionResponse.success("responded with error", {
+          text: errorText,
+          chatId,
+          response: res.data?.res,
+          isError: true,
+        });
+      }
+    } catch {
+      // secondary fallback
+    }
+
+    return ActionResponse.error(errorMsg, { chatId });
   }
 };
 

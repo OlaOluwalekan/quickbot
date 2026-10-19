@@ -1,7 +1,15 @@
 import { GoogleGenAI } from "@google/genai";
 import ActionResponse from "../response";
 
-const TEXT_MODEL = process.env.GEMINI_TEXT_MODEL || "gemini-3.8-flash";
+const PRIMARY_TEXT_MODEL = process.env.GEMINI_TEXT_MODEL || "gemini-3.8-flash";
+export const CANDIDATE_TEXT_MODELS = Array.from(
+  new Set([
+    PRIMARY_TEXT_MODEL,
+    "gemini-3.5-flash",
+    "gemini-3.7-flash",
+    "gemini-3.1-flash-lite",
+  ])
+);
 const IMAGE_MODEL = process.env.GEMINI_IMAGE_MODEL || "gemini-nano-banana-2.1";
 
 let aiClient: GoogleGenAI | null = null;
@@ -15,6 +23,32 @@ function getAIClient(): GoogleGenAI {
     aiClient = new GoogleGenAI({ apiKey });
   }
   return aiClient;
+}
+
+export function extractFriendlyErrorMessage(error: any): string {
+  const rawMsg =
+    error?.error?.message ||
+    error?.message ||
+    (typeof error?.body === "string" ? error.body : "");
+
+  if (typeof rawMsg === "string" && rawMsg.length > 0) {
+    if (
+      rawMsg.includes("high demand") ||
+      rawMsg.includes("503") ||
+      rawMsg.includes("service_unavailable")
+    ) {
+      return "Google Gemini is currently experiencing high demand, spikes in demand are usually temporary. Please try again later.";
+    }
+    if (
+      rawMsg.includes("429") ||
+      rawMsg.includes("quota") ||
+      rawMsg.includes("RESOURCE_EXHAUSTED")
+    ) {
+      return "Gemini API rate limit or quota exceeded. Please wait a moment and try again.";
+    }
+    return rawMsg;
+  }
+  return "AI service is currently unavailable. Please try again later.";
 }
 
 export interface StreamInteractionEvent {
@@ -37,7 +71,7 @@ export const countGeminiTokensUsed = async (
   try {
     const ai = getAIClient();
     const res = await ai.models.countTokens({
-      model: TEXT_MODEL,
+      model: PRIMARY_TEXT_MODEL,
       contents: prompt,
     });
     return ActionResponse.success("Counted tokens", {
@@ -52,7 +86,8 @@ export const countGeminiTokensUsed = async (
 };
 
 /**
- * Generates a single-turn text response using Google's Interactions API (`ai.interactions.create`).
+ * Generates a single-turn text response using Google's Interactions API (`ai.interactions.create`),
+ * with automatic fallback to secondary models if high demand/errors occur.
  *
  * @param {string} prompt - The input prompt string.
  * @returns {Promise<ActionResponse<any>>}
@@ -60,28 +95,45 @@ export const countGeminiTokensUsed = async (
 export const getGeminiResponse = async (
   prompt: string
 ): Promise<ActionResponse<any>> => {
-  try {
-    const ai = getAIClient();
-    const interaction = await ai.interactions.create({
-      model: TEXT_MODEL,
-      input: prompt,
-    });
+  const ai = getAIClient();
+  let lastError: any = null;
 
-    const text = (interaction.output_text || "").trim();
-    const tokenCount =
-      interaction.usage?.total_tokens ??
-      (interaction.usage?.total_input_tokens ?? 0) +
-        (interaction.usage?.total_output_tokens ?? 0);
+  for (const modelName of CANDIDATE_TEXT_MODELS) {
+    try {
+      const interaction = await ai.interactions.create({
+        model: modelName,
+        input: prompt,
+      });
 
-    return ActionResponse.success("responded", {
-      text,
-      interactionId: interaction.id,
-      tokenCount: tokenCount || Math.max(1, Math.ceil(text.length / 4)),
-    });
-  } catch (error) {
-    console.error("[Gemini] getGeminiResponse error:", error);
-    return ActionResponse.error("failed to respond", null);
+      const text = (interaction.output_text || "").trim();
+      const tokenCount =
+        interaction.usage?.total_tokens ??
+        (interaction.usage?.total_input_tokens ?? 0) +
+          (interaction.usage?.total_output_tokens ?? 0);
+
+      return ActionResponse.success("responded", {
+        text,
+        interactionId: interaction.id,
+        tokenCount: tokenCount || Math.max(1, Math.ceil(text.length / 4)),
+      });
+    } catch (error: any) {
+      lastError = error;
+      const errMsg = error?.message || error?.error?.message || "";
+      console.warn(
+        `[Gemini] Model ${modelName} failed in getGeminiResponse (${errMsg}). Trying next candidate...`
+      );
+      if (
+        errMsg.includes("API key not valid") ||
+        errMsg.includes("INVALID_ARGUMENT")
+      ) {
+        break;
+      }
+    }
   }
+
+  const friendlyMsg = extractFriendlyErrorMessage(lastError);
+  console.error("[Gemini] getGeminiResponse failed on all models:", lastError);
+  return ActionResponse.error(friendlyMsg, null);
 };
 
 /**
@@ -128,36 +180,55 @@ export const getGeminiChatResponse = async (
   history: any[] = [],
   previousInteractionId?: string | null
 ): Promise<ActionResponse<any>> => {
-  try {
-    const ai = getAIClient();
-    const input = previousInteractionId
+  const ai = getAIClient();
+  let lastError: any = null;
+
+  for (let i = 0; i < CANDIDATE_TEXT_MODELS.length; i++) {
+    const modelName = CANDIDATE_TEXT_MODELS[i];
+    const useInteractionId = i === 0 ? previousInteractionId : null;
+    const input = useInteractionId
       ? prompt
       : buildInputWithLegacyHistory(prompt, history);
 
-    const interaction = await ai.interactions.create({
-      model: TEXT_MODEL,
-      input,
-      ...(previousInteractionId
-        ? { previous_interaction_id: previousInteractionId }
-        : {}),
-    });
+    try {
+      const interaction = await ai.interactions.create({
+        model: modelName,
+        input,
+        ...(useInteractionId
+          ? { previous_interaction_id: useInteractionId }
+          : {}),
+      });
 
-    const text = interaction.output_text || "";
-    const usage = interaction.usage;
-    const tokenCount =
-      usage?.total_tokens ??
-      ((usage?.total_input_tokens ?? 0) + (usage?.total_output_tokens ?? 0) ||
-        Math.max(1, Math.ceil((prompt.length + text.length) / 4)));
+      const text = interaction.output_text || "";
+      const usage = interaction.usage;
+      const tokenCount =
+        usage?.total_tokens ??
+        ((usage?.total_input_tokens ?? 0) + (usage?.total_output_tokens ?? 0) ||
+          Math.max(1, Math.ceil((prompt.length + text.length) / 4)));
 
-    return ActionResponse.success("responded", {
-      text,
-      tokenCount,
-      interactionId: interaction.id,
-    });
-  } catch (error) {
-    console.error("[Gemini] getGeminiChatResponse error:", error);
-    return ActionResponse.error("failed to respond", null);
+      return ActionResponse.success("responded", {
+        text,
+        tokenCount,
+        interactionId: interaction.id,
+      });
+    } catch (error: any) {
+      lastError = error;
+      const errMsg = error?.message || error?.error?.message || "";
+      console.warn(
+        `[Gemini] Model ${modelName} failed in getGeminiChatResponse (${errMsg}). Trying next candidate...`
+      );
+      if (
+        errMsg.includes("API key not valid") ||
+        errMsg.includes("INVALID_ARGUMENT")
+      ) {
+        break;
+      }
+    }
   }
+
+  const friendlyMsg = extractFriendlyErrorMessage(lastError);
+  console.error("[Gemini] getGeminiChatResponse failed on all models:", lastError);
+  return ActionResponse.error(friendlyMsg, null);
 };
 
 /**
@@ -179,7 +250,7 @@ export async function* streamGeminiInteraction(
     : buildInputWithLegacyHistory(prompt, historyFallback);
 
   const stream = await ai.interactions.create({
-    model: TEXT_MODEL,
+    model: PRIMARY_TEXT_MODEL,
     input,
     ...(previousInteractionId
       ? { previous_interaction_id: previousInteractionId }
@@ -345,7 +416,7 @@ export const getGeminiJSONResponse = async (
   try {
     const ai = getAIClient();
     const interaction = await ai.interactions.create({
-      model: TEXT_MODEL,
+      model: PRIMARY_TEXT_MODEL,
       input: `${prompt}. Respond ONLY with a valid JSON array of objects, each containing "category" (string) and "prompt" (string) keys.`,
       response_format: {
         type: "json_schema",

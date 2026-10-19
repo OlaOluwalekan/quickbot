@@ -39,17 +39,21 @@ const TemplatePrompts = ({
   const handleSubmit = (formData: FormData) => {
     startTransition(() => {
       dispatch(setLoadingResponse(true))
-      getResponseFromAI(formData, window.location.pathname, existingToken).then(
-        (res) => {
-          if (res.success) {
+      getResponseFromAI(formData, window.location.pathname, existingToken)
+        .then((res) => {
+          if (res?.success && res?.data?.text) {
             dispatch(setAIResponse(res.data.text))
           }
-          if (res?.data.chatId) {
+          if (res?.data?.chatId) {
             router.push(`/chat/${res.data.chatId}`)
           }
+        })
+        .catch((err) => {
+          console.error('[TemplatePrompts] Error getting response from AI:', err)
+        })
+        .finally(() => {
           dispatch(setLoadingResponse(false))
-        }
-      )
+        })
     })
   }
 

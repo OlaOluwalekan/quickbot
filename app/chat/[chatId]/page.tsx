@@ -3,7 +3,6 @@ import ResponseList from '@/components/chats/ResponseList'
 import NotFound from '@/components/not-found/NotFound'
 import { getChatById } from '@/utils/actions/chat'
 import { getResponses } from '@/utils/actions/response'
-import React from 'react'
 
 const SingleChatPage = async ({
   params,
