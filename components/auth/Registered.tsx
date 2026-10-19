@@ -111,6 +111,16 @@ const Registered = ({
             })
             .then(() => {
               handleResendClick();
+            })
+            .catch((err) => {
+              console.error("[Resend Email] Error:", err);
+              setResponse({
+                message:
+                  err?.response?.data?.error ||
+                  "Failed to send email. Check server console for details.",
+                success: false,
+                data: null,
+              });
             });
         }
       });

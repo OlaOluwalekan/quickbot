@@ -54,13 +54,18 @@ const RegisterForm = (): React.JSX.Element => {
         setResponse(res)
         if (res.success) {
           // send email on successful user registration
-          axios.post('/api/email/send-verification-email', {
-            email: res.data.email,
-            token: res.data.token,
-          })
+          axios
+            .post('/api/email/send-verification-email', {
+              email: res.data.email,
+              token: res.data.token,
+            })
+            .catch((err) => {
+              console.error('[Verification Email] Failed to send email:', err)
+            })
+
           const accountId = res.data.email
           // redirect to registered page for user to await verification email
-          router.push(`/auth/registered?accountId=${accountId}`)
+          router.push(`/auth/registered?accountId=${encodeURIComponent(accountId)}`)
         }
       })
     })

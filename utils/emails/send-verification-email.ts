@@ -21,6 +21,11 @@ export const sendVerificationEmail = async (
     token
   )}`;
 
+  console.log(`\n========================================`);
+  console.log(`[Verification Email] To: ${email}`);
+  console.log(`[Verification Link]: ${verifyUrl}`);
+  console.log(`========================================\n`);
+
   const html = `
 <!DOCTYPE html>
 <html lang="en">
