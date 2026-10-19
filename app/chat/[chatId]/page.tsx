@@ -39,14 +39,13 @@ const SingleChatPage = async ({
   }
 
   return (
-    <div className='h-full'>
+    <div className="flex-1 flex flex-col min-h-0 w-full h-full overflow-hidden">
       <ResponseList
         data={responses}
         image={session?.user?.image as string | null}
       />
-      {/* {chatId} */}
     </div>
-  )
-}
+  );
+};
 
-export default SingleChatPage
+export default SingleChatPage;

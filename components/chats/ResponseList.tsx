@@ -25,6 +25,8 @@ const ResponseList = ({
 }) => {
   const t = useTranslations("Chat");
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const isAutoScrollingRef = useRef(true);
   const {
     isStreaming,
     streamingPrompt,
@@ -38,6 +40,7 @@ const ResponseList = ({
 
   const currentChatId = data[0]?.chatId;
 
+  // On mount or chat switch, reset ancestor scroll offsets and scroll to bottom
   useEffect(() => {
     if (!currentChatId) return;
     dispatch(clearOptimisticResponses());
@@ -49,6 +52,18 @@ const ResponseList = ({
         }
       });
     });
+
+    if (containerRef.current) {
+      // Ensure any ancestor element that might have been scrolled by scrollIntoView is reset
+      let parent = containerRef.current.parentElement;
+      while (parent && parent !== document.body) {
+        if (parent.scrollTop > 0) {
+          parent.scrollTop = 0;
+        }
+        parent = parent.parentElement;
+      }
+      containerRef.current.scrollTop = containerRef.current.scrollHeight;
+    }
   }, [currentChatId, dispatch]);
 
   useEffect(() => {
@@ -65,12 +80,27 @@ const ResponseList = ({
     return [...data, ...extras];
   }, [data, optimisticResponses, currentChatId]);
 
+  const handleScroll = () => {
+    if (!containerRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
+    // Track if user is near bottom (within 150px) to auto-scroll, or has intentionally scrolled up
+    isAutoScrollingRef.current = scrollHeight - scrollTop - clientHeight < 150;
+  };
+
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [mergedResponses, isStreaming, streamingText]);
+    if (!isAutoScrollingRef.current || !containerRef.current) return;
+    containerRef.current.scrollTo({
+      top: containerRef.current.scrollHeight,
+      behavior: isStreaming ? "auto" : "smooth",
+    });
+  }, [mergedResponses.length, isStreaming, streamingText]);
 
   return (
-    <div className="flex-1 overflow-y-auto scrollbar-none pt-4 pb-6 flex flex-col">
+    <div
+      ref={containerRef}
+      onScroll={handleScroll}
+      className="flex-1 min-h-0 overflow-y-auto w-full pt-4 pb-6 flex flex-col scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-700 hover:scrollbar-thumb-slate-400 dark:hover:scrollbar-thumb-slate-600 scrollbar-track-transparent"
+    >
       {mergedResponses.map((response) => (
         <Response key={response.id} response={response} image={image} />
       ))}
