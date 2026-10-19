@@ -54,21 +54,27 @@ const ChatInput = ({
   const handleSubmit = (formData: FormData) => {
     startTransition(() => {
       dispatch(setLoadingResponse(true))
-      getResponseFromAI(formData, window.location.pathname, existingToken).then(
-        (res) => {
-          if (res.success) {
+      if (textRef.current) {
+        textRef.current.value = ''
+        textRef.current.style.height = '48px'
+      }
+      setText('')
+
+      getResponseFromAI(formData, window.location.pathname, existingToken)
+        .then((res) => {
+          if (res?.success && res?.data?.text) {
             dispatch(setAIResponse(res.data.text))
-            if (textRef.current) {
-              textRef.current.value = ''
-              textRef.current.style.height = '48px'
-            }
           }
-          if (res?.data.chatId && window.location.pathname === '/chat') {
+          if (res?.data?.chatId && window.location.pathname === '/chat') {
             router.push(`/chat/${res.data.chatId}`)
           }
+        })
+        .catch((err) => {
+          console.error('[ChatInput] Error getting response from AI:', err)
+        })
+        .finally(() => {
           dispatch(setLoadingResponse(false))
-        }
-      )
+        })
     })
   }
 
