@@ -1,18 +1,8 @@
-import { InputWithIconsProps } from '@/types/input-types'
-import clsx from 'clsx'
+import { InputWithIconsProps } from "@/types/input-types";
+import clsx from "clsx";
 
 /**
- * typical input with icon
- * @param {Object} props - The component properties
- * @param {string} props.type - input type e.g. email, password, text, etc
- * @param {string} props.placeholder - input placeholder
- * @param {ReactNode} props.icon - input icon - React component
- * @param {string} props.name - input name used mainly for server action and onChange handler
- * @param {string} props.id - input id
- * @param {string | number} props.value - input value
- * @param {ReactEventHandler} props.onChange - callback on change event handler
- * @param {boolean} props.readonly - whether input is read-only or not
- * @returns {JSX.Element} styled input with icon
+ * Sleek rebranded InputWithIcon component.
  */
 const InputWithIcon = ({
   type,
@@ -27,25 +17,27 @@ const InputWithIcon = ({
   return (
     <label
       className={clsx(
-        'bg-base-100 dark:bg-dark-base-100 px-3 py-2.5 rounded-md flex items-center gap-2 my-2 focus-within:border-2 focus-within:border-primary',
-        type === 'hidden' && 'hidden'
+        "bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 px-3.5 py-2.5 rounded-xl flex items-center gap-3 my-2.5 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/20 transition-all shadow-2xs",
+        type === "hidden" && "hidden",
+        readonly && "bg-slate-100 dark:bg-slate-800/50 cursor-not-allowed"
       )}
     >
-      {/* icon */}
       <span
         className={clsx(
-          readonly ? 'text-gray-500 opacity-50' : 'text-primary opacity-100'
+          "text-base shrink-0",
+          readonly
+            ? "text-slate-400 dark:text-slate-500"
+            : "text-indigo-600 dark:text-indigo-400"
         )}
       >
         {icons}
       </span>
 
-      {/* input */}
       <input
         type={type}
         className={clsx(
-          'grow focus:outline-none text-base-content dark:text-dark-base-content',
-          readonly && 'opacity-50 text-gray-500'
+          "grow bg-transparent focus:outline-none text-sm sm:text-base text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500",
+          readonly && "opacity-60 text-slate-500 cursor-not-allowed"
         )}
         placeholder={placeholder}
         name={name}
@@ -55,7 +47,7 @@ const InputWithIcon = ({
         readOnly={readonly}
       />
     </label>
-  )
-}
+  );
+};
 
-export default InputWithIcon
+export default InputWithIcon;

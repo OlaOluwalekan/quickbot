@@ -1,13 +1,14 @@
+import AuthWrapper from "@/components/auth/AuthWrapper";
 import VerificationForm from "@/components/auth/VerificationForm";
 import React, { Suspense } from "react";
 
 const VerificationPage = () => {
   return (
-    <div>
-      <Suspense fallback={<div>Loading...</div>}>
+    <AuthWrapper>
+      <Suspense fallback={<div className="text-sm">Loading...</div>}>
         <VerificationForm />
       </Suspense>
-    </div>
+    </AuthWrapper>
   );
 };
 

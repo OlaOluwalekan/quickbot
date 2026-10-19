@@ -1,3 +1,4 @@
+import AuthWrapper from "@/components/auth/AuthWrapper";
 import Registered from "@/components/auth/Registered";
 
 interface RegisteredPageProps {
@@ -9,9 +10,9 @@ const RegisteredPage = async ({ searchParams }: RegisteredPageProps) => {
   const accountId = resolvedParams?.accountId || null;
 
   return (
-    <div className="h-screen flex justify-center items-center">
+    <AuthWrapper>
       <Registered accountId={accountId} />
-    </div>
+    </AuthWrapper>
   );
 };
 
