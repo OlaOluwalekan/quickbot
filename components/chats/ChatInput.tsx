@@ -87,7 +87,7 @@ const ChatInput = ({
         name='question'
         id='question'
         rows={1}
-        placeholder='Ask Quick'
+        placeholder='Ask Klecx'
         className='w-full resize-none h-[48px] max-h-[200px] overflow-y-auto scrollbar-none text-base py-3 pl-3 pr-8 rounded-lg bg-base-200 dark:bg-dark-base-200 border-1 border-primary placeholder:text-base-300 scrollbar-thin focus:outline-none'
         defaultValue={text}
       ></textarea>

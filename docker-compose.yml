@@ -1,11 +1,11 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: quickbot-postgres
+    container_name: klecx-postgres
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: quickbot_dev
+      POSTGRES_DB: klecx_dev
       PGDATA: /var/lib/postgresql/data/pgdata
     ports:
       - '5432:5432'

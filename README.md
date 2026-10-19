@@ -1,12 +1,12 @@
-# QUICKBOT
+# KLECX
 
-![Quickbot](/public/logo-light.png)
+![Klecx](/public/logo-light.png)
 
-A comprehensive chatbot application built using Next.js, TypeScript, Tailwind CSS, Next-Auth for authentication, Prisma ORM, MongoDB, Google Generative AI API for AI responses, and Redux Toolkit for state management.
+A modern, intelligent AI workspace built using Next.js 16, TypeScript, Tailwind CSS v4, NextAuth for authentication, Prisma ORM with PostgreSQL, Google GenAI (`@google/genai`) Interactions API for real-time SSE streaming & image generation, `next-intl` for internationalization, Resend for transactional emails, and Redux Toolkit for state management.
 
 ## Table of Contents
 
-- [QUICKBOT](#quickbot)
+- [KLECX](#klecx)
   - [Table of Contents](#table-of-contents)
   - [Introduction](#introduction)
   - [Features](#features)
@@ -25,60 +25,52 @@ A comprehensive chatbot application built using Next.js, TypeScript, Tailwind CS
 
 ## Introduction
 
-This chatbot app is designed to provide intelligent responses to user queries using Google's Generative AI API. It supports user authentication, state management, and a responsive UI design. One of my primary motivation for this project is to learn how to integrate AI functionalities into my react project. Then I thought of it of building something similar to AI chat bots but with additional features. While using ChatGPT or Google Bard, It is usually difficult to search for a specific question or response in the midst of many responses, hence I though I could add the search functionality to my chat bot.
+Klecx is designed to provide real-time intelligent responses and native image generation using Google's Gemini Interactions API. It supports user authentication, multi-language internationalization (`next-intl`), Server-Sent Events (SSE) streaming, full-text chat search, mobile-ready REST API endpoints, and a sleek, responsive UI design.
 
-Below is a diagram depicting the flow of the application
+Below is a diagram depicting the flow of the application:
 
 ![Flow Diagram](/public/archi-diagram.jpeg)
 
 ## Features
 
-- Secure user authentication using [NextAuth](https://authjs.dev/)
-- AI powered response using [Google Gemini API](https://ai.google.dev/gemini-api/docs)
+- Secure user authentication using [NextAuth](https://authjs.dev/) (Credentials, Google, GitHub + mobile Bearer token support)
+- AI-powered conversational responses and native image generation using [Google Gemini Interactions API (`@google/genai`)](https://ai.google.dev/gemini-api/docs/interactions)
+- Real-time token-by-token response streaming via **Server-Sent Events (SSE)**
+- Internationalization (`en`, `fr`, `es`) powered by [`next-intl`](https://next-intl.dev/)
 - Efficient state management with [Redux Toolkit](https://redux-toolkit.js.org/introduction/getting-started)
-- Database management using [Prisma ORM](https://www.prisma.io/) and [MongoDB](https://www.mongodb.com/)
-- Responsive UI with [Tailwind CSS](https://tailwindcss.com/) and [Daisy UI components](https://daisyui.com/)
+- Database management using [Prisma ORM](https://www.prisma.io/) and [PostgreSQL](https://www.postgresql.org/)
+- Sleek, mobile-responsive UI with [Tailwind CSS v4](https://tailwindcss.com/)
 - Built with [TypeScript](https://typescriptlang.org/) for type safety
-- Automated email notifications with [Nodemailer](https://nodemailer.com/)
+- Transactional email notifications with [Resend](https://resend.com/)
 
 ## Technologies
 
 - **Frontend:**
-
-  - [**Next.js**](https://nextjs.org/): React framework for server-side rendering and static site generation
+  - [**Next.js 16**](https://nextjs.org/): React framework for App Router, Server Components, and API Route Handlers
   - [**TypeScript**](https://typescriptlang.org/): JavaScript with static typing
-  - [**Tailwind CSS**](https://tailwindcss.com/): Utility-first CSS framework
-  - [**Daisy UI**](https://daisyui.com/): Popular component library for Tailwind CSS
+  - [**Tailwind CSS v4**](https://tailwindcss.com/): Utility-first CSS framework
+  - [**next-intl**](https://next-intl.dev/): Internationalization for Next.js
 
-- **Backend:**
-
-  - [**NextAuth (or Auth.js)**](https://authjs.dev/): Free and open source authentication for the web
-  - [**Prisma ORM**](https://www.prisma.io/): Next-generation ORM for TypeScript and JavaScript
-  - [**NodeJS**](https://nodejs.org): A JavaScript runtime environment for running JavaScript on the server
+- **Backend & API:**
+  - [**NextAuth (Auth.js v5)**](https://authjs.dev/): Authentication for web and mobile clients
+  - [**Prisma ORM**](https://www.prisma.io/): Next-generation ORM for TypeScript and PostgreSQL
+  - [**Google GenAI SDK (`@google/genai`)**](https://ai.google.dev/gemini-api/docs/interactions): Unified Interactions API for Gemini text, multi-turn chat, structured outputs, and image generation
 
 - **Database:**
-
-  - [**MongoDB**](https://www.mongodb.com/): NoSQL database for storing data
-
-- **API:**
-
-  - [**Google Gemini**](https://ai.google.dev/gemini-api/docs): API for generating AI responses
+  - [**PostgreSQL**](https://www.postgresql.org/): Relational database for users, chats, responses, and token usage
 
 - **State Management:**
-
   - [**Redux Toolkit**](https://redux-toolkit.js.org/introduction/getting-started): State management for React applications
 
 - **Email:**
-  - [**Nodemailer**](https://nodemailer.com/): Seamless email sending
+  - [**Resend**](https://resend.com/): Transactional email delivery
 
 ## App Themes
 
-Quickbot offers four themes:
+Klecx offers adaptive themes:
 
-- **Light**: The main theme with a bright color palette.
-- **Cupcake**: A variant of the light theme with pastel colors.
-- **Black**: A dark theme for low-light environments.
-- **Dracula**: A variant of the dark theme with a gothic color scheme.
+- **Light**: Crisp alabaster & slate palette with indigo-violet accents.
+- **Dark**: Deep obsidian & zinc palette designed for low-light environments.
 
 ## Installation
 
@@ -86,101 +78,91 @@ Quickbot offers four themes:
 
 Ensure that the following are installed:
 
-- [Node.js](https://nodejs.org/en/) (v14.x or higher)
-- [npm](https://www.npmjs.com/) (v6.x or higher)
-- [MongoDB](https://www.mongodb.com/) (v4.x or higher)
+- [Node.js](https://nodejs.org/en/) (v20.x or higher)
+- [npm](https://www.npmjs.com/)
+- [PostgreSQL](https://www.postgresql.org/) (or Docker via `docker-compose.yml`)
 
 ### Steps
 
 1. **Clone the repository**
 
    ```bash
-   git clone https://github.com/OlaOluwalekan/quickbot.git
-   cd chat-bot-app
+   git clone https://github.com/OlaOluwalekan/klecx.git
+   cd klecx
    ```
 
-1. Install dependencies
+2. **Install dependencies**
    ```bash
    npm install
    ```
-1. Set up environment variables
-   Create a .env file in the root directory and add the following variables:
+
+3. **Set up environment variables**
+   Create a `.env` file in the root directory (see `.env.example`):
 
    ```env
-   DATABASE_URL=
-
-   AUTH_SECRET=
-
-   GITHUB_CLIENT_ID=
-   GITHUB_CLIENT_SECRET=
-
-   GOOGLE_CLIENT_ID=
-   GOOGLE_CLIENT_SECRET=
-
-   GEMINI_API_KEY=
-
-   DOMAIN=
-
-   EMAIL_ADDRESS=
-   EMAIL_PASSWORD=
+   DATABASE_URL="postgresql://postgres:password@localhost:5432/klecx_dev?schema=public"
+   DOMAIN="http://localhost:3000"
+   AUTH_SECRET="your-auth-secret"
+   GITHUB_CLIENT_ID="your-github-client-id"
+   GITHUB_CLIENT_SECRET="your-github-client-secret"
+   GOOGLE_CLIENT_ID="your-google-client-id"
+   GOOGLE_CLIENT_SECRET="your-google-client-secret"
+   GEMINI_API_KEY="your-gemini-api-key"
+   GEMINI_TEXT_MODEL="gemini-3.8-flash"
+   GEMINI_IMAGE_MODEL="gemini-nano-banana-2.1"
+   RESEND_API_KEY="re_your_resend_api_key"
+   EMAIL_FROM="Klecx <onboarding@resend.dev>"
    ```
 
-1. Run database migration
+4. **Run database migration**
    ```bash
-   npx prisma migrate dev --name init
-   npm prisma db push
+   npx prisma migrate dev
    ```
-1. Start the development server
+
+5. **Start the development server**
    ```bash
    npm run dev
    ```
 
-Open [http://localhost:3000]([http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
 ## Usage
 
 ## User Registration and Authentication
 
-- **Sign Up**: New users can sign up using their email and password.
-- **Log In**: Registered users can log in to access the chat bot features. Users can either login using **credentials** i.e. email and password or can make use of **GitHub** or **Google** OAuth login.
-- **Secure Sessions**: User sessions are securely managed by NextAuth.
+- **Sign Up**: New users can sign up using their email and password and verify their account via a Resend verification email.
+- **Log In**: Registered users can log in using **credentials** (email and password) or **GitHub** / **Google** OAuth.
+- **Secure Sessions**: User sessions are managed by NextAuth (with JWT support for mobile clients).
 
 ## Chat Interface
 
-- **Chat**: Users can create a chat. A chat is supposed to be like a container which holds related (may not be related depending on use) user questions and responses from Quickbot. These chat are ordered from the the most recent. When a new chat is created, the chat is named as deemed fit by Quickbot. However, users can choose to rename their chat for easy identification. Users can also delete a chat completely. Chats deleted cannot be recovered.
-
-> <u>LOOK FORWARD</u>:
-> Upcoming feature is for users to be able to bookmark chats that are important for easy access. Also, users will be able to filter chats.
-
-- **Response**: A response is the result return by Quickbot after a user asked a question. Responses (and questions) are tokenized. The more the character and words in a response (and question), the more token it uses.
-
-- **Markdown rendering**: Responses are rendered as markdown for good presentation
+- **Chat**: Users can create a chat container which holds related questions, streaming AI responses, and generated images from Klecx. Chats are ordered from the most recent and automatically titled by Klecx. Users can rename or delete chats at any time.
+- **Response & Streaming**: Responses stream in real time via Server-Sent Events (SSE) and are tokenized according to usage.
+- **Image Generation**: Switch the composer to Image mode to generate high-resolution visuals directly inside any chat thread.
+- **Markdown Rendering**: Text responses are rendered as rich Markdown with syntax-highlighted code blocks, copy actions, and text-to-speech playback.
 
 ## Contributing
 
 Contributions are welcome! Please follow these steps:
 
 1. Fork the repository.
-2. Clone your forked version of the repository
+2. Clone your forked version of the repository:
    ```bash
-    git clone https://github/your-username/quickbot.git
+   git clone https://github.com/your-username/klecx.git
    ```
-3. Create a new branch.
+3. Create a new branch:
    ```bash
-    git checkout -b feature/your-feature-name
+   git checkout -b feature/your-feature-name
    ```
-4. Add the contributions.
-5. Commit your changes.
+4. Add your contributions and commit your changes:
    ```bash
-    git commit -m 'Add some feature'
+   git commit -m 'Add some feature'
    ```
-6. Push to the branch.
+5. Push to the branch:
    ```bash
-    git push origin feature/your-feature-name
+   git push origin feature/your-feature-name
    ```
-7. Open a pull request.
-
-Please ensure your code adheres to the project's coding standards and conventions.
+6. Open a pull request.
 
 ## Contact
 
@@ -188,24 +170,24 @@ For any inquiries or questions, please contact:
 
 - Name: Olalekan Bello
 - Email: olalekanbello534@gmail.com
-- Twitter(or X): [x.com/OlaOluwalekanMi](https://x.com/OlaOluwalekanMi)
+- Twitter (or X): [x.com/OlaOluwalekanMi](https://x.com/OlaOluwalekanMi)
 - Website: [bellsarena.com](https://bellsarena.com)
 
 ## FAQs
 
 **What is the purpose of this project?**
-The chat bot app aims to provide users with an intuitive and interactive chat experience powered by advanced AI technologies.
+Klecx aims to provide users with an intuitive, fast, and interactive AI chat and image generation experience powered by Google Gemini.
 
 **How can I contribute to this project?**
-You can contribute by forking the repository, creating a new branch for your feature or bug fix, and submitting a pull request see [contributing](#contributing).
+You can contribute by forking the repository, creating a new branch for your feature or bug fix, and submitting a pull request (see [Contributing](#contributing)).
 
 **How do I set up the project locally?**
 Follow the [Installation](#installation) section to set up the project on your local machine.
 
 **Who maintains this project?**
-The project is maintained by Olalekan Bello. For any queries, you can reach out via [email](mailto:olalekanbello534@gmail.com) or [twitter](https://x.com/OlaOluwalekanMi).
+The project is maintained by Olalekan Bello. For any queries, you can reach out via [email](mailto:olalekanbello534@gmail.com) or [Twitter](https://x.com/OlaOluwalekanMi).
 
 ## Acknowledgements
 
-Thanks to the contributors of Next.js, Tailwind CSS, DaisyUI, and Google Generative AI API.
+Thanks to the contributors of Next.js, Tailwind CSS, Resend, `next-intl`, and Google Gemini API.
 Special thanks to the open-source community for their invaluable resources and support.

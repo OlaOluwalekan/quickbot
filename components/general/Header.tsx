@@ -29,7 +29,6 @@ const Header = () => {
         <section className='flex gap-2 items-center'>
           <Logo size='icon' />
           <AppName />
-          {/* <h2>Quickbot</h2> */}
         </section>
 
         <section className='flex gap-2'>

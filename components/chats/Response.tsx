@@ -100,7 +100,7 @@ const Response = ({
             </div>
           </div>
           <div className='flex flex-col'>
-            Quickbot
+            Klecx
             <time className='text-xs opacity-50 ml-2'>
               {format(response.createdAt, 'MMM dd, yyyy HH:mm a')}
             </time>
