@@ -1,39 +1,43 @@
-'use client'
+"use client";
 
 import {
   toggleChatMenuOpen,
   toggleMobileNavOpen,
-} from '@/features/generalSlice'
-import { RootState } from '@/store'
-import clsx from 'clsx'
-import Link from 'next/link'
-import { MouseEvent, useEffect } from 'react'
-import { BiSolidMessageSquareAdd } from 'react-icons/bi'
-import { FaBarsStaggered } from 'react-icons/fa6'
-import { useDispatch, useSelector } from 'react-redux'
-import ChatList from './ChatList'
-import UserProfile from './user-profile/UserProfile'
-import { ChatProps } from '@/types/chats'
-import ChatMenu from './ChatMenu'
-import EditPopup from './EditPopup'
-import DeletePopup from './DeletePopup'
+} from "@/features/generalSlice";
+import { RootState } from "@/store";
+import clsx from "clsx";
+import Link from "next/link";
+import { MouseEvent, useEffect } from "react";
+import { BiSolidMessageSquareAdd } from "react-icons/bi";
+import { FaXmark } from "react-icons/fa6";
+import { useDispatch, useSelector } from "react-redux";
+import ChatList from "./ChatList";
+import UserProfile from "./user-profile/UserProfile";
+import { ChatProps } from "@/types/chats";
+import ChatMenu from "./ChatMenu";
+import EditPopup from "./EditPopup";
+import DeletePopup from "./DeletePopup";
+import Logo from "../logo/Logo";
+import AppName from "../logo/AppName";
+import { useTranslations } from "next-intl";
 
 const Sidebar = ({
   data,
   chats,
   dates,
 }: {
-  data: any
-  chats: ChatProps[]
-  dates: string[]
+  data: any;
+  chats: ChatProps[];
+  dates: string[];
 }) => {
+  const t = useTranslations("Chat");
   const {
     mobileNavIsOpen,
     chatMenuIsOpen,
     editPopUpIsOpen,
     deletePopUpIsOpen,
-  } = useSelector((store: RootState) => store.general)
-  const dispatch = useDispatch()
+  } = useSelector((store: RootState) => store.general);
+  const dispatch = useDispatch();
 
   const grouped: Record<string, ChatProps[]> = chats.reduce(
     (acc: Record<string, ChatProps[]>, chat) => {
@@ -43,65 +47,87 @@ const Sidebar = ({
           : new Date(chat.updatedAt)
       )
         .toISOString()
-        .split('T')[0]
-      if (acc[dateKey] == null) {
-        acc[dateKey] = []
+        .split("T")[0];
+      if (!acc[dateKey]) {
+        acc[dateKey] = [];
       }
-      acc[dateKey].push(chat)
-      return acc
+      acc[dateKey].push(chat);
+      return acc;
     },
     {}
-  ) as Record<string, ChatProps[]>
-  // const grouped: Record<string, ChatProps[]> = Object.groupBy(chats, (chat) => {
-  //   return new Date(chat.updatedAt).toISOString().split('T')[0]
-  // }) as Record<string, ChatProps[]>
-  // console.log('GGG=>', grouped)
+  );
 
   useEffect(() => {
     if (!mobileNavIsOpen) {
-      dispatch(toggleChatMenuOpen(false))
+      dispatch(toggleChatMenuOpen(false));
     }
-  }, [mobileNavIsOpen])
+  }, [mobileNavIsOpen, dispatch]);
 
   return (
-    <div
-      className={clsx(
-        'w-screen h-screen bg-primary/50 fixed top-0 transition-all md:static md:w-[300px] z-10',
-        mobileNavIsOpen ? 'left-0' : 'left-[-5000px]'
-      )}
-      onClick={() => dispatch(toggleMobileNavOpen(false))}
-    >
+    <>
+      {/* Mobile Backdrop */}
       <div
-        className='w-[300px] bg-primary h-full shadow-xl md:shadow-none small:w-full'
-        onClick={(e: MouseEvent<HTMLDivElement>) => e.stopPropagation()}
+        className={clsx(
+          "fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-30 transition-opacity md:hidden",
+          mobileNavIsOpen
+            ? "opacity-100 pointer-events-auto"
+            : "opacity-0 pointer-events-none"
+        )}
+        onClick={() => dispatch(toggleMobileNavOpen(false))}
+      />
+
+      {/* Sidebar Panel */}
+      <aside
+        className={clsx(
+          "fixed md:static top-0 bottom-0 left-0 z-40 w-[280px] shrink-0 bg-slate-900 text-slate-100 border-r border-slate-800/90 flex flex-col transition-transform duration-300 ease-in-out",
+          mobileNavIsOpen
+            ? "translate-x-0"
+            : "-translate-x-full md:translate-x-0"
+        )}
+        onClick={(e: MouseEvent<HTMLElement>) => e.stopPropagation()}
       >
-        <section className='px-3 py-2 flex justify-between items-center'>
-          <button
-            className='text-primary-content text-lg cursor-pointer p-2 hover:bg-accent rounded-md md:hidden'
-            onClick={() => dispatch(toggleMobileNavOpen(false))}
-          >
-            <FaBarsStaggered />
-          </button>
+        {/* Brand Header & New Chat CTA */}
+        <div className="p-3.5 flex flex-col gap-3 border-b border-slate-800/80">
+          <div className="flex items-center justify-between">
+            <Link
+              href="/"
+              className="flex items-center gap-2"
+              onClick={() => dispatch(toggleMobileNavOpen(false))}
+            >
+              <Logo size="icon" />
+              <AppName />
+            </Link>
+            <button
+              type="button"
+              aria-label="Close sidebar"
+              className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 md:hidden cursor-pointer"
+              onClick={() => dispatch(toggleMobileNavOpen(false))}
+            >
+              <FaXmark />
+            </button>
+          </div>
 
           <Link
-            href='/chat'
-            className='flex gap-2 items-center text-primary-content hover:bg-accent p-2 rounded'
+            href="/chat"
             onClick={() => dispatch(toggleMobileNavOpen(false))}
+            className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-gradient-to-r from-indigo-600 to-sky-500 text-white text-sm font-semibold shadow-md shadow-indigo-500/20 hover:opacity-95 transition-all"
           >
-            New Chat <BiSolidMessageSquareAdd />
+            <BiSolidMessageSquareAdd className="text-base" />
+            <span>{t("newChat")}</span>
           </Link>
-        </section>
-        <div className='w-full h-0.5 bg-secondary/30 dark:bg-dark-secondary/30'></div>
-        <div className='h-[calc(100%-75px)] flex flex-col relative mt-1'>
+        </div>
+
+        {/* Scrollable Chat History + Footer Profile */}
+        <div className="flex-1 min-h-0 flex flex-col justify-between relative pt-2">
           <ChatList chats={chats} dates={dates} grouped={grouped} />
           {chatMenuIsOpen && <ChatMenu />}
           {editPopUpIsOpen && <EditPopup />}
           {deletePopUpIsOpen && <DeletePopup />}
           <UserProfile data={data} />
         </div>
-      </div>
-    </div>
-  )
-}
+      </aside>
+    </>
+  );
+};
 
-export default Sidebar
+export default Sidebar;

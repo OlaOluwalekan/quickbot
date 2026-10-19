@@ -8,12 +8,10 @@ import { useRouter } from "next/navigation";
 import { login } from "@/utils/actions/login";
 import Alert from "../alert/Alert";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
-/**
- * Login form
- * @returns {JSX.Element} styled login form
- */
 const LoginForm = (): React.JSX.Element => {
+  const t = useTranslations("Auth");
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -26,45 +24,42 @@ const LoginForm = (): React.JSX.Element => {
   });
   const router = useRouter();
 
-  // used to clear the response passed to the alert toast after 3s (3000ms)
   useEffect(() => {
-    let interval = setTimeout(() => {
+    const interval = setTimeout(() => {
       setResponse({ message: "", success: false, data: null });
-    }, 3000);
+    }, 3500);
 
     return () => clearTimeout(interval);
   }, [response]);
 
-  // handles input change events
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // handle form submission event - server action is used to login user with credentials
-  const handleSubmit = async (formData: FormData) => {
+  const handleSubmit = async (submittedData: FormData) => {
     setResponse({ message: "", success: false, data: null });
 
-    // handle state updates
     startTransition(() => {
-      login(formData).then((res) => {
+      login(submittedData).then((res) => {
         setResponse(res);
-        if (res.message.includes("not verified")) {
-          // redirects to verification page if user is not verified
-          router.push(`/auth/registered?accountId=${res.data.email}`);
+        if (res.message?.includes("not verified") && res.data?.email) {
+          router.push(
+            `/auth/registered?accountId=${encodeURIComponent(res.data.email)}`
+          );
         }
         if (res.success) {
           router.push("/chat");
+          router.refresh();
         }
       });
     });
   };
 
   return (
-    <form action={handleSubmit}>
-      {/* email input */}
+    <form action={handleSubmit} className="space-y-3" noValidate>
       <InputWithIcon
         type="email"
-        placeholder="Email"
+        placeholder={t("emailPlaceholder")}
         icons={<FaEnvelope />}
         name="email"
         id="email"
@@ -72,10 +67,9 @@ const LoginForm = (): React.JSX.Element => {
         onChange={handleChange}
       />
 
-      {/* password input */}
       <InputWithIcon
         type="password"
-        placeholder="Password"
+        placeholder={t("passwordPlaceholder")}
         icons={<FaLock />}
         name="password"
         id="password"
@@ -83,23 +77,23 @@ const LoginForm = (): React.JSX.Element => {
         onChange={handleChange}
       />
 
-      <Link
-        href="/auth/forgot-password"
-        className="mb-2 text-xs underline block"
-      >
-        Forgot Password?
-      </Link>
+      <div className="flex justify-end">
+        <Link
+          href="/auth/forgot-password"
+          className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
+        >
+          {t("forgotPasswordLink")}
+        </Link>
+      </div>
 
-      {/* alert toast message - disappears after 3s */}
       {response.message && (
         <Alert message={response.message} success={response.success} />
       )}
 
-      {/* submit button */}
       <BasicButton
         type="submit"
         size="full"
-        text={isPending ? "Loading..." : "Login"}
+        text={isPending ? t("loggingIn") : t("loginButton")}
         disabled={isPending}
         theme="primary"
       />

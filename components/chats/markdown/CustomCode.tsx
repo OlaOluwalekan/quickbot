@@ -33,39 +33,52 @@ const CustomCode = ({
     setIsCopied(true);
     setTimeout(() => {
       setIsCopied(false);
-    }, 3000);
+    }, 2500);
   };
 
   return (
-    <div className="mockup-code text-sm bg-primary text-primary-content">
-      <section className="flex justify-between px-3">
-        <span className="block">{language}</span>
-        <article className="flex gap-4 items-center">
+    <div className="my-3 rounded-xl overflow-hidden border border-slate-700/80 bg-slate-900 text-slate-100 text-xs sm:text-sm shadow-sm">
+      <div className="flex justify-between items-center px-3.5 py-2 bg-slate-950/90 border-b border-slate-800">
+        <span className="font-mono text-xs font-semibold text-indigo-400 lowercase">
+          {language}
+        </span>
+        <div className="flex gap-3 items-center">
           <button
-            className="text-lg hover:text-base-200"
+            type="button"
+            className="text-sm text-slate-400 hover:text-white transition-colors cursor-pointer"
             onClick={toggleCodeTheme}
+            title="Toggle code theme"
           >
             {codeTheme === "light" ? <FaMoon /> : <FaSun />}
           </button>
           <button
+            type="button"
             className={clsx(
-              "text-lg hover:text-base-200",
-              isCopied ? "text-success" : "text-base"
+              "text-sm transition-colors cursor-pointer",
+              isCopied ? "text-emerald-400" : "text-slate-400 hover:text-white"
             )}
-            onClick={() => handleCopyCode(children as string)}
+            onClick={() => handleCopyCode(String(children))}
+            title="Copy code"
           >
             {isCopied ? <MdLibraryAddCheck /> : <FaCopy />}
           </button>
-        </article>
-      </section>
-      <SyntaxHighlighter
-        {...props}
-        PreTag="div"
-        language={language}
-        style={codeTheme === "light" ? oneLight : darcula}
-      >
-        {String(children).replace(/\n$/, "")}
-      </SyntaxHighlighter>
+        </div>
+      </div>
+      <div className="overflow-x-auto">
+        <SyntaxHighlighter
+          {...props}
+          PreTag="div"
+          language={language}
+          style={codeTheme === "light" ? oneLight : darcula}
+          customStyle={{
+            margin: 0,
+            borderRadius: 0,
+            fontSize: "0.85rem",
+          }}
+        >
+          {String(children).replace(/\n$/, "")}
+        </SyntaxHighlighter>
+      </div>
     </div>
   );
 };

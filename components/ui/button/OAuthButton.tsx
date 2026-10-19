@@ -1,15 +1,16 @@
-import { OAuthBtnProps } from '@/types'
+import { OAuthBtnProps } from "@/types";
 
-const OAuthButton = ({ icon, onClick }: OAuthBtnProps) => {
+const OAuthButton = ({ icon, onClick, text }: OAuthBtnProps) => {
   return (
     <button
-      type='button'
-      className='flex justify-center items-center text-2xl w-full py-3 border-2 border-base-300 rounded cursor-pointer hover:bg-base-100 dark:hover:bg-dark-base-100'
+      type="button"
       onClick={onClick}
+      className="flex justify-center items-center gap-2 text-lg w-full py-2.5 px-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950/70 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors cursor-pointer shadow-2xs"
     >
       {icon}
+      {text && <span className="text-xs font-semibold">{text}</span>}
     </button>
-  )
-}
+  );
+};
 
-export default OAuthButton
+export default OAuthButton;
