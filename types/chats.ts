@@ -6,10 +6,17 @@ export interface ChatProps {
   updatedAt: Date | string;
 }
 
+export type ResponseType = "TEXT" | "IMAGE";
+
 export interface ResponseProps {
   id: string;
   chatId: string;
   question: string;
   response: string;
+  type?: ResponseType;
+  imageUrl?: string | null;
+  mimeType?: string | null;
+  interactionId?: string | null;
   createdAt: Date | string;
 }
+

@@ -69,13 +69,22 @@ model Chat {
   user User @relation(fields: [createdBy], references: [id], onDelete: Cascade)
 }
 
+enum ResponseType {
+  TEXT
+  IMAGE
+}
+
 model Response {
-  id        String   @id @default(uuid())
-  chatId    String
-  question  String
-  response  String
-  createdAt DateTime @default(now())
-  chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  id            String       @id @default(uuid())
+  chatId        String
+  question      String
+  response      String
+  type          ResponseType @default(TEXT)
+  imageUrl      String?      @db.Text
+  mimeType      String?
+  interactionId String?
+  createdAt     DateTime     @default(now())
+  chat          Chat         @relation(fields: [chatId], references: [id], onDelete: Cascade)
 }
 
 model TokenUsage {
