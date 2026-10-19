@@ -1,20 +1,25 @@
-import { ChatProps } from './chats'
+import { ChatProps, ResponseProps } from "./chats";
 
 export interface GeneralSliceInit {
-  theme: 'light' | 'dark'
-  themeIsOpen: boolean
-  mobileNavIsOpen: boolean
-  profileDialogIsOpen: boolean
-  aiResponse: string
-  loadingResponse: boolean
-  codeTheme: 'dark' | 'light'
-  currentPageTitle: string
-  currentPageId: string | null
-  chatMenuIsOpen: boolean
-  chatMenuClass: string
-  dialogData: ChatProps | null
-  editPopUpIsOpen: boolean
-  deletePopUpIsOpen: boolean
-  chatInputHeight: string
-  searchResultIsOpen: boolean
+  theme: "light" | "dark";
+  themeIsOpen: boolean;
+  mobileNavIsOpen: boolean;
+  profileDialogIsOpen: boolean;
+  aiResponse: string;
+  loadingResponse: boolean;
+  codeTheme: "dark" | "light";
+  currentPageTitle: string;
+  currentPageId: string | null;
+  chatMenuIsOpen: boolean;
+  chatMenuClass: string;
+  dialogData: ChatProps | null;
+  editPopUpIsOpen: boolean;
+  deletePopUpIsOpen: boolean;
+  chatInputHeight: string;
+  searchResultIsOpen: boolean;
+  streamingPrompt: string;
+  streamingText: string;
+  isStreaming: boolean;
+  chatMode: "text" | "image";
+  optimisticResponses: ResponseProps[];
 }
