@@ -1,12 +1,10 @@
 import type { NextRequest } from "next/server";
 import crypto from "crypto";
+import { env } from "@/server/env";
 
 import { getUserById } from "./actions/user";
 
-const SECRET = process.env.AUTH_SECRET;
-if (!SECRET || SECRET.length < 32) {
-  throw new Error("AUTH_SECRET must be set (>= 32 chars)");
-}
+const SECRET = env.AUTH_SECRET;
 
 export interface MobileTokenPayload {
   sub: string;

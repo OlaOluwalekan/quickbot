@@ -1,5 +1,6 @@
 import "server-only";
 import sendMail, { SendMailResult } from "./send-email";
+import { env } from "@/server/env";
 
 /**
  * Sends a Klecx branded verification email to the specified email address using Resend.
@@ -12,7 +13,7 @@ export const sendVerificationEmail = async (
   email: string,
   token: string
 ): Promise<SendMailResult> => {
-  const baseUrl = (process.env.DOMAIN || "http://localhost:3000").replace(
+  const baseUrl = env.APP_URL.replace(
     /\/$/,
     ""
   );

@@ -24,8 +24,23 @@ describe("Security: Auth & Token API Security", () => {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         require("../../utils/api-auth");
       });
-    }).toThrow("AUTH_SECRET must be set (>= 32 chars)");
+    }).toThrow(/AUTH_SECRET/);
     process.env.AUTH_SECRET = "test-auth-secret-key-32-characters-minimum";
+  });
+
+  test("server/env throws with readable list of missing variables", () => {
+    expect(() => {
+      const origDb = process.env.DATABASE_URL;
+      delete process.env.DATABASE_URL;
+      try {
+        jest.isolateModules(() => {
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          require("../../server/env");
+        });
+      } finally {
+        process.env.DATABASE_URL = origDb;
+      }
+    }).toThrow(/DATABASE_URL/);
   });
 
   test("safeUserSelect must NEVER include password", () => {
