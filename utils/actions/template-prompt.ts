@@ -1,5 +1,4 @@
-"use server";
-
+import "server-only";
 import { getGeminiJSONResponse } from "../ai-models/gemini";
 import { db } from "../db";
 import ActionResponse from "../response";

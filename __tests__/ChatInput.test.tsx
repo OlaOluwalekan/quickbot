@@ -30,8 +30,7 @@ const mockStore = configureMockStore([]);
 
 describe("ChatInput Component", () => {
   const mockUserId = "userId1";
-  const mockExistingToken = 100;
-  let store: any;
+    let store: any;
 
   beforeEach(() => {
     (useRouter as jest.Mock).mockReturnValue({
@@ -58,7 +57,7 @@ describe("ChatInput Component", () => {
   it("renders the ChatInput component correctly", () => {
     render(
       <Provider store={store}>
-        <ChatInput userId={mockUserId} existingToken={mockExistingToken} />
+        <ChatInput userId={mockUserId} />
       </Provider>
     );
 
@@ -78,7 +77,7 @@ describe("ChatInput Component", () => {
   it("updates the textarea value on change", () => {
     render(
       <Provider store={store}>
-        <ChatInput userId={mockUserId} existingToken={mockExistingToken} />
+        <ChatInput userId={mockUserId} />
       </Provider>
     );
 
@@ -90,7 +89,7 @@ describe("ChatInput Component", () => {
   it("disables the submit button when textarea is empty", () => {
     render(
       <Provider store={store}>
-        <ChatInput userId={mockUserId} existingToken={mockExistingToken} />
+        <ChatInput userId={mockUserId} />
       </Provider>
     );
 
@@ -101,7 +100,7 @@ describe("ChatInput Component", () => {
   it("enables the submit button when textarea has text", () => {
     render(
       <Provider store={store}>
-        <ChatInput userId={mockUserId} existingToken={mockExistingToken} />
+        <ChatInput userId={mockUserId} />
       </Provider>
     );
 
@@ -114,7 +113,7 @@ describe("ChatInput Component", () => {
   it("adjusts textarea height on input change", () => {
     render(
       <Provider store={store}>
-        <ChatInput userId={mockUserId} existingToken={mockExistingToken} />
+        <ChatInput userId={mockUserId} />
       </Provider>
     );
 

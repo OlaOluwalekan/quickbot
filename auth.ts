@@ -2,7 +2,7 @@ import { PrismaAdapter } from '@auth/prisma-adapter'
 import NextAuth from 'next-auth'
 import { db } from './utils/db'
 import authConfig from './auth.config'
-import { getUserByEmail, getUserById } from './utils/actions/user'
+import { getUserByEmailWithPassword, getUserById } from './utils/actions/user'
 import Credentials from 'next-auth/providers/credentials'
 import { isMatch } from './utils/hash'
 
@@ -19,7 +19,7 @@ export const {
     ...authConfig.providers,
     Credentials({
       async authorize(credentials) {
-        const user = await getUserByEmail(credentials.email as string)
+        const user = await getUserByEmailWithPassword(credentials.email as string)
         if (!user || !user.password) {
           return null
         }
@@ -29,7 +29,8 @@ export const {
           user.password,
         )
         if (passwordMatch) {
-          return user
+          const { password: _p, ...safeUser } = user;
+          return safeUser;
         }
 
         return null

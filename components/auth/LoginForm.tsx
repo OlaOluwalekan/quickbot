@@ -5,7 +5,6 @@ import InputWithIcon from "../ui/inputs/InputWithIcon";
 import { FaEnvelope, FaLock } from "react-icons/fa6";
 import BasicButton from "../ui/button/BasicButton";
 import { useRouter } from "next/navigation";
-import { login } from "@/utils/actions/login";
 import Alert from "../alert/Alert";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -17,7 +16,11 @@ const LoginForm = (): React.JSX.Element => {
     password: "",
   });
   const [isPending, startTransition] = useTransition();
-  const [response, setResponse] = useState({
+  const [response, setResponse] = useState<{
+    message: string;
+    success: boolean;
+    data: any;
+  }>({
     message: "",
     success: false,
     data: null,
@@ -39,19 +42,29 @@ const LoginForm = (): React.JSX.Element => {
   const handleSubmit = async (submittedData: FormData) => {
     setResponse({ message: "", success: false, data: null });
 
-    startTransition(() => {
-      login(submittedData).then((res) => {
-        setResponse(res);
-        if (res.message?.includes("not verified") && res.data?.email) {
-          router.push(
-            `/auth/registered?accountId=${encodeURIComponent(res.data.email)}`
-          );
-        }
-        if (res.success) {
+    startTransition(async () => {
+      try {
+        const res = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: submittedData.get("email"),
+            password: submittedData.get("password"),
+          }),
+        });
+        const result = await res.json();
+        setResponse(result);
+        if (result.success) {
           router.push("/chat");
           router.refresh();
         }
-      });
+      } catch (err: unknown) {
+        setResponse({
+          message: err instanceof Error ? err.message : "An error occurred",
+          success: false,
+          data: null,
+        });
+      }
     });
   };
 
@@ -62,25 +75,22 @@ const LoginForm = (): React.JSX.Element => {
         placeholder={t("emailPlaceholder")}
         icons={<FaEnvelope />}
         name="email"
-        id="email"
         value={formData.email}
         onChange={handleChange}
       />
-
       <InputWithIcon
         type="password"
         placeholder={t("passwordPlaceholder")}
         icons={<FaLock />}
         name="password"
-        id="password"
         value={formData.password}
         onChange={handleChange}
       />
 
-      <div className="flex justify-end">
+      <div className="flex justify-end pt-1">
         <Link
           href="/auth/forgot-password"
-          className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
+          className="text-xs font-medium text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 transition-colors"
         >
           {t("forgotPasswordLink")}
         </Link>
@@ -92,10 +102,10 @@ const LoginForm = (): React.JSX.Element => {
 
       <BasicButton
         type="submit"
-        size="full"
         text={isPending ? t("loggingIn") : t("loginButton")}
-        disabled={isPending}
+        size="full"
         theme="primary"
+        disabled={isPending}
       />
     </form>
   );

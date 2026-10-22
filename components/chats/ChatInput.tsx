@@ -23,14 +23,11 @@ import {
   FaRegCommentDots,
 } from "react-icons/fa6";
 import { useDispatch, useSelector } from "react-redux";
-import toast from "react-hot-toast";
 
 const ChatInput = ({
   userId,
-  existingToken,
 }: {
   userId: string;
-  existingToken: number;
 }) => {
   const t = useTranslations("Chat");
   const textRef = useRef<HTMLTextAreaElement>(null);
@@ -38,6 +35,7 @@ const ChatInput = ({
   const pathname = usePathname();
   const dispatch = useDispatch<AppDispatch>();
   const [text, setText] = useState("");
+  const [tokens, setTokens] = useState<number | null>(null);
   const { currentPageTitle, isStreaming, loadingResponse, chatMode } =
     useSelector((store: RootState) => store.general);
 
@@ -48,6 +46,19 @@ const ChatInput = ({
       textRef.current.style.height = "48px";
     }
   }, []);
+
+  useEffect(() => {
+    if (typeof fetch === "function") {
+      fetch("/api/user/tokens")
+        .then((res) => res.json())
+        .then((res) => {
+          if (res?.success && typeof res.data?.tokens === "number") {
+            setTokens(res.data.tokens);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [isStreaming]);
 
   const resetTextarea = () => {
     setText("");
@@ -71,11 +82,6 @@ const ChatInput = ({
   const triggerSend = async () => {
     const prompt = text.trim();
     if (!prompt || isBusy) return;
-
-    if (existingToken <= 0) {
-      toast.error(t("outOfTokens"));
-      return;
-    }
 
     const activePath =
       pathname ||
@@ -144,6 +150,7 @@ const ChatInput = ({
                 <FaRegCommentDots className="text-xs" />
                 <span>{t("modeText")}</span>
               </button>
+
               <button
                 type="button"
                 onClick={() => dispatch(setChatMode("image"))}
@@ -159,9 +166,11 @@ const ChatInput = ({
               </button>
             </div>
 
-            <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500 hidden sm:inline">
-              {t("tokensRemaining", { count: existingToken ?? 0 })}
-            </span>
+            {tokens !== null && (
+              <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500 hidden sm:inline">
+                {t("tokensRemaining", { count: tokens })}
+              </span>
+            )}
           </div>
 
           {/* Textarea & Send Button Row */}
@@ -170,18 +179,19 @@ const ChatInput = ({
               onChange={handleChange}
               onKeyDown={handleKeyDown}
               ref={textRef}
-              name="question"
-              id="question"
               rows={1}
               value={text}
-              disabled={isBusy}
+              name="question"
+              id="question"
               placeholder={
                 chatMode === "image"
                   ? t("imageInputPlaceholder")
                   : t("inputPlaceholder")
               }
               className="w-full resize-none h-[44px] max-h-[180px] overflow-y-auto scrollbar-none text-sm sm:text-base py-2 pr-2 bg-transparent text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none disabled:opacity-60"
+              disabled={isBusy}
             />
+
             <button
               type="submit"
               aria-label={t("send")}

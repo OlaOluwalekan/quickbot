@@ -83,16 +83,14 @@ export async function POST(req: NextRequest) {
       await sendVerificationEmail(email, verificationToken.token);
     }
 
-    const { password: _pwd, ...safeUser } = newUser;
-
     return NextResponse.json(
       ActionResponse.success("Registration successful", {
-        ...safeUser,
-        token: verificationToken?.token,
+        id: newUser.id,
+        email: newUser.email,
       }),
       { status: 201 }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[API /api/auth/register] Error:", error);
     return NextResponse.json(
       ActionResponse.error(
