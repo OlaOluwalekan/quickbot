@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import { signIn } from "@/auth";
 import ActionResponse from "@/utils/response";
 import { LoginSchema } from "@/utils/schema/auth.shema";
-import { getUserByEmail } from "@/utils/actions/user";
+import { getUserByEmailWithPassword } from "@/utils/actions/user";
 import { signMobileToken } from "@/utils/api-auth";
 
 export async function POST(req: NextRequest) {
@@ -11,53 +11,32 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { email, password } = body || {};
 
-    if (!email) {
+    if (!email || !password) {
       return NextResponse.json(
-        ActionResponse.error("email is required", null),
-        { status: 400 }
-      );
-    }
-
-    if (!password) {
-      return NextResponse.json(
-        ActionResponse.error("password is required", null),
-        { status: 400 }
+        ActionResponse.error("Invalid email or password", null),
+        { status: 401 }
       );
     }
 
     const parsed = LoginSchema.safeParse({ email, password });
     if (!parsed.success) {
-      const firstIssue = parsed.error.issues[0]?.message || "Invalid input";
-      return NextResponse.json(ActionResponse.error(firstIssue, null), {
-        status: 400,
-      });
-    }
-
-    const existingUser = await getUserByEmail(email);
-
-    if (!existingUser || !existingUser.email) {
       return NextResponse.json(
-        ActionResponse.error("User does not exist", null),
-        { status: 404 }
+        ActionResponse.error("Invalid email or password", null),
+        { status: 401 }
       );
     }
 
-    if (!existingUser.password) {
-      const { password: _p, ...safeUser } = existingUser;
-      return NextResponse.json(
-        ActionResponse.error(
-          "This account uses a different login method",
-          safeUser
-        ),
-        { status: 400 }
-      );
-    }
+    const existingUser = await getUserByEmailWithPassword(email);
 
-    if (!existingUser.emailVerified) {
-      const { password: _p, ...safeUser } = existingUser;
+    if (
+      !existingUser ||
+      !existingUser.email ||
+      !existingUser.password ||
+      !existingUser.emailVerified
+    ) {
       return NextResponse.json(
-        ActionResponse.error("Email is not verified", safeUser),
-        { status: 403 }
+        ActionResponse.error("Invalid email or password", null),
+        { status: 401 }
       );
     }
 
@@ -67,7 +46,7 @@ export async function POST(req: NextRequest) {
     );
     if (!isPasswordValid) {
       return NextResponse.json(
-        ActionResponse.error("Invalid credentials", null),
+        ActionResponse.error("Invalid email or password", null),
         { status: 401 }
       );
     }
@@ -85,7 +64,15 @@ export async function POST(req: NextRequest) {
       role: existingUser.role,
     });
 
-    const { password: _pwd, ...safeUser } = existingUser;
+    const safeUser = {
+      id: existingUser.id,
+      name: existingUser.name,
+      email: existingUser.email,
+      image: existingUser.image,
+      emailVerified: existingUser.emailVerified,
+      role: existingUser.role,
+      tokens: existingUser.tokens,
+    };
 
     return NextResponse.json(
       ActionResponse.success("Login successful", {
@@ -94,7 +81,7 @@ export async function POST(req: NextRequest) {
       }),
       { status: 200 }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[API /api/auth/login] Error:", error);
     return NextResponse.json(
       ActionResponse.error("An error occurred", null),

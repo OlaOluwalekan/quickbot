@@ -1,5 +1,4 @@
-'use server'
-
+import "server-only";
 import { revalidatePath } from 'next/cache'
 import { getGeminiResponse } from '../ai-models/gemini'
 import { db } from '../db'
@@ -188,6 +187,9 @@ export const searchChat = async (
     responses = await db.response.findMany({
       where: {
         chatId,
+        chat: {
+          createdBy: userId,
+        },
         OR: [
           {
             question: {

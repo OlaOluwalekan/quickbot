@@ -1,5 +1,5 @@
 import { ChatProps, ResponseProps } from '@/types/chats'
-import { getChatById } from '@/utils/actions/chat'
+
 import { getSnippetWithHighlight } from '@/utils/search'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
@@ -38,7 +38,9 @@ export const ResponseSearchResult = ({
   const [title, setTitle] = useState('')
 
   useEffect(() => {
-    getChatById(result.chatId).then((res) => {
+    fetch(`/api/chats/${result.chatId}`)
+      .then((r) => r.json())
+      .then((res) => {
       if (res.success) {
         setTitle(res.data.chat.title)
       }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import ActionResponse from "@/utils/response";
+import { db } from "@/utils/db";
 import { generateVerificationToken } from "@/utils/actions/token";
 import { sendVerificationEmail } from "@/utils/emails/send-verification-email";
 
@@ -15,18 +16,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const verificationToken = await generateVerificationToken(email);
-    if (!verificationToken) {
-      return NextResponse.json(
-        ActionResponse.error("Error Occurred", null),
-        { status: 500 }
-      );
+    const user = await db.user.findUnique({
+      where: { email },
+      select: { id: true, emailVerified: true },
+    });
+
+    if (user && !user.emailVerified) {
+      const verificationToken = await generateVerificationToken(email);
+      if (verificationToken?.token) {
+        await sendVerificationEmail(email, verificationToken.token);
+      }
     }
 
-    await sendVerificationEmail(email, verificationToken.token);
-
     return NextResponse.json(
-      ActionResponse.success("Verification email sent", verificationToken),
+      ActionResponse.success("If the account exists, an email was sent", null),
       { status: 200 }
     );
   } catch (error) {

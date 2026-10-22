@@ -1,5 +1,4 @@
-"use server";
-
+import "server-only";
 import sendMail, { SendMailResult } from "./send-email";
 
 /**

@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/utils/db";
 import ActionResponse from "@/utils/response";
 import { getAuthenticatedUser } from "@/utils/api-auth";
+import { safeUserSelect } from "@/utils/actions/user";
 
 export async function GET(req: NextRequest) {
   try {
@@ -14,9 +15,8 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const { password: _pwd, ...safeUser } = user;
     return NextResponse.json(
-      ActionResponse.success("User profile fetched", { user: safeUser }),
+      ActionResponse.success("User profile fetched", { user }),
       { status: 200 }
     );
   } catch (error) {
@@ -51,13 +51,13 @@ export async function PATCH(req: NextRequest) {
     const updatedUser = await db.user.update({
       where: { id: user.id },
       data: { name: name.trim() },
+      select: safeUserSelect,
     });
 
     revalidatePath("/settings");
-    const { password: _pwd, ...safeUser } = updatedUser;
 
     return NextResponse.json(
-      ActionResponse.success("Name updated", safeUser),
+      ActionResponse.success("Name updated", updatedUser),
       { status: 200 }
     );
   } catch (error) {

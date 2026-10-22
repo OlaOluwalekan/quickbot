@@ -5,7 +5,7 @@ import React, { useEffect, useMemo, useRef, useTransition } from "react";
 import Response from "./Response";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/store";
-import { getChatById } from "@/utils/actions/chat";
+
 import {
   clearOptimisticResponses,
   setCurrentPageId,
@@ -45,7 +45,9 @@ const ResponseList = ({
     if (!currentChatId) return;
     dispatch(clearOptimisticResponses());
     startTransition(() => {
-      getChatById(currentChatId).then((res) => {
+      fetch(`/api/chats/${currentChatId}`)
+        .then((r) => r.json())
+        .then((res) => {
         if (res?.success && res.data?.chat) {
           dispatch(setCurrentPageTitle(res.data.chat.title));
           dispatch(setCurrentPageId(res.data.chat.id));

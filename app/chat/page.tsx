@@ -44,7 +44,7 @@ const ChatPage = async () => {
       <TemplatePrompts
         data={samplePrompts}
         userId={session?.user?.id as string}
-        existingToken={(session?.user as any).token}
+
       />
     </div>
   )

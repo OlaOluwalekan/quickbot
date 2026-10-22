@@ -1,6 +1,5 @@
 "use client";
 
-import { getUserByEmail } from "@/utils/actions/user";
 import { useRouter } from "next/navigation";
 import { ChangeEvent, FormEvent, useEffect, useState, useTransition } from "react";
 import InputWithIcon from "../ui/inputs/InputWithIcon";
@@ -10,7 +9,6 @@ import Alert from "../alert/Alert";
 import { useTranslations } from "next-intl";
 
 const RESEND_SECONDS = 15;
-const REDIRECT_MILLISECONDS = 3000;
 
 const Registered = ({
   accountId: email,
@@ -20,12 +18,13 @@ const Registered = ({
   const t = useTranslations("Auth");
   const tCommon = useTranslations("Common");
   const router = useRouter();
-  const [user, setUser] = useState<any>(null);
-  const [userEmail, setUserEmail] = useState("");
-  const [isPending, startTransition] = useTransition();
+  const [userEmail, setUserEmail] = useState(email || "");
   const [sendingEmail, startSendingEmail] = useTransition();
-  const [pageIsLoading, setPageIsLoading] = useState(true);
-  const [response, setResponse] = useState({
+  const [response, setResponse] = useState<{
+    message: string;
+    success: boolean;
+    data: any;
+  }>({
     message: "",
     success: false,
     data: null,
@@ -35,33 +34,14 @@ const Registered = ({
   useEffect(() => {
     if (!email) {
       router.push("/auth/register");
+    } else {
+      setUserEmail(email);
     }
   }, [email, router]);
 
   const handleResendClick = () => {
     setCount(RESEND_SECONDS);
   };
-
-  useEffect(() => {
-    if (email) {
-      startTransition(() => {
-        getUserByEmail(email).then((data) => {
-          if (data) {
-            if (data.emailVerified) {
-              router.push("/auth/login");
-            }
-            setUser(data);
-            setUserEmail(data.email as string);
-          } else {
-            setTimeout(() => {
-              router.push("/auth/register");
-            }, REDIRECT_MILLISECONDS);
-          }
-          setPageIsLoading(false);
-        });
-      });
-    }
-  }, [email, router]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout | undefined;
@@ -93,13 +73,15 @@ const Registered = ({
           body: JSON.stringify({ email: userEmail || email }),
         });
         const json = await res.json();
-        setResponse(json);
-        if (json.success) {
-          handleResendClick();
-        }
-      } catch (err: any) {
         setResponse({
-          message: err?.message || "Failed to send verification email",
+          message: json.message || "If the account exists, an email was sent",
+          success: json.success ?? true,
+          data: null,
+        });
+        handleResendClick();
+      } catch (err: unknown) {
+        setResponse({
+          message: err instanceof Error ? err.message : "Failed to send verification email",
           success: false,
           data: null,
         });
@@ -118,17 +100,13 @@ const Registered = ({
       </h1>
 
       <form onSubmit={handleSubmit} className="space-y-4 mt-4" noValidate>
-        {isPending || pageIsLoading ? (
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            {tCommon("loading")}
-          </p>
-        ) : user ? (
+        {email ? (
           <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
             {t("registeredDescription")}
           </p>
         ) : (
           <Alert
-            message={`The email ${email} was not found. Redirecting...`}
+            message="No account email provided. Redirecting..."
             success={false}
           />
         )}
@@ -160,7 +138,7 @@ const Registered = ({
           }
           size="full"
           theme="primary"
-          disabled={isPending || sendingEmail || count > 0}
+          disabled={sendingEmail || count > 0 || !userEmail}
         />
       </form>
     </div>

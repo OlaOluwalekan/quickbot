@@ -1,9 +1,12 @@
-import { NextRequest } from "next/server";
+import type { NextRequest } from "next/server";
 import crypto from "crypto";
-import { auth } from "@/auth";
+
 import { getUserById } from "./actions/user";
 
-const SECRET = process.env.AUTH_SECRET || "klecx-fallback-secret-key";
+const SECRET = process.env.AUTH_SECRET;
+if (!SECRET || SECRET.length < 32) {
+  throw new Error("AUTH_SECRET must be set (>= 32 chars)");
+}
 
 export interface MobileTokenPayload {
   sub: string;
@@ -37,7 +40,7 @@ export function signMobileToken(
   );
 
   const signature = crypto
-    .createHmac("sha256", SECRET)
+    .createHmac("sha256", SECRET as string)
     .update(`${header}.${encodedPayload}`)
     .digest("base64url");
 
@@ -54,12 +57,27 @@ export function verifyMobileToken(token: string): MobileTokenPayload | null {
     const [header, encodedPayload, signature] = parts;
     if (!header || !encodedPayload || !signature) return null;
 
+    // Reject tokens whose header alg isn't HS256
+    const headerObj = JSON.parse(
+      Buffer.from(header, "base64url").toString("utf8")
+    );
+    if (headerObj.alg !== "HS256") {
+      return null;
+    }
+
     const expectedSig = crypto
-      .createHmac("sha256", SECRET)
+      .createHmac("sha256", SECRET as string)
       .update(`${header}.${encodedPayload}`)
       .digest("base64url");
 
-    if (signature !== expectedSig) return null;
+    const expectedBuf = Buffer.from(expectedSig);
+    const sigBuf = Buffer.from(signature);
+    if (
+      expectedBuf.length !== sigBuf.length ||
+      !crypto.timingSafeEqual(expectedBuf, sigBuf)
+    ) {
+      return null;
+    }
 
     const payload = JSON.parse(
       Buffer.from(encodedPayload, "base64url").toString("utf8")
@@ -83,6 +101,7 @@ export function verifyMobileToken(token: string): MobileTokenPayload | null {
  */
 export async function getAuthenticatedUser(req?: NextRequest | Request) {
   try {
+    const { auth } = await import("@/auth");
     const session = await auth();
     if (session?.user?.id) {
       const dbUser = await getUserById(session.user.id);

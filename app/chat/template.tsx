@@ -40,7 +40,7 @@ const Template = async ({ children }: { children: ReactNode }) => {
 
             <ChatInput
               userId={session?.user?.id as string}
-              existingToken={(session?.user as any)?.token ?? 0}
+
             />
           </main>
         </div>
