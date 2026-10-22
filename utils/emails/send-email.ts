@@ -1,8 +1,8 @@
 import "server-only";
 import { Resend } from "resend";
+import { env } from "@/server/env";
 
-const resendApiKey = process.env.RESEND_API_KEY;
-const resend = resendApiKey ? new Resend(resendApiKey) : null;
+const resend = new Resend(env.RESEND_API_KEY);
 
 export interface SendMailResult {
   success: boolean;
@@ -24,18 +24,7 @@ const sendMail = async (
   message: string
 ): Promise<SendMailResult> => {
   try {
-    if (!resend) {
-      console.warn(
-        `[Resend] Missing RESEND_API_KEY. Skipping email delivery to ${email} (${subject}).`
-      );
-      return {
-        success: false,
-        error: "Email service is not configured (missing RESEND_API_KEY).",
-      };
-    }
-
-    const fromAddress =
-      process.env.EMAIL_FROM || "Klecx <onboarding@resend.dev>";
+    const fromAddress = env.EMAIL_FROM;
 
     const { data, error } = await resend.emails.send({
       from: fromAddress,

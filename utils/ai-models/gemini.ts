@@ -1,7 +1,8 @@
 import { GoogleGenAI } from "@google/genai";
 import ActionResponse from "../response";
+import { env } from "@/server/env";
 
-const PRIMARY_TEXT_MODEL = process.env.GEMINI_TEXT_MODEL || "gemini-3.8-flash";
+const PRIMARY_TEXT_MODEL = env.GEMINI_TEXT_MODEL;
 export const CANDIDATE_TEXT_MODELS = Array.from(
   new Set([
     PRIMARY_TEXT_MODEL,
@@ -10,13 +11,13 @@ export const CANDIDATE_TEXT_MODELS = Array.from(
     "gemini-3.1-flash-lite",
   ])
 );
-const IMAGE_MODEL = process.env.GEMINI_IMAGE_MODEL || "gemini-nano-banana-2.1";
+const IMAGE_MODEL = env.GEMINI_IMAGE_MODEL;
 
 let aiClient: GoogleGenAI | null = null;
 
 function getAIClient(): GoogleGenAI {
   if (!aiClient) {
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = env.GEMINI_API_KEY;
     if (!apiKey) {
       throw new Error("GEMINI_API_KEY environment variable is not configured.");
     }

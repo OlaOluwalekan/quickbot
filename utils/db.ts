@@ -1,16 +1,17 @@
 import { PrismaClient } from "@prisma/client";
 import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
+import { env } from "@/server/env";
 
 declare global {
   var prima: PrismaClient | undefined;
 }
 
-const connectionString = `${process.env.DATABASE_URL}`
+const connectionString = env.DATABASE_URL;
 
-const pool = new Pool({ connectionString })
-const adapter = new PrismaPg(pool)
+const pool = new Pool({ connectionString });
+const adapter = new PrismaPg(pool);
 
 export const db = globalThis.prima || new PrismaClient({ adapter });
 
-if (process.env.NODE_ENV !== "production") globalThis.prima = db;
+if (env.NODE_ENV !== "production") globalThis.prima = db;
