@@ -1,0 +1,38 @@
+name: ci
+on: [pull_request, push]
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env: { POSTGRES_PASSWORD: postgres, POSTGRES_DB: klecx_ci }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/klecx_ci
+      APP_URL: http://localhost:3000
+      AUTH_SECRET: ci-dummy-auth-secret-min-32-chars-long!
+      GEMINI_API_KEY: ci-dummy-key-0000
+      RESEND_API_KEY: re_ci_dummy
+      EMAIL_FROM: "Klecx <ci@example.com>"
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npx prisma validate
+      - run: npx prisma migrate deploy      # proves migrations apply to an empty DB
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test -- --ci
+      - run: npm run build
+      - run: npm audit --omit=dev --audit-level=high
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: gitleaks/gitleaks-action@v2
