@@ -26,7 +26,7 @@ export const getResponseFromAI = async (
   const id = formData.get("id");
 
   let chatId: string = "";
-  let history: any[] = [];
+  const history: any[] = [];
   let previousInteractionId: string | null = null;
 
   if (!prompt) {

@@ -72,11 +72,10 @@ export const getChats = async (
 
     const grouped = chats.reduce(
       (acc: { [key: string]: typeof chats }, chat) => {
-        const dateKey = chat.updatedAt.toISOString().split('T')[0]
-        if (!acc[dateKey]) {
-          acc[dateKey] = []
-        }
-        acc[dateKey].push(chat)
+        const dateKey = chat.updatedAt.toISOString().split('T')[0] ?? 'Unknown'
+        const list = acc[dateKey] ?? []
+        list.push(chat)
+        acc[dateKey] = list
         return acc
       },
       {}

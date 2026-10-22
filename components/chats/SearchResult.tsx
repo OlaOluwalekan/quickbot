@@ -13,7 +13,7 @@ export const ChatSearchResult = ({
   searchText: string
   setSearchText: (text: string) => void
 }) => {
-  let render = getSnippetWithHighlight(result.title, searchText)
+  const render = getSnippetWithHighlight(result.title, searchText)
 
   return (
     <Link
@@ -34,7 +34,7 @@ export const ResponseSearchResult = ({
   searchText: string
   setSearchText: (text: string) => void
 }) => {
-  let render = getSnippetWithHighlight(result.response, searchText)
+  const render = getSnippetWithHighlight(result.response, searchText)
   const [title, setTitle] = useState('')
 
   useEffect(() => {

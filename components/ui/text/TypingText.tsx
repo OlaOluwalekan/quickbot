@@ -31,7 +31,7 @@ const TypingText = ({
 
     if (isTyping) {
       // Typing effect
-      const currentText = texts[currentIndex]
+      const currentText = texts[currentIndex] ?? ""
       let index = displayedText.length
 
       intervalId = setInterval(() => {

@@ -27,7 +27,7 @@ const ResponseMD = ({ response }: { response: string }) => {
       remarkPlugins={[remarkGfm]}
       components={{
         code({ className, children, ...props }: CodeProps) {
-          let match: any = /language-(\w+)/.exec(className || '')
+          const match: any = /language-(\w+)/.exec(className || '')
 
           const isBlock = className
             ? true

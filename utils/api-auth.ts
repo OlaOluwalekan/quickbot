@@ -52,6 +52,7 @@ export function verifyMobileToken(token: string): MobileTokenPayload | null {
     const parts = token.split(".");
     if (parts.length !== 3) return null;
     const [header, encodedPayload, signature] = parts;
+    if (!header || !encodedPayload || !signature) return null;
 
     const expectedSig = crypto
       .createHmac("sha256", SECRET)
