@@ -4,7 +4,7 @@ import { getGeminiJSONResponse } from "../ai-models/gemini";
 import { db } from "../db";
 import ActionResponse from "../response";
 
-let PROMPT = `List 4 short template prompts for a new chat`;
+const PROMPT = `List 4 short template prompts for a new chat`;
 
 /**
  * Asynchronously creates multiple template prompts in the database and retrieves them.
@@ -64,6 +64,7 @@ export const getTemplatePrompts = async () => {
     }
 
     const samplePrompt = prompts[0];
+    if (!samplePrompt) return ActionResponse.error("No template prompts found");
     const dateCreated = new Date(samplePrompt.createAt);
     const todaysDate = new Date();
 

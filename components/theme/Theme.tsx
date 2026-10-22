@@ -42,7 +42,7 @@ const Theme = () => {
         className="a-modal p-3 bg-gradient-to-r from-indigo-600 to-sky-500 rounded-2xl text-white shadow-lg shadow-indigo-500/25 hover:opacity-95 transition-all cursor-pointer"
         onClick={() => dispatch(toggleThemeOpen(!themeIsOpen))}
       >
-        {themeMap[theme].icon()}
+        {themeMap[theme]?.icon()}
       </button>
     </div>
   );

@@ -47,11 +47,12 @@ const Sidebar = ({
           : new Date(chat.updatedAt)
       )
         .toISOString()
-        .split("T")[0];
-      if (!acc[dateKey]) {
-        acc[dateKey] = [];
-      }
-      acc[dateKey].push(chat);
+        .split("T")[0] ?? "Unknown";
+      const group = acc[dateKey] ?? [];
+
+
+      group.push(chat);
+      acc[dateKey] = group;
       return acc;
     },
     {}

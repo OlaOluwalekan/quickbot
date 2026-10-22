@@ -185,6 +185,7 @@ export const getGeminiChatResponse = async (
 
   for (let i = 0; i < CANDIDATE_TEXT_MODELS.length; i++) {
     const modelName = CANDIDATE_TEXT_MODELS[i];
+    if (!modelName) continue;
     const useInteractionId = i === 0 ? previousInteractionId : null;
     const input = useInteractionId
       ? prompt
