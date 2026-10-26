@@ -21,27 +21,24 @@ const Template = async ({ children }: { children: ReactNode }) => {
   }
 
   return (
-    <div className="h-[100dvh] w-full flex flex-col bg-slate-50 dark:bg-[#090d16] text-slate-900 dark:text-slate-100 overflow-hidden">
+    <div className="flex h-dvh w-full flex-col overflow-hidden bg-slate-50 text-slate-900 dark:bg-[#090d16] dark:text-slate-100">
       {/* Mobile Header */}
       <ChatMobileHeader userId={session?.user?.id as string} />
 
-      <div className="flex flex-1 min-h-0 overflow-hidden">
+      <div className="flex min-h-0 flex-1 overflow-hidden">
         {/* Sidebar (Off-canvas drawer on mobile, fixed 280px rail on desktop) */}
         <Sidebar data={session?.user} chats={chats} dates={dates} />
 
         {/* Main Chat Canvas */}
-        <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+        <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
           <ChatDesktopHeader userId={session?.user?.id as string} />
 
-          <main className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
-            <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          <main className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
               {children}
             </div>
 
-            <ChatInput
-              userId={session?.user?.id as string}
-
-            />
+            <ChatInput userId={session?.user?.id as string} />
           </main>
         </div>
       </div>

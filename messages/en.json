@@ -25,9 +25,9 @@
     "dashboard": "Open Chat"
   },
   "Landing": {
-    "badge": "Next-Gen Gemini Interactions & Image Studio",
+    "badge": "Next-Gen AI Workspace & Image Studio",
     "heroTitle": "Think faster. Create bolder with",
-    "heroHighlight": "Klecx AI",
+    "heroHighlight": "{appName} AI",
     "heroDescription": "Experience real-time Server-Sent Events streaming, stateful multi-turn reasoning, and instant AI image synthesis in one unified workspace.",
     "getStarted": "Start Free Workspace",
     "exploreFeatures": "Explore Capabilities",
