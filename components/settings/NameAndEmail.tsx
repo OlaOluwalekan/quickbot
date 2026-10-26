@@ -1,93 +1,118 @@
-'use client'
+"use client";
 
-import { SessionProps } from '@/types/user'
-import { ChangeEvent, useState, useTransition } from 'react'
-import { FaEdit, FaTimes } from 'react-icons/fa'
-import { FaCheck, FaUser } from 'react-icons/fa6'
-import InputWithIcon from '../ui/inputs/InputWithIcon'
-import toast from 'react-hot-toast'
-import { updateUserName } from '@/utils/actions/user'
+import { SessionProps } from "@/types/user";
+import { ChangeEvent, FormEvent, useState, useTransition } from "react";
+import { FaEdit, FaTimes } from "react-icons/fa";
+import { FaCheck, FaUser } from "react-icons/fa6";
+import InputWithIcon from "../ui/inputs/InputWithIcon";
+import toast from "react-hot-toast";
+import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 
 const NameAndEmail = ({ user }: { user: SessionProps }) => {
-  const [isEditing, setIsEditing] = useState(false)
-  const [name, setName] = useState(user.name)
-  const [isPending, startTransaction] = useTransition()
+  const t = useTranslations("Settings");
+  const router = useRouter();
+  const [isEditing, setIsEditing] = useState(false);
+  const [name, setName] = useState(user?.name || "");
+  const [isPending, startTransition] = useTransition();
 
   const handleCancel = () => {
-    setName(user.name)
-    setIsEditing(false)
-  }
+    setName(user?.name || "");
+    setIsEditing(false);
+  };
 
-  const handleSubmit = (formData: FormData) => {
-    if (!name) {
-      toast.error('Please enter your name')
-      return
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!name.trim()) {
+      toast.error(t("fullName"));
+      return;
     }
 
-    startTransaction(() => {
-      updateUserName(formData).then((res) => {
-        if (res.success) {
-          toast.success(res.message)
-          setIsEditing(false)
+    startTransition(async () => {
+      try {
+        const res = await fetch("/api/user/profile", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: name.trim() }),
+        });
+        const json = await res.json();
+        if (json.success) {
+          toast.success(json.message || "Name updated");
+          setIsEditing(false);
+          router.refresh();
         } else {
-          toast.error(res.message)
+          toast.error(json.message || "Failed to update name");
         }
-      })
-    })
-  }
+      } catch {
+        toast.error("Failed to update name");
+      }
+    });
+  };
 
   return (
-    <div className='flex flex-col justify-center items-center w-full my-2 gap-1 text-base-content dark:text-dark-base-content'>
-      <span>{user.email}</span>
+    <div className="flex flex-col items-center sm:items-start w-full gap-1.5 text-slate-900 dark:text-slate-100">
       {isEditing ? (
         <form
-          action={handleSubmit}
-          className='flex justify-center items-center gap-2'
+          onSubmit={handleSubmit}
+          className="flex items-center gap-2 w-full max-w-xs"
         >
-          <input type='hidden' value={user.id} name='id' />
           <InputWithIcon
-            type='text'
-            placeholder='Your Name'
+            type="text"
+            placeholder={t("fullName")}
             value={name}
-            name='name'
+            name="name"
             icons={<FaUser />}
             onChange={(e: ChangeEvent<HTMLInputElement>) =>
               setName(e.target.value)
             }
           />
           {isPending ? (
-            <span className='loading loading-spinner loading-xs'></span>
+            <span
+              className="animate-spin inline-block w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full shrink-0"
+              role="status"
+              aria-label="loading"
+            />
           ) : (
-            <article className='flex gap-1'>
+            <div className="flex items-center gap-1 shrink-0">
               <button
-                type='submit'
-                className='text-lg w-8 aspect-square flex justify-center items-center text-success hover:bg-success/50 rounded-full cursor-pointer'
+                type="submit"
+                aria-label="Save name"
+                className="w-8 h-8 flex justify-center items-center text-emerald-500 hover:bg-emerald-500/15 rounded-lg cursor-pointer"
               >
                 <FaCheck />
               </button>
               <button
-                type='button'
-                className='text-lg w-8 aspect-square flex justify-center items-center text-error hover:bg-error/50 rounded-full cursor-pointer'
+                type="button"
+                aria-label="Cancel edit"
+                className="w-8 h-8 flex justify-center items-center text-rose-500 hover:bg-rose-500/15 rounded-lg cursor-pointer"
                 onClick={handleCancel}
               >
                 <FaTimes />
               </button>
-            </article>
+            </div>
           )}
         </form>
       ) : (
-        <article className='flex items-center gap-2'>
-          <span>{user.name}</span>{' '}
+        <div className="flex items-center gap-2">
+          <h2 className="text-xl font-bold tracking-tight">{name}</h2>
           <button
-            type='button'
-            className='w-8 aspect-square flex justify-center items-center text-base-content dark:text-dark-base-content hover:bg-primary dark:hover:bg-dark-primary hover:text-primary-content rounded-full cursor-pointer'
+            type="button"
+            aria-label="Edit name"
+            className="w-8 h-8 flex justify-center items-center text-slate-400 hover:text-indigo-500 hover:bg-indigo-500/10 rounded-lg transition-colors cursor-pointer"
             onClick={() => setIsEditing(true)}
           >
-            <FaEdit />
+            <FaEdit className="text-sm" />
           </button>
-        </article>
+        </div>
       )}
+      <span className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+        {user?.email}
+      </span>
+      <span className="text-[11px] text-slate-400 dark:text-slate-500">
+        {t("emailReadOnly")}
+      </span>
     </div>
-  )
-}
-export default NameAndEmail
+  );
+};
+
+export default NameAndEmail;

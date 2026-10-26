@@ -5,103 +5,107 @@ import InputWithIcon from "../ui/inputs/InputWithIcon";
 import { FaEnvelope, FaLock } from "react-icons/fa6";
 import BasicButton from "../ui/button/BasicButton";
 import { useRouter } from "next/navigation";
-import { login } from "@/utils/actions/login";
 import Alert from "../alert/Alert";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
-/**
- * Login form
- * @returns {JSX.Element} styled login form
- */
-const LoginForm = (): JSX.Element => {
+const LoginForm = (): React.JSX.Element => {
+  const t = useTranslations("Auth");
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
   const [isPending, startTransition] = useTransition();
-  const [response, setResponse] = useState({
+  const [response, setResponse] = useState<{
+    message: string;
+    success: boolean;
+    data: any;
+  }>({
     message: "",
     success: false,
     data: null,
   });
   const router = useRouter();
 
-  // used to clear the response passed to the alert toast after 3s (3000ms)
   useEffect(() => {
-    let interval = setTimeout(() => {
+    const interval = setTimeout(() => {
       setResponse({ message: "", success: false, data: null });
-    }, 3000);
+    }, 3500);
 
     return () => clearTimeout(interval);
   }, [response]);
 
-  // handles input change events
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // handle form submission event - server action is used to login user with credentials
-  const handleSubmit = async (formData: FormData) => {
+  const handleSubmit = async (submittedData: FormData) => {
     setResponse({ message: "", success: false, data: null });
 
-    // handle state updates
-    startTransition(() => {
-      login(formData).then((res) => {
-        setResponse(res);
-        if (res.message.includes("not verified")) {
-          // redirects to verification page if user is not verified
-          router.push(`/auth/registered?accountId=${res.data.email}`);
-        }
-        if (res.success) {
+    startTransition(async () => {
+      try {
+        const res = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: submittedData.get("email"),
+            password: submittedData.get("password"),
+          }),
+        });
+        const result = await res.json();
+        setResponse(result);
+        if (result.success) {
           router.push("/chat");
+          router.refresh();
         }
-      });
+      } catch (err: unknown) {
+        setResponse({
+          message: err instanceof Error ? err.message : "An error occurred",
+          success: false,
+          data: null,
+        });
+      }
     });
   };
 
   return (
-    <form action={handleSubmit}>
-      {/* email input */}
+    <form action={handleSubmit} className="space-y-3" noValidate>
       <InputWithIcon
         type="email"
-        placeholder="Email"
+        placeholder={t("emailPlaceholder")}
         icons={<FaEnvelope />}
         name="email"
-        id="email"
         value={formData.email}
         onChange={handleChange}
       />
-
-      {/* password input */}
       <InputWithIcon
         type="password"
-        placeholder="Password"
+        placeholder={t("passwordPlaceholder")}
         icons={<FaLock />}
         name="password"
-        id="password"
         value={formData.password}
         onChange={handleChange}
       />
 
-      <Link
-        href="/auth/forgot-password"
-        className="mb-2 text-xs underline block"
-      >
-        Forgot Password?
-      </Link>
+      <div className="flex justify-end pt-1">
+        <Link
+          href="/auth/forgot-password"
+          className="text-xs font-medium text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 transition-colors"
+        >
+          {t("forgotPasswordLink")}
+        </Link>
+      </div>
 
-      {/* alert toast message - disappears after 3s */}
       {response.message && (
         <Alert message={response.message} success={response.success} />
       )}
 
-      {/* submit button */}
       <BasicButton
         type="submit"
+        text={isPending ? t("loggingIn") : t("loginButton")}
         size="full"
-        text={isPending ? "Loading..." : "Login"}
-        disabled={isPending}
         theme="primary"
+        disabled={isPending}
       />
     </form>
   );

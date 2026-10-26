@@ -1,5 +1,4 @@
-'use server'
-
+import "server-only";
 import { revalidatePath } from 'next/cache'
 import { getGeminiResponse } from '../ai-models/gemini'
 import { db } from '../db'
@@ -21,20 +20,28 @@ export const createChat = async (
 ): Promise<ActionResponse<any>> => {
   // get the response from gemini api
   const aiResponse = await getGeminiResponse(
-    `In plain text and in a single line, without any formatting, give a title to the the text "${prompt}" in 60 characters maximum`
+    `In plain text and in a single line, without any formatting, give a title to the text "${prompt}" in 60 characters maximum`
   )
+
+  const fallbackTitle =
+    prompt.trim().slice(0, 60) || 'New Conversation'
+  const generatedTitle =
+    aiResponse?.success && aiResponse?.data?.text
+      ? aiResponse.data.text.replace(/^["']|["']$/g, '').trim().slice(0, 80)
+      : fallbackTitle
 
   try {
     // create chat and add the generated ai response to the database
     const chatResponse = await db.chat.create({
       data: {
-        title: aiResponse.data.text,
+        title: generatedTitle || fallbackTitle,
         createdBy: userId,
       },
     })
     revalidatePath('/chat')
     return ActionResponse.success('Chat created successfully', {
       chatId: chatResponse.id,
+      chat: chatResponse,
     })
   } catch (error) {
     return ActionResponse.error('Failed to create chat', { error })
@@ -62,15 +69,12 @@ export const getChats = async (
       },
     })
 
-    // const grouped = Object.groupBy(chats, (chat) => {
-    //   return chat.updatedAt.toISOString().split('T')[0]
-    // })
     const grouped = chats.reduce(
       (acc: { [key: string]: typeof chats }, chat) => {
-        if (acc[chat.updatedAt.toISOString().split('T')[0]] == null) {
-          acc[chat.updatedAt.toISOString().split('T')[0]] = [chat]
-        }
-        acc[chat.updatedAt.toISOString().split('T')[0]].push(chat)
+        const dateKey = chat.updatedAt.toISOString().split('T')[0] ?? 'Unknown'
+        const list = acc[dateKey] ?? []
+        list.push(chat)
+        acc[dateKey] = list
         return acc
       },
       {}
@@ -79,7 +83,6 @@ export const getChats = async (
     const dates = Object.keys(grouped).sort((a, b) => {
       return new Date(b).getTime() - new Date(a).getTime()
     })
-    // console.log('grouped', grouped)
 
     return ActionResponse.success('Chats retrieved successfully', {
       chats,
@@ -184,6 +187,9 @@ export const searchChat = async (
     responses = await db.response.findMany({
       where: {
         chatId,
+        chat: {
+          createdBy: userId,
+        },
         OR: [
           {
             question: {

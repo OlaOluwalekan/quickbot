@@ -1,60 +1,49 @@
-import { auth } from '@/auth'
-import ChatDesktopHeader from '@/components/chats/ChatDesktopHeader'
-import ChatInput from '@/components/chats/ChatInput'
-import ChatMobileHeader from '@/components/chats/ChatMobileHeader'
-import Sidebar from '@/components/chats/Sidebar'
-import { ChatProps } from '@/types/chats'
-import { getChats } from '@/utils/actions/chat'
-import { ReactNode } from 'react'
+import { auth } from "@/auth";
+import ChatDesktopHeader from "@/components/chats/ChatDesktopHeader";
+import ChatInput from "@/components/chats/ChatInput";
+import ChatMobileHeader from "@/components/chats/ChatMobileHeader";
+import Sidebar from "@/components/chats/Sidebar";
+import { ChatProps } from "@/types/chats";
+import { getChats } from "@/utils/actions/chat";
+import { ReactNode } from "react";
 
 const Template = async ({ children }: { children: ReactNode }) => {
-  // get authenticated user session
-  const session = await auth()
-  let chats: ChatProps[] = []
-  let dates: string[] = []
-  let grouped: Record<string, ChatProps[]> = {}
+  const session = await auth();
+  let chats: ChatProps[] = [];
+  let dates: string[] = [];
 
-  // get chats created by the user by the userId
   if (session?.user?.id) {
-    const chatResponse = await getChats(session?.user?.id)
+    const chatResponse = await getChats(session?.user?.id);
     if (chatResponse.data) {
-      chats = chatResponse.data.chats
-      dates = chatResponse.data.dates
-      grouped = chatResponse.data.grouped
-    } else {
-      chats = []
+      chats = chatResponse.data.chats;
+      dates = chatResponse.data.dates;
     }
   }
 
   return (
-    <div className='h-screen flex flex-col'>
-      {/* header displayed on mobile screen */}
+    <div className="flex h-dvh w-full flex-col overflow-hidden bg-slate-50 text-slate-900 dark:bg-[#090d16] dark:text-slate-100">
+      {/* Mobile Header */}
       <ChatMobileHeader userId={session?.user?.id as string} />
-      <div className='flex flex-grow'>
-        {/* sidebar containing list of all chats created by a user */}
+
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+        {/* Sidebar (Off-canvas drawer on mobile, fixed 280px rail on desktop) */}
         <Sidebar data={session?.user} chats={chats} dates={dates} />
-        <div className='w-full h-full flex flex-col bg-primary pt-1'>
-          {/* header displayed on larger screens */}
+
+        {/* Main Chat Canvas */}
+        <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
           <ChatDesktopHeader userId={session?.user?.id as string} />
-          <div className='flex flex-col flex-grow bg-primary md:pt-3 md:pb-2 md:pr-2'>
-            <section className='flex flex-grow flex-col bg-base-100 dark:bg-dark-base-100 md:rounded-lg'>
-              <section className='flex flex-grow flex-col items-end w-[90%] mx-auto max-w-[800px] relative'>
-                {/* children */}
-                <section className='h-[calc(100vh-125px)] w-full md:h-[calc(100vh-151px)] flex flex-col'>
-                  {children}
-                </section>
-                {/* chat input where user type their questions */}
-                <ChatInput
-                  userId={session?.user?.id as string}
-                  existingToken={(session?.user as any).token}
-                />
-              </section>
-            </section>
-          </div>
+
+          <main className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+              {children}
+            </div>
+
+            <ChatInput userId={session?.user?.id as string} />
+          </main>
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default Template
+export default Template;

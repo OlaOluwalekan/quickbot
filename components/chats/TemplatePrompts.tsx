@@ -1,96 +1,119 @@
-'use client'
+"use client";
 
 import {
-  setAIResponse,
+  clearOptimisticResponses,
   setCurrentPageId,
   setCurrentPageTitle,
-  setLoadingResponse,
-} from '@/features/generalSlice'
-import { useEffect, useTransition } from 'react'
-import { useDispatch, useSelector } from 'react-redux'
-import InlineLoading from '../loading/InlineLoading'
-import { RootState } from '@/store'
-import { getResponseFromAI } from '@/utils/actions/response'
-import { useRouter } from 'next/navigation'
+} from "@/features/generalSlice";
+import { AppDispatch, RootState } from "@/store";
+import { submitChatPrompt } from "@/utils/chat-stream-client";
+import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import {
+  FaArrowUpRightFromSquare,
+  FaWandMagicSparkles,
+} from "react-icons/fa6";
+import { useDispatch, useSelector } from "react-redux";
+import ResponseMD from "./markdown/ResponseMD";
 
 const TemplatePrompts = ({
   data,
-  userId,
-  existingToken,
+  userId: _userId,
 }: {
-  data: { name: string; domain: string | null }[]
-  userId: string
-  existingToken: number
+  data: { name: string; domain: string | null }[];
+  userId: string;
 }) => {
-  const dispatch = useDispatch()
-  const { loadingResponse, chatInputHeight } = useSelector(
+  const t = useTranslations("Chat");
+  const dispatch = useDispatch<AppDispatch>();
+  const { isStreaming, streamingPrompt, streamingText, chatMode } = useSelector(
     (store: RootState) => store.general
-  )
-  const [isPending, startTransition] = useTransition()
-  const router = useRouter()
+  );
+  const router = useRouter();
 
-  // reset the page title when navigated to general chat page
   useEffect(() => {
-    dispatch(setCurrentPageTitle('New Chat'))
-    dispatch(setCurrentPageId(null))
-  }, [])
+    dispatch(setCurrentPageTitle(t("newChat")));
+    dispatch(setCurrentPageId(null));
+    dispatch(clearOptimisticResponses());
+  }, [dispatch, t]);
 
-  // handle clicking of a template prompt to get ai response
-  const handleSubmit = (formData: FormData) => {
-    startTransition(() => {
-      dispatch(setLoadingResponse(true))
-      getResponseFromAI(formData, window.location.pathname, existingToken).then(
-        (res) => {
-          if (res.success) {
-            dispatch(setAIResponse(res.data.text))
-          }
-          if (res?.data.chatId) {
-            router.push(`/chat/${res.data.chatId}`)
-          }
-          dispatch(setLoadingResponse(false))
-        }
-      )
-    })
-  }
+  const handleSelectPrompt = async (promptText: string) => {
+    if (isStreaming) return;
+
+    await submitChatPrompt({
+      prompt: promptText,
+      chatId: null,
+      mode: chatMode,
+      dispatch,
+      onNavigateChat: (newChatId) => {
+        router.push(`/chat/${newChatId}`);
+        router.refresh();
+      },
+      onRefresh: () => {
+        router.refresh();
+      },
+    });
+  };
 
   return (
-    <div
-      className='w-full flex flex-col'
-      style={{
-        height: `calc(100vh - ${chatInputHeight} - 200px)`,
-      }}
-    >
-      <div className='h-full w-full flex justify-center items-center'>
-        <div className='flex flex-wrap justify-center items-center gap-2'>
-          {data.map((item, i) => {
-            return (
-              <form action={handleSubmit} key={i}>
-                <input type='hidden' id='id' name='id' value={userId} />
-                <input
-                  type='hidden'
-                  name='question'
-                  id='question'
-                  value={item.name}
-                />
-                <button
-                  type='submit'
-                  className='w-[200px] h-[100px] bg-base-200 text-base-content dark:bg-dark-base-200 dark:text-dark-base-content border-base-200 border-2 px-2 py-2 flex flex-col rounded hover:bg-base-300 dark:hover:bg-dark-base-300 cursor-pointer'
-                >
-                  <span className='text-xs flex w-fit px-1 bg-secondary/50 rounded-sm'>
-                    {item.domain || 'general'}
-                  </span>
-                  <section className='flex-grow flex justify-center items-center'>
-                    <p className='text-sm text-center'>{item.name}</p>
-                  </section>
-                </button>
-              </form>
-            )
-          })}
+    <div className="flex flex-col items-center justify-center p-4 max-w-3xl mx-auto w-full">
+      {isStreaming ? (
+        <div className="w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-3xl p-5 shadow-xl shadow-indigo-500/5 mb-8">
+          <div className="flex items-center gap-2 mb-3 text-xs font-semibold uppercase tracking-wider text-indigo-500">
+            <FaWandMagicSparkles className="animate-spin text-sm" />
+            <span>{chatMode === "image" ? t("generatingImage") : t("generating")}</span>
+          </div>
+          {streamingPrompt && (
+            <p className="text-sm font-medium text-slate-800 dark:text-slate-200 mb-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+              {streamingPrompt}
+            </p>
+          )}
+          {streamingText && (
+            <div className="text-sm text-slate-600 dark:text-slate-300">
+              <ResponseMD response={streamingText} />
+            </div>
+          )}
         </div>
-      </div>
-      {loadingResponse && <InlineLoading />}
-    </div>
-  )
-}
+      ) : (
+        <>
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-500 mb-3">
+              <FaWandMagicSparkles className="text-xl" />
+            </div>
+            <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+              {t("welcomeTitle")}
+            </h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+              {t("welcomeSubtitle")}
+            </p>
+          </div>
 
-export default TemplatePrompts
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-2xl">
+            {data.map((item, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => handleSelectPrompt(item.name)}
+                className="group flex flex-col items-start p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900/60 hover:bg-slate-50 dark:hover:bg-slate-800/80 hover:border-indigo-500/30 transition-all text-left shadow-xs cursor-pointer"
+              >
+                <div className="flex items-center justify-between w-full mb-1">
+                  {item.domain && (
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-indigo-500 bg-indigo-500/10 px-2 py-0.5 rounded-full">
+                      {item.domain}
+                    </span>
+                  )}
+                  <FaArrowUpRightFromSquare className="text-xs text-slate-400 group-hover:text-indigo-500 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all ml-auto" />
+                </div>
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
+                  {item.name}
+                </span>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
+export default TemplatePrompts;

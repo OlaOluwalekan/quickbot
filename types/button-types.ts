@@ -18,5 +18,5 @@ export interface LinkBtnProps extends BasicBtnProps {
 }
 
 export interface OAuthBtnProps extends ButtonBase {
-  icon: JSX.Element
+  icon: React.ReactNode
 }

@@ -10,7 +10,7 @@ import {
 
 const { auth } = NextAuth(authConfig)
 
-export default auth(async (req) => {
+export const proxy = auth(async (req) => {
   const { nextUrl } = req
   const isLoggedIn = !!req.auth
 
@@ -40,6 +40,8 @@ export default auth(async (req) => {
 
   return
 })
+
+export default proxy
 
 export const config = {
   matcher: ['/((?!.+\\.[\\w]+$|_next).*)', '/', '/(api|trpc)(.*)'],

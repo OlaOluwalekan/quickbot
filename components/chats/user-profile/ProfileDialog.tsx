@@ -1,31 +1,31 @@
-import clsx from "clsx";
+"use client";
+
 import Link from "next/link";
 import { FaGear } from "react-icons/fa6";
 import Logout from "../../auth/Logout";
+import { useTranslations } from "next-intl";
 
 const ProfileDialog = ({ data }: { data: any }) => {
+  const t = useTranslations("Chat");
+
   return (
-    <div
-      className={clsx(
-        "flex flex-col bg-accent absolute bottom-[50px] left-1 w-[290px] p-2 rounded-md text-primary-content"
-      )}
-    >
+    <div className="flex flex-col bg-slate-900 border border-slate-800 shadow-2xl absolute bottom-[68px] left-2.5 right-2.5 p-2 rounded-2xl text-slate-100 z-50">
       <p
-        className="p-2 rounded-lg my-1 whitespace-nowrap overflow-hidden text-ellipsis"
-        title={data.email}
+        className="px-3 py-2 text-xs text-slate-400 truncate border-b border-slate-800"
+        title={data?.email}
       >
-        {data.email}
+        {data?.email}
       </p>
-      <hr />
       <Link
         href="/settings"
-        className="p-2 rounded-lg my-1.5 flex justify-start items-center gap-3 hover:bg-primary"
+        className="px-3 py-2 rounded-xl my-1 flex items-center gap-2.5 text-sm font-medium text-slate-200 hover:bg-slate-800 transition-colors"
       >
-        <FaGear />
-        Settings
+        <FaGear className="text-indigo-400" />
+        <span>{t("settings")}</span>
       </Link>
-      <hr />
-      <Logout />
+      <div className="border-t border-slate-800 pt-1">
+        <Logout />
+      </div>
     </div>
   );
 };

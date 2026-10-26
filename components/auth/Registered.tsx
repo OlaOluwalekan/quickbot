@@ -1,171 +1,147 @@
 "use client";
 
-import { getUserByEmail } from "@/utils/actions/user";
 import { useRouter } from "next/navigation";
-import { ChangeEvent, useEffect, useState, useTransition } from "react";
+import { ChangeEvent, FormEvent, useEffect, useState, useTransition } from "react";
 import InputWithIcon from "../ui/inputs/InputWithIcon";
-import { FaEnvelope } from "react-icons/fa6";
+import { FaEnvelope, FaEnvelopeCircleCheck } from "react-icons/fa6";
 import BasicButton from "../ui/button/BasicButton";
-import { resendVerificationEmail } from "@/utils/actions/register";
 import Alert from "../alert/Alert";
-import axios from "axios";
+import { useTranslations } from "next-intl";
 
-const RESEND_SECONDS = 15; // number of seconds to wait before resending verification email
-const REDIRECT_MILLISECONDS = 3000; // number of seconds to wait before redirecting
+const RESEND_SECONDS = 15;
 
-/**
- * registered form - shows user registration success and a form to resend verification email link
- * @param {Object} props - component properties
- * @param {string} props.accountId - email address of the newly registered user
- * @returns {JSX.Element} registered form component
- */
 const Registered = ({
   accountId: email,
 }: {
   accountId: string | null;
-}): JSX.Element | null => {
+}): React.JSX.Element | null => {
+  const t = useTranslations("Auth");
+  const tCommon = useTranslations("Common");
   const router = useRouter();
-  const [user, setUser] = useState<any>(null);
-  const [userEmail, setUserEmail] = useState("");
-  const [isPending, startTransition] = useTransition();
+  const [userEmail, setUserEmail] = useState(email || "");
   const [sendingEmail, startSendingEmail] = useTransition();
-  const [pageIsLoading, setPageIsLoading] = useState(true);
-  const [response, setResponse] = useState({
+  const [response, setResponse] = useState<{
+    message: string;
+    success: boolean;
+    data: any;
+  }>({
     message: "",
     success: false,
     data: null,
   });
-  const [count, setCount] = useState(0); // to count the number of seconds to wait to resent verification email
+  const [count, setCount] = useState(0);
 
-  // check if email is in req params and redirect if not
-  if (!email) {
-    router.push("/auth/register");
-    return null;
-  }
+  useEffect(() => {
+    if (!email) {
+      router.push("/auth/register");
+    } else {
+      setUserEmail(email);
+    }
+  }, [email, router]);
 
-  // reset count
   const handleResendClick = () => {
     setCount(RESEND_SECONDS);
   };
 
   useEffect(() => {
-    // handle state update on page load
-    startTransition(() => {
-      getUserByEmail(email).then((data) => {
-        if (data) {
-          // if email already verified, then redirect to login page
-          if (data.emailVerified) {
-            router.push("/auth/login");
-          }
-          setUser(data);
-          setUserEmail(data.email as string);
-        } else {
-          // if email does not exit in the database, redirect to registration page
-          setTimeout(() => {
-            router.push("/auth/register");
-          }, REDIRECT_MILLISECONDS);
-        }
-        setPageIsLoading(false);
-      });
-    });
-  }, []);
-
-  // handle countdown to resend verification email
-  useEffect(() => {
     let interval: NodeJS.Timeout | undefined;
     if (count > 0) {
       interval = setInterval(() => {
-        setCount(count - 1);
+        setCount((c) => c - 1);
       }, 1000);
-    } else {
-      clearInterval(interval);
     }
-
     return () => clearInterval(interval);
   }, [count]);
 
-  // used to clear the response passed to the alert toast after 3s (3000ms)
   useEffect(() => {
-    let interval = setTimeout(() => {
+    const interval = setTimeout(() => {
       setResponse({ message: "", success: false, data: null });
-    }, 3000);
+    }, 3500);
 
     return () => clearTimeout(interval);
   }, [response]);
 
-  // handle resending of verification email
-  const handleSubmit = (formData: FormData) => {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     setResponse({ message: "", success: false, data: null });
 
-    startSendingEmail(() => {
-      resendVerificationEmail(formData).then((res) => {
-        setResponse(res);
-        if (res.success) {
-          axios
-            .post("/api/email/send-verification-email", {
-              email,
-              token: res.data.token,
-            })
-            .then(() => {
-              handleResendClick();
-            });
-        }
-      });
+    startSendingEmail(async () => {
+      try {
+        const res = await fetch("/api/auth/resend-verification", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: userEmail || email }),
+        });
+        const json = await res.json();
+        setResponse({
+          message: json.message || "If the account exists, an email was sent",
+          success: json.success ?? true,
+          data: null,
+        });
+        handleResendClick();
+      } catch (err: unknown) {
+        setResponse({
+          message: err instanceof Error ? err.message : "Failed to send verification email",
+          success: false,
+          data: null,
+        });
+      }
     });
   };
 
   return (
-    <form
-      className="w-[90%] mx-auto max-w-[500px]"
-      action={handleSubmit}
-      noValidate
-    >
-      {/* render appropriate message when page is loading or when email is not found */}
-      {isPending || pageIsLoading ? (
-        <p className="text-center">Please wait...</p>
-      ) : user ? (
-        <p className="text-center text-sm bg-success/35 rounded text-success py-1">
-          A Confirmation Email has been sent to you. Please check your Email
-        </p>
-      ) : (
-        <p className="text-center text-sm bg-error/50 text-error py-1">
-          The email {email} cannot be found. Redirecting to registration page...
-        </p>
-      )}
+    <div className="w-full max-w-md rounded-3xl border border-slate-200/90 dark:border-slate-800/90 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl p-6 sm:p-8 shadow-2xl shadow-indigo-500/10 text-center">
+      <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/25 text-indigo-500 flex items-center justify-center text-2xl mx-auto mb-4">
+        <FaEnvelopeCircleCheck />
+      </div>
 
-      {/* email input - read only */}
-      <InputWithIcon
-        type="email"
-        placeholder="Email"
-        icons={<FaEnvelope />}
-        name="email"
-        value={userEmail}
-        onChange={(e: ChangeEvent<HTMLInputElement>) =>
-          setUserEmail(e.target.value)
-        }
-        readonly={true}
-      />
+      <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white mb-2">
+        {t("registeredTitle")}
+      </h1>
 
-      {/* alert toast message - disappears after 3s */}
-      {response.message && (
-        <Alert message={response.message} success={response.success} />
-      )}
+      <form onSubmit={handleSubmit} className="space-y-4 mt-4" noValidate>
+        {email ? (
+          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+            {t("registeredDescription")}
+          </p>
+        ) : (
+          <Alert
+            message="No account email provided. Redirecting..."
+            success={false}
+          />
+        )}
 
-      {/* submit button */}
-      <BasicButton
-        type="submit"
-        text={
-          sendingEmail
-            ? "Sending Email..."
-            : count > 0
-            ? `Resend in ${count}s`
-            : "Resend Email"
-        }
-        size="full"
-        theme="primary"
-        disabled={isPending || sendingEmail || count > 0}
-      />
-    </form>
+        <InputWithIcon
+          type="email"
+          placeholder={t("emailPlaceholder")}
+          icons={<FaEnvelope />}
+          name="email"
+          value={userEmail}
+          onChange={(e: ChangeEvent<HTMLInputElement>) =>
+            setUserEmail(e.target.value)
+          }
+          readonly={true}
+        />
+
+        {response.message && (
+          <Alert message={response.message} success={response.success} />
+        )}
+
+        <BasicButton
+          type="submit"
+          text={
+            sendingEmail
+              ? tCommon("loading")
+              : count > 0
+              ? `${t("resendEmailLink")} (${count}s)`
+              : t("resendEmailLink")
+          }
+          size="full"
+          theme="primary"
+          disabled={sendingEmail || count > 0 || !userEmail}
+        />
+      </form>
+    </div>
   );
 };
 

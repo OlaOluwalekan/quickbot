@@ -1,12 +1,18 @@
+import AuthWrapper from "@/components/auth/AuthWrapper";
 import Registered from "@/components/auth/Registered";
 
-const RegisteredPage = ({ searchParams }: { searchParams: any }) => {
-  const { accountId } = searchParams;
+interface RegisteredPageProps {
+  searchParams: Promise<{ accountId?: string }>;
+}
+
+const RegisteredPage = async ({ searchParams }: RegisteredPageProps) => {
+  const resolvedParams = await searchParams;
+  const accountId = resolvedParams?.accountId || null;
 
   return (
-    <div className="h-screen flex justify-center items-center">
+    <AuthWrapper>
       <Registered accountId={accountId} />
-    </div>
+    </AuthWrapper>
   );
 };
 

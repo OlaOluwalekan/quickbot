@@ -1,47 +1,81 @@
-"use server";
-
+import "server-only";
 import { revalidatePath } from "next/cache";
 import { db } from "../db";
 import ActionResponse from "../response";
 
+export const safeUserSelect = {
+  id: true,
+  name: true,
+  email: true,
+  image: true,
+  emailVerified: true,
+  role: true,
+  tokens: true,
+} as const;
+
+export type SafeUser = {
+  id: string;
+  name: string | null;
+  email: string | null;
+  image: string | null;
+  emailVerified: Date | null;
+  role: string;
+  tokens: number;
+};
+
 /**
- * Retrieves a user from the database by their email address.
- *
- * @param {string} email - The email address of the user to retrieve.
- * @returns The user object if found, otherwise null if an error occurs or the user is not found.
+ * Retrieves a user from the database by their email address with safe fields (no password).
  */
-export const getUserByEmail = async (email: string) => {
+export const getUserByEmail = async (email: string): Promise<SafeUser | null> => {
   try {
-    const user = await db.user.findUnique({ where: { email } });
+    const user = await db.user.findUnique({
+      where: { email },
+      select: safeUserSelect,
+    });
 
     return user;
-  } catch (error) {
+  } catch {
     return null;
   }
 };
 
 /**
- * Retrieves a user from the database by their unique identifier.
- *
- * @param {string} id - The unique identifier of the user to retrieve.
- * @returns The user object if found, otherwise null if an error occurs or the user is not found.
+ * Retrieves a user for authentication purposes (internal only, used by auth.ts authorize).
  */
-export const getUserById = async (id: string) => {
+export const getUserByEmailWithPassword = async (email: string) => {
   try {
-    const user = await db.user.findUnique({ where: { id } });
+    const user = await db.user.findUnique({
+      where: { email },
+      select: {
+        ...safeUserSelect,
+        password: true,
+      },
+    });
 
     return user;
-  } catch (error) {
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Retrieves a user from the database by their unique identifier with safe fields (no password).
+ */
+export const getUserById = async (id: string): Promise<SafeUser | null> => {
+  try {
+    const user = await db.user.findUnique({
+      where: { id },
+      select: safeUserSelect,
+    });
+
+    return user;
+  } catch {
     return null;
   }
 };
 
 /**
  * Updates the user's name in the database and re-validates the settings path.
- *
- * @param formData - The form data containing the user's new name and id.
- * @returns A success response with the updated user data if successful,
- *          otherwise an error response.
  */
 export const updateUserName = async (formData: FormData) => {
   const name = formData.get("name");
@@ -55,10 +89,11 @@ export const updateUserName = async (formData: FormData) => {
       data: {
         name: name as string,
       },
+      select: safeUserSelect,
     });
     revalidatePath("/settings");
     return ActionResponse.success("Name updated", updatedUser);
-  } catch (error) {
-    return ActionResponse.error("Filed to update name", null);
+  } catch {
+    return ActionResponse.error("Failed to update name", null);
   }
 };

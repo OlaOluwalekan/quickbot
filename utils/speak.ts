@@ -6,7 +6,7 @@ export const readAloud = (text: string, cb: (speaking: boolean) => void) => {
       return;
     }
     const voices = synth.getVoices();
-    const voice = voices.find((voice) => voice.default) || voices[0];
+    const voice = voices.find((voice) => voice.default) || voices[0] || null;
 
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = "en-US";

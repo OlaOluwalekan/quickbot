@@ -1,17 +1,9 @@
-import { BasicBtnProps } from '@/types'
-import clsx from 'clsx'
-import { sizeClass, themeClass } from './button.config'
+import { BasicBtnProps } from "@/types";
+import clsx from "clsx";
+import { sizeClass, themeClass } from "./button.config";
 
 /**
- * Basic button
- * @param {Object} props - component properties
- * @param {string} props.type - button type either submit, button or reset
- * @param {string} props.text - text of the button
- * @param {string} props.size - button size either small, medium, large or full
- * @param {boolean} props.disabled - whether the button is disabled or not
- * @param {string} props.theme - the button theme either primary, outline or base
- * @param {string} props.title - the title of the button for tool tip
- * @returns {JSX.Element} styled button component
+ * Sleek rebranded BasicButton component that properly forwards `disabled` and `onClick`.
  */
 const BasicButton = ({
   type,
@@ -20,24 +12,27 @@ const BasicButton = ({
   disabled,
   theme,
   title,
-}: BasicBtnProps): JSX.Element => {
+  onClick,
+}: BasicBtnProps): React.JSX.Element => {
   return (
     <button
       type={type}
+      disabled={disabled}
+      onClick={onClick}
+      title={title}
       className={clsx(
         sizeClass(size),
-        themeClass(theme as 'base' | 'primary' | 'outline'),
+        themeClass(theme as "base" | "primary" | "outline"),
         disabled
-          ? 'cursor-not-allowed opacity-50'
-          : 'cursor-pointer opacity-100',
-        'rounded',
-        size === 'small' ? 'py-1' : 'py-2'
+          ? "cursor-not-allowed opacity-50"
+          : "cursor-pointer opacity-100 hover:opacity-95 active:scale-[0.99]",
+        "rounded-xl font-semibold transition-all duration-200 shadow-xs",
+        size === "small" ? "py-1.5 text-sm" : "py-2.5 text-sm sm:text-base"
       )}
-      title={title}
     >
       {text}
     </button>
-  )
-}
+  );
+};
 
-export default BasicButton
+export default BasicButton;

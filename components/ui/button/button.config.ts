@@ -1,19 +1,19 @@
-import clsx from 'clsx'
+import clsx from "clsx";
 
 export const sizeClass = (size: string) =>
   clsx({
-    'w-[100px]': size === 'small',
-    'w-[150px]': size === 'medium',
-    'w-[300px]': size === 'large',
-    'w-full': size === 'full',
-  })
+    "px-3.5 min-w-[96px]": size === "small",
+    "px-5 min-w-[140px]": size === "medium",
+    "px-7 min-w-[220px]": size === "large",
+    "w-full px-4": size === "full",
+  });
 
-export const themeClass = (theme: 'primary' | 'outline' | 'base') =>
+export const themeClass = (theme: "primary" | "outline" | "base") =>
   clsx({
-    'bg-primary border-primary border-2 text-primary-content hover:bg-accent hover:text-accent-content':
-      theme === 'primary',
-    'border-2 border-primary bg-primary/0 text-primary hover:bg-primary hover:text-primary-content hover-border-none':
-      theme === 'outline',
-    'border-2 border-base-200 bg-base-100 text-base-content hover:bg-base-200':
-      theme === 'base',
-  })
+    "bg-gradient-to-r from-indigo-600 to-sky-500 text-white border border-transparent shadow-md shadow-indigo-500/20 hover:shadow-indigo-500/30":
+      theme === "primary",
+    "border border-slate-300 dark:border-slate-700 bg-transparent text-slate-800 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800":
+      theme === "outline",
+    "border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800":
+      theme === "base",
+  });

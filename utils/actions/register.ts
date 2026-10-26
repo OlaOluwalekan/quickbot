@@ -1,5 +1,4 @@
-"use server";
-
+import "server-only";
 import { db } from "../db";
 import ActionResponse from "../response";
 import { RegisterSchema } from "../schema/auth.shema";

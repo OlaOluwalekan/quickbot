@@ -1,47 +1,55 @@
-@import 'tailwindcss';
+@import "tailwindcss";
 @plugin "tailwind-scrollbar";
 
-/* @custom-variant dark (&:where(.dark, .dark *)); */
 @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
 
 @theme {
-  /* GENERAL */
-  --color-error: #f5365c;
-  --color-success: #21ba45;
-  --color-warning: #f1c40f;
-  --color-info: #3182ce;
+  --breakpoint-small: 400px;
+
+  /* GENERAL STATUS COLORS */
+  --color-error: #f43f5e;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-info: #0ea5e9;
   --color-light: #ffffff;
-  --color-dark: #212121;
+  --color-dark: #090d16;
 
-  /* LIGHT MODE */
-  --color-primary: #5b16fc;
+  /* LIGHT MODE PALETTE (Klecx Obsidian & Electric Indigo) */
+  --color-primary: #4f46e5;
   --color-primary-content: #ffffff;
-  --color-secondary: #10c4e3;
-  --color-secondary-content: #090476;
-  --color-base-100: #f3f5fd;
-  --color-base-content: #0a029e;
-  --color-base-200: #cdcdce;
-  --color-base-200-content: #363636;
-  --color-base-300: #8c8c8d;
-  --color-base-300-content: #efeff5;
-  --color-neutral: #0f7eba;
-  --color-neutral-content: #eaedf8;
-  --color-accent: #32049c;
-  --color-accent-content: #e7dffa;
+  --color-secondary: #0ea5e9;
+  --color-secondary-content: #0f172a;
+  --color-base-100: #f8fafc;
+  --color-base-content: #0f172a;
+  --color-base-200: #f1f5f9;
+  --color-base-200-content: #1e293b;
+  --color-base-300: #94a3b8;
+  --color-base-300-content: #f8fafc;
+  --color-neutral: #0284c7;
+  --color-neutral-content: #f8fafc;
+  --color-accent: #4338ca;
+  --color-accent-content: #eef2ff;
 
-  /* DARK MODE */
-  --color-dark-primary: #2d2d31;
+  /* DARK MODE PALETTE */
+  --color-dark-primary: #6366f1;
   --color-dark-primary-content: #ffffff;
-  --color-dark-secondary: #1a1a1d;
-  --color-dark-secondary-content: #ffffff;
-  --color-dark-base-100: #000000;
-  --color-dark-base-content: #e1e0e2;
-  --color-dark-base-200: #1f1d1f;
-  --color-dark-base-200-content: #f0d9f5;
-  --color-dark-base-300: #454045;
-  --color-dark-base-300-content: #cdbad0;
-  --color-dark-neutral: #392c40;
-  --color-dark-neutral-content: #cfccd0;
-  --color-dark-accent: #40404c;
-  --color-dark-accent-content: #dcdce2;
+  --color-dark-secondary: #1e293b;
+  --color-dark-secondary-content: #f8fafc;
+  --color-dark-base-100: #090d16;
+  --color-dark-base-content: #f8fafc;
+  --color-dark-base-200: #111827;
+  --color-dark-base-200-content: #e2e8f0;
+  --color-dark-base-300: #334155;
+  --color-dark-base-300-content: #cbd5e1;
+  --color-dark-neutral: #1e293b;
+  --color-dark-neutral-content: #e2e8f0;
+  --color-dark-accent: #312e81;
+  --color-dark-accent-content: #e0e7ff;
+}
+
+@layer base {
+  html,
+  body {
+    scroll-behavior: smooth;
+  }
 }
