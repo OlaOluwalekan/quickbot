@@ -38,3 +38,6 @@ sample
 next-env.d.ts
 
 /sample
+
+# prisma generated client
+/server/db/generated
