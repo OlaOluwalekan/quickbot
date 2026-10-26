@@ -11,6 +11,7 @@ import {
 import { streamGeminiInteraction } from "@/utils/ai-models/gemini";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60; // Allows streaming to run up to 60 seconds
 
 function formatSSEEvent(event: string, data: unknown): string {
   return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
@@ -20,10 +21,9 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getAuthenticatedUser(req);
     if (!user) {
-      return NextResponse.json(
-        ActionResponse.error("Unauthorized", null),
-        { status: 401 }
-      );
+      return NextResponse.json(ActionResponse.error("Unauthorized", null), {
+        status: 401,
+      });
     }
 
     const body = await req.json();
@@ -140,7 +140,9 @@ export async function POST(req: NextRequest) {
           console.error("[SSE /api/chat/stream] Error:", err);
           send("error", {
             message:
-              err instanceof Error ? err.message : "Failed to stream AI response",
+              err instanceof Error
+                ? err.message
+                : "Failed to stream AI response",
           });
         } finally {
           controller.close();
