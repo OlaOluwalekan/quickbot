@@ -1,33 +1,20 @@
-jest.mock("server-only", () => {});
+/**
+ * @jest-environment node
+ */
+jest.mock("better-auth/cookies", () => ({
+  getSessionCookie: jest.fn((req: Request) =>
+    req.headers.get("cookie")?.includes("better-auth.session_token=")
+      ? "session-token-value"
+      : null
+  ),
+}));
 
-import { signMobileToken, verifyMobileToken } from "@/utils/api-auth";
-import { safeUserSelect } from "@/utils/actions/user";
+import fs from "fs";
+import path from "path";
+import { NextRequest } from "next/server";
+import { RegisterSchema, LoginSchema, PASSWORD_MIN_LENGTH } from "@/lib/schemas/auth";
 
-describe("Security: Auth & Token API Security", () => {
-  const originalSecret = process.env.AUTH_SECRET;
-
-  beforeAll(() => {
-    process.env.AUTH_SECRET =
-      originalSecret && originalSecret.length >= 32
-        ? originalSecret
-        : "test-auth-secret-key-32-characters-minimum";
-  });
-
-  afterAll(() => {
-    process.env.AUTH_SECRET = originalSecret;
-  });
-
-  test("throws error when AUTH_SECRET is missing or less than 32 chars", () => {
-    expect(() => {
-      delete process.env.AUTH_SECRET;
-      jest.isolateModules(() => {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        require("../../utils/api-auth");
-      });
-    }).toThrow(/AUTH_SECRET/);
-    process.env.AUTH_SECRET = "test-auth-secret-key-32-characters-minimum";
-  });
-
+describe("Security: Better Auth & Schema Security (Step 1.3)", () => {
   test("server/env throws with readable list of missing variables", () => {
     expect(() => {
       const origDb = process.env.DATABASE_URL;
@@ -43,52 +30,126 @@ describe("Security: Auth & Token API Security", () => {
     }).toThrow(/DATABASE_URL/);
   });
 
-  test("safeUserSelect must NEVER include password", () => {
-    expect((safeUserSelect as any).password).toBeUndefined();
-    expect(safeUserSelect).toHaveProperty("id");
-    expect(safeUserSelect).toHaveProperty("email");
-    expect(safeUserSelect).toHaveProperty("tokens");
-    expect(safeUserSelect).toHaveProperty("role");
+  test("server/env throws when BETTER_AUTH_SECRET is missing or < 32 chars", () => {
+    const origBetter = process.env.BETTER_AUTH_SECRET;
+    const origAuth = process.env.AUTH_SECRET;
+    try {
+      delete process.env.BETTER_AUTH_SECRET;
+      delete process.env.AUTH_SECRET;
+      expect(() => {
+        jest.isolateModules(() => {
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          require("../../server/env");
+        });
+      }).toThrow(/BETTER_AUTH_SECRET/);
+    } finally {
+      if (origBetter !== undefined) process.env.BETTER_AUTH_SECRET = origBetter;
+      if (origAuth !== undefined) process.env.AUTH_SECRET = origAuth;
+    }
   });
 
-  test("mobile tokens with non-HS256 algorithms are rejected", () => {
-    const header = Buffer.from(
-      JSON.stringify({ alg: "none", typ: "JWT" })
-    ).toString("base64url");
-    const payload = Buffer.from(
-      JSON.stringify({
-        sub: "user-123",
-        iat: Math.floor(Date.now() / 1000),
-        exp: Math.floor(Date.now() / 1000) + 3600,
-      })
-    ).toString("base64url");
-    const forgedToken = `${header}.${payload}.invalidsig`;
+  test("RegisterSchema enforces minimum 10-character password rule and confirmation match", () => {
+    expect(PASSWORD_MIN_LENGTH).toBe(10);
 
-    expect(verifyMobileToken(forgedToken)).toBeNull();
-  });
-
-  test("tampered signatures are rejected using timing-safe check", () => {
-    const validToken = signMobileToken({
-      id: "user-456",
+    const shortPassword = RegisterSchema.safeParse({
       email: "user@example.com",
-      role: "USER",
+      name: "Alice",
+      password: "short8!!",
+      confirmPassword: "short8!!",
     });
+    expect(shortPassword.success).toBe(false);
 
-    const parts = validToken.split(".");
-    const tamperedToken = `${parts[0]}.${parts[1]}.tamperedSignatureHere`;
-    expect(verifyMobileToken(tamperedToken)).toBeNull();
+    const mismatch = RegisterSchema.safeParse({
+      email: "user@example.com",
+      name: "Alice",
+      password: "ValidTenCharPass!",
+      confirmPassword: "DifferentTenChar!",
+    });
+    expect(mismatch.success).toBe(false);
+
+    const valid = RegisterSchema.safeParse({
+      email: "user@example.com",
+      name: "Alice",
+      password: "ValidTenCharPass!",
+      confirmPassword: "ValidTenCharPass!",
+    });
+    expect(valid.success).toBe(true);
   });
 
-  test("valid mobile tokens verify and return decoded payload", () => {
-    const token = signMobileToken({
-      id: "user-789",
-      email: "verified@example.com",
-      role: "USER",
-    });
+  test("LoginSchema validates email and non-empty password", () => {
+    expect(
+      LoginSchema.safeParse({ email: "not-an-email", password: "secret" }).success
+    ).toBe(false);
+    expect(
+      LoginSchema.safeParse({ email: "user@example.com", password: "" }).success
+    ).toBe(false);
+    expect(
+      LoginSchema.safeParse({ email: "user@example.com", password: "secret" })
+        .success
+    ).toBe(true);
+  });
 
-    const payload = verifyMobileToken(token);
-    expect(payload).not.toBeNull();
-    expect(payload?.sub).toBe("user-789");
-    expect(payload?.email).toBe("verified@example.com");
+  test("codebase contains zero references to legacy next-auth", () => {
+    const dirsToScan = ["app", "components", "server", "lib", "utils", "providers"];
+    const offendingFiles: string[] = [];
+
+    function walk(dir: string) {
+      if (!fs.existsSync(dir)) return;
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const fullPath = path.join(dir, entry.name);
+        if (entry.name === "generated" || entry.name === "node_modules") continue;
+        if (entry.isDirectory()) {
+          walk(fullPath);
+        } else if (/\.(ts|tsx|js|jsx)$/.test(entry.name)) {
+          const content = fs.readFileSync(fullPath, "utf8");
+          if (content.includes("next-auth")) {
+            offendingFiles.push(path.relative(process.cwd(), fullPath));
+          }
+        }
+      }
+    }
+
+    for (const d of dirsToScan) {
+      walk(path.resolve(process.cwd(), d));
+    }
+    const proxyContent = fs.readFileSync(
+      path.resolve(process.cwd(), "proxy.ts"),
+      "utf8"
+    );
+    expect(proxyContent).not.toContain("next-auth");
+    expect(offendingFiles).toEqual([]);
+  });
+
+  test("proxy leaves /api/auth/*, /api/webhooks/*, /api/cron/*, and /s/* public and redirects unauthenticated page requests", async () => {
+    const { proxy } = await import("../../proxy");
+
+    const publicAuthApi = new NextRequest("http://localhost:3000/api/auth/session");
+    const res1 = await proxy(publicAuthApi);
+    expect(res1.headers.get("location")).toBeNull();
+
+    const publicWebhook = new NextRequest("http://localhost:3000/api/webhooks/creem");
+    const res2 = await proxy(publicWebhook);
+    expect(res2.headers.get("location")).toBeNull();
+
+    const publicShare = new NextRequest("http://localhost:3000/s/share-token-123");
+    const res3 = await proxy(publicShare);
+    expect(res3.headers.get("location")).toBeNull();
+
+    const protectedPage = new NextRequest("http://localhost:3000/chat");
+    const res4 = await proxy(protectedPage);
+    expect(res4.status).toBe(307);
+    expect(res4.headers.get("location")).toContain("/auth/login");
+
+    const authenticatedAuthPage = new NextRequest(
+      "http://localhost:3000/auth/login",
+      {
+        headers: {
+          cookie: "better-auth.session_token=valid_cookie",
+        },
+      }
+    );
+    const res5 = await proxy(authenticatedAuthPage);
+    expect(res5.status).toBe(307);
+    expect(res5.headers.get("location")).toContain("/chat");
   });
 });

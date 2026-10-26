@@ -7,6 +7,9 @@ import BasicButton from "../ui/button/BasicButton";
 import Alert from "../alert/Alert";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { authClient } from "@/lib/auth-client";
+import { RegisterSchema } from "@/lib/schemas/auth";
+import { DEFAULT_LOGIN_REDIRECT } from "@/utils/routes";
 
 const RegisterForm = (): React.JSX.Element => {
   const t = useTranslations("Auth");
@@ -19,14 +22,14 @@ const RegisterForm = (): React.JSX.Element => {
   const [response, setResponse] = useState({
     message: "",
     success: false,
-    data: null,
   });
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
   useEffect(() => {
+    if (!response.message) return;
     const interval = setTimeout(() => {
-      setResponse({ message: "", success: false, data: null });
+      setResponse({ message: "", success: false });
     }, 3500);
 
     return () => clearTimeout(interval);
@@ -38,28 +41,45 @@ const RegisterForm = (): React.JSX.Element => {
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setResponse({ message: "", success: false, data: null });
+    setResponse({ message: "", success: false });
+
+    const parsed = RegisterSchema.safeParse(formData);
+    if (!parsed.success) {
+      const firstIssue =
+        parsed.error.issues[0]?.message || "Invalid registration details";
+      setResponse({ message: firstIssue, success: false });
+      return;
+    }
 
     startTransition(async () => {
       try {
-        const res = await fetch("/api/auth/register", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(formData),
+        const { error } = await authClient.signUp.email({
+          email: parsed.data.email,
+          name: parsed.data.name,
+          password: parsed.data.password,
+          callbackURL: DEFAULT_LOGIN_REDIRECT,
         });
-        const json = await res.json();
-        setResponse(json);
 
-        if (json.success && json.data?.email) {
-          router.push(
-            `/auth/registered?accountId=${encodeURIComponent(json.data.email)}`
-          );
+        if (error) {
+          setResponse({
+            message: error.message || "Registration failed",
+            success: false,
+          });
+          return;
         }
-      } catch (err: any) {
+
         setResponse({
-          message: err?.message || "Registration failed",
+          message: "Registration successful! Check your inbox to verify your email.",
+          success: true,
+        });
+
+        router.push(
+          `/auth/registered?accountId=${encodeURIComponent(parsed.data.email)}`
+        );
+      } catch (err: unknown) {
+        setResponse({
+          message: err instanceof Error ? err.message : "Registration failed",
           success: false,
-          data: null,
         });
       }
     });

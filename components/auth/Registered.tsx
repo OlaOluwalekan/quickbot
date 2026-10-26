@@ -7,6 +7,8 @@ import { FaEnvelope, FaEnvelopeCircleCheck } from "react-icons/fa6";
 import BasicButton from "../ui/button/BasicButton";
 import Alert from "../alert/Alert";
 import { useTranslations } from "next-intl";
+import { authClient } from "@/lib/auth-client";
+import { DEFAULT_LOGIN_REDIRECT } from "@/utils/routes";
 
 const RESEND_SECONDS = 15;
 
@@ -23,11 +25,9 @@ const Registered = ({
   const [response, setResponse] = useState<{
     message: string;
     success: boolean;
-    data: any;
   }>({
     message: "",
     success: false,
-    data: null,
   });
   const [count, setCount] = useState(0);
 
@@ -54,8 +54,9 @@ const Registered = ({
   }, [count]);
 
   useEffect(() => {
+    if (!response.message) return;
     const interval = setTimeout(() => {
-      setResponse({ message: "", success: false, data: null });
+      setResponse({ message: "", success: false });
     }, 3500);
 
     return () => clearTimeout(interval);
@@ -63,27 +64,28 @@ const Registered = ({
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setResponse({ message: "", success: false, data: null });
+    const targetEmail = (userEmail || email || "").trim();
+    if (!targetEmail) return;
+    setResponse({ message: "", success: false });
 
     startSendingEmail(async () => {
       try {
-        const res = await fetch("/api/auth/resend-verification", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: userEmail || email }),
+        await authClient.sendVerificationEmail({
+          email: targetEmail,
+          callbackURL: DEFAULT_LOGIN_REDIRECT,
         });
-        const json = await res.json();
         setResponse({
-          message: json.message || "If the account exists, an email was sent",
-          success: json.success ?? true,
-          data: null,
+          message: "If the account exists, a verification email was sent.",
+          success: true,
         });
         handleResendClick();
       } catch (err: unknown) {
         setResponse({
-          message: err instanceof Error ? err.message : "Failed to send verification email",
+          message:
+            err instanceof Error
+              ? err.message
+              : "Failed to send verification email",
           success: false,
-          data: null,
         });
       }
     });

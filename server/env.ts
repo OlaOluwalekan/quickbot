@@ -3,9 +3,9 @@ import { z } from "zod";
 
 export const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
-  APP_URL: z.string().url(),                       // replaces DOMAIN
+  APP_URL: z.string().url(), // replaces DOMAIN
   DATABASE_URL: z.string().url(),
-  AUTH_SECRET: z.string().min(32),
+  BETTER_AUTH_SECRET: z.string().min(32),
   GEMINI_API_KEY: z.string().min(10),
   GEMINI_TEXT_MODEL: z.string().default("gemini-3.8-flash"),
   GEMINI_IMAGE_MODEL: z.string().default("gemini-nano-banana-2.1"),
@@ -21,6 +21,7 @@ export function validateEnv(input: Record<string, unknown> = process.env) {
   const rawEnv = {
     ...input,
     APP_URL: input.APP_URL || input.DOMAIN,
+    BETTER_AUTH_SECRET: input.BETTER_AUTH_SECRET || input.AUTH_SECRET,
   };
 
   const parsed = envSchema.safeParse(rawEnv);

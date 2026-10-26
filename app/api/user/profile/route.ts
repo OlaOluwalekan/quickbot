@@ -1,19 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { db } from "@/utils/db";
+import { db } from "@/server/db/client";
 import ActionResponse from "@/utils/response";
-import { getAuthenticatedUser } from "@/utils/api-auth";
-import { safeUserSelect } from "@/utils/actions/user";
+import { getActor } from "@/server/auth/session";
+
+const safeUserSelect = {
+  id: true,
+  name: true,
+  email: true,
+  image: true,
+  emailVerified: true,
+  role: true,
+} as const;
 
 export async function GET(req: NextRequest) {
   try {
-    const user = await getAuthenticatedUser(req);
-    if (!user) {
+    const actor = await getActor(req);
+    if (!actor) {
       return NextResponse.json(
         ActionResponse.error("Unauthorized", null),
         { status: 401 }
       );
     }
+
+    const user = await db.user.findUnique({
+      where: { id: actor.userId },
+      select: safeUserSelect,
+    });
 
     return NextResponse.json(
       ActionResponse.success("User profile fetched", { user }),
@@ -30,8 +43,8 @@ export async function GET(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const user = await getAuthenticatedUser(req);
-    if (!user) {
+    const actor = await getActor(req);
+    if (!actor) {
       return NextResponse.json(
         ActionResponse.error("Unauthorized", null),
         { status: 401 }
@@ -49,7 +62,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     const updatedUser = await db.user.update({
-      where: { id: user.id },
+      where: { id: actor.userId },
       data: { name: name.trim() },
       select: safeUserSelect,
     });

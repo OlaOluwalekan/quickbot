@@ -1,19 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import ActionResponse from "@/utils/response";
-import { getAuthenticatedUser } from "@/utils/api-auth";
+import { getActor } from "@/server/auth/session";
 import { createChat, getChats } from "@/utils/actions/chat";
 
 export async function GET(req: NextRequest) {
   try {
-    const user = await getAuthenticatedUser(req);
-    if (!user) {
+    const actor = await getActor(req);
+    if (!actor) {
       return NextResponse.json(
         ActionResponse.error("Unauthorized", null),
         { status: 401 }
       );
     }
 
-    const result = await getChats(user.id);
+    const result = await getChats(actor.userId);
     return NextResponse.json(result, {
       status: result.success ? 200 : 500,
     });
@@ -28,8 +28,8 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const user = await getAuthenticatedUser(req);
-    if (!user) {
+    const actor = await getActor(req);
+    if (!actor) {
       return NextResponse.json(
         ActionResponse.error("Unauthorized", null),
         { status: 401 }
@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const result = await createChat(user.id, prompt.trim());
+    const result = await createChat(actor.userId, prompt.trim());
     return NextResponse.json(result, {
       status: result.success ? 201 : 500,
     });
