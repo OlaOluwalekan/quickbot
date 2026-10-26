@@ -1,12 +1,8 @@
-import { auth } from "@/auth";
+import { getActor } from "@/server/auth/session";
 import TemplatePrompts from "@/components/chats/TemplatePrompts";
 
 const ChatPage = async () => {
-  // get authenticated user session
-  const session = await auth();
-
-  // load template prompts to give user prompt suggestion
-  // const templateResponse = await getTrendingTopics()
+  const actor = await getActor();
 
   const samplePrompts = [
     {
@@ -27,23 +23,11 @@ const ChatPage = async () => {
     },
   ];
 
-  // if failed to load template prompts, return error message
-  // TODO: add a more user friendly interface when template prompts failed to load
-  // if (templateResponse.status !== 'SUCCESS') {
-  //   return (
-  //     <div className='flex flex-col justify-center items-center h-full w-full'>
-  //       Failed to load Prompts
-  //     </div>
-  //   )
-  // }
-
-  // const templatePrompts = templateResponse.trending.trends.slice(0, 4)
-
   return (
     <div className="flex h-full w-full scrollbar-none flex-col items-center justify-center overflow-auto">
       <TemplatePrompts
         data={samplePrompts}
-        userId={session?.user?.id as string}
+        userId={(actor?.userId ?? "") as string}
       />
     </div>
   );

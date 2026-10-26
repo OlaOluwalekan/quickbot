@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import ActionResponse from "@/utils/response";
-import { getAuthenticatedUser } from "@/utils/api-auth";
+import { getActor } from "@/server/auth/session";
 import { getChatById } from "@/utils/actions/chat";
 import { getResponses } from "@/utils/actions/response";
 
@@ -9,8 +9,8 @@ export async function GET(
   context: { params: Promise<{ chatId: string }> }
 ) {
   try {
-    const user = await getAuthenticatedUser(req);
-    if (!user) {
+    const actor = await getActor(req);
+    if (!actor) {
       return NextResponse.json(
         ActionResponse.error("Unauthorized", null),
         { status: 401 }
@@ -27,7 +27,7 @@ export async function GET(
       );
     }
 
-    if (chatRes.data.chat.createdBy !== user.id) {
+    if (chatRes.data.chat.createdBy !== actor.userId) {
       return NextResponse.json(
         ActionResponse.error("Forbidden", null),
         { status: 403 }

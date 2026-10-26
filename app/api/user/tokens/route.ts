@@ -1,23 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import ActionResponse from "@/utils/response";
-import { getAuthenticatedUser } from "@/utils/api-auth";
+import { getActor } from "@/server/auth/session";
 import { getTokenUsageByUserId } from "@/utils/actions/response-token";
 
 export async function GET(req: NextRequest) {
   try {
-    const user = await getAuthenticatedUser(req);
-    if (!user) {
+    const actor = await getActor(req);
+    if (!actor) {
       return NextResponse.json(
         ActionResponse.error("Unauthorized", null),
         { status: 401 }
       );
     }
 
-    const usageHistory = (await getTokenUsageByUserId(user.id)) || [];
+    const usageHistory = (await getTokenUsageByUserId(actor.userId)) || [];
 
     return NextResponse.json(
       ActionResponse.success("Token usage fetched", {
-        tokens: user.tokens,
+        tokens: 0,
         usageHistory,
       }),
       { status: 200 }

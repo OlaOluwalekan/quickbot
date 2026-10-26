@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import ActionResponse from "@/utils/response";
-import { getAuthenticatedUser } from "@/utils/api-auth";
+import { getActor } from "@/server/auth/session";
 import { createChat, getChatById } from "@/utils/actions/chat";
 import { createResponse, getResponses } from "@/utils/actions/response";
 import {
@@ -15,8 +15,8 @@ export const maxDuration = 60; // Allows up to 60 seconds for image generation
 
 export async function POST(req: NextRequest) {
   try {
-    const user = await getAuthenticatedUser(req);
-    if (!user) {
+    const actor = await getActor(req);
+    if (!actor) {
       return NextResponse.json(ActionResponse.error("Unauthorized", null), {
         status: 401,
       });
@@ -33,18 +33,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (user.tokens <= 0) {
-      return NextResponse.json(
-        ActionResponse.error("You are out of token, Please purchase", null),
-        { status: 402 }
-      );
-    }
-
     let previousInteractionId: string | null = null;
     let isNewChat = false;
 
     if (!chatId) {
-      const created = await createChat(user.id, prompt);
+      const created = await createChat(actor.userId, prompt);
       if (!created.success || !created.data?.chatId) {
         return NextResponse.json(
           ActionResponse.error("Failed to create chat", null),
@@ -58,7 +51,7 @@ export async function POST(req: NextRequest) {
       if (
         !chatCheck.success ||
         !chatCheck.data?.chat ||
-        chatCheck.data.chat.createdBy !== user.id
+        chatCheck.data.chat.createdBy !== actor.userId
       ) {
         return NextResponse.json(
           ActionResponse.error("Chat not found or unauthorized", null),
@@ -101,12 +94,12 @@ export async function POST(req: NextRequest) {
 
     const savedResponse = saved.data?.res;
     const tokensUsed = tokenCount || 250;
-    const remainingTokens = Math.max(0, user.tokens - tokensUsed);
+    const remainingTokens = 0;
 
     if (savedResponse?.id) {
-      await createTokenUsage(user.id, tokensUsed, savedResponse.id);
+      await createTokenUsage(actor.userId, tokensUsed, savedResponse.id);
     }
-    await updateUserToken(user.id, remainingTokens);
+    await updateUserToken(actor.userId, remainingTokens);
 
     revalidatePath("/chat");
     revalidatePath(`/chat/${chatId}`);

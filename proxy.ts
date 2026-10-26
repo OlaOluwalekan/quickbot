@@ -1,48 +1,53 @@
-import NextAuth from 'next-auth'
-import authConfig from './auth.config'
-import {
-  apiAuthPrefix,
-  apiRoutes,
-  authRoutes,
-  DEFAULT_LOGIN_REDIRECT,
-  publicRoutes,
-} from './utils/routes'
+import { NextRequest, NextResponse } from "next/server";
+import { getSessionCookie } from "better-auth/cookies";
+import { authRoutes, DEFAULT_LOGIN_REDIRECT, publicRoutes } from "./utils/routes";
 
-const { auth } = NextAuth(authConfig)
+export async function proxy(req: NextRequest) {
+  const { nextUrl } = req;
+  const { pathname } = nextUrl;
 
-export const proxy = auth(async (req) => {
-  const { nextUrl } = req
-  const isLoggedIn = !!req.auth
-
-  const isApiAuthRoute = nextUrl.pathname.startsWith(apiAuthPrefix)
-  const isPublicRoute = publicRoutes.includes(nextUrl.pathname)
-  const isAuthRoute = authRoutes.includes(nextUrl.pathname)
-  const isApiRoute = nextUrl.pathname.startsWith(apiRoutes)
-
-  if (isApiRoute) {
-    return
+  // Leave Better Auth, webhooks, cron jobs, and shared links public
+  if (
+    pathname.startsWith("/api/auth") ||
+    pathname.startsWith("/api/webhooks") ||
+    pathname.startsWith("/api/cron") ||
+    pathname.startsWith("/s/")
+  ) {
+    return NextResponse.next();
   }
 
-  if (isApiAuthRoute) {
-    return
+  // API routes handle their own authorization via route() / getActor()
+  if (pathname.startsWith("/api/")) {
+    return NextResponse.next();
   }
+
+  const sessionCookie = getSessionCookie(req);
+  const isLoggedIn = Boolean(sessionCookie);
+
+  const isPublicRoute = publicRoutes.includes(pathname);
+  const isAuthRoute =
+    authRoutes.includes(pathname) ||
+    pathname === "/login" ||
+    pathname === "/register" ||
+    pathname === "/forgot-password" ||
+    pathname === "/reset-password";
 
   if (isAuthRoute) {
     if (isLoggedIn) {
-      return Response.redirect(new URL(DEFAULT_LOGIN_REDIRECT, nextUrl))
+      return NextResponse.redirect(new URL(DEFAULT_LOGIN_REDIRECT, nextUrl));
     }
-    return
+    return NextResponse.next();
   }
 
   if (!isLoggedIn && !isPublicRoute) {
-    return Response.redirect(new URL('/auth/login', nextUrl))
+    return NextResponse.redirect(new URL("/auth/login", nextUrl));
   }
 
-  return
-})
+  return NextResponse.next();
+}
 
-export default proxy
+export default proxy;
 
 export const config = {
-  matcher: ['/((?!.+\\.[\\w]+$|_next).*)', '/', '/(api|trpc)(.*)'],
-}
+  matcher: ["/((?!.+\\.[\\w]+$|_next).*)", "/", "/(api|trpc)(.*)"],
+};

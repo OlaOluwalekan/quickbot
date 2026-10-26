@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import ActionResponse from "@/utils/response";
-import { getAuthenticatedUser } from "@/utils/api-auth";
+import { getActor } from "@/server/auth/session";
 import { searchChat } from "@/utils/actions/chat";
 
 export async function GET(req: NextRequest) {
   try {
-    const user = await getAuthenticatedUser(req);
-    if (!user) {
+    const actor = await getActor(req);
+    if (!actor) {
       return NextResponse.json(
         ActionResponse.error("Unauthorized", null),
         { status: 401 }
@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const results = await searchChat(q, option, user.id, chatId);
+    const results = await searchChat(q, option, actor.userId, chatId);
     return NextResponse.json(
       ActionResponse.success("Search results", { results }),
       { status: 200 }

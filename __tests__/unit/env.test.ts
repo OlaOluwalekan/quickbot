@@ -8,7 +8,7 @@ describe("server/env validation", () => {
     NODE_ENV: "test",
     APP_URL: "http://localhost:3000",
     DATABASE_URL: "postgresql://user:pass@localhost:5432/testdb",
-    AUTH_SECRET: "test-auth-secret-min-32-chars-long!",
+    BETTER_AUTH_SECRET: "test-auth-secret-min-32-chars-long!",
     GEMINI_API_KEY: "test-gemini-key",
     GEMINI_TEXT_MODEL: "gemini-1.5-flash",
     GEMINI_IMAGE_MODEL: "gemini-1.5-flash",
@@ -26,6 +26,7 @@ describe("server/env validation", () => {
     if (result.success) {
       expect(result.data.APP_URL).toBe("http://localhost:3000");
       expect(result.data.DATABASE_URL).toBe(baseValidEnv.DATABASE_URL);
+      expect(result.data.BETTER_AUTH_SECRET).toBe(baseValidEnv.BETTER_AUTH_SECRET);
     }
   });
 

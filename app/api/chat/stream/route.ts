@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import ActionResponse from "@/utils/response";
-import { getAuthenticatedUser } from "@/utils/api-auth";
+import { getActor } from "@/server/auth/session";
 import { createChat, getChatById } from "@/utils/actions/chat";
 import { createResponse, getResponses } from "@/utils/actions/response";
 import {
@@ -19,8 +19,8 @@ function formatSSEEvent(event: string, data: unknown): string {
 
 export async function POST(req: NextRequest) {
   try {
-    const user = await getAuthenticatedUser(req);
-    if (!user) {
+    const actor = await getActor(req);
+    if (!actor) {
       return NextResponse.json(ActionResponse.error("Unauthorized", null), {
         status: 401,
       });
@@ -34,13 +34,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         ActionResponse.error("Prompt is required", null),
         { status: 400 }
-      );
-    }
-
-    if (user.tokens <= 0) {
-      return NextResponse.json(
-        ActionResponse.error("You are out of token, Please purchase", null),
-        { status: 402 }
       );
     }
 
@@ -58,7 +51,7 @@ export async function POST(req: NextRequest) {
             [];
 
           if (!chatId) {
-            const created = await createChat(user.id, prompt);
+            const created = await createChat(actor.userId, prompt);
             if (!created.success || !created.data?.chatId) {
               send("error", { message: "Failed to create chat" });
               controller.close();
@@ -74,7 +67,7 @@ export async function POST(req: NextRequest) {
             if (
               !chatCheck.success ||
               !chatCheck.data?.chat ||
-              chatCheck.data.chat.createdBy !== user.id
+              chatCheck.data.chat.createdBy !== actor.userId
             ) {
               send("error", { message: "Chat not found or unauthorized" });
               controller.close();
@@ -114,12 +107,12 @@ export async function POST(req: NextRequest) {
               });
 
               const savedResponse = saved.data?.res;
-              const remainingTokens = Math.max(0, user.tokens - tokenCount);
+              const remainingTokens = 0;
 
               if (savedResponse?.id) {
-                await createTokenUsage(user.id, tokenCount, savedResponse.id);
+                await createTokenUsage(actor.userId, tokenCount, savedResponse.id);
               }
-              await updateUserToken(user.id, remainingTokens);
+              await updateUserToken(actor.userId, remainingTokens);
 
               try {
                 revalidatePath("/chat");

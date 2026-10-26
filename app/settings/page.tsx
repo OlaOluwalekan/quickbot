@@ -1,4 +1,4 @@
-import { auth } from "@/auth";
+import { getActor } from "@/server/auth/session";
 import Logout from "@/components/auth/Logout";
 import LocaleSwitcher from "@/components/general/LocaleSwitcher";
 import AppName from "@/components/logo/AppName";
@@ -13,8 +13,18 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
 const SettingsPage = async () => {
-  const session = await auth();
+  const actor = await getActor();
   const t = await getTranslations("Settings");
+
+  const sessionUser: SessionProps | undefined = actor
+    ? {
+        id: actor.userId,
+        name: actor.name ?? "",
+        email: actor.email,
+        image: actor.image ?? "",
+        token: 0,
+      }
+    : undefined;
 
   return (
     <div className="min-h-screen w-full bg-slate-50 dark:bg-[#090d16] text-slate-900 dark:text-slate-100 flex flex-col">
@@ -53,8 +63,8 @@ const SettingsPage = async () => {
             {/* Profile Column */}
             <div className="lg:col-span-5 flex flex-col justify-between gap-6 lg:border-r lg:border-slate-200 dark:lg:border-slate-800 lg:pr-6">
               <div className="flex flex-col sm:flex-row lg:flex-col items-center sm:items-start gap-4">
-                <UserProfileImage user={session?.user as SessionProps} />
-                <NameAndEmail user={session?.user as SessionProps} />
+                <UserProfileImage user={sessionUser as SessionProps} />
+                <NameAndEmail user={sessionUser as SessionProps} />
               </div>
 
               <div className="pt-4 border-t border-slate-200/80 dark:border-slate-800/80 flex flex-col gap-3">
@@ -73,7 +83,7 @@ const SettingsPage = async () => {
 
             {/* Token Usage Column */}
             <div className="lg:col-span-7">
-              <TokensDisplay user={session?.user as SessionProps} />
+              <TokensDisplay user={sessionUser as SessionProps} />
             </div>
           </div>
         </SettingsCard>
