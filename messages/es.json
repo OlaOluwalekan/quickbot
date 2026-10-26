@@ -25,9 +25,9 @@
     "dashboard": "Abrir Chat"
   },
   "Landing": {
-    "badge": "Interacciones Gemini de Próxima Generación y Estudio de Imágenes",
+    "badge": "Espacio de trabajo y estudio de imágenes con IA de nueva generación",
     "heroTitle": "Piensa más rápido. Crea con audacia junto a",
-    "heroHighlight": "Klecx IA",
+    "heroHighlight": "{appName} IA",
     "heroDescription": "Experimenta transmisión en tiempo real mediante Server-Sent Events, razonamiento contextual multiturno y síntesis instantánea de imágenes con IA en un solo espacio.",
     "getStarted": "Comenzar Gratis",
     "exploreFeatures": "Explorar Capacidades",

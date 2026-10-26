@@ -41,15 +41,14 @@ const Sidebar = ({
 
   const grouped: Record<string, ChatProps[]> = chats.reduce(
     (acc: Record<string, ChatProps[]>, chat) => {
-      const dateKey = (
-        chat.updatedAt instanceof Date
+      const dateKey =
+        (chat.updatedAt instanceof Date
           ? chat.updatedAt
           : new Date(chat.updatedAt)
-      )
-        .toISOString()
-        .split("T")[0] ?? "Unknown";
+        )
+          .toISOString()
+          .split("T")[0] ?? "Unknown";
       const group = acc[dateKey] ?? [];
-
 
       group.push(chat);
       acc[dateKey] = group;
@@ -69,10 +68,10 @@ const Sidebar = ({
       {/* Mobile Backdrop */}
       <div
         className={clsx(
-          "fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-30 transition-opacity md:hidden",
+          "fixed inset-0 z-30 bg-slate-950/60 backdrop-blur-xs transition-opacity md:hidden",
           mobileNavIsOpen
-            ? "opacity-100 pointer-events-auto"
-            : "opacity-0 pointer-events-none"
+            ? "pointer-events-auto opacity-100"
+            : "pointer-events-none opacity-0"
         )}
         onClick={() => dispatch(toggleMobileNavOpen(false))}
       />
@@ -80,7 +79,7 @@ const Sidebar = ({
       {/* Sidebar Panel */}
       <aside
         className={clsx(
-          "fixed md:static top-0 bottom-0 left-0 z-40 w-[280px] shrink-0 bg-slate-900 text-slate-100 border-r border-slate-800/90 flex flex-col transition-transform duration-300 ease-in-out",
+          "fixed top-0 bottom-0 left-0 z-40 flex w-70 shrink-0 flex-col border-r border-slate-800/90 bg-slate-900 text-slate-100 transition-transform duration-300 ease-in-out md:static",
           mobileNavIsOpen
             ? "translate-x-0"
             : "-translate-x-full md:translate-x-0"
@@ -88,7 +87,7 @@ const Sidebar = ({
         onClick={(e: MouseEvent<HTMLElement>) => e.stopPropagation()}
       >
         {/* Brand Header & New Chat CTA */}
-        <div className="p-3.5 flex flex-col gap-3 border-b border-slate-800/80">
+        <div className="flex flex-col gap-3 border-b border-slate-800/80 p-3.5">
           <div className="flex items-center justify-between">
             <Link
               href="/"
@@ -101,7 +100,7 @@ const Sidebar = ({
             <button
               type="button"
               aria-label="Close sidebar"
-              className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 md:hidden cursor-pointer"
+              className="cursor-pointer rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-white md:hidden"
               onClick={() => dispatch(toggleMobileNavOpen(false))}
             >
               <FaXmark />
@@ -111,7 +110,7 @@ const Sidebar = ({
           <Link
             href="/chat"
             onClick={() => dispatch(toggleMobileNavOpen(false))}
-            className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-gradient-to-r from-indigo-600 to-sky-500 text-white text-sm font-semibold shadow-md shadow-indigo-500/20 hover:opacity-95 transition-all"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-linear-to-r from-indigo-600 to-sky-500 px-3 py-2.5 text-sm font-semibold text-white shadow-md shadow-indigo-500/20 transition-all hover:opacity-95"
           >
             <BiSolidMessageSquareAdd className="text-base" />
             <span>{t("newChat")}</span>
@@ -119,7 +118,7 @@ const Sidebar = ({
         </div>
 
         {/* Scrollable Chat History + Footer Profile */}
-        <div className="flex-1 min-h-0 flex flex-col justify-between relative pt-2">
+        <div className="relative flex min-h-0 flex-1 flex-col justify-between pt-2">
           <ChatList chats={chats} dates={dates} grouped={grouped} />
           {chatMenuIsOpen && <ChatMenu />}
           {editPopUpIsOpen && <EditPopup />}

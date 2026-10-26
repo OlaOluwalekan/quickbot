@@ -25,9 +25,9 @@
     "dashboard": "Ouvrir le Chat"
   },
   "Landing": {
-    "badge": "Interactions Gemini Nouvelle Génération & Studio d'Images",
+    "badge": "Espace de travail et studio d’imagerie basés sur l’IA de nouvelle génération",
     "heroTitle": "Pensez plus vite. Créez avec audace grâce à",
-    "heroHighlight": "Klecx IA",
+    "heroHighlight": "{appName} IA",
     "heroDescription": "Profitez du streaming en temps réel par Server-Sent Events, d'un raisonnement multi-tours contextuel et de la génération d'images IA instantanée dans un espace unifié.",
     "getStarted": "Démarrer Gratuitement",
     "exploreFeatures": "Découvrir les Capacités",

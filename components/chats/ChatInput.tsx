@@ -1,9 +1,6 @@
 "use client";
 
-import {
-  setChatInputHeight,
-  setChatMode,
-} from "@/features/generalSlice";
+import { setChatInputHeight, setChatMode } from "@/features/generalSlice";
 import { AppDispatch, RootState } from "@/store";
 import { submitChatPrompt } from "@/utils/chat-stream-client";
 import clsx from "clsx";
@@ -17,18 +14,10 @@ import {
   useRef,
   useState,
 } from "react";
-import {
-  FaImage,
-  FaPaperPlane,
-  FaRegCommentDots,
-} from "react-icons/fa6";
+import { FaImage, FaPaperPlane, FaRegCommentDots } from "react-icons/fa6";
 import { useDispatch, useSelector } from "react-redux";
 
-const ChatInput = ({
-  userId,
-}: {
-  userId: string;
-}) => {
+const ChatInput = ({ userId }: { userId: string }) => {
   const t = useTranslations("Chat");
   const textRef = useRef<HTMLTextAreaElement>(null);
   const router = useRouter();
@@ -123,28 +112,28 @@ const ChatInput = ({
   return (
     <div
       className={clsx(
-        "w-full pt-2 pb-3 bg-gradient-to-t from-base-100 via-base-100/95 to-transparent dark:from-dark-base-100 dark:via-dark-base-100/95 shrink-0",
+        "from-base-100 via-base-100/95 dark:from-dark-base-100 dark:via-dark-base-100/95 w-full shrink-0 bg-linear-to-t to-transparent pt-2 pb-3",
         currentPageTitle === "" && "hidden"
       )}
     >
-      <div className="max-w-4xl mx-auto w-full px-2 sm:px-4">
+      <div className="mx-auto w-full max-w-4xl px-2 sm:px-4">
         <form
           onSubmit={handleFormSubmit}
-          className="relative flex flex-col rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 shadow-lg shadow-indigo-500/5 focus-within:border-indigo-500/70 focus-within:ring-2 focus-within:ring-indigo-500/15 transition-all"
+          className="relative flex flex-col rounded-2xl border border-slate-200/90 bg-white/95 shadow-lg shadow-indigo-500/5 transition-all focus-within:border-indigo-500/70 focus-within:ring-2 focus-within:ring-indigo-500/15 dark:border-slate-800 dark:bg-slate-900/95"
         >
           <input type="hidden" value={userId} id="id" name="id" />
 
           {/* Mode Selector Pill Bar */}
-          <div className="flex items-center justify-between px-3 pt-2.5 pb-1 border-b border-slate-100 dark:border-slate-800/80">
-            <div className="inline-flex items-center gap-1 rounded-xl bg-slate-100 dark:bg-slate-800/90 p-1">
+          <div className="flex items-center justify-between border-b border-slate-100 px-3 pt-2.5 pb-1 dark:border-slate-800/80">
+            <div className="inline-flex items-center gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-800/90">
               <button
                 type="button"
                 onClick={() => dispatch(setChatMode("text"))}
                 className={clsx(
-                  "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer",
+                  "inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition-all",
                   chatMode === "text"
-                    ? "bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs"
-                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+                    ? "bg-white text-indigo-600 shadow-xs dark:bg-slate-900 dark:text-indigo-400"
+                    : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
                 )}
               >
                 <FaRegCommentDots className="text-xs" />
@@ -155,10 +144,10 @@ const ChatInput = ({
                 type="button"
                 onClick={() => dispatch(setChatMode("image"))}
                 className={clsx(
-                  "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer",
+                  "inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition-all",
                   chatMode === "image"
-                    ? "bg-gradient-to-r from-indigo-500 to-sky-500 text-white shadow-xs"
-                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+                    ? "bg-linear-to-r from-indigo-500 to-sky-500 text-white shadow-xs"
+                    : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
                 )}
               >
                 <FaImage className="text-xs" />
@@ -167,7 +156,7 @@ const ChatInput = ({
             </div>
 
             {tokens !== null && (
-              <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500 hidden sm:inline">
+              <span className="hidden text-[11px] font-medium text-slate-400 sm:inline dark:text-slate-500">
                 {t("tokensRemaining", { count: tokens })}
               </span>
             )}
@@ -188,7 +177,7 @@ const ChatInput = ({
                   ? t("imageInputPlaceholder")
                   : t("inputPlaceholder")
               }
-              className="w-full resize-none h-[44px] max-h-[180px] overflow-y-auto scrollbar-none text-sm sm:text-base py-2 pr-2 bg-transparent text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none disabled:opacity-60"
+              className="h-11 max-h-45 w-full resize-none scrollbar-none overflow-y-auto bg-transparent py-2 pr-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none disabled:opacity-60 sm:text-base dark:text-slate-100 dark:placeholder:text-slate-500"
               disabled={isBusy}
             />
 
@@ -197,10 +186,10 @@ const ChatInput = ({
               aria-label={t("send")}
               disabled={isBusy || text.trim() === ""}
               className={clsx(
-                "shrink-0 w-10 h-10 rounded-xl flex justify-center items-center transition-all",
+                "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all",
                 isBusy || text.trim() === ""
-                  ? "bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed"
-                  : "bg-gradient-to-r from-indigo-600 to-sky-500 text-white shadow-md shadow-indigo-500/25 hover:opacity-95 active:scale-95 cursor-pointer"
+                  ? "cursor-not-allowed bg-slate-200 text-slate-400 dark:bg-slate-800 dark:text-slate-600"
+                  : "cursor-pointer bg-linear-to-r from-indigo-600 to-sky-500 text-white shadow-md shadow-indigo-500/25 hover:opacity-95 active:scale-95"
               )}
             >
               <FaPaperPlane className="text-sm" />
@@ -208,7 +197,7 @@ const ChatInput = ({
           </div>
         </form>
 
-        <p className="text-[11px] text-center text-slate-400 dark:text-slate-500 mt-1.5">
+        <p className="mt-1.5 text-center text-[11px] text-slate-400 dark:text-slate-500">
           {t("disclaimer")}
         </p>
       </div>

@@ -10,19 +10,19 @@ const Home = () => {
   const t = useTranslations("Landing");
 
   return (
-    <div className="min-h-screen w-full flex flex-col bg-slate-50 dark:bg-[#090d16] text-slate-900 dark:text-slate-100 overflow-x-hidden">
+    <div className="flex min-h-screen w-full flex-col overflow-x-hidden bg-slate-50 text-slate-900 dark:bg-[#090d16] dark:text-slate-100">
       <Header />
 
-      <main className="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col">
+      <main className="mx-auto flex w-full max-w-7xl grow flex-col px-4 sm:px-6 lg:px-8">
         <Hero />
         <Features />
 
         {/* Call To Action Banner */}
-        <section className="my-12 sm:my-20 rounded-3xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-sky-500 p-8 sm:p-12 text-center text-white shadow-xl shadow-indigo-500/20">
-          <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight">
+        <section className="my-12 rounded-3xl bg-linear-to-r from-indigo-600 via-indigo-500 to-sky-500 p-8 text-center text-white shadow-xl shadow-indigo-500/20 sm:my-20 sm:p-12">
+          <h2 className="text-2xl font-extrabold tracking-tight sm:text-4xl">
             {t("ctaTitle")}
           </h2>
-          <p className="mt-3 text-sm sm:text-base text-indigo-100 max-w-xl mx-auto">
+          <p className="mx-auto mt-3 max-w-xl text-sm text-indigo-100 sm:text-base">
             {t("ctaDescription")}
           </p>
           <div className="mt-6 flex justify-center">
@@ -36,8 +36,8 @@ const Home = () => {
         </section>
       </main>
 
-      <footer className="border-t border-slate-200/80 dark:border-slate-800/80 py-8 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 dark:text-slate-400">
+      <footer className="border-t border-slate-200/80 px-4 py-8 sm:px-6 lg:px-8 dark:border-slate-800/80">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 text-xs text-slate-500 sm:flex-row dark:text-slate-400">
           <div className="flex items-center gap-2">
             <Logo size="icon" />
             <AppName />
