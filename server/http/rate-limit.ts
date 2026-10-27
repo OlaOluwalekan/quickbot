@@ -1,4 +1,5 @@
 import "server-only";
+import { isIP } from "node:net";
 import { Ratelimit, type Duration } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import { env } from "@/server/env";
@@ -134,30 +135,84 @@ export function setRateLimitBackendForTests(
 }
 
 /**
+ * Validates and normalizes an IPv4 or IPv6 address string.
+ * Returns `null` if the string is empty or not a valid IP literal.
+ */
+export function normalizeAndValidateIp(raw: string): string | null {
+  let candidate = raw.trim();
+  if (!candidate) return null;
+
+  if (candidate.startsWith("[") && candidate.endsWith("]")) {
+    candidate = candidate.slice(1, -1).trim();
+  }
+
+  if (candidate.toLowerCase().startsWith("::ffff:")) {
+    const mappedIpv4 = candidate.slice(7).trim();
+    if (isIP(mappedIpv4) === 4) {
+      return mappedIpv4;
+    }
+  }
+
+  const version = isIP(candidate);
+  if (version === 4) return candidate;
+  if (version === 6) return candidate.toLowerCase();
+  return null;
+}
+
+/**
+ * Reads and validates the client IP from headers guaranteed by the deployment's
+ * trusted reverse proxy (`x-forwarded-for` first entry, or `x-real-ip`).
+ *
+ * Required proxy configuration when `TRUST_PROXY=true`:
+ * - Vercel / Cloudflare: edge network automatically overwrites forwarded IP headers.
+ * - Nginx / reverse proxy: must strip or overwrite incoming client headers
+ *   (e.g. `proxy_set_header X-Forwarded-For $remote_addr;` and
+ *   `proxy_set_header X-Real-IP $remote_addr;`).
+ */
+export function readTrustedProxyAddress(req: Request): string | null {
+  const xff = req.headers.get("x-forwarded-for");
+  if (xff !== null) {
+    const first = xff.split(",")[0];
+    if (!first) return null;
+    return normalizeAndValidateIp(first);
+  }
+
+  const realIp = req.headers.get("x-real-ip");
+  if (realIp !== null) {
+    return normalizeAndValidateIp(realIp);
+  }
+
+  return null;
+}
+
+/**
  * Resolves the client IP address safely.
- * Reads the first `x-forwarded-for` entry ONLY when `TRUST_PROXY=true`;
- * otherwise uses the socket/request IP address.
+ * Reads forwarded proxy headers ONLY when `trustProxy` (`TRUST_PROXY=true`) is enabled.
+ * Returns `null` (never a shared `"127.0.0.1"` fallback) when `trustProxy` is false
+ * or when no valid proxy address header is present.
+ */
+export function resolveClientIp(
+  req: Request,
+  trustProxy: boolean = env.TRUST_PROXY
+): string | null {
+  if (!trustProxy) return null;
+  return readTrustedProxyAddress(req);
+}
+
+/**
+ * Alias for `resolveClientIp`.
  */
 export function getClientIp(
   req: Request,
   trustProxy: boolean = env.TRUST_PROXY
-): string {
-  if (trustProxy) {
-    const xff = req.headers.get("x-forwarded-for");
-    if (xff) {
-      const first = xff.split(",")[0]?.trim();
-      if (first) return first;
-    }
-  }
-
-  const socketIp = (req as { ip?: string }).ip?.trim();
-  return socketIp || "127.0.0.1";
+): string | null {
+  return resolveClientIp(req, trustProxy);
 }
 
 /**
  * Enforces sliding-window rate limiting for the given policy and key.
  * - Throws `Errors.rateLimited(retryAfter)` (429) when limit is exceeded.
- * - If Redis throws an operational error:
+ * - If Redis throws an operational error (or is missing in production):
  *   - Fails CLOSED (429) for `auth:*` policies.
  *   - Fails OPEN (logs & continues) for all other policies.
  */
@@ -179,6 +234,10 @@ export async function limit(
           reset: r.reset,
           remaining: r.remaining,
         };
+      } else if (env.NODE_ENV === "production") {
+        throw new Error(
+          "Upstash Redis credentials are required for rate limiting in production"
+        );
       } else {
         result = await checkInMemoryLimit(policy, key);
       }
@@ -213,10 +272,19 @@ export async function limit(
 }
 
 // Secondary storage for Better Auth (backed by Upstash Redis or in-memory TTL map)
-const memorySecondaryStore = new Map<
-  string,
-  { value: string; expiresAt: number | null }
->();
+type SecondaryStoreEntry = {
+  value: string;
+  expiresAt: number | null;
+};
+
+const memorySecondaryStore = new Map<string, SecondaryStoreEntry>();
+
+function isSecondaryEntryExpired(
+  entry: SecondaryStoreEntry,
+  now = Date.now()
+): boolean {
+  return entry.expiresAt !== null && now >= entry.expiresAt;
+}
 
 export const authSecondaryStorage = {
   async get(key: string): Promise<string | null> {
@@ -229,7 +297,7 @@ export const authSecondaryStorage = {
 
     const entry = memorySecondaryStore.get(key);
     if (!entry) return null;
-    if (entry.expiresAt !== null && Date.now() > entry.expiresAt) {
+    if (isSecondaryEntryExpired(entry)) {
       memorySecondaryStore.delete(key);
       return null;
     }
@@ -271,9 +339,16 @@ export const authSecondaryStorage = {
       return typeof val === "string" ? val : JSON.stringify(val);
     }
 
-    const val = await authSecondaryStorage.get(key);
+    // Read, delete, and check expiry synchronously without any `await` in between
+    // so concurrent callers can never consume the same single-use token twice.
+    const entry = memorySecondaryStore.get(key);
     memorySecondaryStore.delete(key);
-    return val;
+
+    if (!entry || isSecondaryEntryExpired(entry)) {
+      return null;
+    }
+
+    return entry.value;
   },
 
   async increment(key: string, ttl: number): Promise<number> {
@@ -289,7 +364,7 @@ export const authSecondaryStorage = {
 
     const now = Date.now();
     const existing = memorySecondaryStore.get(key);
-    if (!existing || (existing.expiresAt !== null && now > existing.expiresAt)) {
+    if (!existing || isSecondaryEntryExpired(existing, now)) {
       memorySecondaryStore.set(key, {
         value: "1",
         expiresAt: ttl > 0 ? now + ttl * 1000 : null,

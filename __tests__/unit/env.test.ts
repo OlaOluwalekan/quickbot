@@ -49,4 +49,57 @@ describe("server/env validation", () => {
       expect(issues.APP_URL).toBeDefined();
     }
   });
+
+  it("rejects missing Redis credentials in production", () => {
+    const prodWithoutRedis = {
+      ...baseValidEnv,
+      NODE_ENV: "production",
+    };
+    const result = envSchema.safeParse(prodWithoutRedis);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issues = result.error.flatten().fieldErrors;
+      expect(issues.UPSTASH_REDIS_REST_URL).toBeDefined();
+      expect(issues.UPSTASH_REDIS_REST_TOKEN).toBeDefined();
+    }
+  });
+
+  it("rejects partially supplied Redis credentials in all environments", () => {
+    const urlOnly = {
+      ...baseValidEnv,
+      NODE_ENV: "development",
+      UPSTASH_REDIS_REST_URL: "https://example-redis.upstash.io",
+    };
+    const res1 = envSchema.safeParse(urlOnly);
+    expect(res1.success).toBe(false);
+    if (!res1.success) {
+      expect(
+        res1.error.flatten().fieldErrors.UPSTASH_REDIS_REST_TOKEN
+      ).toBeDefined();
+    }
+
+    const tokenOnly = {
+      ...baseValidEnv,
+      NODE_ENV: "production",
+      UPSTASH_REDIS_REST_TOKEN: "secret-redis-token",
+    };
+    const res2 = envSchema.safeParse(tokenOnly);
+    expect(res2.success).toBe(false);
+    if (!res2.success) {
+      expect(
+        res2.error.flatten().fieldErrors.UPSTASH_REDIS_REST_URL
+      ).toBeDefined();
+    }
+  });
+
+  it("accepts complete Redis credentials in production", () => {
+    const prodWithRedis = {
+      ...baseValidEnv,
+      NODE_ENV: "production",
+      UPSTASH_REDIS_REST_URL: "https://example-redis.upstash.io",
+      UPSTASH_REDIS_REST_TOKEN: "secret-redis-token",
+    };
+    const result = envSchema.safeParse(prodWithRedis);
+    expect(result.success).toBe(true);
+  });
 });

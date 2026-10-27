@@ -22,6 +22,42 @@ export const auth = betterAuth({
       "/forget-password": { window: 3600, max: 3 },
       "/send-verification-email": { window: 3600, max: 3 },
     },
+    customStorage: {
+      async consume(key, rule) {
+        // Better Auth keys limits as `${ip}|${path}`.
+        // Paths handled by enforceAuthRateLimit() in app/api/auth/[...all]/route.ts
+        // are already rate-limited with per-client / per-email keys.
+        // Also avoid shared fallback buckets ("127.0.0.1" / "no-trusted-ip") when
+        // TRUST_PROXY is disabled or no trusted proxy header is present.
+        const [ipPart, pathPart] = key.split("|");
+        if (
+          pathPart === "/sign-in/email" ||
+          pathPart === "/sign-up/email" ||
+          pathPart === "/forget-password" ||
+          pathPart === "/request-password-reset" ||
+          pathPart === "/send-verification-email" ||
+          !env.TRUST_PROXY ||
+          !ipPart ||
+          ipPart === "127.0.0.1" ||
+          ipPart === "no-trusted-ip"
+        ) {
+          return { allowed: true, retryAfter: null };
+        }
+        const count = await authSecondaryStorage.increment(
+          `rl:${key}`,
+          rule.window
+        );
+        if (count <= rule.max) {
+          return { allowed: true, retryAfter: null };
+        }
+        return { allowed: false, retryAfter: rule.window };
+      },
+    },
+  },
+  advanced: {
+    ipAddress: {
+      ipAddressHeaders: env.TRUST_PROXY ? ["x-forwarded-for", "x-real-ip"] : [],
+    },
   },
   trustedOrigins: [env.APP_URL],
   user: {
@@ -73,10 +109,14 @@ export const auth = betterAuth({
   session: {
     expiresIn: 60 * 60 * 24 * 30,
     updateAge: 60 * 60 * 24,
+    storeSessionInDatabase: true,
     cookieCache: {
       enabled: true,
       maxAge: 5 * 60,
     },
+  },
+  verification: {
+    storeInDatabase: true,
   },
   plugins: [bearer(), nextCookies()], // username() is added in Step 7.1
 });

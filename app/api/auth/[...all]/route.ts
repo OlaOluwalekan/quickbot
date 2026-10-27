@@ -1,65 +1,94 @@
 import { NextRequest, NextResponse } from "next/server";
 import { toNextJsHandler } from "better-auth/next-js";
 import { auth } from "@/server/auth/auth";
-import { ApiError } from "@/server/http/errors";
-import { getClientIp, limit } from "@/server/http/rate-limit";
+import { env } from "@/server/env";
+import { ApiError, Errors } from "@/server/http/errors";
+import { limit, resolveClientIp } from "@/server/http/rate-limit";
 
 const baseHandler = toNextJsHandler(auth);
 
-async function enforceAuthRateLimit(req: NextRequest): Promise<void> {
+async function readNormalizedEmail(req: NextRequest): Promise<string | null> {
+  try {
+    const cloned = req.clone();
+    const body = (await cloned.json()) as { email?: unknown };
+    if (typeof body?.email === "string") {
+      const normalized = body.email.trim().toLowerCase();
+      if (normalized.length > 0) return normalized;
+    }
+  } catch {
+    // Ignore body parse errors here; Better Auth will handle payload validation
+  }
+  return null;
+}
+
+async function enforceAuthRateLimit(
+  req: NextRequest,
+  trustProxy: boolean = env.TRUST_PROXY
+): Promise<void> {
   const pathname = req.nextUrl.pathname;
-  const ip = getClientIp(req);
+  const ip = resolveClientIp(req, trustProxy);
 
   if (pathname.endsWith("/sign-in/email")) {
-    let email = "";
-    try {
-      const cloned = req.clone();
-      const body = (await cloned.json()) as { email?: unknown };
-      if (typeof body?.email === "string") {
-        email = body.email.trim().toLowerCase();
-      }
-    } catch {
-      // Ignore body parse errors here; Better Auth will handle validation
+    const email = await readNormalizedEmail(req);
+    if (ip && email) {
+      await limit("auth:signin", `${ip}:${email}`);
+      return;
     }
-    await limit("auth:signin", `${ip}:${email}`);
-    return;
+    if (!ip && !trustProxy && email) {
+      await limit("auth:signin", `email:${email}`);
+      return;
+    }
+    if (ip && !email) {
+      await limit("auth:signin", `ip:${ip}`);
+      return;
+    }
+    throw Errors.rateLimited(60);
   }
 
   if (pathname.endsWith("/sign-up/email")) {
-    await limit("auth:signup", ip);
-    return;
+    if (ip) {
+      await limit("auth:signup", `ip:${ip}`);
+      return;
+    }
+    if (!trustProxy) {
+      const email = await readNormalizedEmail(req);
+      if (email) {
+        await limit("auth:signup", `email:${email}`);
+        return;
+      }
+    }
+    // When TRUST_PROXY=true and the proxy IP header is missing/invalid,
+    // or when neither IP nor email is available, fail closed.
+    throw Errors.rateLimited(60);
   }
 
   if (
     pathname.endsWith("/forget-password") ||
     pathname.endsWith("/request-password-reset")
   ) {
-    let email = ip;
-    try {
-      const cloned = req.clone();
-      const body = (await cloned.json()) as { email?: unknown };
-      if (typeof body?.email === "string" && body.email.trim()) {
-        email = body.email.trim().toLowerCase();
-      }
-    } catch {
-      // Fallback to IP
+    const email = await readNormalizedEmail(req);
+    if (email) {
+      await limit("auth:reset", `email:${email}`);
+      return;
     }
-    await limit("auth:reset", email);
-    return;
+    if (ip) {
+      await limit("auth:reset", `ip:${ip}`);
+      return;
+    }
+    throw Errors.rateLimited(60);
   }
 
   if (pathname.endsWith("/send-verification-email")) {
-    let email = ip;
-    try {
-      const cloned = req.clone();
-      const body = (await cloned.json()) as { email?: unknown };
-      if (typeof body?.email === "string" && body.email.trim()) {
-        email = body.email.trim().toLowerCase();
-      }
-    } catch {
-      // Fallback to IP
+    const email = await readNormalizedEmail(req);
+    if (email) {
+      await limit("auth:verify", `email:${email}`);
+      return;
     }
-    await limit("auth:verify", email);
+    if (ip) {
+      await limit("auth:verify", `ip:${ip}`);
+      return;
+    }
+    throw Errors.rateLimited(60);
   }
 }
 
