@@ -1,7 +1,9 @@
 name: ci
-# on: [pull_request, push]
-on:
-  workflow_dispatch: # re-enable later by restoring: [pull_request, push]
+on: [pull_request, push]
+
+permissions:
+  contents: read
+
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -20,10 +22,13 @@ jobs:
       RESEND_API_KEY: re_ci_dummy
       EMAIL_FROM: "Klecx <ci@example.com>"
     steps:
-      - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }
-      - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: npm }
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
       - run: npm ci
       - run: npx prisma validate
       - run: npx prisma migrate deploy # proves migrations apply to an empty DB
@@ -35,6 +40,11 @@ jobs:
   secrets:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }
-      - uses: gitleaks/gitleaks-action@v2
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: "false"
