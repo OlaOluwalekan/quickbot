@@ -84,3 +84,14 @@ Internal server errors (`500`) never expose stack traces or raw exception messag
 
 - `404` is returned whenever `resolveWorkspaceRole` / `resolveProjectRole` returns `null`, preventing attackers from probing UUIDs to discover private resources.
 - `403` is returned **only** when the user already has at least `VIEWER` access to the resource (so they are allowed to know it exists) but lacks the specific permission required for the operation (e.g., a `VIEWER` attempting `workspace.rename`).
+
+---
+
+## 5. Rate Limiting & Reverse Proxy Configuration (`TRUST_PROXY`)
+
+- Next.js 16 `Request` / `NextRequest` objects do not expose a raw socket IP (`req.ip`).
+- Client IP resolution (`resolveClientIp` in `server/http/rate-limit.ts`) returns `null` when `TRUST_PROXY=false` (never a shared `"127.0.0.1"` fallback) so untrusted client-supplied headers are ignored and callers do not collide in a single global localhost bucket.
+- When `TRUST_PROXY=true`:
+  - Your deployment's edge / reverse proxy **must** strip or overwrite incoming `X-Forwarded-For` and `X-Real-IP` headers from untrusted clients (Vercel and Cloudflare do this automatically; on Nginx, configure `proxy_set_header X-Forwarded-For $remote_addr;` and `proxy_set_header X-Real-IP $remote_addr;`).
+  - `readTrustedProxyAddress(req)` reads the first entry of `x-forwarded-for` (or `x-real-ip`) and validates it with `node:net`'s `isIP()`, returning `null` if the header is missing or malformed.
+  - Auth endpoints (`/api/auth/*`) fail closed (`429`) if `TRUST_PROXY=true` is configured and a request arrives without a valid proxy IP header.

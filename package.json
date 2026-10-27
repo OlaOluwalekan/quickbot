@@ -23,6 +23,8 @@
     "@reduxjs/toolkit": "^2.2.6",
     "@speechly/react-client": "^2.2.4",
     "@tailwindcss/postcss": "^4.3.3",
+    "@upstash/ratelimit": "^2.2.0",
+    "@upstash/redis": "^1.40.0",
     "axios": "^1.7.3",
     "better-auth": "^1.7.14",
     "clsx": "^2.1.1",

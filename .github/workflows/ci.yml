@@ -36,6 +36,9 @@ jobs:
       - run: npm run typecheck
       - run: npm test -- --ci
       - run: npm run build
+        env:
+          UPSTASH_REDIS_REST_URL: https://ci-dummy-redis.upstash.io
+          UPSTASH_REDIS_REST_TOKEN: ci-dummy-redis-token
       - run: npm audit --omit=dev --audit-level=high
   secrets:
     runs-on: ubuntu-latest
