@@ -1,7 +1,8 @@
 import "server-only";
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
+import { z, ZodTypeAny } from "zod";
 import { ApiError, Errors } from "./errors";
+import { limit, type RateLimitPolicy } from "./rate-limit";
 import { getActor, type Actor } from "@/server/auth/session";
 
 export type Ctx<B, Q, P> = {
@@ -14,13 +15,17 @@ export type Ctx<B, Q, P> = {
 };
 
 export function route<
-  B extends z.ZodType = z.ZodUndefined,
-  Q extends z.ZodType = z.ZodUndefined,
+  B extends ZodTypeAny = z.ZodUndefined,
+  Q extends ZodTypeAny = z.ZodUndefined,
   P = Record<string, string>,
 >(opts: {
   auth?: "required" | "optional"; // default "required"
   body?: B;
   query?: Q;
+  rateLimit?: {
+    policy: RateLimitPolicy;
+    key: (c: Ctx<z.infer<B>, z.infer<Q>, P>) => string;
+  };
   handler: (c: Ctx<z.infer<B>, z.infer<Q>, P>) => Promise<unknown | Response>;
 }) {
   return async (
@@ -66,16 +71,26 @@ export function route<
         parsedQuery = queryResult.data as z.infer<Q>;
       }
 
-      const resolvedParams = context?.params ? await context.params : ({} as P);
+      const resolvedParams = context?.params
+        ? await context.params
+        : ({} as P);
 
-      const out = await opts.handler({
+      const ctx: Ctx<z.infer<B>, z.infer<Q>, P> = {
         req,
         actor: actor as Actor,
         body: parsedBody,
         query: parsedQuery,
         params: resolvedParams,
         requestId,
-      });
+      };
+
+      if (opts.rateLimit) {
+        await limit(opts.rateLimit.policy, opts.rateLimit.key(ctx));
+      } else if (actor) {
+        await limit("api:default", actor.userId);
+      }
+
+      const out = await opts.handler(ctx);
 
       if (out instanceof Response) {
         out.headers.set("x-request-id", requestId);

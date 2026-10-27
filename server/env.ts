@@ -15,6 +15,12 @@ export const envSchema = z.object({
   GITHUB_CLIENT_SECRET: z.string().optional(),
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
+  UPSTASH_REDIS_REST_URL: z.string().url().optional(),
+  UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
+  TRUST_PROXY: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((v) => v === "true"),
 });
 
 export function validateEnv(input: Record<string, unknown> = process.env) {
@@ -22,6 +28,14 @@ export function validateEnv(input: Record<string, unknown> = process.env) {
     ...input,
     APP_URL: input.APP_URL || input.DOMAIN,
     BETTER_AUTH_SECRET: input.BETTER_AUTH_SECRET || input.AUTH_SECRET,
+    UPSTASH_REDIS_REST_URL: input.UPSTASH_REDIS_REST_URL || undefined,
+    UPSTASH_REDIS_REST_TOKEN: input.UPSTASH_REDIS_REST_TOKEN || undefined,
+    TRUST_PROXY:
+      input.TRUST_PROXY === true
+        ? "true"
+        : input.TRUST_PROXY === "true"
+          ? "true"
+          : "false",
   };
 
   const parsed = envSchema.safeParse(rawEnv);

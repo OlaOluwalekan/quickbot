@@ -6,11 +6,23 @@ import { bearer } from "better-auth/plugins";
 import { db } from "@/server/db/client";
 import { env } from "@/server/env";
 import { sendEmail } from "@/server/email/send";
+import { authSecondaryStorage } from "@/server/http/rate-limit";
 
 export const auth = betterAuth({
   baseURL: env.APP_URL,
   secret: env.BETTER_AUTH_SECRET,
   database: prismaAdapter(db, { provider: "postgresql" }),
+  secondaryStorage: authSecondaryStorage,
+  rateLimit: {
+    enabled: true,
+    storage: "secondary-storage",
+    customRules: {
+      "/sign-in/email": { window: 60, max: 5 },
+      "/sign-up/email": { window: 3600, max: 5 },
+      "/forget-password": { window: 3600, max: 3 },
+      "/send-verification-email": { window: 3600, max: 3 },
+    },
+  },
   trustedOrigins: [env.APP_URL],
   user: {
     additionalFields: {

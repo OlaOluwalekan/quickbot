@@ -1,0 +1,307 @@
+import "server-only";
+import { Ratelimit, type Duration } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
+import { env } from "@/server/env";
+import { ApiError, Errors } from "./errors";
+
+export const policies = {
+  "auth:signin":  { n: 5,   window: "1 m"  as Duration }, // key: ip + lowercased email
+  "auth:signup":  { n: 5,   window: "1 h"  as Duration }, // key: ip
+  "auth:reset":   { n: 3,   window: "1 h"  as Duration }, // key: email
+  "auth:verify":  { n: 3,   window: "1 h"  as Duration }, // key: email
+  "api:default":  { n: 120, window: "1 m"  as Duration }, // key: userId
+  "gen:start":    { n: 20,  window: "1 m"  as Duration }, // key: userId (plan caps are in Step 8.1)
+  "upload":       { n: 30,  window: "10 m" as Duration }, // key: userId
+  "share:create": { n: 20,  window: "1 h"  as Duration },
+  "invite:send":  { n: 20,  window: "1 h"  as Duration },
+  "support:send": { n: 3,   window: "1 h"  as Duration }, // key: ip or userId
+} as const;
+
+export type RateLimitPolicy = keyof typeof policies;
+
+function parseWindowMs(window: string): number {
+  const match = /^(\d+)\s*(s|m|h|d)$/.exec(window.trim());
+  if (!match) return 60_000;
+  const amount = Number(match[1]);
+  const unit = match[2];
+  switch (unit) {
+    case "s":
+      return amount * 1_000;
+    case "m":
+      return amount * 60_000;
+    case "h":
+      return amount * 3_600_000;
+    case "d":
+      return amount * 86_400_000;
+    default:
+      return 60_000;
+  }
+}
+
+export type RateLimitCheckResult = {
+  success: boolean;
+  reset: number; // epoch ms when window resets
+  remaining: number;
+};
+
+export type RateLimitBackend = (
+  policy: RateLimitPolicy,
+  key: string
+) => Promise<RateLimitCheckResult>;
+
+// In-memory sliding window store for development & unit tests
+const memoryWindows = new Map<string, number[]>();
+
+export function resetInMemoryRateLimits(): void {
+  memoryWindows.clear();
+  memorySecondaryStore.clear();
+}
+
+export async function checkInMemoryLimit(
+  policy: RateLimitPolicy,
+  key: string,
+  now = Date.now()
+): Promise<RateLimitCheckResult> {
+  const { n, window } = policies[policy];
+  const windowMs = parseWindowMs(window);
+  const bucketKey = `rl:${policy}:${key}`;
+
+  const existing = memoryWindows.get(bucketKey) ?? [];
+  const windowStart = now - windowMs;
+  const active = existing.filter((ts) => ts > windowStart);
+
+  if (active.length >= n) {
+    memoryWindows.set(bucketKey, active);
+    const oldest = active[0] ?? now;
+    return {
+      success: false,
+      reset: oldest + windowMs,
+      remaining: 0,
+    };
+  }
+
+  active.push(now);
+  memoryWindows.set(bucketKey, active);
+
+  return {
+    success: true,
+    reset: (active[0] ?? now) + windowMs,
+    remaining: Math.max(0, n - active.length),
+  };
+}
+
+let redisClient: Redis | null = null;
+const upstashLimiters = new Map<RateLimitPolicy, Ratelimit>();
+
+function getRedisClient(): Redis | null {
+  if (redisClient) return redisClient;
+  if (env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN) {
+    redisClient = new Redis({
+      url: env.UPSTASH_REDIS_REST_URL,
+      token: env.UPSTASH_REDIS_REST_TOKEN,
+    });
+    return redisClient;
+  }
+  return null;
+}
+
+function getUpstashLimiter(policy: RateLimitPolicy): Ratelimit | null {
+  const existing = upstashLimiters.get(policy);
+  if (existing) return existing;
+
+  const redis = getRedisClient();
+  if (!redis) return null;
+
+  const { n, window } = policies[policy];
+  const limiter = new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(n, window),
+    prefix: `klecx:rl:${policy}`,
+  });
+  upstashLimiters.set(policy, limiter);
+  return limiter;
+}
+
+let customBackendOverride: RateLimitBackend | null = null;
+
+/**
+ * Allows unit tests to inject a custom backend (e.g. to simulate Redis outages).
+ */
+export function setRateLimitBackendForTests(
+  backend: RateLimitBackend | null
+): void {
+  customBackendOverride = backend;
+}
+
+/**
+ * Resolves the client IP address safely.
+ * Reads the first `x-forwarded-for` entry ONLY when `TRUST_PROXY=true`;
+ * otherwise uses the socket/request IP address.
+ */
+export function getClientIp(
+  req: Request,
+  trustProxy: boolean = env.TRUST_PROXY
+): string {
+  if (trustProxy) {
+    const xff = req.headers.get("x-forwarded-for");
+    if (xff) {
+      const first = xff.split(",")[0]?.trim();
+      if (first) return first;
+    }
+  }
+
+  const socketIp = (req as { ip?: string }).ip?.trim();
+  return socketIp || "127.0.0.1";
+}
+
+/**
+ * Enforces sliding-window rate limiting for the given policy and key.
+ * - Throws `Errors.rateLimited(retryAfter)` (429) when limit is exceeded.
+ * - If Redis throws an operational error:
+ *   - Fails CLOSED (429) for `auth:*` policies.
+ *   - Fails OPEN (logs & continues) for all other policies.
+ */
+export async function limit(
+  policy: RateLimitPolicy,
+  key: string
+): Promise<void> {
+  try {
+    let result: RateLimitCheckResult;
+
+    if (customBackendOverride) {
+      result = await customBackendOverride(policy, key);
+    } else {
+      const upstash = getUpstashLimiter(policy);
+      if (upstash) {
+        const r = await upstash.limit(key);
+        result = {
+          success: r.success,
+          reset: r.reset,
+          remaining: r.remaining,
+        };
+      } else {
+        result = await checkInMemoryLimit(policy, key);
+      }
+    }
+
+    if (!result.success) {
+      const retryAfter = Math.max(
+        1,
+        Math.ceil((result.reset - Date.now()) / 1000)
+      );
+      throw Errors.rateLimited(retryAfter);
+    }
+  } catch (err) {
+    if (err instanceof ApiError) {
+      throw err;
+    }
+
+    // Operational / Redis error: fail closed for auth:*, fail open for others
+    if (policy.startsWith("auth:")) {
+      console.error(
+        `[rate-limit] Backend error on ${policy}; failing closed:`,
+        String(err)
+      );
+      throw Errors.rateLimited(60);
+    }
+
+    console.error(
+      `[rate-limit] Backend error on ${policy}; failing open:`,
+      String(err)
+    );
+  }
+}
+
+// Secondary storage for Better Auth (backed by Upstash Redis or in-memory TTL map)
+const memorySecondaryStore = new Map<
+  string,
+  { value: string; expiresAt: number | null }
+>();
+
+export const authSecondaryStorage = {
+  async get(key: string): Promise<string | null> {
+    const redis = getRedisClient();
+    if (redis) {
+      const val = await redis.get<string>(`klecx:auth:${key}`);
+      if (val === null || val === undefined) return null;
+      return typeof val === "string" ? val : JSON.stringify(val);
+    }
+
+    const entry = memorySecondaryStore.get(key);
+    if (!entry) return null;
+    if (entry.expiresAt !== null && Date.now() > entry.expiresAt) {
+      memorySecondaryStore.delete(key);
+      return null;
+    }
+    return entry.value;
+  },
+
+  async set(key: string, value: string, ttl?: number): Promise<void> {
+    const redis = getRedisClient();
+    if (redis) {
+      if (ttl && ttl > 0) {
+        await redis.set(`klecx:auth:${key}`, value, { ex: ttl });
+      } else {
+        await redis.set(`klecx:auth:${key}`, value);
+      }
+      return;
+    }
+
+    memorySecondaryStore.set(key, {
+      value,
+      expiresAt: ttl && ttl > 0 ? Date.now() + ttl * 1000 : null,
+    });
+  },
+
+  async delete(key: string): Promise<void> {
+    const redis = getRedisClient();
+    if (redis) {
+      await redis.del(`klecx:auth:${key}`);
+      return;
+    }
+
+    memorySecondaryStore.delete(key);
+  },
+
+  async getAndDelete(key: string): Promise<string | null> {
+    const redis = getRedisClient();
+    if (redis) {
+      const val = await redis.getdel<string>(`klecx:auth:${key}`);
+      if (val === null || val === undefined) return null;
+      return typeof val === "string" ? val : JSON.stringify(val);
+    }
+
+    const val = await authSecondaryStorage.get(key);
+    memorySecondaryStore.delete(key);
+    return val;
+  },
+
+  async increment(key: string, ttl: number): Promise<number> {
+    const redis = getRedisClient();
+    if (redis) {
+      const redisKey = `klecx:auth:${key}`;
+      const count = await redis.incr(redisKey);
+      if (count === 1 && ttl > 0) {
+        await redis.expire(redisKey, ttl);
+      }
+      return count;
+    }
+
+    const now = Date.now();
+    const existing = memorySecondaryStore.get(key);
+    if (!existing || (existing.expiresAt !== null && now > existing.expiresAt)) {
+      memorySecondaryStore.set(key, {
+        value: "1",
+        expiresAt: ttl > 0 ? now + ttl * 1000 : null,
+      });
+      return 1;
+    }
+
+    const nextCount = (Number(existing.value) || 0) + 1;
+    memorySecondaryStore.set(key, {
+      value: String(nextCount),
+      expiresAt: existing.expiresAt,
+    });
+    return nextCount;
+  },
+};
