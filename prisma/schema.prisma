@@ -12,17 +12,41 @@ enum UserRole {
   ADMIN
 }
 
+enum ProjectRole {
+  VIEWER
+  COMMENTER
+  EDITOR
+  ADMIN
+}
+
+enum WorkspaceRole {
+  NONE
+  VIEWER
+  COMMENTER
+  EDITOR
+  ADMIN
+}
+
+enum TitleSource {
+  AUTO
+  USER
+}
+
 model User {
-  id            String    @id
-  name          String
-  email         String    @unique
-  emailVerified Boolean   @default(false)
-  image         String?
-  role          UserRole  @default(USER)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  sessions      Session[]
-  accounts      Account[]
+  id                   String            @id
+  name                 String
+  email                String            @unique
+  emailVerified        Boolean           @default(false)
+  image                String?
+  role                 UserRole          @default(USER)
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+  sessions             Session[]
+  accounts             Account[]
+  projects             Project[]
+  workspaces           Workspace[]
+  projectMemberships   ProjectMember[]
+  workspaceMemberships WorkspaceMember[]
 
   @@map("users")
 }
@@ -73,4 +97,71 @@ model Verification {
 
   @@index([identifier])
   @@map("verifications")
+}
+
+model Project {
+  id          String          @id @default(uuid(7))
+  ownerId     String
+  name        String
+  description String?
+  archivedAt  DateTime?
+  deletedAt   DateTime?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  owner       User            @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  workspaces  Workspace[]
+  members     ProjectMember[]
+
+  @@index([ownerId, deletedAt, updatedAt(sort: Desc)])
+  @@map("projects")
+}
+
+model Workspace {
+  id             String            @id @default(uuid(7))
+  ownerId        String
+  projectId      String?
+  title          String
+  titleSource    TitleSource       @default(AUTO)
+  archivedAt     DateTime?
+  deletedAt      DateTime?
+  lastActivityAt DateTime          @default(now())
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  owner          User              @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  project        Project?          @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  members        WorkspaceMember[]
+
+  @@index([ownerId, deletedAt, lastActivityAt(sort: Desc)])
+  @@index([projectId, deletedAt])
+  @@map("workspaces")
+}
+
+model ProjectMember {
+  id          String      @id @default(uuid(7))
+  projectId   String
+  userId      String
+  role        ProjectRole
+  invitedById String
+  createdAt   DateTime    @default(now())
+  project     Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@index([userId])
+  @@map("project_members")
+}
+
+model WorkspaceMember {
+  id          String        @id @default(uuid(7))
+  workspaceId String
+  userId      String
+  role        WorkspaceRole
+  invitedById String
+  createdAt   DateTime      @default(now())
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([userId])
+  @@map("workspace_members")
 }
