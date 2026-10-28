@@ -167,5 +167,81 @@
     "usageResponseId": "ID de Interacción / Respuesta",
     "usageTokens": "Tokens Usados",
     "noTokenUsage": "Aún no se ha registrado consumo de tokens."
+  },
+  "Email": {
+    "common": {
+      "appName": "Klecx",
+      "supportNotice": "¿Tienes preguntas o necesitas ayuda? Contacta a nuestro equipo en {supportEmail}",
+      "legalNotice": "© {year} Klecx AI. Todos los derechos reservados. 123 Innovation Way, Suite 400. Servicios de Merchant of Record proporcionados por Creem.",
+      "transactionalDisclaimer": "Este es un mensaje transaccional automatizado enviado a {email}. Lo recibes por un evento o acción de seguridad en tu cuenta.",
+      "copyUrlNotice": "Si el botón anterior no funciona, copia y pega este enlace en tu navegador web:"
+    },
+    "verifyEmail": {
+      "subject": "Verifica tu dirección de correo electrónico de Klecx",
+      "heading": "Verifica tu correo electrónico",
+      "greeting": "Hola,",
+      "greetingWithName": "Hola {name},",
+      "body": "Gracias por unirte a Klecx. Por favor verifica tu correo electrónico para activar tu cuenta y comenzar a usar tu espacio de trabajo de IA.",
+      "button": "Verificar correo",
+      "disclaimer": "Este enlace de verificación caducará en 24 horas. Si no creaste una cuenta en Klecx, puedes ignorar este mensaje."
+    },
+    "resetPassword": {
+      "subject": "Restablece tu contraseña de Klecx",
+      "heading": "Restablece tu contraseña",
+      "greeting": "Hola,",
+      "greetingWithName": "Hola {name},",
+      "body": "Hemos recibido una solicitud para restablecer tu contraseña de Klecx. Haz clic en el botón de abajo para elegir una nueva contraseña segura.",
+      "button": "Restablecer contraseña",
+      "disclaimer": "Este enlace caducará en 1 hora. Si no solicitaste restablecer tu contraseña, puedes ignorar este correo de forma segura. Tu contraseña no cambiará."
+    },
+    "invitation": {
+      "subject": "{inviterName} te invitó a unirte a {teamOrProjectName} en Klecx",
+      "heading": "¡Te han invitado a colaborar!",
+      "greeting": "Hola,",
+      "body": "{inviterName} te ha invitado a unirte a \"{teamOrProjectName}\" con el rol de {role} en Klecx.",
+      "button": "Aceptar invitación",
+      "disclaimer": "Si no esperabas esta invitación, puedes ignorar este correo."
+    },
+    "newSignIn": {
+      "subject": "Alerta de seguridad: Nuevo inicio de sesión en tu cuenta de Klecx",
+      "heading": "Nuevo inicio de sesión detectado",
+      "greeting": "Hola,",
+      "body": "Se detectó un nuevo inicio de sesión en tu cuenta de Klecx el {time} desde {device} ({ipAddress}, {location}).",
+      "button": "Revisar actividad de la cuenta",
+      "disclaimer": "Si fuiste tú, no es necesario hacer nada. Si no iniciaste sesión en este momento, cambia tu contraseña de inmediato."
+    },
+    "passwordChanged": {
+      "subject": "Alerta de seguridad: Tu contraseña de Klecx ha sido modificada",
+      "heading": "Contraseña modificada correctamente",
+      "greeting": "Hola,",
+      "body": "La contraseña de tu cuenta de Klecx se actualizó con éxito el {time}.",
+      "button": "Ver configuración de la cuenta",
+      "disclaimer": "Si realizaste este cambio, puedes ignorar este correo con tranquilidad. Si NO lo hiciste, contacta al soporte técnico de inmediato."
+    },
+    "shareCreated": {
+      "subject": "Tu enlace de espacio de trabajo compartido para \"{title}\" está listo",
+      "heading": "Enlace de espacio compartido creado",
+      "greeting": "Hola,",
+      "body": "Se ha generado un enlace de acceso para tu espacio de trabajo \"{title}\". Cualquier persona con acceso puede ver la conversación según los permisos establecidos.",
+      "button": "Abrir espacio compartido",
+      "disclaimer": "Puedes revocar o modificar los permisos de acceso compartido en cualquier momento desde la configuración de tu espacio."
+    },
+    "creditsLow": {
+      "subject": "Aviso: Tu saldo de tokens en Klecx se está agotando",
+      "heading": "Saldo de tokens bajo",
+      "greeting": "Hola,",
+      "body": "Te quedan {remainingCredits} tokens en el saldo de tu cuenta de Klecx. Recarga tus tokens para garantizar una generación fluida y sin interrupciones.",
+      "button": "Recargar tokens",
+      "disclaimer": "Puedes configurar la recarga automática o mejorar tu plan de suscripción en cualquier momento desde los ajustes."
+    },
+    "paymentFailed": {
+      "subject": "Acción requerida: Error en el pago de tu suscripción a Klecx",
+      "heading": "Error en el cobro del pago",
+      "greeting": "Hola,",
+      "body": "No pudimos procesar tu pago. Por favor actualiza tu método de pago para mantener tu suscripción activa.",
+      "bodyWithReason": "No pudimos procesar tu pago debido a: {reason}. Por favor actualiza tu método de pago para mantener tu suscripción activa.",
+      "button": "Actualizar método de pago",
+      "disclaimer": "Reintentaremos realizar el cobro automáticamente en los próximos días."
+    }
   }
 }

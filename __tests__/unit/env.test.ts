@@ -27,6 +27,18 @@ describe("server/env validation", () => {
       expect(result.data.APP_URL).toBe("http://localhost:3000");
       expect(result.data.DATABASE_URL).toBe(baseValidEnv.DATABASE_URL);
       expect(result.data.BETTER_AUTH_SECRET).toBe(baseValidEnv.BETTER_AUTH_SECRET);
+      expect(result.data.SUPPORT_EMAIL).toBe("support@mail.klecx.vyraxity.com");
+    }
+  });
+
+  it("accepts a custom SUPPORT_EMAIL when specified", () => {
+    const result = envSchema.safeParse({
+      ...baseValidEnv,
+      SUPPORT_EMAIL: "help@custom.domain.com",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.SUPPORT_EMAIL).toBe("help@custom.domain.com");
     }
   });
 

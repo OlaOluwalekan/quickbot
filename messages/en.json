@@ -167,5 +167,81 @@
     "usageResponseId": "Interaction / Response ID",
     "usageTokens": "Tokens Used",
     "noTokenUsage": "No token usage recorded yet."
+  },
+  "Email": {
+    "common": {
+      "appName": "Klecx",
+      "supportNotice": "Questions or need help? Contact our support team at {supportEmail}",
+      "legalNotice": "© {year} Klecx AI. All rights reserved. 123 Innovation Way, Suite 400. Merchant of Record services provided by Creem.",
+      "transactionalDisclaimer": "This is an automated transactional message sent to {email}. You are receiving this because an account event or security action occurred.",
+      "copyUrlNotice": "If the button above does not work, copy and paste this link into your web browser:"
+    },
+    "verifyEmail": {
+      "subject": "Verify your Klecx email address",
+      "heading": "Verify your email address",
+      "greeting": "Hi,",
+      "greetingWithName": "Hi {name},",
+      "body": "Thank you for joining Klecx. Please verify your email address to activate your account and start using your AI workspace.",
+      "button": "Verify Email",
+      "disclaimer": "This verification link will expire in 24 hours. If you did not create a Klecx account, please disregard this email."
+    },
+    "resetPassword": {
+      "subject": "Reset your Klecx password",
+      "heading": "Reset your password",
+      "greeting": "Hi,",
+      "greetingWithName": "Hi {name},",
+      "body": "We received a request to reset your Klecx password. Click the button below to choose a new, secure password.",
+      "button": "Reset Password",
+      "disclaimer": "This link will expire in 1 hour. If you did not request a password reset, you can safely ignore this email. Your password remains unchanged."
+    },
+    "invitation": {
+      "subject": "{inviterName} invited you to join {teamOrProjectName} on Klecx",
+      "heading": "You've been invited to collaborate",
+      "greeting": "Hi,",
+      "body": "{inviterName} has invited you to join \"{teamOrProjectName}\" as a {role} on Klecx.",
+      "button": "Accept Invitation",
+      "disclaimer": "If you were not expecting this invitation, you can safely ignore this email."
+    },
+    "newSignIn": {
+      "subject": "Security Alert: New sign-in to your Klecx account",
+      "heading": "New sign-in detected",
+      "greeting": "Hi,",
+      "body": "A new sign-in to your Klecx account was detected on {time} from {device} ({ipAddress}, {location}).",
+      "button": "Review Account Activity",
+      "disclaimer": "If this was you, no action is required. If you did not sign in at this time, please change your password immediately."
+    },
+    "passwordChanged": {
+      "subject": "Security Alert: Your Klecx password was changed",
+      "heading": "Password changed successfully",
+      "greeting": "Hi,",
+      "body": "The password for your Klecx account was successfully updated on {time}.",
+      "button": "View Account Settings",
+      "disclaimer": "If you performed this change, you can safely ignore this email. If you did NOT make this change, please contact support immediately."
+    },
+    "shareCreated": {
+      "subject": "Your shared workspace link for \"{title}\" is ready",
+      "heading": "Shared workspace link created",
+      "greeting": "Hi,",
+      "body": "A share link was generated for your workspace \"{title}\". Anyone with access can view the conversation according to the permissions set.",
+      "button": "Open Shared Workspace",
+      "disclaimer": "You can revoke or modify sharing permissions at any time from your workspace settings."
+    },
+    "creditsLow": {
+      "subject": "Notice: Your Klecx token balance is running low",
+      "heading": "Token balance low",
+      "greeting": "Hi,",
+      "body": "You have {remainingCredits} tokens remaining in your Klecx account balance. Top up your tokens to ensure uninterrupted AI streaming and generation.",
+      "button": "Top Up Tokens",
+      "disclaimer": "You can manage auto-refill or upgrade your subscription plan anytime in settings."
+    },
+    "paymentFailed": {
+      "subject": "Action Required: Payment failed for your Klecx subscription",
+      "heading": "Payment attempt failed",
+      "greeting": "Hi,",
+      "body": "We were unable to process your payment. Please update your billing method to keep your subscription active.",
+      "bodyWithReason": "We were unable to process your payment due to: {reason}. Please update your billing method to keep your subscription active.",
+      "button": "Update Payment Method",
+      "disclaimer": "We will automatically retry charging your payment method in the next few days."
+    }
   }
 }
