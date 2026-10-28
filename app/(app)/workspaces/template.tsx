@@ -4,7 +4,7 @@ import ChatInput from "@/components/chats/ChatInput";
 import ChatMobileHeader from "@/components/chats/ChatMobileHeader";
 import Sidebar from "@/components/chats/Sidebar";
 import { ChatProps } from "@/types/chats";
-import { getChats } from "@/utils/actions/chat";
+import { listWorkspaces } from "@/server/services/workspace";
 import { ReactNode } from "react";
 
 const Template = async ({ children }: { children: ReactNode }) => {
@@ -13,10 +13,26 @@ const Template = async ({ children }: { children: ReactNode }) => {
   let dates: string[] = [];
 
   if (actor?.userId) {
-    const chatResponse = await getChats(actor.userId);
-    if (chatResponse.data) {
-      chats = chatResponse.data.chats;
-      dates = chatResponse.data.dates;
+    try {
+      const page = await listWorkspaces(actor, { limit: 50 });
+      chats = page.items.map((ws) => ({
+        id: ws.id,
+        title: ws.title,
+        createdBy: ws.ownerId,
+        createdAt: ws.createdAt,
+        updatedAt: ws.lastActivityAt || ws.updatedAt,
+      }));
+
+      const dateSet = new Set(
+        chats.map((c) => {
+          const d = c.updatedAt instanceof Date ? c.updatedAt : new Date(c.updatedAt);
+          return d.toISOString().split("T")[0] ?? "Unknown";
+        })
+      );
+      dates = Array.from(dateSet).sort((a, b) => (a < b ? 1 : -1));
+    } catch {
+      chats = [];
+      dates = [];
     }
   }
 

@@ -57,7 +57,7 @@ export async function resolveWorkspaceRole(
     return { ws: summary, role: "OWNER" };
   }
 
-  const explicit = ws.members[0]?.role; // workspace row overrides project row
+  const explicit = ws.members?.[0]?.role; // workspace row overrides project row
   if (explicit) {
     return explicit === "NONE" ? null : { ws: summary, role: explicit };
   }
@@ -135,7 +135,7 @@ export async function resolveProjectRole(
     return { project: summary, role: "OWNER" };
   }
 
-  const memberRole = project.members[0]?.role;
+  const memberRole = project.members?.[0]?.role;
   if (memberRole) {
     return { project: summary, role: memberRole };
   }

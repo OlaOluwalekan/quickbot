@@ -30,16 +30,15 @@ const DeletePopup = () => {
 
     startTransition(async () => {
       try {
-        const res = await fetch(`/api/chats/${dialogData.id}`, {
+        const res = await fetch(`/api/v1/workspaces/${dialogData.id}`, {
           method: "DELETE",
         });
-        const json = await res.json();
-        if (json.success) {
+        if (res.ok) {
           toast.success(t("deleteSuccess"));
           dispatch(setDeletePopUpOpen(false));
           dispatch(toggleMobileNavOpen(false));
           if (currentPageId === dialogData.id) {
-            router.push("/chat");
+            router.push("/workspaces");
           }
           router.refresh();
         } else {

@@ -108,7 +108,7 @@ const Sidebar = ({
           </div>
 
           <Link
-            href="/chat"
+            href="/workspaces"
             onClick={() => dispatch(toggleMobileNavOpen(false))}
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-linear-to-r from-indigo-600 to-sky-500 px-3 py-2.5 text-sm font-semibold text-white shadow-md shadow-indigo-500/20 transition-all hover:opacity-95"
           >

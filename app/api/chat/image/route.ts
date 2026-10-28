@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import ActionResponse from "@/utils/response";
 import { getActor } from "@/server/auth/session";
-import { createChat, getChatById } from "@/utils/actions/chat";
+import { createWorkspace } from "@/server/services/workspace";
+import { requireWorkspace } from "@/server/authz/access";
+import { ApiError } from "@/server/http/errors";
 import { createResponse, getResponses } from "@/utils/actions/response";
 import {
   createTokenUsage,
@@ -37,22 +39,21 @@ export async function POST(req: NextRequest) {
     let isNewChat = false;
 
     if (!chatId) {
-      const created = await createChat(actor.userId, prompt);
-      if (!created.success || !created.data?.chatId) {
-        return NextResponse.json(
-          ActionResponse.error("Failed to create chat", null),
-          { status: 500 }
-        );
-      }
-      chatId = created.data.chatId;
+      const workspace = await createWorkspace(actor, {
+        title: prompt.slice(0, 60),
+      });
+      chatId = workspace.id;
       isNewChat = true;
     } else {
-      const chatCheck = await getChatById(chatId);
-      if (
-        !chatCheck.success ||
-        !chatCheck.data?.chat ||
-        chatCheck.data.chat.createdBy !== actor.userId
-      ) {
+      try {
+        await requireWorkspace(actor, chatId, "workspace.generate");
+      } catch (err: any) {
+        if (err instanceof ApiError) {
+          return NextResponse.json(
+            ActionResponse.error(err.message, null),
+            { status: err.status }
+          );
+        }
         return NextResponse.json(
           ActionResponse.error("Chat not found or unauthorized", null),
           { status: 404 }
@@ -101,8 +102,8 @@ export async function POST(req: NextRequest) {
     }
     await updateUserToken(actor.userId, remainingTokens);
 
-    revalidatePath("/chat");
-    revalidatePath(`/chat/${chatId}`);
+    revalidatePath("/workspaces");
+    revalidatePath(`/workspaces/${chatId}`);
 
     return NextResponse.json(
       ActionResponse.success("Image generated", {

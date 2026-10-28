@@ -3,6 +3,7 @@
 import { setChatInputHeight, setChatMode } from "@/features/generalSlice";
 import { AppDispatch, RootState } from "@/store";
 import { submitChatPrompt } from "@/utils/chat-stream-client";
+import { formatNumber } from "@/utils/format";
 import clsx from "clsx";
 import { useTranslations } from "next-intl";
 import { usePathname, useRouter } from "next/navigation";
@@ -74,9 +75,14 @@ const ChatInput = ({ userId }: { userId: string }) => {
 
     const activePath =
       pathname ||
-      (typeof window !== "undefined" ? window.location.pathname : "/chat");
+      (typeof window !== "undefined"
+        ? window.location.pathname
+        : "/workspaces");
     const activeChatId =
-      activePath && activePath !== "/chat" && activePath.startsWith("/chat/")
+      activePath &&
+      activePath !== "/chat" &&
+      activePath !== "/workspaces" &&
+      (activePath.startsWith("/chat/") || activePath.startsWith("/workspaces/"))
         ? activePath.split("/").pop() || null
         : null;
 
@@ -88,7 +94,7 @@ const ChatInput = ({ userId }: { userId: string }) => {
       mode: chatMode,
       dispatch,
       onNavigateChat: (newChatId) => {
-        router.push(`/chat/${newChatId}`);
+        router.push(`/workspaces/${newChatId}`);
         router.refresh();
       },
       onRefresh: () => {
@@ -119,34 +125,33 @@ const ChatInput = ({ userId }: { userId: string }) => {
       <div className="mx-auto w-full max-w-4xl px-2 sm:px-4">
         <form
           onSubmit={handleFormSubmit}
-          className="relative flex flex-col rounded-2xl border border-slate-200/90 bg-white/95 shadow-lg shadow-indigo-500/5 transition-all focus-within:border-indigo-500/70 focus-within:ring-2 focus-within:ring-indigo-500/15 dark:border-slate-800 dark:bg-slate-900/95"
+          className="rounded-3xl border border-slate-200/80 bg-white/90 p-2 shadow-xl backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/90"
         >
-          <input type="hidden" value={userId} id="id" name="id" />
-
-          {/* Mode Selector Pill Bar */}
-          <div className="flex items-center justify-between border-b border-slate-100 px-3 pt-2.5 pb-1 dark:border-slate-800/80">
-            <div className="inline-flex items-center gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-800/90">
+          {/* Top Row: Mode Toggle & Token Badge */}
+          <div className="mb-1 flex items-center justify-between px-2 pt-1 text-xs text-slate-500 dark:text-slate-400">
+            <div className="flex items-center gap-1 rounded-xl bg-slate-100 p-0.5 dark:bg-slate-800">
               <button
                 type="button"
                 onClick={() => dispatch(setChatMode("text"))}
+                disabled={isBusy}
                 className={clsx(
-                  "inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition-all",
+                  "flex cursor-pointer items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors",
                   chatMode === "text"
-                    ? "bg-white text-indigo-600 shadow-xs dark:bg-slate-900 dark:text-indigo-400"
+                    ? "bg-white text-indigo-600 shadow-xs dark:bg-slate-700 dark:text-indigo-400"
                     : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
                 )}
               >
                 <FaRegCommentDots className="text-xs" />
                 <span>{t("modeText")}</span>
               </button>
-
               <button
                 type="button"
                 onClick={() => dispatch(setChatMode("image"))}
+                disabled={isBusy}
                 className={clsx(
-                  "inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition-all",
+                  "flex cursor-pointer items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors",
                   chatMode === "image"
-                    ? "bg-linear-to-r from-indigo-500 to-sky-500 text-white shadow-xs"
+                    ? "bg-white text-indigo-600 shadow-xs dark:bg-slate-700 dark:text-indigo-400"
                     : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
                 )}
               >
@@ -156,50 +161,44 @@ const ChatInput = ({ userId }: { userId: string }) => {
             </div>
 
             {tokens !== null && (
-              <span className="hidden text-[11px] font-medium text-slate-400 sm:inline dark:text-slate-500">
-                {t("tokensRemaining", { count: tokens })}
+              <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500">
+                {t("tokensRemaining", { count: formatNumber(tokens) })}
               </span>
             )}
           </div>
 
-          {/* Textarea & Send Button Row */}
-          <div className="relative flex items-end gap-2 px-3 py-2">
+          {/* Main Input Row */}
+          <div className="flex items-end gap-2">
             <textarea
-              onChange={handleChange}
-              onKeyDown={handleKeyDown}
               ref={textRef}
               rows={1}
               value={text}
-              name="question"
-              id="question"
+              disabled={isBusy}
+              onChange={handleChange}
+              onKeyDown={handleKeyDown}
               placeholder={
                 chatMode === "image"
                   ? t("imageInputPlaceholder")
                   : t("inputPlaceholder")
               }
-              className="h-11 max-h-45 w-full resize-none scrollbar-none overflow-y-auto bg-transparent py-2 pr-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none disabled:opacity-60 sm:text-base dark:text-slate-100 dark:placeholder:text-slate-500"
-              disabled={isBusy}
+              className="max-h-45 min-h-12 flex-1 resize-none bg-transparent px-3 py-2 text-sm text-slate-800 placeholder-slate-400 focus:outline-none dark:text-slate-100 dark:placeholder-slate-500"
             />
 
             <button
               type="submit"
-              aria-label={t("send")}
-              disabled={isBusy || text.trim() === ""}
+              disabled={isBusy || !text.trim()}
+              aria-label="Send message"
               className={clsx(
-                "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all",
-                isBusy || text.trim() === ""
-                  ? "cursor-not-allowed bg-slate-200 text-slate-400 dark:bg-slate-800 dark:text-slate-600"
-                  : "cursor-pointer bg-linear-to-r from-indigo-600 to-sky-500 text-white shadow-md shadow-indigo-500/25 hover:opacity-95 active:scale-95"
+                "mb-1 flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-2xl text-white shadow-md transition-all",
+                !isBusy && text.trim()
+                  ? "bg-indigo-600 hover:bg-indigo-500 active:scale-95"
+                  : "cursor-not-allowed bg-slate-300 dark:bg-slate-700"
               )}
             >
-              <FaPaperPlane className="text-sm" />
+              <FaPaperPlane className="text-xs" />
             </button>
           </div>
         </form>
-
-        <p className="mt-1.5 text-center text-[11px] text-slate-400 dark:text-slate-500">
-          {t("disclaimer")}
-        </p>
       </div>
     </div>
   );

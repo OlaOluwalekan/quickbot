@@ -1,6 +1,6 @@
 import { ChatProps, ResponseProps } from '@/types/chats'
 
-import { getSnippetWithHighlight } from '@/utils/search'
+import { getSnippetWithHighlight } from '@/utils/format'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
@@ -17,7 +17,7 @@ export const ChatSearchResult = ({
 
   return (
     <Link
-      href={`/chat/${result.id}`}
+      href={`/workspaces/${result.id}`}
       className='px-2 py-3 hover:bg-base-300/30 block'
       onClick={() => setSearchText('')}
       dangerouslySetInnerHTML={{ __html: render }}
@@ -38,18 +38,21 @@ export const ResponseSearchResult = ({
   const [title, setTitle] = useState('')
 
   useEffect(() => {
-    fetch(`/api/chats/${result.chatId}`)
+    fetch(`/api/v1/workspaces/${result.chatId}`)
       .then((r) => r.json())
       .then((res) => {
-      if (res.success) {
-        setTitle(res.data.chat.title)
-      }
-    })
-  }, [searchText])
+        if (res.data?.title) {
+          setTitle(res.data.title)
+        } else if (res.data?.chat?.title) {
+          setTitle(res.data.chat.title)
+        }
+      })
+      .catch(() => {})
+  }, [result.chatId, searchText])
 
   return (
     <Link
-      href={`/chat/${result.chatId}#${result.id}`}
+      href={`/workspaces/${result.chatId}#${result.id}`}
       className='px-2 py-1 hover:bg-base-300/30 flex flex-col'
       onClick={() => setSearchText('')}
     >

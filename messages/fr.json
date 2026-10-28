@@ -119,6 +119,8 @@
     "noSearchResults": "Aucun message ou discussion correspondant trouvé.",
     "noChatsYet": "Aucune discussion pour le moment. Lancez un nouveau chat !",
     "renameChat": "Renommer la discussion",
+    "renameTitle": "Renommer la discussion",
+    "renamePlaceholder": "Entrez le titre de la discussion...",
     "deleteChat": "Supprimer la discussion",
     "deleteConfirmTitle": "Supprimer la discussion ?",
     "deleteConfirmDescription": "Cela supprimera définitivement « {title} » et tous ses messages. Cette action est irréversible.",

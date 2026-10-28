@@ -119,6 +119,8 @@
     "noSearchResults": "No matching messages or chats found.",
     "noChatsYet": "No conversations yet. Start a new chat above!",
     "renameChat": "Rename conversation",
+    "renameTitle": "Rename conversation",
+    "renamePlaceholder": "Enter conversation title...",
     "deleteChat": "Delete conversation",
     "deleteConfirmTitle": "Delete Conversation?",
     "deleteConfirmDescription": "This will permanently remove \"{title}\" and all of its messages. This action cannot be undone.",
