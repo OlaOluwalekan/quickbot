@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import ActionResponse from "@/utils/response";
 import { getActor } from "@/server/auth/session";
-import { createWorkspace, getWorkspace } from "@/server/services/workspace";
+import { createWorkspace } from "@/server/services/workspace";
+import { requireWorkspace } from "@/server/authz/access";
+import { ApiError } from "@/server/http/errors";
 import { createResponse, getResponses } from "@/utils/actions/response";
 import {
   createTokenUsage,
@@ -44,8 +46,14 @@ export async function POST(req: NextRequest) {
       isNewChat = true;
     } else {
       try {
-        await getWorkspace(actor, chatId);
-      } catch {
+        await requireWorkspace(actor, chatId, "workspace.generate");
+      } catch (err: any) {
+        if (err instanceof ApiError) {
+          return NextResponse.json(
+            ActionResponse.error(err.message, null),
+            { status: err.status }
+          );
+        }
         return NextResponse.json(
           ActionResponse.error("Chat not found or unauthorized", null),
           { status: 404 }

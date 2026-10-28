@@ -52,13 +52,20 @@ const Search = ({ userId }: { userId: string }) => {
     try {
       const params = new URLSearchParams({
         q: searchText.trim(),
+        scope: searchOption,
       });
-      const res = await fetch(`/api/v1/workspaces?${params.toString()}`);
+
+      if (searchOption === "this chat" && workspaceId) {
+        params.set("workspaceId", workspaceId);
+        params.set("chatId", workspaceId);
+      }
+
+      const res = await fetch(`/api/v1/workspaces/search?${params.toString()}`);
       const json = await res.json();
-      if (Array.isArray(json.data?.items)) {
-        setResults(json.data.items);
-      } else if (Array.isArray(json.data?.results)) {
+      if (Array.isArray(json.data?.results)) {
         setResults(json.data.results);
+      } else if (Array.isArray(json.data?.items)) {
+        setResults(json.data.items);
       } else {
         setResults([]);
       }

@@ -69,7 +69,7 @@ const EditPopup = () => {
             <FaEdit className="text-lg" />
           </div>
           <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-            {t("renameTitle")}
+            {t("renameChat")}
           </h3>
         </div>
 
@@ -94,7 +94,7 @@ const EditPopup = () => {
           />
           <BasicButton
             type="submit"
-            text={isPending ? tCommon("loading") : t("save")}
+            text={isPending ? tCommon("loading") : tCommon("save")}
             size="small"
             theme="primary"
             disabled={isPending || !chatTitle.trim()}

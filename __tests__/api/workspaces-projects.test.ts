@@ -28,6 +28,7 @@ const mockProjectCreate = jest.fn();
 const mockProjectUpdate = jest.fn();
 
 const mockProjectMemberFindUnique = jest.fn();
+const mockResponseFindMany = jest.fn();
 
 jest.mock("../../server/db/client", () => ({
   db: {
@@ -48,6 +49,9 @@ jest.mock("../../server/db/client", () => ({
     projectMember: {
       findUnique: (...args: unknown[]) => mockProjectMemberFindUnique(...args),
     },
+    response: {
+      findMany: (...args: unknown[]) => mockResponseFindMany(...args),
+    },
   },
 }));
 
@@ -59,6 +63,7 @@ import {
   getWorkspace,
   listWorkspaces,
   restoreWorkspace,
+  searchWorkspaces,
   updateWorkspace,
 } from "@/server/services/workspace";
 import {
@@ -76,6 +81,7 @@ import {
   DELETE as deleteWorkspaceByIdRoute,
 } from "@/app/api/v1/workspaces/[id]/route";
 import { POST as restoreWorkspaceRoute } from "@/app/api/v1/workspaces/[id]/restore/route";
+import { GET as searchWorkspacesRoute } from "@/app/api/v1/workspaces/search/route";
 import { GET as getProjectsRoute, POST as postProjectsRoute } from "@/app/api/v1/projects/route";
 import {
   GET as getProjectByIdRoute,
@@ -83,6 +89,8 @@ import {
   DELETE as deleteProjectByIdRoute,
 } from "@/app/api/v1/projects/[id]/route";
 import { GET as getProjectWorkspacesRoute } from "@/app/api/v1/projects/[id]/workspaces/route";
+import { POST as postChatStreamRoute } from "@/app/api/chat/stream/route";
+import { POST as postChatImageRoute } from "@/app/api/chat/image/route";
 
 describe("Workspaces and Projects API & Service Tests (Step 1.6)", () => {
   const alice: Actor = {
@@ -265,6 +273,39 @@ describe("Workspaces and Projects API & Service Tests (Step 1.6)", () => {
       expect(updated.title).toBe("Renamed Title");
     });
 
+    it("authorizes PATCH before input processing: rejects empty update with 422 validation error", async () => {
+      mockWorkspaceFindFirst.mockResolvedValue({
+        id: "ws_01",
+        ownerId: alice.userId,
+        projectId: null,
+        deletedAt: null,
+        members: [],
+      });
+
+      await expect(updateWorkspace(alice, "ws_01", {})).rejects.toMatchObject({
+        status: 422,
+        code: "validation_error",
+      });
+    });
+
+    it("authorizes PATCH before input processing: returns 404 for non-members even with empty input", async () => {
+      mockWorkspaceFindFirst.mockResolvedValue(null);
+
+      await expect(updateWorkspace(bob, "ws_alice", {})).rejects.toMatchObject({
+        status: 404,
+        code: "not_found",
+      });
+    });
+
+    it("authorizes PATCH before input processing: returns 404 for soft-deleted workspaces", async () => {
+      mockWorkspaceFindFirst.mockResolvedValue(null);
+
+      await expect(updateWorkspace(alice, "ws_deleted", { title: "New" })).rejects.toMatchObject({
+        status: 404,
+        code: "not_found",
+      });
+    });
+
     it("soft-deletes workspace by setting deletedAt", async () => {
       mockWorkspaceFindFirst.mockResolvedValue({
         id: "ws_01",
@@ -390,6 +431,30 @@ describe("Workspaces and Projects API & Service Tests (Step 1.6)", () => {
       expect(updated.name).toBe("Acme Core Platform");
     });
 
+    it("authorizes PATCH before input processing: rejects empty update with 422 validation error", async () => {
+      mockProjectFindFirst.mockResolvedValue({
+        id: "proj_01",
+        name: "Acme Platform",
+        ownerId: alice.userId,
+        deletedAt: null,
+        members: [],
+      });
+
+      await expect(updateProject(alice, "proj_01", {})).rejects.toMatchObject({
+        status: 422,
+        code: "validation_error",
+      });
+    });
+
+    it("authorizes PATCH before input processing: returns 404 for non-members even with empty input", async () => {
+      mockProjectFindFirst.mockResolvedValue(null);
+
+      await expect(updateProject(bob, "proj_alice", {})).rejects.toMatchObject({
+        status: 404,
+        code: "not_found",
+      });
+    });
+
     it("soft-deletes project", async () => {
       mockProjectFindFirst.mockResolvedValue({
         id: "proj_01",
@@ -428,6 +493,181 @@ describe("Workspaces and Projects API & Service Tests (Step 1.6)", () => {
       expect(page.items).toHaveLength(1);
       expect(page.items[0]!.title).toBe("Feature A");
       expect(page.nextCursor).toBeNull();
+    });
+  });
+
+  describe("Scoped Conversation Search (Defect 3)", () => {
+    it("searches strictly within 'this chat' when requested and enforces workspace read access", async () => {
+      mockWorkspaceFindFirst.mockResolvedValue({
+        id: "ws_01",
+        ownerId: alice.userId,
+        deletedAt: null,
+        members: [],
+      });
+
+      const mockResponses = [
+        {
+          id: "resp_01",
+          chatId: "ws_01",
+          question: "How does pagination work?",
+          response: "Cursor pagination works using ID and limit.",
+        },
+      ];
+      mockResponseFindMany.mockResolvedValue(mockResponses);
+
+      const res = await searchWorkspaces(alice, {
+        q: "pagination",
+        scope: "this chat",
+        workspaceId: "ws_01",
+      });
+
+      expect(res.results).toEqual(mockResponses);
+      expect(mockResponseFindMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            chatId: "ws_01",
+          }),
+        })
+      );
+    });
+
+    it("rejects 'this chat' search with 404 for non-members (privacy rule)", async () => {
+      mockWorkspaceFindFirst.mockResolvedValue(null);
+
+      await expect(
+        searchWorkspaces(bob, {
+          q: "pagination",
+          scope: "this chat",
+          workspaceId: "ws_alice",
+        })
+      ).rejects.toMatchObject({
+        status: 404,
+      });
+    });
+
+    it("searches across 'all chats' for matching titles and responses", async () => {
+      mockWorkspaceFindMany.mockResolvedValue([
+        { id: "ws_01", title: "Pagination Workspace" },
+      ]);
+      mockResponseFindMany.mockResolvedValue([
+        { id: "resp_02", chatId: "ws_02", response: "See pagination guide" },
+      ]);
+
+      const res = await searchWorkspaces(alice, {
+        q: "pagination",
+        scope: "all chats",
+      });
+
+      expect(res.results).toHaveLength(2);
+    });
+
+    it("GET /api/v1/workspaces/search route returns 200 with search results envelope", async () => {
+      mockWorkspaceFindMany.mockResolvedValue([]);
+      mockResponseFindMany.mockResolvedValue([]);
+
+      const req = new NextRequest(
+        "http://localhost:3000/api/v1/workspaces/search?q=test&scope=all+chats"
+      );
+      const res = await searchWorkspacesRoute(req);
+      expect(res.status).toBe(200);
+      const json = await res.json();
+      expect(json.data).toEqual({ results: [] });
+    });
+  });
+
+  describe("AI Endpoints Generation Permission (Defect 2)", () => {
+    it("POST /api/chat/stream rejects VIEWER role with 403 Forbidden", async () => {
+      // Bob is VIEWER on ws_01
+      mockWorkspaceFindFirst.mockResolvedValue({
+        id: "ws_01",
+        ownerId: alice.userId,
+        deletedAt: null,
+        members: [{ role: "VIEWER" }],
+      });
+      mockGetActor.mockResolvedValue(bob);
+
+      const req = new NextRequest("http://localhost:3000/api/chat/stream", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ prompt: "Hello AI", chatId: "ws_01" }),
+      });
+
+      const res = await postChatStreamRoute(req);
+      expect(res.status).toBe(403);
+    });
+
+    it("POST /api/chat/stream rejects archived workspace with 409 Conflict", async () => {
+      // Alice is OWNER but workspace is archived
+      mockWorkspaceFindFirst.mockResolvedValue({
+        id: "ws_01",
+        ownerId: alice.userId,
+        archivedAt: new Date(),
+        deletedAt: null,
+        members: [],
+      });
+      mockGetActor.mockResolvedValue(alice);
+
+      const req = new NextRequest("http://localhost:3000/api/chat/stream", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ prompt: "Hello AI", chatId: "ws_01" }),
+      });
+
+      const res = await postChatStreamRoute(req);
+      expect(res.status).toBe(409);
+    });
+
+    it("POST /api/chat/stream rejects non-member with 404 Not Found", async () => {
+      mockWorkspaceFindFirst.mockResolvedValue(null);
+      mockGetActor.mockResolvedValue(bob);
+
+      const req = new NextRequest("http://localhost:3000/api/chat/stream", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ prompt: "Hello AI", chatId: "ws_alice" }),
+      });
+
+      const res = await postChatStreamRoute(req);
+      expect(res.status).toBe(404);
+    });
+
+    it("POST /api/chat/image rejects VIEWER role with 403 Forbidden", async () => {
+      mockWorkspaceFindFirst.mockResolvedValue({
+        id: "ws_01",
+        ownerId: alice.userId,
+        deletedAt: null,
+        members: [{ role: "VIEWER" }],
+      });
+      mockGetActor.mockResolvedValue(bob);
+
+      const req = new NextRequest("http://localhost:3000/api/chat/image", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ prompt: "A blue ocean", chatId: "ws_01" }),
+      });
+
+      const res = await postChatImageRoute(req);
+      expect(res.status).toBe(403);
+    });
+
+    it("POST /api/chat/image rejects archived workspace with 409 Conflict", async () => {
+      mockWorkspaceFindFirst.mockResolvedValue({
+        id: "ws_01",
+        ownerId: alice.userId,
+        archivedAt: new Date(),
+        deletedAt: null,
+        members: [],
+      });
+      mockGetActor.mockResolvedValue(alice);
+
+      const req = new NextRequest("http://localhost:3000/api/chat/image", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ prompt: "A blue ocean", chatId: "ws_01" }),
+      });
+
+      const res = await postChatImageRoute(req);
+      expect(res.status).toBe(409);
     });
   });
 

@@ -162,6 +162,18 @@ Internal server errors (`500`) never expose stack traces or raw exception messag
 - Owner only. Rejects with `409 Conflict` if more than 30 days have elapsed.
 - **Response**: `{ data: Workspace }`
 
+### Search Workspaces & Messages
+`GET /api/v1/workspaces/search`
+
+- **Query Parameters**:
+  - `q`: String, 1–200 characters, search term.
+  - `scope`: `"this chat"` | `"all chats"` (default: `"all chats"`).
+  - `workspaceId`: String (required when `scope = "this chat"`).
+- **Behavior**:
+  - When `scope = "this chat"`: searches question and response text strictly within the designated workspace. Enforces caller has at least `workspace.read` permission (returns 404 if caller lacks access or workspace is soft-deleted).
+  - When `scope = "all chats"`: searches accessible workspace titles and conversation messages across all workspaces the caller has access to.
+- **Response**: `{ data: { results: Array<Workspace | Response> } }`
+
 ---
 
 ## 7. Projects API (`/api/v1/projects`)

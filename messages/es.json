@@ -119,6 +119,8 @@
     "noSearchResults": "No se encontraron mensajes ni conversaciones coincidentes.",
     "noChatsYet": "Aún no hay conversaciones. ¡Inicia un nuevo chat arriba!",
     "renameChat": "Renombrar conversación",
+    "renameTitle": "Renombrar conversación",
+    "renamePlaceholder": "Introduce el título de la conversación...",
     "deleteChat": "Eliminar conversación",
     "deleteConfirmTitle": "¿Eliminar conversación?",
     "deleteConfirmDescription": "Esto eliminará permanentemente \"{title}\" y todos sus mensajes. Esta acción no se puede deshacer.",

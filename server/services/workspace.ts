@@ -9,6 +9,7 @@ import {
 } from "@/server/authz/access";
 import type {
   CreateWorkspaceInput,
+  SearchWorkspacesQuery,
   UpdateWorkspaceInput,
 } from "@/lib/schemas/workspace";
 
@@ -149,22 +150,22 @@ export async function updateWorkspace(
   workspaceId: string,
   input: UpdateWorkspaceInput
 ) {
-  // If renaming, require workspace.rename (ADMIN+)
-  if (input.title !== undefined) {
-    await requireWorkspace(actor, workspaceId, "workspace.rename");
+  // Always authorize first, ensuring non-members and soft-deleted resources get 404 (never 403)
+  await requireWorkspace(actor, workspaceId, "workspace.rename");
+
+  // Reject updates containing no supported fields
+  const hasSupportedFields = Object.values(input).some((v) => v !== undefined);
+  if (!hasSupportedFields) {
+    throw Errors.validation({ formErrors: ["No supported update fields provided"] });
   }
 
-  // If archiving/unarchiving, require workspace.archive (ADMIN+)
+  // Field-specific authorization checks
   if (input.archived !== undefined) {
     await requireWorkspace(actor, workspaceId, "workspace.archive");
   }
 
-  // Moving requires ADMIN on workspace AND EDITOR+ on target project
-  if (input.projectId !== undefined) {
-    await requireWorkspace(actor, workspaceId, "workspace.rename");
-    if (input.projectId !== null) {
-      await requireProject(actor, input.projectId, "workspace.generate");
-    }
+  if (input.projectId !== undefined && input.projectId !== null) {
+    await requireProject(actor, input.projectId, "workspace.generate");
   }
 
   return db.workspace.update({
@@ -227,4 +228,95 @@ export async function touchWorkspaceActivity(workspaceId: string) {
     // Non-fatal if workspace doesn't exist
     return null;
   }
+}
+
+export async function searchWorkspaces(
+  actor: Actor,
+  query: SearchWorkspacesQuery
+) {
+  const q = query.q.trim();
+  const targetWorkspaceId = query.workspaceId || query.chatId;
+  const isScoped =
+    (query.scope === "this chat" || query.scope === "this-chat") &&
+    Boolean(targetWorkspaceId);
+
+  if (isScoped && targetWorkspaceId) {
+    // Must enforce read access to the requested workspace
+    await requireWorkspace(actor, targetWorkspaceId, "workspace.read");
+
+    const responseDelegate = (db as any).response;
+    const responses = responseDelegate
+      ? await responseDelegate.findMany({
+          where: {
+            chatId: targetWorkspaceId,
+            OR: [
+              { question: { contains: q, mode: "insensitive" } },
+              { response: { contains: q, mode: "insensitive" } },
+            ],
+          },
+          orderBy: { createdAt: "desc" },
+          take: 50,
+        })
+      : [];
+
+    return { results: responses };
+  }
+
+  // "all chats" scope: search accessible workspace titles and responses
+  const accessibleCondition = {
+    OR: [
+      { ownerId: actor.userId },
+      {
+        members: {
+          some: {
+            userId: actor.userId,
+            role: { not: "NONE" as const },
+          },
+        },
+      },
+      {
+        AND: [
+          {
+            project: {
+              deletedAt: null,
+              members: { some: { userId: actor.userId } },
+            },
+          },
+          {
+            members: { none: { userId: actor.userId } },
+          },
+        ],
+      },
+    ],
+  };
+
+  const workspaces = await db.workspace.findMany({
+    where: {
+      deletedAt: null,
+      title: { contains: q, mode: "insensitive" },
+      ...accessibleCondition,
+    },
+    orderBy: [{ lastActivityAt: "desc" }, { id: "desc" }],
+    take: 20,
+  });
+
+  const responseDelegate = (db as any).response;
+  const responses = responseDelegate
+    ? await responseDelegate.findMany({
+        where: {
+          chat: {
+            deletedAt: null,
+            ...accessibleCondition,
+          },
+          OR: [
+            { question: { contains: q, mode: "insensitive" } },
+            { response: { contains: q, mode: "insensitive" } },
+          ],
+        },
+        orderBy: { createdAt: "desc" },
+        take: 30,
+      })
+    : [];
+
+  return { results: [...workspaces, ...responses] };
 }

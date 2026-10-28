@@ -96,8 +96,13 @@ export async function updateProject(
   projectId: string,
   input: UpdateProjectInput
 ) {
-  if (input.name !== undefined || input.description !== undefined) {
-    await requireProject(actor, projectId, "workspace.rename");
+  // Always authorize first, ensuring non-members and soft-deleted resources get 404 (never 403)
+  await requireProject(actor, projectId, "workspace.rename");
+
+  // Reject updates containing no supported fields
+  const hasSupportedFields = Object.values(input).some((v) => v !== undefined);
+  if (!hasSupportedFields) {
+    throw Errors.validation({ formErrors: ["No supported update fields provided"] });
   }
 
   if (input.archived !== undefined) {

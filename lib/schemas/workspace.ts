@@ -25,6 +25,15 @@ export const listWorkspacesQuerySchema = pageQuery.extend({
     .transform((v) => (v === undefined ? false : v === "true")),
 });
 
+export const searchWorkspacesQuerySchema = z.object({
+  q: z.string().trim().min(1).max(200),
+  scope: z
+    .enum(["this chat", "all chats", "this-chat", "all-chats"])
+    .default("all chats"),
+  workspaceId: z.string().optional(),
+  chatId: z.string().optional(),
+});
+
 export const createProjectSchema = z.object({
   name: z.string().trim().min(1).max(120),
   description: z.string().trim().max(500).optional(),
@@ -47,6 +56,7 @@ export const listProjectsQuerySchema = pageQuery.extend({
 export type CreateWorkspaceInput = z.infer<typeof createWorkspaceSchema>;
 export type UpdateWorkspaceInput = z.infer<typeof updateWorkspaceSchema>;
 export type ListWorkspacesQuery = z.infer<typeof listWorkspacesQuerySchema>;
+export type SearchWorkspacesQuery = z.infer<typeof searchWorkspacesQuerySchema>;
 
 export type CreateProjectInput = z.infer<typeof createProjectSchema>;
 export type UpdateProjectInput = z.infer<typeof updateProjectSchema>;

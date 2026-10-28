@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import ActionResponse from "@/utils/response";
 import { getActor } from "@/server/auth/session";
-import { createWorkspace, getWorkspace } from "@/server/services/workspace";
+import { createWorkspace } from "@/server/services/workspace";
+import { requireWorkspace } from "@/server/authz/access";
+import { ApiError } from "@/server/http/errors";
 import { createResponse, getResponses } from "@/utils/actions/response";
 import {
   createTokenUsage,
@@ -37,6 +39,23 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // If existing workspace provided, enforce "workspace.generate" authorization upfront
+    if (chatId) {
+      try {
+        await requireWorkspace(actor, chatId, "workspace.generate");
+      } catch (err: any) {
+        if (err instanceof ApiError) {
+          return NextResponse.json(ActionResponse.error(err.message, null), {
+            status: err.status,
+          });
+        }
+        return NextResponse.json(
+          ActionResponse.error("Chat not found or unauthorized", null),
+          { status: 404 }
+        );
+      }
+    }
+
     const encoder = new TextEncoder();
 
     const stream = new ReadableStream({
@@ -60,14 +79,6 @@ export async function POST(req: NextRequest) {
               title: workspace.title || prompt.slice(0, 60),
             });
           } else {
-            try {
-              await getWorkspace(actor, chatId);
-            } catch {
-              send("error", { message: "Chat not found or unauthorized" });
-              controller.close();
-              return;
-            }
-
             const existingRes = await getResponses(chatId);
             const responses = existingRes.data?.responses || [];
             if (responses.length > 0) {
