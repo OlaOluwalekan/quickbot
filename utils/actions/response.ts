@@ -2,6 +2,7 @@ import "server-only";
 import { db } from "../db";
 import ActionResponse from "../response";
 import { ResponseType } from "@/types/chats";
+import { touchWorkspaceActivity } from "@/server/services/workspace";
 
 /**
  * Asynchronously retrieves responses from the database for a given chat ID ordered chronologically.
@@ -35,11 +36,11 @@ export interface CreateResponseOptions {
 }
 
 /**
- * Asynchronously creates a new response in the database and updates the chat's last updated timestamp.
+ * Asynchronously creates a new response in the database and updates the workspace's activity.
  *
- * @param {string} chatId - The unique identifier for the chat to which the response belongs.
- * @param {string} question - The question or prompt that was asked in the chat.
- * @param {string} response - The response generated for the given question.
+ * @param {string} chatId - The unique identifier for the workspace to which the response belongs.
+ * @param {string} question - The question or prompt that was asked.
+ * @param {string} response - The response generated.
  * @param {CreateResponseOptions} [options] - Optional metadata (type, imageUrl, mimeType, interactionId).
  * @returns {Promise<ActionResponse<any>>}
  */
@@ -62,14 +63,7 @@ export const createResponse = async (
       },
     });
 
-    await db.chat.update({
-      where: {
-        id: chatId,
-      },
-      data: {
-        updatedAt: new Date(),
-      },
-    });
+    await touchWorkspaceActivity(chatId);
     return ActionResponse.success("Created response", { res });
   } catch {
     return ActionResponse.error("Failed to create response", null);

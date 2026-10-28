@@ -135,7 +135,7 @@ describe("Security: Better Auth & Schema Security (Step 1.3)", () => {
     const res3 = await proxy(publicShare);
     expect(res3.headers.get("location")).toBeNull();
 
-    const protectedPage = new NextRequest("http://localhost:3000/chat");
+    const protectedPage = new NextRequest("http://localhost:3000/workspaces");
     const res4 = await proxy(protectedPage);
     expect(res4.status).toBe(307);
     expect(res4.headers.get("location")).toContain("/auth/login");
@@ -150,6 +150,6 @@ describe("Security: Better Auth & Schema Security (Step 1.3)", () => {
     );
     const res5 = await proxy(authenticatedAuthPage);
     expect(res5.status).toBe(307);
-    expect(res5.headers.get("location")).toContain("/chat");
+    expect(res5.headers.get("location")).toContain("/workspaces");
   });
 });

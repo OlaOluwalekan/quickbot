@@ -40,5 +40,54 @@ export const formatCustomDate = (dateString: string) => {
   }
 }
 
-// Usage
-// console.log(formatCustomDate('2024-03-05')); // e.g., "3 days ago"
+export function getSnippetWithHighlight(
+  text: string,
+  searchTerm: string,
+  snippetLength = 200
+) {
+  const searchRegex = new RegExp(searchTerm, 'i')
+  const match = text.match(searchRegex)
+  if (!match) return ''
+
+  const termIndex = match.index
+  const punctuationRegex = /[.?!]/g
+  let sentenceStart = 0
+  let lastPunctuationIndex = -1
+
+  let pMatch
+  while ((pMatch = punctuationRegex.exec(text)) !== null) {
+    if (pMatch.index < (termIndex as number)) {
+      lastPunctuationIndex = pMatch.index
+    } else {
+      break
+    }
+  }
+  if (lastPunctuationIndex !== -1) {
+    sentenceStart = lastPunctuationIndex + 1
+  }
+
+  while (text[sentenceStart] === ' ' || text[sentenceStart] === '\n') {
+    sentenceStart++
+  }
+
+  let snippetStart = sentenceStart
+  if ((termIndex as number) - sentenceStart > snippetLength - searchTerm.length) {
+    snippetStart = (termIndex as number) - Math.floor(snippetLength / 2)
+    if (snippetStart < sentenceStart) snippetStart = sentenceStart
+  }
+
+  let snippetEnd = snippetStart + snippetLength
+  if (snippetEnd < (termIndex as number) + searchTerm.length) {
+    snippetEnd = (termIndex as number) + searchTerm.length
+    snippetStart = snippetEnd - snippetLength
+    if (snippetStart < sentenceStart) snippetStart = sentenceStart
+  }
+
+  let snippet = text.substring(snippetStart, snippetEnd)
+  snippet = snippet.replace(
+    searchRegex,
+    (found: string) => `<span class="bg-yellow">${found}</span>`
+  )
+
+  return snippet
+}

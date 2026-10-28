@@ -30,14 +30,14 @@ const mockStore = configureMockStore([]);
 
 describe("ChatInput Component", () => {
   const mockUserId = "userId1";
-    let store: any;
+  let store: any;
 
   beforeEach(() => {
     (useRouter as jest.Mock).mockReturnValue({
       push: jest.fn(),
       refresh: jest.fn(),
     });
-    (usePathname as jest.Mock).mockReturnValue("/chat");
+    (usePathname as jest.Mock).mockReturnValue("/workspaces");
 
     store = mockStore({
       general: {

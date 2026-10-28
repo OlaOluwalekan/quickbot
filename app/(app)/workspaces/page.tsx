@@ -1,7 +1,7 @@
 import { getActor } from "@/server/auth/session";
 import TemplatePrompts from "@/components/chats/TemplatePrompts";
 
-const ChatPage = async () => {
+const WorkspacesPage = async () => {
   const actor = await getActor();
 
   const samplePrompts = [
@@ -33,4 +33,4 @@ const ChatPage = async () => {
   );
 };
 
-export default ChatPage;
+export default WorkspacesPage;

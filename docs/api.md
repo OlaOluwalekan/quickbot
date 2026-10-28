@@ -95,3 +95,129 @@ Internal server errors (`500`) never expose stack traces or raw exception messag
   - Your deployment's edge / reverse proxy **must** strip or overwrite incoming `X-Forwarded-For` and `X-Real-IP` headers from untrusted clients (Vercel and Cloudflare do this automatically; on Nginx, configure `proxy_set_header X-Forwarded-For $remote_addr;` and `proxy_set_header X-Real-IP $remote_addr;`).
   - `readTrustedProxyAddress(req)` reads the first entry of `x-forwarded-for` (or `x-real-ip`) and validates it with `node:net`'s `isIP()`, returning `null` if the header is missing or malformed.
   - Auth endpoints (`/api/auth/*`) fail closed (`429`) if `TRUST_PROXY=true` is configured and a request arrives without a valid proxy IP header.
+
+---
+
+## 6. Workspaces API (`/api/v1/workspaces`)
+
+### List Workspaces
+`GET /api/v1/workspaces`
+
+- **Query Parameters**:
+  - `limit`: Integer between 1 and 50 (default: 20).
+  - `cursor`: String, pagination cursor (workspace ID).
+  - `projectId`: CUID, filter to workspaces inside a specific project.
+  - `standalone`: Boolean, if true, returns only workspaces where `projectId` is `null`.
+  - `archived`: Boolean, if true, returns archived workspaces; defaults to active.
+  - `q`: String, full-text substring search on workspace `title` (accelerated by `pg_trgm` GIN index).
+- **Response**: `{ data: { items: Workspace[], nextCursor: string | null } }`
+
+### Create Workspace
+`POST /api/v1/workspaces`
+
+- **Body**:
+  ```json
+  {
+    "title": "My Analysis Workspace",
+    "projectId": "clh1234567890abcdef"
+  }
+  ```
+  - `title`: String, 1–255 characters (optional, defaults to `"New workspace"`).
+  - `projectId`: CUID (optional, requires project `EDITOR` or `OWNER` permission).
+- **Response**: `{ data: Workspace }`
+
+### Get Workspace Detail
+`GET /api/v1/workspaces/:id`
+
+- Returns workspace detail, including associated project and the caller's resolved `role`.
+- Returns `404` if the workspace does not exist, is soft-deleted, or caller has no role.
+- **Response**: `{ data: WorkspaceWithRelations & { role: EffectiveRole } }`
+
+### Update Workspace
+`PATCH /api/v1/workspaces/:id`
+
+- **Body**:
+  ```json
+  {
+    "title": "Renamed Title",
+    "projectId": "clh1234567890abcdef",
+    "archived": false
+  }
+  ```
+  - `title`: String, 1–255 characters (requires `ADMIN` or `OWNER`).
+  - `projectId`: CUID or `null` to move workspace (requires `ADMIN` on workspace and `EDITOR` on target project).
+  - `archived`: Boolean (requires `ADMIN` or `OWNER`).
+- **Response**: `{ data: Workspace }`
+
+### Soft-Delete Workspace
+`DELETE /api/v1/workspaces/:id`
+
+- Soft-deletes the workspace by setting `deletedAt = now()`. Owner only.
+- **Response**: `{ data: Workspace }`
+
+### Restore Workspace
+`POST /api/v1/workspaces/:id/restore`
+
+- Restores a soft-deleted workspace within 30 days of deletion (`deletedAt = null`).
+- Owner only. Rejects with `409 Conflict` if more than 30 days have elapsed.
+- **Response**: `{ data: Workspace }`
+
+---
+
+## 7. Projects API (`/api/v1/projects`)
+
+### List Projects
+`GET /api/v1/projects`
+
+- **Query Parameters**:
+  - `limit`: Integer between 1 and 50 (default: 20).
+  - `cursor`: String, pagination cursor (project ID).
+  - `q`: String, search on project name.
+  - `archived`: Boolean.
+- **Response**: `{ data: { items: Project[], nextCursor: string | null } }`
+
+### Create Project
+`POST /api/v1/projects`
+
+- **Body**:
+  ```json
+  {
+    "name": "Design Systems",
+    "description": "Cross-functional design and code workspaces"
+  }
+  ```
+- **Response**: `{ data: Project }`
+
+### Get Project Detail
+`GET /api/v1/projects/:id`
+
+- Returns project detail with member count, active workspace count, and caller's resolved `role`.
+- Returns `404` if project does not exist, is soft-deleted, or caller is not a member.
+- **Response**: `{ data: ProjectWithCounts & { role: EffectiveRole } }`
+
+### Update Project
+`PATCH /api/v1/projects/:id`
+
+- **Body**:
+  ```json
+  {
+    "name": "New Project Name",
+    "description": "Updated description",
+    "archived": false
+  }
+  ```
+- Requires project `OWNER` or `ADMIN`.
+- **Response**: `{ data: Project }`
+
+### Soft-Delete Project
+`DELETE /api/v1/projects/:id`
+
+- Soft-deletes project by setting `deletedAt = now()`. Workspaces remain intact.
+- Requires project `OWNER`.
+- **Response**: `{ data: Project }`
+
+### List Project Workspaces
+`GET /api/v1/projects/:id/workspaces`
+
+- Lists active workspaces contained within the project that are visible to the caller.
+- **Response**: `{ data: { items: Workspace[], nextCursor: string | null } }`

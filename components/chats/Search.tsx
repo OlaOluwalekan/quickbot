@@ -2,7 +2,6 @@
 
 import { FaSearch } from "react-icons/fa";
 import { ChangeEvent, useEffect, useState } from "react";
-import clsx from "clsx";
 import { ChatProps, ResponseProps } from "@/types/chats";
 import { ChatSearchResult, ResponseSearchResult } from "./SearchResult";
 import { usePathname } from "next/navigation";
@@ -15,7 +14,7 @@ const Search = ({ userId }: { userId: string }) => {
   const t = useTranslations("Chat");
   const [searchText, setSearchText] = useState("");
   const [results, setResults] = useState<(ChatProps | ResponseProps)[]>([]);
-  const pathname = usePathname() || "/chat";
+  const pathname = usePathname() || "/workspaces";
   const path = pathname.split("/");
   const { searchResultIsOpen } = useSelector(
     (store: RootState) => store.general
@@ -23,12 +22,15 @@ const Search = ({ userId }: { userId: string }) => {
   const dispatch = useDispatch();
 
   const lastPath = path[path.length - 1] || "";
-  let chatId = "";
-  if (lastPath.toLowerCase() !== "chat") {
-    chatId = lastPath;
+  let workspaceId = "";
+  if (
+    lastPath.toLowerCase() !== "chat" &&
+    lastPath.toLowerCase() !== "workspaces"
+  ) {
+    workspaceId = lastPath;
   }
   const [searchOption, setSearchOption] = useState(
-    chatId ? "this chat" : "all chats"
+    workspaceId ? "this chat" : "all chats"
   );
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -50,13 +52,15 @@ const Search = ({ userId }: { userId: string }) => {
     try {
       const params = new URLSearchParams({
         q: searchText.trim(),
-        option: searchOption,
-        chatId,
       });
-      const res = await fetch(`/api/chats/search?${params.toString()}`);
+      const res = await fetch(`/api/v1/workspaces?${params.toString()}`);
       const json = await res.json();
-      if (json.success && Array.isArray(json.data?.results)) {
+      if (Array.isArray(json.data?.items)) {
+        setResults(json.data.items);
+      } else if (Array.isArray(json.data?.results)) {
         setResults(json.data.results);
+      } else {
+        setResults([]);
       }
     } catch {
       setResults([]);
@@ -96,7 +100,7 @@ const Search = ({ userId }: { userId: string }) => {
           className="bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 px-2.5 py-1.5 text-xs font-medium focus:outline-none cursor-pointer"
           onChange={(e) => setSearchOption(e.target.value)}
         >
-          {chatId && <option value="this chat">{t("searchThisChat")}</option>}
+          {workspaceId && <option value="this chat">{t("searchThisChat")}</option>}
           <option value="all chats">{t("searchAllChats")}</option>
         </select>
       </form>
@@ -113,7 +117,7 @@ const Search = ({ userId }: { userId: string }) => {
                 <div key={result.id} className="py-1.5">
                   {"title" in result ? (
                     <ChatSearchResult
-                      result={result}
+                      result={result as ChatProps}
                       searchText={searchText}
                       setSearchText={setSearchText}
                     />

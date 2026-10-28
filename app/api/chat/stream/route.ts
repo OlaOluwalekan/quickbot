@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import ActionResponse from "@/utils/response";
 import { getActor } from "@/server/auth/session";
-import { createChat, getChatById } from "@/utils/actions/chat";
+import { createWorkspace, getWorkspace } from "@/server/services/workspace";
 import { createResponse, getResponses } from "@/utils/actions/response";
 import {
   createTokenUsage,
@@ -51,24 +51,18 @@ export async function POST(req: NextRequest) {
             [];
 
           if (!chatId) {
-            const created = await createChat(actor.userId, prompt);
-            if (!created.success || !created.data?.chatId) {
-              send("error", { message: "Failed to create chat" });
-              controller.close();
-              return;
-            }
-            chatId = created.data.chatId;
+            const workspace = await createWorkspace(actor, {
+              title: prompt.slice(0, 60),
+            });
+            chatId = workspace.id;
             send("chat_created", {
               chatId,
-              title: created.data.chat?.title || prompt.slice(0, 60),
+              title: workspace.title || prompt.slice(0, 60),
             });
           } else {
-            const chatCheck = await getChatById(chatId);
-            if (
-              !chatCheck.success ||
-              !chatCheck.data?.chat ||
-              chatCheck.data.chat.createdBy !== actor.userId
-            ) {
+            try {
+              await getWorkspace(actor, chatId);
+            } catch {
               send("error", { message: "Chat not found or unauthorized" });
               controller.close();
               return;
@@ -115,8 +109,8 @@ export async function POST(req: NextRequest) {
               await updateUserToken(actor.userId, remainingTokens);
 
               try {
-                revalidatePath("/chat");
-                revalidatePath(`/chat/${chatId}`);
+                revalidatePath("/workspaces");
+                revalidatePath(`/workspaces/${chatId}`);
               } catch {
                 // Ignore revalidatePath warnings inside streaming context
               }

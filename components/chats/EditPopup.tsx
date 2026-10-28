@@ -33,17 +33,18 @@ const EditPopup = () => {
 
     startTransition(async () => {
       try {
-        const res = await fetch(`/api/chats/${dialogData.id}`, {
+        const res = await fetch(`/api/v1/workspaces/${dialogData.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ title: chatTitle.trim() }),
         });
         const json = await res.json();
-        if (json.success) {
+        if (res.ok && json.data) {
           toast.success(t("renameSuccess"));
           dispatch(setEditPopUpOpen(false));
+          const newTitle = json.data.title || json.data.updatedChat?.title || chatTitle.trim();
           if (currentPageId === dialogData.id) {
-            dispatch(setCurrentPageTitle(json.data.updatedChat.title));
+            dispatch(setCurrentPageTitle(newTitle));
           }
           dispatch(toggleMobileNavOpen(false));
           router.refresh();
@@ -63,19 +64,26 @@ const EditPopup = () => {
         onClick={(e: MouseEvent) => e.stopPropagation()}
         className="w-[92%] max-w-md rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-2xl space-y-4"
       >
-        <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-          {t("renameChat")}
-        </h3>
+        <div className="flex items-center gap-3 text-indigo-600 dark:text-indigo-400">
+          <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center shrink-0">
+            <FaEdit className="text-lg" />
+          </div>
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+            {t("renameTitle")}
+          </h3>
+        </div>
+
         <InputWithIcon
           type="text"
-          placeholder={t("renameChat")}
           icons={<FaEdit />}
           name="chatTitle"
           value={chatTitle}
+          placeholder={t("renamePlaceholder")}
           onChange={(e: ChangeEvent<HTMLInputElement>) =>
             setChatTitle(e.target.value)
           }
         />
+
         <div className="flex items-center justify-end gap-2.5 pt-2">
           <BasicButton
             type="button"
@@ -86,10 +94,10 @@ const EditPopup = () => {
           />
           <BasicButton
             type="submit"
-            text={isPending ? tCommon("loading") : tCommon("save")}
+            text={isPending ? tCommon("loading") : t("save")}
             size="small"
             theme="primary"
-            disabled={!chatTitle.trim() || isPending}
+            disabled={isPending || !chatTitle.trim()}
           />
         </div>
       </form>

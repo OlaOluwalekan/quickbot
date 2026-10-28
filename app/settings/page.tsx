@@ -31,14 +31,14 @@ const SettingsPage = async () => {
       {/* Top Navbar */}
       <header className="w-full border-b border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between">
-          <Link href="/chat" className="flex items-center gap-2">
+          <Link href="/workspaces" className="flex items-center gap-2">
             <Logo size="icon" />
             <AppName />
           </Link>
           <div className="flex items-center gap-3">
             <LocaleSwitcher />
             <LinkButton
-              href="/chat"
+              href="/workspaces"
               size="small"
               theme="primary"
               text={t("backToChat")}

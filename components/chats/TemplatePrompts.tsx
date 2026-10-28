@@ -46,7 +46,7 @@ const TemplatePrompts = ({
       mode: chatMode,
       dispatch,
       onNavigateChat: (newChatId) => {
-        router.push(`/chat/${newChatId}`);
+        router.push(`/workspaces/${newChatId}`);
         router.refresh();
       },
       onRefresh: () => {

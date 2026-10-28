@@ -1,35 +1,29 @@
 import { getActor } from "@/server/auth/session";
 import ResponseList from "@/components/chats/ResponseList";
 import NotFound from "@/components/not-found/NotFound";
-import { getChatById } from "@/utils/actions/chat";
+import { getWorkspace } from "@/server/services/workspace";
 import { getResponses } from "@/utils/actions/response";
 
-const SingleChatPage = async ({
+const SingleWorkspacePage = async ({
   params,
 }: {
-  params: Promise<{ chatId: string }>;
+  params: Promise<{ id: string }>;
 }) => {
   const actor = await getActor();
-  const chatId = (await params).chatId;
-
-  const responsesRes = await getResponses(chatId);
-
-  if (!responsesRes.data) {
+  if (!actor) {
     return <NotFound />;
   }
 
-  const responses = responsesRes.data.responses;
+  const workspaceId = (await params).id;
 
-  if (!responses || responses.length === 0) {
+  try {
+    await getWorkspace(actor, workspaceId);
+  } catch {
     return <NotFound />;
   }
 
-  const chatResponse = await getChatById(responses[0].chatId);
-  const chat = chatResponse.data.chat;
-
-  if (!chat || chat.createdBy !== actor?.userId) {
-    return <NotFound />;
-  }
+  const responsesRes = await getResponses(workspaceId);
+  const responses = responsesRes.data?.responses || [];
 
   return (
     <div className="flex-1 flex flex-col min-h-0 w-full h-full overflow-hidden">
@@ -41,4 +35,4 @@ const SingleChatPage = async ({
   );
 };
 
-export default SingleChatPage;
+export default SingleWorkspacePage;

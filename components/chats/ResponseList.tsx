@@ -45,14 +45,16 @@ const ResponseList = ({
     if (!currentChatId) return;
     dispatch(clearOptimisticResponses());
     startTransition(() => {
-      fetch(`/api/chats/${currentChatId}`)
+      fetch(`/api/v1/workspaces/${currentChatId}`)
         .then((r) => r.json())
         .then((res) => {
-        if (res?.success && res.data?.chat) {
-          dispatch(setCurrentPageTitle(res.data.chat.title));
-          dispatch(setCurrentPageId(res.data.chat.id));
-        }
-      });
+          const ws = res?.data?.workspace || res?.data?.chat || res?.data;
+          if (ws?.id && ws?.title) {
+            dispatch(setCurrentPageTitle(ws.title));
+            dispatch(setCurrentPageId(ws.id));
+          }
+        })
+        .catch(() => {});
     });
 
     if (containerRef.current) {
