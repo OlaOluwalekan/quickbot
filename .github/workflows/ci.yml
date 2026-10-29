@@ -22,7 +22,7 @@ jobs:
       RESEND_API_KEY: re_ci_dummy
       EMAIL_FROM: "Klecx <ci@example.com>"
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: actions/setup-node@v6
@@ -43,7 +43,7 @@ jobs:
   secrets:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
