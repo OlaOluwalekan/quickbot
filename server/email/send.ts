@@ -185,7 +185,7 @@ export function getResendClient(): Resend {
 /**
  * Transactional email sender:
  * - One place that sends all emails with templates, localization, and no secrets in logs.
- * - In development with a test/CI key (or missing key), prints the clickable link to the console.
+ * - In development with a placeholder/dummy key, writes the email (and its link) to the console.
  */
 export async function sendEmail<T extends EmailTemplateName>(
   template: T,
@@ -195,13 +195,14 @@ export async function sendEmail<T extends EmailTemplateName>(
 ): Promise<SendEmailResult> {
   const rendered = await renderEmail(template, to, data, opts);
 
-  const isDevOrTest =
-    env.NODE_ENV !== "production" ||
-    env.RESEND_API_KEY.startsWith("re_ci") ||
-    env.RESEND_API_KEY.includes("test");
-
-  // In development/test with no live Resend key, log the email and link for local clicking
-  if (isDevOrTest && env.RESEND_API_KEY.startsWith("re_ci")) {
+  // In development with no live Resend key or a placeholder key, log the email and link for local clicking
+  if (
+    env.NODE_ENV === "development" &&
+    (!env.RESEND_API_KEY ||
+      env.RESEND_API_KEY.includes("dummy") ||
+      env.RESEND_API_KEY.includes("placeholder") ||
+      env.RESEND_API_KEY.startsWith("re_dev"))
+  ) {
     const rawData = data as unknown as Record<string, unknown>;
     const actionUrl =
       (rawData.url as string) ||
@@ -236,6 +237,19 @@ export async function sendEmail<T extends EmailTemplateName>(
       console.error(
         `[Email] Delivery failure template=${template} to=${maskEmail(to)} error=${error.message}`
       );
+
+      if (env.NODE_ENV === "development") {
+        const rawData = data as unknown as Record<string, unknown>;
+        const actionUrl =
+          (rawData.url as string) ||
+          (rawData.inviteUrl as string) ||
+          (rawData.shareUrl as string) ||
+          null;
+        console.info(
+          `[Dev Email Fallback:${template}] to=${to} url=${actionUrl}`
+        );
+      }
+
       return { success: false, error: error.message };
     }
 
@@ -257,7 +271,7 @@ export async function sendEmail<T extends EmailTemplateName>(
       `[Email] Unexpected error template=${template} to=${maskEmail(to)} error=${errorMessage}`
     );
 
-    if (env.NODE_ENV !== "production") {
+    if (env.NODE_ENV === "development") {
       // In dev fallback, write the clickable link
       const rawData = data as unknown as Record<string, unknown>;
       const actionUrl =

@@ -170,6 +170,7 @@ describe("Step 1.7 — Transactional Email Module", () => {
         { locale: "en" }
       );
 
+      expect(mockSend).toHaveBeenCalledTimes(1);
       expect(result.success).toBe(true);
       expect(result.id).toBeDefined();
     });
@@ -186,8 +187,23 @@ describe("Step 1.7 — Transactional Email Module", () => {
         sampleData["reset-password"]
       );
 
+      expect(mockSend).toHaveBeenCalledTimes(1);
       expect(result.success).toBe(false);
       expect(result.error).toBe("Domain not verified");
+    });
+
+    it("handles network rejection from Resend gracefully", async () => {
+      mockSend.mockRejectedValueOnce(new Error("Connection reset"));
+
+      const result = await sendEmail(
+        "reset-password",
+        "user@example.com",
+        sampleData["reset-password"]
+      );
+
+      expect(mockSend).toHaveBeenCalledTimes(1);
+      expect(result.success).toBe(false);
+      expect(result.error).toBe("Connection reset");
     });
   });
 });
