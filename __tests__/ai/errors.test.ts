@@ -36,11 +36,11 @@ describe("Step 2.1 — AI Error Normalization", () => {
   it("normalizes 401, 403, and PERMISSION_DENIED into non-retryable auth without leaking keys", () => {
     const err401 = normalizeGeminiError({
       status: 401,
-      message: "API key not valid. Please pass a valid API key: AIzaSyD-secret-key-12345",
+      message: "API key not valid. Please pass a valid API key: mock_gemini_key_secret_12345",
     });
     expect(err401.category).toBe("auth");
     expect(err401.retryable).toBe(false);
-    expect(err401.safeMessage).not.toContain("AIzaSyD"); // Never leaks API secrets!
+    expect(err401.safeMessage).not.toContain("mock_gemini_key_secret"); // Never leaks API secrets!
   });
 
   it("normalizes SAFETY finish reason into non-retryable safety", () => {
