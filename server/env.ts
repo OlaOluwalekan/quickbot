@@ -12,6 +12,7 @@ export const envSchema = z
     GEMINI_IMAGE_MODEL: z.string().default("gemini-nano-banana-2.1"),
     RESEND_API_KEY: z.string().startsWith("re_"),
     EMAIL_FROM: z.string().min(3),
+    SUPPORT_EMAIL: z.string().min(3).default("support@mail.klecx.vyraxity.com"),
     GITHUB_CLIENT_ID: z.string().optional(),
     GITHUB_CLIENT_SECRET: z.string().optional(),
     GOOGLE_CLIENT_ID: z.string().optional(),
@@ -81,6 +82,7 @@ export function validateEnv(input: Record<string, unknown> = process.env) {
     NODE_ENV: isNextProductionBuildPhase ? "development" : input.NODE_ENV,
     APP_URL: input.APP_URL || input.DOMAIN,
     BETTER_AUTH_SECRET: input.BETTER_AUTH_SECRET || input.AUTH_SECRET,
+    SUPPORT_EMAIL: input.SUPPORT_EMAIL || undefined,
     UPSTASH_REDIS_REST_URL: input.UPSTASH_REDIS_REST_URL || undefined,
     UPSTASH_REDIS_REST_TOKEN: input.UPSTASH_REDIS_REST_TOKEN || undefined,
     TRUST_PROXY:

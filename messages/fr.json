@@ -167,5 +167,81 @@
     "usageResponseId": "ID d'interaction / réponse",
     "usageTokens": "Jetons utilisés",
     "noTokenUsage": "Aucune utilisation de jetons enregistrée pour le moment."
+  },
+  "Email": {
+    "common": {
+      "appName": "Klecx",
+      "supportNotice": "Des questions ou besoin d'aide ? Contactez notre équipe sur {supportEmail}",
+      "legalNotice": "© {year} Klecx AI. Tous droits réservés. 123 Innovation Way, Suite 400. Services Merchant of Record assurés par Creem.",
+      "transactionalDisclaimer": "Ceci est un message transactionnel automatique envoyé à {email}. Vous le recevez en raison d'une action ou d'un événement sur votre compte.",
+      "copyUrlNotice": "Si le bouton ci-dessus ne fonctionne pas, copiez et collez ce lien dans votre navigateur web :"
+    },
+    "verifyEmail": {
+      "subject": "Vérifiez votre adresse e-mail Klecx",
+      "heading": "Vérifiez votre adresse e-mail",
+      "greeting": "Bonjour,",
+      "greetingWithName": "Bonjour {name},",
+      "body": "Merci d'avoir rejoint Klecx. Veuillez vérifier votre adresse e-mail pour activer votre compte et commencer à utiliser votre espace de travail d'IA.",
+      "button": "Vérifier l'e-mail",
+      "disclaimer": "Ce lien de vérification expirera dans 24 heures. Si vous n'avez pas créé de compte Klecx, vous pouvez ignorer cet e-mail."
+    },
+    "resetPassword": {
+      "subject": "Réinitialisez votre mot de passe Klecx",
+      "heading": "Réinitialisez votre mot de passe",
+      "greeting": "Bonjour,",
+      "greetingWithName": "Bonjour {name},",
+      "body": "Nous avons reçu une demande de réinitialisation de votre mot de passe Klecx. Cliquez sur le bouton ci-dessous pour choisir un nouveau mot de passe sécurisé.",
+      "button": "Réinitialiser le mot de passe",
+      "disclaimer": "Ce lien expirera dans 1 heure. Si vous n'avez pas demandé cette réinitialisation, ignorez cet e-mail en toute sécurité. Votre mot de passe reste inchangé."
+    },
+    "invitation": {
+      "subject": "{inviterName} vous a invité(e) à rejoindre {teamOrProjectName} sur Klecx",
+      "heading": "Vous avez été invité(e) à collaborer !",
+      "greeting": "Bonjour,",
+      "body": "{inviterName} vous a invité(e) à rejoindre « {teamOrProjectName} » avec le rôle {role} sur Klecx.",
+      "button": "Accepter l'invitation",
+      "disclaimer": "Si vous n'attendiez pas cette invitation, vous pouvez ignorer cet e-mail."
+    },
+    "newSignIn": {
+      "subject": "Alerte de sécurité : Nouvelle connexion à votre compte Klecx",
+      "heading": "Nouvelle connexion détectée",
+      "greeting": "Bonjour,",
+      "body": "Une nouvelle connexion à votre compte Klecx a été détectée le {time} depuis {device} ({ipAddress}, {location}).",
+      "button": "Consulter l'activité du compte",
+      "disclaimer": "S'il s'agissait de vous, aucune action n'est requise. Si vous ne vous êtes pas connecté à ce moment, veuillez modifier votre mot de passe immédiatement."
+    },
+    "passwordChanged": {
+      "subject": "Alerte de sécurité : Votre mot de passe Klecx a été modifié",
+      "heading": "Mot de passe modifié avec succès",
+      "greeting": "Bonjour,",
+      "body": "Le mot de passe de votre compte Klecx a été mis à jour avec succès le {time}.",
+      "button": "Gérer les paramètres du compte",
+      "disclaimer": "Si vous êtes à l'origine de cette modification, vous pouvez ignorer cet e-mail. Si vous n'avez PAS effectué ce changement, contactez immédiatement l'assistance."
+    },
+    "shareCreated": {
+      "subject": "Le lien de partage pour votre espace « {title} » est prêt",
+      "heading": "Lien d'espace partagé créé",
+      "greeting": "Bonjour,",
+      "body": "Un lien de partage a été généré pour votre espace de travail « {title} ». Toute personne y ayant accès peut consulter la conversation selon les droits accordés.",
+      "button": "Ouvrir l'espace partagé",
+      "disclaimer": "Vous pouvez révoquer ou ajuster les permissions de partage à tout moment depuis les paramètres de votre espace."
+    },
+    "creditsLow": {
+      "subject": "Avis : Votre solde de jetons Klecx est presque épuisé",
+      "heading": "Solde de jetons faible",
+      "greeting": "Bonjour,",
+      "body": "Il vous reste {remainingCredits} jetons dans votre solde Klecx. Rechargez vos jetons pour garantir une génération IA fluide et sans interruption.",
+      "button": "Recharger les jetons",
+      "disclaimer": "Vous pouvez configurer la recharge automatique ou changer d'offre à tout moment dans les paramètres."
+    },
+    "paymentFailed": {
+      "subject": "Action requise : Échec du paiement pour votre abonnement Klecx",
+      "heading": "Échec du prélèvement",
+      "greeting": "Bonjour,",
+      "body": "Nous n'avons pas pu prélever votre paiement. Veuillez mettre à jour votre moyen de paiement pour maintenir votre abonnement actif.",
+      "bodyWithReason": "Nous n'avons pas pu prélever votre paiement en raison de : {reason}. Veuillez mettre à jour votre moyen de paiement pour maintenir votre abonnement actif.",
+      "button": "Mettre à jour le paiement",
+      "disclaimer": "Nous relancerons automatiquement la tentative de paiement dans les prochains jours."
+    }
   }
 }
