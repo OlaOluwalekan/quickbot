@@ -21,7 +21,6 @@
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.10.0",
     "@reduxjs/toolkit": "^2.2.6",
-    "@speechly/react-client": "^2.2.4",
     "@tailwindcss/postcss": "^4.3.3",
     "@upstash/ratelimit": "^2.2.0",
     "@upstash/redis": "^1.40.0",
