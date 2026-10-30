@@ -28,6 +28,23 @@ describe("server/env validation", () => {
       expect(result.data.DATABASE_URL).toBe(baseValidEnv.DATABASE_URL);
       expect(result.data.BETTER_AUTH_SECRET).toBe(baseValidEnv.BETTER_AUTH_SECRET);
       expect(result.data.SUPPORT_EMAIL).toBe("support@mail.klecx.vyraxity.com");
+      expect(result.data.GEMINI_TEXT_MODEL_ECONOMY).toBeDefined();
+      expect(result.data.GEMINI_TEXT_MODEL_STANDARD).toBeDefined();
+    }
+  });
+
+  it("accepts custom Gemini economy and standard models", () => {
+    const result = envSchema.safeParse({
+      ...baseValidEnv,
+      GEMINI_TEXT_MODEL_ECONOMY: "gemini-2.0-flash-exp",
+      GEMINI_TEXT_MODEL_STANDARD: "gemini-1.5-pro-002",
+      GEMINI_IMAGE_MODEL: "imagen-3.0-fast",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.GEMINI_TEXT_MODEL_ECONOMY).toBe("gemini-2.0-flash-exp");
+      expect(result.data.GEMINI_TEXT_MODEL_STANDARD).toBe("gemini-1.5-pro-002");
+      expect(result.data.GEMINI_IMAGE_MODEL).toBe("imagen-3.0-fast");
     }
   });
 
