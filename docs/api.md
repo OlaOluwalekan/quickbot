@@ -315,3 +315,81 @@ Keepalive ping comments are emitted every 15 seconds:
 - Explicitly halts the running upstream provider stream and settles credits up to the cancellation point.
 - **Authorization**: Requires `workspace.generate` permission.
 - **Response**: `{ "data": { "success": true, "status": "CANCELLED" } }`
+
+
+---
+
+## 6. Response Versions & Regeneration
+
+### List Workspace Responses
+`GET /api/v1/workspaces/:id/responses?cursor&limit`
+
+- Returns responses ordered chronologically by `(sortAt, id)` ascending.
+- **Authorization**: Requires `workspace.read` permission.
+- Each item includes `activeVersion` (with its latest edit summary: `hasEdits`, `editCount`) and `versionCount`.
+- **Response**:
+  ```json
+  {
+    "data": {
+      "items": [
+        {
+          "id": "resp_123",
+          "workspaceId": "ws_123",
+          "createdById": "user_123",
+          "prompt": "Explain quantum computing",
+          "kind": "TEXT",
+          "origin": "DIRECT",
+          "sortAt": "2026-10-31T12:00:00.000Z",
+          "activeVersionId": "ver_002",
+          "createdAt": "2026-10-31T12:00:00.000Z",
+          "activeVersion": {
+            "id": "ver_002",
+            "number": 2,
+            "status": "COMPLETE",
+            "content": "Quantum computing is...",
+            "thoughtSummary": "Analyzing quantum states...",
+            "modelKey": "text-economy",
+            "hasEdits": false,
+            "editCount": 0,
+            "latestEditContent": null
+          },
+          "versionCount": 2
+        }
+      ],
+      "nextCursor": null
+    }
+  }
+  ```
+
+### List Response Versions
+`GET /api/v1/responses/:id/versions`
+
+- Lists all versions for a response ordered by `number` ascending.
+- **Authorization**: Requires `workspace.read` permission.
+- **Response**: `{ "data": [ ResponseVersion & { isActive: boolean, hasEdits: boolean, editCount: number } ] }`
+
+### Regenerate Response Turn
+`POST /api/v1/responses/:id/regenerate`
+
+- Creates **version N+1** without mutating or replacing earlier versions.
+- Uses conversation context **up to that response only** (excludes subsequent turns).
+- On completion, automatically updates `Response.activeVersionId` to the newly generated version.
+- **Authorization**: Requires `workspace.regenerate` permission.
+- **SSE Stream**: Adheres to the exact same SSE contract as `/api/v1/workspaces/:id/generations`.
+- **Body**:
+  ```json
+  {
+    "idempotencyKey": "uuid-v4-or-v7",
+    "modelKey": "text-economy",
+    "think": false,
+    "language": "en"
+  }
+  ```
+
+### Switch Active Response Version
+`PUT /api/v1/responses/:id/active-version`
+
+- Changes what version is displayed by default for everyone viewing the workspace.
+- **Authorization**: Requires `workspace.regenerate` permission.
+- **Body**: `{ "versionId": "ver_001" }`
+- **Response**: `{ "data": { "responseId": "resp_123", "activeVersionId": "ver_001" } }`
