@@ -95,6 +95,7 @@ async function generateWorkspaceTitle(
       {
         modelKey: "text-economy",
         messages: [{ role: "user", parts: [{ type: "text", text: titlePrompt }] }],
+        thinking: { summaries: false },
       },
       {
         userPlan: "FREE",
@@ -137,7 +138,6 @@ async function executeDetachedGeneration(params: {
   workspaceId: string;
   responseId: string;
   versionId: string;
-  actorId: string;
   billedAccountId: string;
   modelKey: ModelKey;
   prompt: string;
@@ -146,6 +146,7 @@ async function executeDetachedGeneration(params: {
   reservedCredits: number;
   inputMessages: GenerateRequest["messages"];
   systemPrompt: string;
+  think?: boolean;
   providerInstance?: AiProvider;
   isFirstTurn: boolean;
   abortController: AbortController;
@@ -162,6 +163,7 @@ async function executeDetachedGeneration(params: {
     truncated,
     inputMessages,
     systemPrompt,
+    think,
     providerInstance,
     isFirstTurn,
     abortController,
@@ -174,13 +176,13 @@ async function executeDetachedGeneration(params: {
   const settleKey = `stl_${generationId}`;
   const releaseKey = `rel_${generationId}`;
 
-  // Emit status: preparing
+  // Emit status: preparing (includes context_truncated flag if truncated)
   broadcastEvent(active, "status", { stage: "preparing", truncated });
 
   let checkpointInterval: NodeJS.Timeout | null = null;
   let lastSavedLength = 0;
 
-  // Persist partial text every ~2 seconds
+  // Persist partial text and thoughtSummary every ~2 seconds
   checkpointInterval = setInterval(async () => {
     if (active.currentContent.length !== lastSavedLength && !active.isComplete) {
       lastSavedLength = active.currentContent.length;
@@ -219,6 +221,8 @@ async function executeDetachedGeneration(params: {
       active.currentContent = `![Generated Image](data:${imgResult.mime};base64,${base64Data})`;
       active.tokensEmitted = true;
 
+      broadcastEvent(active, "status", { stage: "saving" });
+
       const chargedCredits = creditsFor(modelKey, { images: 1 });
       await settle(billedAccountId, generationId, chargedCredits, settleKey);
 
@@ -248,6 +252,7 @@ async function executeDetachedGeneration(params: {
         });
       });
 
+      broadcastEvent(active, "status", { stage: "done" });
       broadcastEvent(active, "delta", { text: active.currentContent });
       broadcastEvent(active, "usage", {
         inputTokens: 0,
@@ -267,13 +272,21 @@ async function executeDetachedGeneration(params: {
     }
 
     // TEXT generation
-    broadcastEvent(active, "status", { stage: "writing" });
+    const modelDef = getModel(modelKey);
+    const supportsThinking = modelDef.caps.thinkingSummaries === true;
+    const thinkingConfig = supportsThinking
+      ? {
+          summaries: true,
+          level: think ? ("high" as const) : ("low" as const),
+        }
+      : { summaries: false };
 
     const stream = streamAi(
       {
         modelKey,
         messages: inputMessages,
         system: systemPrompt,
+        thinking: thinkingConfig,
       },
       {
         userPlan: "FREE",
@@ -281,6 +294,7 @@ async function executeDetachedGeneration(params: {
       }
     );
 
+    let stage: "preparing" | "thinking" | "writing" = "preparing";
     let usage = { inputTokens: 0, outputTokens: 0 };
 
     for await (const event of stream) {
@@ -289,10 +303,20 @@ async function executeDetachedGeneration(params: {
       }
 
       if (event.type === "thought_delta") {
-        active.currentThought += event.text;
-        active.tokensEmitted = true;
-        broadcastEvent(active, "thought", { text: event.text });
+        if (supportsThinking) {
+          if (stage !== "thinking") {
+            stage = "thinking";
+            broadcastEvent(active, "status", { stage: "thinking" });
+          }
+          active.currentThought += event.text;
+          active.tokensEmitted = true;
+          broadcastEvent(active, "thought", { text: event.text });
+        }
       } else if (event.type === "text_delta") {
+        if (stage !== "writing") {
+          stage = "writing";
+          broadcastEvent(active, "status", { stage: "writing" });
+        }
         active.currentContent += event.text;
         active.tokensEmitted = true;
         broadcastEvent(active, "delta", { text: event.text });
@@ -307,6 +331,9 @@ async function executeDetachedGeneration(params: {
     if (abortController.signal.aborted) {
       throw new Error("Cancelled");
     }
+
+    // Stage: saving
+    broadcastEvent(active, "status", { stage: "saving" });
 
     // If usage was not provided by provider, estimate from content length
     if (usage.outputTokens === 0 && active.currentContent.length > 0) {
@@ -350,6 +377,8 @@ async function executeDetachedGeneration(params: {
       });
     });
 
+    // Stage: done
+    broadcastEvent(active, "status", { stage: "done" });
     broadcastEvent(active, "usage", {
       inputTokens: usage.inputTokens,
       outputTokens: usage.outputTokens,
@@ -471,6 +500,7 @@ async function executeDetachedGeneration(params: {
         .catch(() => {});
     }
 
+    broadcastEvent(active, "status", { stage: "failed" });
     broadcastEvent(active, "error", { code: errorCode });
   } finally {
     if (checkpointInterval) {
@@ -491,7 +521,7 @@ async function executeDetachedGeneration(params: {
 }
 
 /**
- * Creates and streams a generation according to Step 2.4 specifications.
+ * Creates and streams a generation according to Step 2.4 and Step 2.5 specifications.
  */
 export async function createAndStreamGeneration(
   actor: Actor,
@@ -545,11 +575,19 @@ export async function createAndStreamGeneration(
               })
             )
           );
+          if (version?.thoughtSummary) {
+            controller.enqueue(
+              encoder.encode(formatSSEEvent("thought", { text: version.thoughtSummary }))
+            );
+          }
           if (version?.content) {
             controller.enqueue(
               encoder.encode(formatSSEEvent("delta", { text: version.content }))
             );
           }
+          controller.enqueue(
+            encoder.encode(formatSSEEvent("status", { stage: "done" }))
+          );
           controller.enqueue(
             encoder.encode(
               formatSSEEvent("completed", {
@@ -590,7 +628,7 @@ export async function createAndStreamGeneration(
               try {
                 controller.close();
               } catch {
-                // controller already closed
+                // already closed
               }
             },
           };
@@ -781,13 +819,15 @@ export async function createAndStreamGeneration(
     versionId: version.id,
   });
 
+  // Emit initial queued status event
+  broadcastEvent(active, "status", { stage: "queued" });
+
   // 8. Run detached generation pipeline
   executeDetachedGeneration({
     generationId: generation.id,
     workspaceId,
     responseId: response.id,
     versionId: version.id,
-    actorId: actor.userId,
     billedAccountId,
     modelKey,
     prompt: input.prompt,
@@ -796,6 +836,7 @@ export async function createAndStreamGeneration(
     reservedCredits: reserveAmount,
     inputMessages: messages,
     systemPrompt,
+    think: input.think,
     providerInstance: options.providerInstance || customProviderForTesting || undefined,
     isFirstTurn,
     abortController,
