@@ -393,3 +393,80 @@ Keepalive ping comments are emitted every 15 seconds:
 - **Authorization**: Requires `workspace.regenerate` permission.
 - **Body**: `{ "versionId": "ver_001" }`
 - **Response**: `{ "data": { "responseId": "resp_123", "activeVersionId": "ver_001" } }`
+
+
+---
+
+## 7. Response Edits (User Improvements)
+
+### List Response Version Edits
+`GET /api/v1/response-versions/:id/edits`
+
+- Returns the append-only revision history of user edits for a specific response version, ordered by `revision` descending.
+- **Authorization**: Requires `workspace.read` permission.
+- **Response**:
+  ```json
+  {
+    "data": {
+      "versionId": "ver_123",
+      "originalContent": "AI generated text...",
+      "total": 1,
+      "items": [
+        {
+          "id": "edit_123",
+          "versionId": "ver_123",
+          "revision": 1,
+          "content": "User improved text...",
+          "editorId": "usr_123",
+          "createdAt": "2026-10-31T12:00:00.000Z"
+        }
+      ]
+    }
+  }
+  ```
+
+### Create Response Version Edit
+`POST /api/v1/response-versions/:id/edits`
+
+- Appends a new revision (`revision = max + 1`) to the response version.
+- `ResponseVersion.content` remains untouched and byte-identical.
+- User edits cost 0 credits.
+- Max content length: 100,000 characters.
+- **Authorization**: Requires `workspace.edit_response` permission (OWNER, ADMIN, COLLABORATOR).
+- **Body**:
+  ```json
+  {
+    "content": "Updated and polished explanation..."
+  }
+  ```
+- **Response**:
+  ```json
+  {
+    "data": {
+      "id": "edit_123",
+      "versionId": "ver_123",
+      "revision": 1,
+      "content": "Updated and polished explanation...",
+      "editorId": "usr_123",
+      "createdAt": "2026-10-31T12:00:00.000Z"
+    }
+  }
+  ```
+
+### Revert Latest Response Edit
+`DELETE /api/v1/response-versions/:id/edits/latest`
+
+- Reverts the most recent edit (`max(revision)`), returning the response version to its previous revision or original state.
+- **Authorization**: Requires workspace owner, workspace admin, or the editor who authored that latest edit.
+- **Response**:
+  ```json
+  {
+    "data": {
+      "revertedEdit": {
+        "id": "edit_123",
+        "revision": 2
+      },
+      "remainingEdits": 1
+    }
+  }
+  ```
