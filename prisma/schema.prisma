@@ -131,6 +131,7 @@ model Workspace {
   owner          User              @relation(fields: [ownerId], references: [id], onDelete: Restrict)
   project        Project?          @relation(fields: [projectId], references: [id], onDelete: SetNull)
   members        WorkspaceMember[]
+  responses      Response[]
 
   @@index([ownerId, deletedAt, lastActivityAt(sort: Desc)])
   @@index([projectId, deletedAt])
@@ -209,4 +210,73 @@ model CreditLedger {
   @@index([accountId, createdAt(sort: Desc)])
   @@index([generationId])
   @@map("credit_ledger")
+}
+
+
+enum ResponseKind {
+  TEXT
+  IMAGE
+}
+
+enum ResponseOrigin {
+  DIRECT
+  PROMOTED
+}
+
+enum VersionStatus {
+  STREAMING
+  COMPLETE
+  FAILED
+}
+
+model Response {
+  id              String            @id @default(uuid(7))
+  workspaceId     String            @map("workspace_id")
+  createdById     String            @map("created_by_id")
+  prompt          String            @db.Text
+  kind            ResponseKind      @default(TEXT)
+  origin          ResponseOrigin    @default(DIRECT)
+  sortAt          DateTime          @default(now()) @map("sort_at")
+  activeVersionId String?           @unique @map("active_version_id")
+  deletedAt       DateTime?         @map("deleted_at")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  workspace       Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  versions        ResponseVersion[]
+
+  @@index([workspaceId, deletedAt, sortAt, id])
+  @@map("responses")
+}
+
+model ResponseVersion {
+  id              String         @id @default(uuid(7))
+  responseId      String         @map("response_id")
+  number          Int
+  status          VersionStatus  @default(STREAMING)
+  content         String         @default("") @db.Text
+  thoughtSummary  String?        @map("thought_summary") @db.Text
+  modelKey        String         @map("model_key")
+  providerModelId String         @map("provider_model_id")
+  promptVersion   String         @map("prompt_version")
+  generationId    String?        @unique @map("generation_id")
+  createdById     String         @map("created_by_id")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  response        Response       @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  edits           ResponseEdit[]
+
+  @@unique([responseId, number])
+  @@index([responseId, createdAt])
+  @@map("response_versions")
+}
+
+model ResponseEdit {
+  id        String          @id @default(uuid(7))
+  versionId String          @map("version_id")
+  revision  Int
+  content   String          @db.Text
+  editorId  String          @map("editor_id")
+  createdAt DateTime        @default(now()) @map("created_at")
+  version   ResponseVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+
+  @@unique([versionId, revision])
+  @@map("response_edits")
 }

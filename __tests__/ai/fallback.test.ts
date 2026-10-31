@@ -3,6 +3,7 @@
  */
 import { streamAi } from "@/server/ai/index";
 import { AiError, AiProvider, GenerateRequest, StreamEvent } from "@/server/ai/types";
+import { getModel } from "@/server/ai/registry";
 
 describe("Step 2.1 — AI Fallback Chain (Pre-Token vs Post-Token)", () => {
   const sampleRequest: GenerateRequest = {
@@ -15,6 +16,12 @@ describe("Step 2.1 — AI Fallback Chain (Pre-Token vs Post-Token)", () => {
     ],
   };
 
+  const isStandardModel = (key: string) =>
+    key === "text-standard" ||
+    key === getModel("text-standard").providerModelId ||
+    key.includes("standard") ||
+    key.includes("pro");
+
   it("triggers pre-token fallback when primary model fails with a retryable error", async () => {
     let attemptedPrimary = false;
     let attemptedFallback = false;
@@ -22,7 +29,7 @@ describe("Step 2.1 — AI Fallback Chain (Pre-Token vs Post-Token)", () => {
     const mockProvider: AiProvider = {
       id: "gemini",
       async *stream(req) {
-        if (req.modelKey.includes("standard") || req.modelKey.includes("pro")) {
+        if (isStandardModel(req.modelKey)) {
           attemptedPrimary = true;
           // Primary model fails with a 503 unavailable before emitting any tokens
           throw new AiError("unavailable", true, "High demand on standard model");
@@ -59,7 +66,7 @@ describe("Step 2.1 — AI Fallback Chain (Pre-Token vs Post-Token)", () => {
     const mockProvider: AiProvider = {
       id: "gemini",
       async *stream(req) {
-        if (req.modelKey.includes("standard") || req.modelKey.includes("pro")) {
+        if (isStandardModel(req.modelKey)) {
           // Emits one token first
           yield { type: "text_delta", text: "Quantum " };
           // Then crashes with a retryable 503
@@ -77,7 +84,7 @@ describe("Step 2.1 — AI Fallback Chain (Pre-Token vs Post-Token)", () => {
     });
 
     const receivedEvents: StreamEvent[] = [];
-    let caughtError: any = null;
+    let caughtError: unknown = null;
 
     try {
       for await (const event of stream) {
@@ -89,14 +96,14 @@ describe("Step 2.1 — AI Fallback Chain (Pre-Token vs Post-Token)", () => {
 
     // Must have received the first token
     expect(receivedEvents.length).toBe(1);
-    expect((receivedEvents[0] as any).text).toBe("Quantum ");
+    expect((receivedEvents[0] as { type: string; text: string }).text).toBe("Quantum ");
 
     // Must NOT have attempted fallback because output was already streamed
     expect(attemptedFallback).toBe(false);
 
     // Error must be rethrown
     expect(caughtError).toBeInstanceOf(AiError);
-    expect(caughtError.category).toBe("unavailable");
+    expect((caughtError as AiError).category).toBe("unavailable");
   });
 
   it("does NOT fallback if error is non-retryable (e.g. invalid_request or auth)", async () => {
@@ -105,7 +112,7 @@ describe("Step 2.1 — AI Fallback Chain (Pre-Token vs Post-Token)", () => {
     const mockProvider: AiProvider = {
       id: "gemini",
       async *stream(req) {
-        if (req.modelKey.includes("standard") || req.modelKey.includes("pro")) {
+        if (isStandardModel(req.modelKey)) {
           throw new AiError("invalid_request", false, "Invalid argument parameters");
         } else {
           attemptedFallback = true;
@@ -118,12 +125,13 @@ describe("Step 2.1 — AI Fallback Chain (Pre-Token vs Post-Token)", () => {
       providerInstance: mockProvider,
     });
 
-    await expect(async () => {
+    const consume = async () => {
       for await (const _event of stream) {
         // no-op
       }
-    }).rejects.toThrow("Invalid argument parameters");
+    };
 
+    await expect(consume()).rejects.toThrow("Invalid argument parameters");
     expect(attemptedFallback).toBe(false);
   });
 });
