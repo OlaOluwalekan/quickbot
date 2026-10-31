@@ -48,6 +48,7 @@ model User {
   projectMemberships   ProjectMember[]
   workspaceMemberships WorkspaceMember[]
   creditAccount        CreditAccount?
+  preference           UserPreference?
 
   @@map("users")
 }
@@ -328,4 +329,14 @@ model Generation {
   @@index([status, startedAt])
   @@index([billedAccountId, createdAt])
   @@map("generations")
+}
+
+model UserPreference {
+  userId     String   @id @map("user_id")
+  uiLocale   String?  @map("ui_locale")
+  aiLanguage String?  @map("ai_language")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preferences")
 }

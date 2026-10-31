@@ -470,3 +470,59 @@ Keepalive ping comments are emitted every 15 seconds:
     }
   }
   ```
+
+
+---
+
+## 8. User Preferences & Language (`/api/v1/me/preferences`)
+
+### Get User Preferences
+`GET /api/v1/me/preferences`
+
+- Returns the authenticated user's UI locale and AI language preferences.
+- **Authorization**: Requires authenticated user session or token.
+- **Response**:
+  ```json
+  {
+    "data": {
+      "uiLocale": "fr",
+      "aiLanguage": "es",
+      "updatedAt": "2026-10-31T12:00:00.000Z"
+    }
+  }
+  ```
+
+### Update User Preferences
+`PATCH /api/v1/me/preferences`
+
+- Updates the authenticated user's UI locale and/or AI response language.
+- Pass `null` to reset to auto-detect (`uiLocale`) or follow UI locale (`aiLanguage`).
+- When `uiLocale` is updated, sets the `NEXT_LOCALE` cookie on the response (maxAge 1 year).
+- **Supported UI Locales**: `["en", "es", "fr"]`
+- **Supported AI Languages**: `["en", "es", "fr", "pt", "de", "it", "nl", "ar", "hi", "bn", "sw", "yo", "ig", "ha", "zh", "ja", "ko", "ru", "tr", "id"]`
+- **Authorization**: Requires authenticated user session or token.
+- **Body**:
+  ```json
+  {
+    "uiLocale": "fr",
+    "aiLanguage": "yo"
+  }
+  ```
+- **Response**:
+  ```json
+  {
+    "data": {
+      "uiLocale": "fr",
+      "aiLanguage": "yo",
+      "updatedAt": "2026-10-31T12:00:00.000Z"
+    }
+  }
+  ```
+
+### AI Response Language Precedence (Decision D-13)
+When generating a response, the effective language follows this strict priority:
+1. **Explicit request inside prompt text** (e.g. "Reply in Yoruba") — honored by the system prompt, never changes saved settings.
+2. **One-off generation override** (`POST .../generations { language }` or language chip from composer) — not persisted.
+3. **Saved AI Language** (`UserPreference.aiLanguage`).
+4. **UI Locale** (`UserPreference.uiLocale` or detected via cookie / `Accept-Language`).
+5. **Default** (`"en"`).
