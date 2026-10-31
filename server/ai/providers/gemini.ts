@@ -59,10 +59,13 @@ export class GeminiProvider implements AiProvider {
     const config: Record<string, unknown> = {
       maxOutputTokens: req.maxOutputTokens,
       temperature: req.temperature,
-      thinkingConfig: {
-        includeThoughts: true,
-      },
     };
+
+    if (req.thinking?.summaries !== false) {
+      config.thinkingConfig = {
+        includeThoughts: true,
+      };
+    }
 
     if (req.system) {
       config.systemInstruction = {

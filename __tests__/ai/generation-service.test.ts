@@ -433,4 +433,112 @@ describe("Generation Service and Streaming Pipeline (Step 2.4)", () => {
     expect(updated?.status).toBe("FAILED");
     expect(updated?.errorCode).toBe("timeout_orphaned");
   });
+
+  it("8. Progress events and thinking summaries: produces ordered lifecycle events and persists thoughtSummary", async () => {
+    const fakeEvents: StreamEvent[] = [
+      { type: "thought_delta", text: "Analyzing the query..." },
+      { type: "thought_delta", text: "Formulating plan..." },
+      { type: "text_delta", text: "Final answer text." },
+      { type: "usage", inputTokens: 15, outputTokens: 10, estimated: false },
+    ];
+    setCustomProvider(new FakeAiProvider(fakeEvents));
+
+    const idempotencyKey = `think_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+
+    const { stream, generationId } = await createAndStreamGeneration(
+      actorA,
+      workspace.id,
+      {
+        idempotencyKey,
+        prompt: "Explain relativity with deep thoughts",
+        modelKey: "text-economy",
+        think: true,
+      }
+    );
+
+    const sseOutput = await readAllSse(stream);
+
+    const queuedIdx = sseOutput.indexOf('"stage":"queued"');
+    const preparingIdx = sseOutput.indexOf('"stage":"preparing"');
+    const thinkingIdx = sseOutput.indexOf('"stage":"thinking"');
+    const thoughtDeltaIdx = sseOutput.indexOf("Analyzing the query...");
+    const writingIdx = sseOutput.indexOf('"stage":"writing"');
+    const textDeltaIdx = sseOutput.indexOf("Final answer text.");
+    const savingIdx = sseOutput.indexOf('"stage":"saving"');
+    const doneIdx = sseOutput.indexOf('"stage":"done"');
+    const completedIdx = sseOutput.indexOf('"content":"Final answer text."');
+
+    expect(queuedIdx).toBeGreaterThan(-1);
+    expect(preparingIdx).toBeGreaterThan(queuedIdx);
+    expect(thinkingIdx).toBeGreaterThan(preparingIdx);
+    expect(thoughtDeltaIdx).toBeGreaterThan(thinkingIdx);
+    expect(writingIdx).toBeGreaterThan(thoughtDeltaIdx);
+    expect(textDeltaIdx).toBeGreaterThan(writingIdx);
+    expect(savingIdx).toBeGreaterThan(textDeltaIdx);
+    expect(doneIdx).toBeGreaterThan(savingIdx);
+    expect(completedIdx).toBeGreaterThan(doneIdx);
+
+    expect(sseOutput).toContain("event: thought");
+
+    await new Promise((r) => setTimeout(r, 100));
+
+    const status = await getGenerationStatus(actorA, generationId);
+    expect(status.status).toBe("COMPLETED");
+    expect(status.thoughtSummary).toBe("Analyzing the query...Formulating plan...");
+    expect(status.content).toBe("Final answer text.");
+
+    const version = await db.responseVersion.findUnique({
+      where: { id: status.versionId! },
+    });
+    expect(version?.thoughtSummary).toBe("Analyzing the query...Formulating plan...");
+    expect(version?.content).toBe("Final answer text.");
+  });
+
+  it("9. Model without summary capability yields only status events and no thought events", async () => {
+    const { MODELS } = await import("@/server/ai/registry");
+    const originalSetting = MODELS["text-economy"].caps.thinkingSummaries;
+    (MODELS["text-economy"].caps as { thinkingSummaries: boolean }).thinkingSummaries = false;
+
+    try {
+      const fakeEvents: StreamEvent[] = [
+        { type: "thought_delta", text: "Hidden thoughts" },
+        { type: "text_delta", text: "Direct response text." },
+        { type: "usage", inputTokens: 10, outputTokens: 8, estimated: false },
+      ];
+      setCustomProvider(new FakeAiProvider(fakeEvents));
+
+      const idempotencyKey = `nothink_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+
+      const { stream, generationId } = await createAndStreamGeneration(
+        actorA,
+        workspace.id,
+        {
+          idempotencyKey,
+          prompt: "No thinking model prompt",
+          modelKey: "text-economy",
+        }
+      );
+
+      const sseOutput = await readAllSse(stream);
+
+      expect(sseOutput).not.toContain("event: thought");
+      expect(sseOutput).not.toContain('"stage":"thinking"');
+      expect(sseOutput).not.toContain("Hidden thoughts");
+
+      expect(sseOutput).toContain('"stage":"queued"');
+      expect(sseOutput).toContain('"stage":"preparing"');
+      expect(sseOutput).toContain('"stage":"writing"');
+      expect(sseOutput).toContain('"stage":"saving"');
+      expect(sseOutput).toContain('"stage":"done"');
+      expect(sseOutput).toContain("Direct response text.");
+
+      await new Promise((r) => setTimeout(r, 100));
+
+      const status = await getGenerationStatus(actorA, generationId);
+      expect(status.thoughtSummary).toBeNull();
+      expect(status.content).toBe("Direct response text.");
+    } finally {
+      (MODELS["text-economy"].caps as { thinkingSummaries: boolean }).thinkingSummaries = originalSetting;
+    }
+  });
 });
