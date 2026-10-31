@@ -727,73 +727,100 @@ export async function createAndStreamGeneration(
   });
   const isFirstTurn = responseCount === 0;
 
-  const { response, version, generation } = await db.$transaction(async (tx) => {
-    let targetResponse;
-    let versionNumber = 1;
+  type TxResult = {
+    response: any;
+    version: any;
+    generation: any;
+  };
+  let txResult: TxResult | null = null;
+  let retries = 0;
 
-    if (input.regenerateResponseId) {
-      targetResponse = await tx.response.findUnique({
-        where: { id: input.regenerateResponseId },
+  while (retries < 5) {
+    try {
+      txResult = await db.$transaction(async (tx) => {
+        let targetResponse;
+        let versionNumber = 1;
+
+        if (input.regenerateResponseId) {
+          targetResponse = await tx.response.findUnique({
+            where: { id: input.regenerateResponseId },
+          });
+          if (!targetResponse) {
+            throw Errors.notFound("Target response for regeneration");
+          }
+          const maxVer = await tx.responseVersion.aggregate({
+            where: { responseId: targetResponse.id },
+            _max: { number: true },
+          });
+          versionNumber = (maxVer._max.number ?? 1) + 1;
+        } else {
+          targetResponse = await tx.response.create({
+            data: {
+              workspaceId,
+              createdById: actor.userId,
+              prompt: input.prompt,
+              kind: kind === "IMAGE" ? "IMAGE" : "TEXT",
+              origin: "DIRECT",
+            },
+          });
+        }
+
+        const newVersion = await tx.responseVersion.create({
+          data: {
+            responseId: targetResponse.id,
+            number: versionNumber,
+            status: "STREAMING",
+            content: "",
+            modelKey,
+            providerModelId: model.providerModelId,
+            promptVersion: PROMPT_VERSION,
+            createdById: actor.userId,
+          },
+        });
+
+        const newGen = await tx.generation.create({
+          data: {
+            id: generationId,
+            workspaceId,
+            responseId: targetResponse.id,
+            versionId: newVersion.id,
+            actorId: actor.userId,
+            billedAccountId,
+            kind: kind === "IMAGE" ? "IMAGE" : "TEXT",
+            status: "RUNNING",
+            modelKey,
+            providerModelId: model.providerModelId,
+            promptVersion: PROMPT_VERSION,
+            idempotencyKey: input.idempotencyKey,
+            reservedCredits: reserveAmount,
+            startedAt: new Date(),
+          },
+        });
+
+        await tx.responseVersion.update({
+          where: { id: newVersion.id },
+          data: { generationId: newGen.id },
+        });
+
+        return { response: targetResponse, version: newVersion, generation: newGen };
       });
-      if (!targetResponse) {
-        throw Errors.notFound("Target response for regeneration");
+      break;
+    } catch (err: unknown) {
+      const pErr = err as { code?: string; message?: string };
+      if (
+        pErr?.code === "P2002" ||
+        pErr?.message?.includes("response_versions_response_id_number_key")
+      ) {
+        retries++;
+        if (retries >= 5) throw err;
+        await new Promise((r) => setTimeout(r, 20 * retries));
+        continue;
       }
-      const maxVer = await tx.responseVersion.aggregate({
-        where: { responseId: targetResponse.id },
-        _max: { number: true },
-      });
-      versionNumber = (maxVer._max.number ?? 1) + 1;
-    } else {
-      targetResponse = await tx.response.create({
-        data: {
-          workspaceId,
-          createdById: actor.userId,
-          prompt: input.prompt,
-          kind: kind === "IMAGE" ? "IMAGE" : "TEXT",
-          origin: "DIRECT",
-        },
-      });
+      throw err;
     }
+  }
 
-    const newVersion = await tx.responseVersion.create({
-      data: {
-        responseId: targetResponse.id,
-        number: versionNumber,
-        status: "STREAMING",
-        content: "",
-        modelKey,
-        providerModelId: model.providerModelId,
-        promptVersion: PROMPT_VERSION,
-        createdById: actor.userId,
-      },
-    });
-
-    const newGen = await tx.generation.create({
-      data: {
-        id: generationId,
-        workspaceId,
-        responseId: targetResponse.id,
-        versionId: newVersion.id,
-        actorId: actor.userId,
-        billedAccountId,
-        kind: kind === "IMAGE" ? "IMAGE" : "TEXT",
-        status: "RUNNING",
-        modelKey,
-        providerModelId: model.providerModelId,
-        promptVersion: PROMPT_VERSION,
-        idempotencyKey: input.idempotencyKey,
-        reservedCredits: reserveAmount,
-        startedAt: new Date(),
-      },
-    });
-
-    await tx.responseVersion.update({
-      where: { id: newVersion.id },
-      data: { generationId: newGen.id },
-    });
-
-    return { response: targetResponse, version: newVersion, generation: newGen };
-  });
+  const { response, version, generation } = txResult!;
 
   // 7. Initialize in-memory active generation
   const abortController = new AbortController();

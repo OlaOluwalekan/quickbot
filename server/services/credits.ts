@@ -104,7 +104,7 @@ export async function reserve(
         planBalance: row.plan_balance,
         topupBalance: row.topup_balance,
       };
-    });
+    }, { timeout: 15000, maxWait: 10000 });
   } catch (error: unknown) {
     const err = error as { code?: string; message?: string };
     // On race condition unique violation on idempotency_key, return existing ledger row
