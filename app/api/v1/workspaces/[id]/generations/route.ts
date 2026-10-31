@@ -3,7 +3,7 @@ import { createGenerationSchema } from "@/lib/schemas/generation";
 import { createAndStreamGeneration } from "@/server/services/generation";
 
 export const runtime = "nodejs";
-export const maxDuration = 300;
+export const maxDuration = 60;
 
 export const POST = route({
   body: createGenerationSchema,
