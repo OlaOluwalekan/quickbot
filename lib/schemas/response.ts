@@ -14,3 +14,18 @@ export const setActiveVersionSchema = z.object({
 });
 
 export type SetActiveVersionInput = z.infer<typeof setActiveVersionSchema>;
+
+export const createResponseEditSchema = z.object({
+  content: z
+    .string()
+    .min(1, "Content cannot be empty")
+    .max(100_000, "Content cannot exceed 100,000 characters"),
+});
+
+export type CreateResponseEditInput = z.infer<typeof createResponseEditSchema>;
+
+export const responseViewQuerySchema = z.object({
+  view: z.enum(["original", "edited"]).optional().default("edited"),
+});
+
+export type ResponseViewQuery = z.infer<typeof responseViewQuerySchema>;

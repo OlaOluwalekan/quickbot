@@ -15,7 +15,7 @@ export const Errors = {
   unauthorized: () => new ApiError(401, "unauthorized", "Authentication required"),
   paymentRequired: (m = "Not enough credits") =>
     new ApiError(402, "insufficient_credits", m),
-  forbidden: () => new ApiError(403, "forbidden", "You don't have permission"),
+  forbidden: (m = "You don't have permission") => new ApiError(403, "forbidden", m),
   notFound: (what = "Resource") => new ApiError(404, "not_found", `${what} not found`),
   conflict: (m: string) => new ApiError(409, "conflict", m),
   validation: (details: unknown) =>
