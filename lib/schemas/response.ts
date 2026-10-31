@@ -4,7 +4,7 @@ export const regenerateResponseSchema = z.object({
   idempotencyKey: z.string().min(1, "Idempotency key is required").max(255),
   modelKey: z.string().optional().default("text-economy"),
   think: z.boolean().optional(),
-  language: z.string().optional().default("en"),
+  language: z.string().optional(),
 });
 
 export type RegenerateResponseInput = z.input<typeof regenerateResponseSchema>;

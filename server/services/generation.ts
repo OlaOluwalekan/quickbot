@@ -28,6 +28,7 @@ import {
   CreateGenerationInput,
 } from "@/lib/schemas/generation";
 import { normalizeGeminiError } from "@/server/ai/errors";
+import { resolveEffectiveAiLanguage } from "@/lib/locale";
 
 // In-memory active generation tracking
 export type ActiveSubscriber = {
@@ -680,13 +681,24 @@ export async function createAndStreamGeneration(
   let estimatedInputTokens = estimateTokens(input.prompt);
 
   if (kind === "TEXT") {
+    let targetLanguage = input.language;
+    if (!targetLanguage) {
+      const userPref = await db.userPreference.findUnique({
+        where: { userId: actor.userId },
+        select: { aiLanguage: true, uiLocale: true },
+      });
+      targetLanguage = resolveEffectiveAiLanguage({
+        savedAiLanguage: userPref?.aiLanguage,
+        uiLocale: userPref?.uiLocale,
+      });
+    }
     const ctx = await buildContext({
       workspaceId,
       upToResponseId: input.regenerateResponseId,
       excludeUpToResponseId: !!input.regenerateResponseId,
       newPrompt: input.prompt,
       modelKey,
-      language: input.language ?? "en",
+      language: targetLanguage,
     });
 
     systemPrompt = ctx.system;
