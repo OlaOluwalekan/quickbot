@@ -233,3 +233,85 @@ Internal server errors (`500`) never expose stack traces or raw exception messag
 
 - Lists active workspaces contained within the project that are visible to the caller.
 - **Response**: `{ data: { items: Workspace[], nextCursor: string | null } }`
+
+
+---
+
+## 5. Generations & Server-Sent Events (SSE)
+
+### Stream Generation
+`POST /api/v1/workspaces/:id/generations`
+
+- **Authorization**: Requires `workspace.generate` permission on the target workspace.
+- **Billing**: The workspace owner's credit account is billed (not the actor's).
+- **Runtime**: `nodejs`, with `maxDuration = 300` s.
+- **Headers**:
+  ```http
+  Content-Type: text/event-stream; charset=utf-8
+  Cache-Control: no-cache, no-transform
+  X-Accel-Buffering: no
+  Connection: keep-alive
+  ```
+- **Body**:
+  ```json
+  {
+    "idempotencyKey": "uuid-v4-or-v7",
+    "prompt": "Your question or prompt text",
+    "modelKey": "text-economy",
+    "kind": "TEXT",
+    "attachmentIds": [],
+    "regenerateResponseId": "optional-response-id",
+    "think": false,
+    "language": "en"
+  }
+  ```
+
+#### SSE Event Format
+All streaming events adhere to the standard SSE structure:
+```http
+event: <eventType>
+data: <jsonPayload>
+
+```
+Keepalive ping comments are emitted every 15 seconds:
+```http
+: ping
+
+```
+
+#### SSE Events Lifecycle:
+1. `started`: `{ "generationId": string, "responseId": string, "versionId": string }`
+2. `status`: `{ "stage": "preparing" | "writing" | "done" | "cancelled" | "failed", "truncated"?: boolean }`
+3. `thought`: `{ "text": string }` (incremental reasoning summaries)
+4. `delta`: `{ "text": string }` (incremental model response text)
+5. `usage`: `{ "inputTokens": number, "outputTokens": number, "credits": number }`
+6. `completed`: `{ "responseId": string, "versionId": string, "content": string }`
+7. `error`: `{ "code": string }` (localization key)
+
+### Get Generation Status & Resume
+`GET /api/v1/generations/:id`
+
+- Returns current status, latest partial or completed text, and metadata for recovery after client disconnect.
+- **Authorization**: Requires `workspace.read` permission.
+- **Response**:
+  ```json
+  {
+    "data": {
+      "id": "gen_123",
+      "status": "RUNNING",
+      "workspaceId": "ws_123",
+      "responseId": "resp_123",
+      "versionId": "ver_123",
+      "content": "Partial text stream...",
+      "thoughtSummary": null,
+      "errorCode": null
+    }
+  }
+  ```
+
+### Cancel Generation
+`POST /api/v1/generations/:id/cancel`
+
+- Explicitly halts the running upstream provider stream and settles credits up to the cancellation point.
+- **Authorization**: Requires `workspace.generate` permission.
+- **Response**: `{ "data": { "success": true, "status": "CANCELLED" } }`
