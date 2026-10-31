@@ -132,6 +132,7 @@ model Workspace {
   project        Project?          @relation(fields: [projectId], references: [id], onDelete: SetNull)
   members        WorkspaceMember[]
   responses      Response[]
+  generations    Generation[]
 
   @@index([ownerId, deletedAt, lastActivityAt(sort: Desc)])
   @@index([projectId, deletedAt])
@@ -279,4 +280,52 @@ model ResponseEdit {
 
   @@unique([versionId, revision])
   @@map("response_edits")
+}
+
+
+enum GenStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum GenKind {
+  TEXT
+  IMAGE
+  ANNOTATION_REPLY
+  QUESTION_BATCH
+  TITLE
+  SPEECH
+}
+
+model Generation {
+  id              String      @id @default(uuid(7))
+  workspaceId     String      @map("workspace_id")
+  responseId      String?     @map("response_id")
+  versionId       String?     @map("version_id")
+  actorId         String      @map("actor_id")
+  billedAccountId String      @map("billed_account_id")
+  kind            GenKind
+  status          GenStatus   @default(QUEUED)
+  modelKey        String      @map("model_key")
+  providerModelId String      @map("provider_model_id")
+  promptVersion   String      @map("prompt_version")
+  idempotencyKey  String      @map("idempotency_key")
+  reservedCredits Int         @default(0) @map("reserved_credits")
+  chargedCredits  Int         @default(0) @map("charged_credits")
+  usage           Json?
+  errorCode       String?     @map("error_code")
+  startedAt       DateTime?   @map("started_at")
+  finishedAt      DateTime?   @map("finished_at")
+  createdAt       DateTime    @default(now()) @map("created_at")
+
+  workspace       Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([actorId, idempotencyKey])
+  @@index([workspaceId, createdAt])
+  @@index([status, startedAt])
+  @@index([billedAccountId, createdAt])
+  @@map("generations")
 }
