@@ -7,11 +7,21 @@ import { db } from "@/server/db/client";
 import { env } from "@/server/env";
 import { sendEmail } from "@/server/email/send";
 import { authSecondaryStorage } from "@/server/http/rate-limit";
+import { createAccountWithFreeGrant } from "@/server/services/credits";
 
 export const auth = betterAuth({
   baseURL: env.APP_URL,
   secret: env.BETTER_AUTH_SECRET,
   database: prismaAdapter(db, { provider: "postgresql" }),
+  databaseHooks: {
+    user: {
+      create: {
+        after: async (user) => {
+          await createAccountWithFreeGrant(user.id);
+        },
+      },
+    },
+  },
   secondaryStorage: authSecondaryStorage,
   rateLimit: {
     enabled: true,

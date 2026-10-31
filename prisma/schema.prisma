@@ -47,6 +47,7 @@ model User {
   workspaces           Workspace[]
   projectMemberships   ProjectMember[]
   workspaceMemberships WorkspaceMember[]
+  creditAccount        CreditAccount?
 
   @@map("users")
 }
@@ -164,4 +165,48 @@ model WorkspaceMember {
   @@unique([workspaceId, userId])
   @@index([userId])
   @@map("workspace_members")
+}
+
+enum LedgerType {
+  GRANT
+  RESERVE
+  SETTLE
+  RELEASE
+  REFUND
+  EXPIRE
+  ADJUST
+}
+
+model CreditAccount {
+  id           String         @id @default(uuid(7))
+  userId       String         @unique @map("user_id")
+  planBalance  Int            @default(0) @map("plan_balance")
+  topupBalance Int            @default(0) @map("topup_balance")
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ledger       CreditLedger[]
+
+  @@map("credit_accounts")
+}
+
+model CreditLedger {
+  id             String        @id @default(uuid(7))
+  accountId      String        @map("account_id")
+  type           LedgerType
+  planDelta      Int           @map("plan_delta")
+  topupDelta     Int           @map("topup_delta")
+  planAfter      Int           @map("plan_after")
+  topupAfter     Int           @map("topup_after")
+  generationId   String?       @map("generation_id")
+  actorId        String?       @map("actor_id")
+  reason         String?
+  estimated      Boolean       @default(false)
+  idempotencyKey String        @unique @map("idempotency_key")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  account        CreditAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId, createdAt(sort: Desc)])
+  @@index([generationId])
+  @@map("credit_ledger")
 }
