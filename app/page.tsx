@@ -1,9 +1,10 @@
+import Link from "next/link";
 import Features from "@/components/general/Features";
 import Header from "@/components/general/Header";
 import Hero from "@/components/general/Hero";
 import AppName from "@/components/logo/AppName";
 import Logo from "@/components/logo/Logo";
-import LinkButton from "@/components/ui/button/LinkButton";
+import { Button } from "@/components/ui/button";
 import { useTranslations } from "next-intl";
 
 const Home = () => {
@@ -26,12 +27,9 @@ const Home = () => {
             {t("ctaDescription")}
           </p>
           <div className="mt-6 flex justify-center">
-            <LinkButton
-              href="/auth/register"
-              size="large"
-              text={t("ctaButton")}
-              theme="base"
-            />
+            <Button asChild variant="secondary" size="lg">
+              <Link href="/auth/register">{t("ctaButton")}</Link>
+            </Button>
           </div>
         </section>
       </main>

@@ -1,21 +1,13 @@
 "use client";
 
-import TypingText from "../ui/text/TypingText";
-import LinkButton from "../ui/button/LinkButton";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Code2, Image as ImageIcon, Sparkles, Zap } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const Hero = () => {
   const t = useTranslations("Landing");
   const t2 = useTranslations("Common");
-
-  const localizedTypingTexts = [
-    t("typing1"),
-    t("typing2"),
-    t("typing3"),
-    t("typing4"),
-    t("typing5"),
-  ];
 
   return (
     <section className="relative flex flex-col items-center pt-10 pb-16 text-center sm:pt-16 sm:pb-24">
@@ -39,13 +31,11 @@ const Hero = () => {
         </span>
       </h1>
 
-      {/* Dynamic Typing Subheading */}
+      {/* Subheading */}
       <div className="mt-5 flex min-h-9 items-center justify-center px-2 sm:min-h-11">
-        <TypingText
-          texts={localizedTypingTexts}
-          className="text-lg font-semibold text-accent sm:text-2xl"
-          cursorStyleClass="inline text-lg sm:text-2xl text-accent"
-        />
+        <h2 className="text-lg font-semibold text-accent sm:text-2xl">
+          {t("typing1")}
+        </h2>
       </div>
 
       {/* Hero Description */}
@@ -55,18 +45,12 @@ const Hero = () => {
 
       {/* CTA Buttons */}
       <div className="mt-8 flex w-full flex-col items-center justify-center gap-3.5 px-4 sm:w-auto sm:flex-row">
-        <LinkButton
-          href="/auth/register"
-          size="large"
-          text={t("getStarted")}
-          theme="primary"
-        />
-        <LinkButton
-          href="#features"
-          size="medium"
-          text={t("exploreFeatures")}
-          theme="outline"
-        />
+        <Button asChild size="lg" className="min-w-[220px]">
+          <Link href="/auth/register">{t("getStarted")}</Link>
+        </Button>
+        <Button asChild variant="outline" size="lg" className="min-w-[160px]">
+          <Link href="#features">{t("exploreFeatures")}</Link>
+        </Button>
       </div>
 
       {/* Interactive Product Preview Mockup Card */}

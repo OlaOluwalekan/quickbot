@@ -7,7 +7,7 @@ import { Menu, X } from "lucide-react";
 import LocaleSwitcher from "./LocaleSwitcher";
 import AppName from "../logo/AppName";
 import Logo from "../logo/Logo";
-import LinkButton from "../ui/button/LinkButton";
+import { Button } from "@/components/ui/button";
 
 const Header = () => {
   const t = useTranslations("Header");
@@ -42,37 +42,31 @@ const Header = () => {
         {/* Desktop Actions */}
         <div className="hidden md:flex items-center gap-3">
           <LocaleSwitcher />
-          <LinkButton
-            size="small"
-            type="button"
-            text={t("login")}
-            theme="outline"
-            href="/auth/login"
-          />
-          <LinkButton
-            size="small"
-            type="button"
-            text={t("register")}
-            theme="primary"
-            href="/auth/register"
-          />
+          <Button asChild variant="outline" size="sm">
+            <Link href="/auth/login">{t("login")}</Link>
+          </Button>
+          <Button asChild size="sm">
+            <Link href="/auth/register">{t("register")}</Link>
+          </Button>
         </div>
 
         {/* Mobile Hamburger */}
         <div className="flex items-center gap-2 md:hidden">
           <LocaleSwitcher compact />
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="icon"
             aria-label="Toggle Menu"
+            tooltip="Toggle Menu"
             onClick={() => setMobileMenuOpen((prev) => !prev)}
-            className="p-2 rounded-xl border border-border text-fg hover:bg-surface-2 cursor-pointer"
           >
             {mobileMenuOpen ? (
               <X className="h-5 w-5" strokeWidth={1.5} />
             ) : (
               <Menu className="h-5 w-5" strokeWidth={1.5} />
             )}
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -94,20 +88,12 @@ const Header = () => {
             {t("dashboard")}
           </Link>
           <div className="grid grid-cols-2 gap-2.5 pt-2 border-t border-border">
-            <LinkButton
-              size="full"
-              type="button"
-              text={t("login")}
-              theme="outline"
-              href="/auth/login"
-            />
-            <LinkButton
-              size="full"
-              type="button"
-              text={t("register")}
-              theme="primary"
-              href="/auth/register"
-            />
+            <Button asChild variant="outline" className="w-full">
+              <Link href="/auth/login">{t("login")}</Link>
+            </Button>
+            <Button asChild className="w-full">
+              <Link href="/auth/register">{t("register")}</Link>
+            </Button>
           </div>
         </div>
       )}

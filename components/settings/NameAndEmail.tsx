@@ -1,12 +1,14 @@
 "use client";
 
 import { SessionProps } from "@/types/user";
-import { ChangeEvent, FormEvent, useState, useTransition } from "react";
+import { FormEvent, useState, useTransition } from "react";
 import { Check, Pencil, User, X } from "lucide-react";
-import InputWithIcon from "../ui/inputs/InputWithIcon";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
 
 const NameAndEmail = ({ user }: { user: SessionProps }) => {
   const t = useTranslations("Settings");
@@ -55,53 +57,61 @@ const NameAndEmail = ({ user }: { user: SessionProps }) => {
           onSubmit={handleSubmit}
           className="flex items-center gap-2 w-full max-w-xs"
         >
-          <InputWithIcon
-            type="text"
-            placeholder={t("fullName")}
-            value={name}
-            name="name"
-            icons={<User className="h-4 w-4" strokeWidth={1.5} />}
-            onChange={(e: ChangeEvent<HTMLInputElement>) =>
-              setName(e.target.value)
-            }
-          />
-          {isPending ? (
-            <span
-              className="animate-spin inline-block w-5 h-5 border-2 border-accent border-t-transparent rounded-full shrink-0"
-              role="status"
-              aria-label="loading"
+          <div className="relative flex flex-1 items-center">
+            <User
+              className="pointer-events-none absolute left-3 h-4 w-4 text-accent"
+              strokeWidth={1.5}
             />
+            <Input
+              type="text"
+              placeholder={t("fullName")}
+              value={name}
+              name="name"
+              onChange={(e) => setName(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          {isPending ? (
+            <Spinner size="sm" />
           ) : (
             <div className="flex items-center gap-1 shrink-0">
-              <button
+              <Button
                 type="submit"
+                variant="ghost"
+                size="icon"
                 aria-label="Save name"
-                className="w-8 h-8 flex justify-center items-center text-success hover:bg-success/15 rounded-lg cursor-pointer"
+                tooltip="Save name"
+                className="text-success hover:bg-success/15"
               >
                 <Check className="h-4 w-4" strokeWidth={1.5} />
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon"
                 aria-label="Cancel edit"
-                className="w-8 h-8 flex justify-center items-center text-danger hover:bg-danger/15 rounded-lg cursor-pointer"
+                tooltip="Cancel edit"
+                className="text-danger hover:bg-danger/15"
                 onClick={handleCancel}
               >
                 <X className="h-4 w-4" strokeWidth={1.5} />
-              </button>
+              </Button>
             </div>
           )}
         </form>
       ) : (
         <div className="flex items-center gap-2">
           <h2 className="text-xl font-bold tracking-tight">{name}</h2>
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon"
             aria-label="Edit name"
-            className="w-8 h-8 flex justify-center items-center text-subtle hover:text-accent hover:bg-accent-soft rounded-lg transition-colors cursor-pointer"
+            tooltip="Edit name"
             onClick={() => setIsEditing(true)}
           >
             <Pencil className="h-3.5 w-3.5" strokeWidth={1.5} />
-          </button>
+          </Button>
         </div>
       )}
       <span className="text-xs sm:text-sm text-muted">

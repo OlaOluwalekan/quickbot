@@ -1,7 +1,7 @@
 "use client";
 
 import { SessionProps } from "@/types/user";
-import BasicButton from "../ui/button/BasicButton";
+import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { formatNumber } from "@/utils/format";
@@ -54,18 +54,18 @@ const TokensDisplay = ({ user }: { user: SessionProps }) => {
           </p>
         </div>
 
-        <BasicButton
+        <Button
           type="button"
-          text="Request Tokens"
-          size="small"
-          theme="primary"
+          size="sm"
           disabled={tokens > 0}
           title={
             tokens > 0
               ? `You have ${tokens} tokens remaining.`
               : "Request token top-up"
           }
-        />
+        >
+          Request Tokens
+        </Button>
       </div>
 
       {/* Recent Token Activity Table */}
