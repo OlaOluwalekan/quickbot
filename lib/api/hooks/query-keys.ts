@@ -65,4 +65,7 @@ export const queryKeys = {
     preferences: (userId: string) => userQueryKey(userId, "me", "preferences"),
     credits: (userId: string) => userQueryKey(userId, "me", "credits"),
   },
+  home: {
+    get: (userId: string) => userQueryKey(userId, "home"),
+  },
 } as const;

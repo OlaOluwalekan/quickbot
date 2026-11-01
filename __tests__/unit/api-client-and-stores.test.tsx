@@ -260,6 +260,7 @@ describe("Step 3.3 — Client Data Layer (api client, TanStack Query, Zustand)",
         sidebarCollapsed: true,
         rightPanelOpen: true,
         composerEnterToSend: false,
+        onboardingDismissed: false,
         drafts: { "ws-1": "my draft" },
       });
       expect("currentPageTitle" in persisted).toBe(false);

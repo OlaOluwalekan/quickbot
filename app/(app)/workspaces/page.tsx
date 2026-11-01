@@ -1,36 +1,16 @@
-import { getActor } from "@/server/auth/session";
-import TemplatePrompts from "@/components/chats/TemplatePrompts";
+import { requireActor } from "@/server/auth/session";
+import { getHomeData } from "@/server/services/home";
+import { WorkspaceHome } from "@/components/home/workspace-home";
 
-const WorkspacesPage = async () => {
-  const actor = await getActor();
-
-  const samplePrompts = [
-    {
-      name: "What is the weather like today?",
-      domain: "weather",
-    },
-    {
-      name: "Tell me a joke",
-      domain: "general",
-    },
-    {
-      name: "What is the capital of France?",
-      domain: "geography",
-    },
-    {
-      name: "How do I make a cake?",
-      domain: "cooking",
-    },
-  ];
+export default async function WorkspacesHomePage() {
+  const actor = await requireActor();
+  const initialData = await getHomeData(actor);
 
   return (
-    <div className="flex h-full w-full scrollbar-none flex-col items-center justify-center overflow-auto">
-      <TemplatePrompts
-        data={samplePrompts}
-        userId={(actor?.userId ?? "") as string}
-      />
-    </div>
+    <WorkspaceHome
+      userId={actor.userId}
+      userName={actor.name ?? ""}
+      initialData={initialData}
+    />
   );
-};
-
-export default WorkspacesPage;
+}
