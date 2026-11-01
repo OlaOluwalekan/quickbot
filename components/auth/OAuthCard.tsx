@@ -1,6 +1,6 @@
 "use client";
 
-import OAuthButton from "../ui/button/OAuthButton";
+import { Button } from "@/components/ui/button";
 import { DEFAULT_LOGIN_REDIRECT } from "@/utils/routes";
 import { useTranslations } from "next-intl";
 import { authClient } from "@/lib/auth-client";
@@ -37,16 +37,24 @@ const OAuthCard = (): React.JSX.Element => {
 
   return (
     <div className="grid grid-cols-2 gap-3">
-      <OAuthButton
-        icon={<GoogleIcon />}
-        text={t("google")}
+      <Button
+        type="button"
+        variant="outline"
+        className="w-full"
         onClick={() => handleClick("google")}
-      />
-      <OAuthButton
-        icon={<GithubIcon />}
-        text={t("github")}
+      >
+        <GoogleIcon />
+        <span>{t("google")}</span>
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        className="w-full"
         onClick={() => handleClick("github")}
-      />
+      >
+        <GithubIcon />
+        <span>{t("github")}</span>
+      </Button>
     </div>
   );
 };

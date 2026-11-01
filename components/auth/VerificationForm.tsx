@@ -1,15 +1,15 @@
 "use client";
 
 import clsx from "clsx";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChangeEvent, FormEvent, useEffect, useState, useTransition } from "react";
+import { FormEvent, useEffect, useState, useTransition } from "react";
 import { CheckCircle2, Mail, XCircle } from "lucide-react";
-import InputWithIcon from "../ui/inputs/InputWithIcon";
-import BasicButton from "../ui/button/BasicButton";
-import LinkButton from "../ui/button/LinkButton";
 import { useTranslations } from "next-intl";
 import { authClient } from "@/lib/auth-client";
 import { DEFAULT_LOGIN_REDIRECT } from "@/utils/routes";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 const RESEND_SECONDS = 15;
 
@@ -30,10 +30,6 @@ const VerificationForm = (): React.JSX.Element => {
   });
   const [userEmail, setUserEmail] = useState("");
   const [count, setCount] = useState(0);
-
-  const handleResendClick = () => {
-    setCount(RESEND_SECONDS);
-  };
 
   useEffect(() => {
     let interval: NodeJS.Timeout | undefined;
@@ -97,7 +93,7 @@ const VerificationForm = (): React.JSX.Element => {
           message: "If the account exists, a verification email was sent.",
           success: true,
         });
-        handleResendClick();
+        setCount(RESEND_SECONDS);
       } catch {
         setResponse({
           message: t("verifiedError"),
@@ -141,40 +137,39 @@ const VerificationForm = (): React.JSX.Element => {
 
       {!isPending && !response.success && (
         <form className="w-full space-y-3" onSubmit={handleSubmit}>
-          <InputWithIcon
-            type="email"
-            placeholder={t("emailPlaceholder")}
-            icons={<Mail className="h-4 w-4" strokeWidth={1.5} />}
-            name="email"
-            value={userEmail}
-            onChange={(e: ChangeEvent<HTMLInputElement>) =>
-              setUserEmail(e.target.value)
-            }
-          />
+          <div className="relative flex items-center">
+            <Mail
+              className="pointer-events-none absolute left-3 h-4 w-4 text-accent"
+              strokeWidth={1.5}
+            />
+            <Input
+              type="email"
+              placeholder={t("emailPlaceholder")}
+              name="email"
+              value={userEmail}
+              onChange={(e) => setUserEmail(e.target.value)}
+              className="pl-9"
+            />
+          </div>
 
-          <BasicButton
+          <Button
             type="submit"
-            text={
-              sendingEmail
-                ? tCommon("loading")
-                : count > 0
-                ? `${t("resendEmailLink")} (${count}s)`
-                : t("resendEmailLink")
-            }
-            size="full"
-            theme="primary"
+            className="w-full"
             disabled={isPending || sendingEmail || count > 0 || !userEmail.trim()}
-          />
+          >
+            {sendingEmail
+              ? tCommon("loading")
+              : count > 0
+              ? `${t("resendEmailLink")} (${count}s)`
+              : t("resendEmailLink")}
+          </Button>
         </form>
       )}
 
       {response.success && (
-        <LinkButton
-          href="/auth/login"
-          text={t("loginButton")}
-          size="full"
-          theme="primary"
-        />
+        <Button asChild className="w-full">
+          <Link href="/auth/login">{t("loginButton")}</Link>
+        </Button>
       )}
     </div>
   );

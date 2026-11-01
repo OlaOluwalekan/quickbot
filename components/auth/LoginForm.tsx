@@ -1,22 +1,29 @@
 "use client";
 
-import { ChangeEvent, FormEvent, useEffect, useState, useTransition } from "react";
-import InputWithIcon from "../ui/inputs/InputWithIcon";
-import { Lock, Mail } from "lucide-react";
-import BasicButton from "../ui/button/BasicButton";
+import { useState, useTransition } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { AlertTriangle, CheckCircle2, Lock, Mail } from "lucide-react";
 import { useRouter } from "next/navigation";
-import Alert from "../alert/Alert";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { authClient } from "@/lib/auth-client";
+import { LoginSchema, type LoginInput } from "@/lib/schemas/auth";
 import { DEFAULT_LOGIN_REDIRECT } from "@/utils/routes";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormMessage,
+} from "@/components/ui/form";
+import { cn } from "@/lib/utils";
 
 const LoginForm = (): React.JSX.Element => {
   const t = useTranslations("Auth");
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [isResending, startResendTransition] = useTransition();
   const [needsVerification, setNeedsVerification] = useState(false);
@@ -27,31 +34,24 @@ const LoginForm = (): React.JSX.Element => {
     message: "",
     success: false,
   });
-  const router = useRouter();
 
-  useEffect(() => {
-    if (!response.message || needsVerification) return;
-    const interval = setTimeout(() => {
-      setResponse({ message: "", success: false });
-    }, 3500);
+  const form = useForm<LoginInput>({
+    resolver: zodResolver(LoginSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
 
-    return () => clearTimeout(interval);
-  }, [response, needsVerification]);
-
-  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const onSubmit = (values: LoginInput) => {
     setResponse({ message: "", success: false });
     setNeedsVerification(false);
 
     startTransition(async () => {
       try {
         const { error } = await authClient.signIn.email({
-          email: formData.email.trim(),
-          password: formData.password,
+          email: values.email.trim(),
+          password: values.password,
           callbackURL: DEFAULT_LOGIN_REDIRECT,
         });
 
@@ -64,7 +64,8 @@ const LoginForm = (): React.JSX.Element => {
           if (isUnverified) {
             setNeedsVerification(true);
             setResponse({
-              message: "Please check your inbox and verify your email address before signing in.",
+              message:
+                "Please check your inbox and verify your email address before signing in.",
               success: false,
             });
             return;
@@ -93,11 +94,12 @@ const LoginForm = (): React.JSX.Element => {
   };
 
   const handleResendVerification = () => {
-    if (!formData.email.trim()) return;
+    const email = form.getValues("email").trim();
+    if (!email) return;
     startResendTransition(async () => {
       try {
         await authClient.sendVerificationEmail({
-          email: formData.email.trim(),
+          email,
           callbackURL: DEFAULT_LOGIN_REDIRECT,
         });
         setResponse({
@@ -114,56 +116,105 @@ const LoginForm = (): React.JSX.Element => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-3" noValidate>
-      <InputWithIcon
-        type="email"
-        placeholder={t("emailPlaceholder")}
-        icons={<Mail className="h-4 w-4" strokeWidth={1.5} />}
-        name="email"
-        value={formData.email}
-        onChange={handleChange}
-      />
-      <InputWithIcon
-        type="password"
-        placeholder={t("passwordPlaceholder")}
-        icons={<Lock className="h-4 w-4" strokeWidth={1.5} />}
-        name="password"
-        value={formData.password}
-        onChange={handleChange}
-      />
-
-      <div className="flex justify-end pt-1">
-        <Link
-          href="/auth/forgot-password"
-          className="text-xs font-medium text-muted hover:text-accent transition-colors"
-        >
-          {t("forgotPasswordLink")}
-        </Link>
-      </div>
-
-      {response.message && (
-        <Alert message={response.message} success={response.success} />
-      )}
-
-      {needsVerification && (
-        <BasicButton
-          type="button"
-          text={isResending ? t("loggingIn") : t("resendEmailLink")}
-          size="full"
-          theme="outline"
-          disabled={isResending}
-          onClick={handleResendVerification}
+    <Form {...form}>
+      <form
+        onSubmit={form.handleSubmit(onSubmit)}
+        className="space-y-3"
+        noValidate
+      >
+        <FormField
+          control={form.control}
+          name="email"
+          render={({ field }) => (
+            <FormItem>
+              <FormControl>
+                <div className="relative flex items-center">
+                  <Mail
+                    className="pointer-events-none absolute left-3 h-4 w-4 text-accent"
+                    strokeWidth={1.5}
+                  />
+                  <Input
+                    type="email"
+                    placeholder={t("emailPlaceholder")}
+                    className="pl-9"
+                    {...field}
+                  />
+                </div>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      )}
 
-      <BasicButton
-        type="submit"
-        text={isPending ? t("loggingIn") : t("loginButton")}
-        size="full"
-        theme="primary"
-        disabled={isPending}
-      />
-    </form>
+        <FormField
+          control={form.control}
+          name="password"
+          render={({ field }) => (
+            <FormItem>
+              <FormControl>
+                <div className="relative flex items-center">
+                  <Lock
+                    className="pointer-events-none absolute left-3 h-4 w-4 text-accent"
+                    strokeWidth={1.5}
+                  />
+                  <Input
+                    type="password"
+                    placeholder={t("passwordPlaceholder")}
+                    className="pl-9"
+                    {...field}
+                  />
+                </div>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <div className="flex justify-end pt-1">
+          <Link
+            href="/auth/forgot-password"
+            className="text-xs font-medium text-muted hover:text-accent transition-colors"
+          >
+            {t("forgotPasswordLink")}
+          </Link>
+        </div>
+
+        {response.message && (
+          <div
+            role="alert"
+            className={cn(
+              "my-3 flex items-center justify-center gap-2 rounded-xl border px-3.5 py-2.5 text-xs font-medium sm:text-sm",
+              response.success
+                ? "border-success/30 bg-success/10 text-success"
+                : "border-danger/30 bg-danger/10 text-danger"
+            )}
+          >
+            {response.success ? (
+              <CheckCircle2 className="h-4 w-4 shrink-0" strokeWidth={1.5} />
+            ) : (
+              <AlertTriangle className="h-4 w-4 shrink-0" strokeWidth={1.5} />
+            )}
+            <span>{response.message}</span>
+          </div>
+        )}
+
+        {needsVerification && (
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            disabled={isResending}
+            onClick={handleResendVerification}
+          >
+            {isResending ? t("loggingIn") : t("resendEmailLink")}
+          </Button>
+        )}
+
+        <Button type="submit" className="w-full" disabled={isPending}>
+          {isPending ? t("loggingIn") : t("loginButton")}
+        </Button>
+      </form>
+    </Form>
   );
 };
 

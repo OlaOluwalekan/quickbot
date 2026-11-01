@@ -1,62 +1,53 @@
 "use client";
 
-import { ChangeEvent, FormEvent, useEffect, useState, useTransition } from "react";
-import InputWithIcon from "../ui/inputs/InputWithIcon";
-import { Lock, Mail, User } from "lucide-react";
-import BasicButton from "../ui/button/BasicButton";
-import Alert from "../alert/Alert";
+import { useState, useTransition } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { AlertTriangle, CheckCircle2, Lock, Mail, User } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { authClient } from "@/lib/auth-client";
-import { RegisterSchema } from "@/lib/schemas/auth";
+import { RegisterSchema, type RegisterInput } from "@/lib/schemas/auth";
 import { DEFAULT_LOGIN_REDIRECT } from "@/utils/routes";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormMessage,
+} from "@/components/ui/form";
+import { cn } from "@/lib/utils";
 
 const RegisterForm = (): React.JSX.Element => {
   const t = useTranslations("Auth");
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-  });
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const [response, setResponse] = useState({
     message: "",
     success: false,
   });
-  const [isPending, startTransition] = useTransition();
-  const router = useRouter();
 
-  useEffect(() => {
-    if (!response.message) return;
-    const interval = setTimeout(() => {
-      setResponse({ message: "", success: false });
-    }, 3500);
+  const form = useForm<RegisterInput>({
+    resolver: zodResolver(RegisterSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+    },
+  });
 
-    return () => clearTimeout(interval);
-  }, [response]);
-
-  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const onSubmit = (values: RegisterInput) => {
     setResponse({ message: "", success: false });
-
-    const parsed = RegisterSchema.safeParse(formData);
-    if (!parsed.success) {
-      const firstIssue =
-        parsed.error.issues[0]?.message || "Invalid registration details";
-      setResponse({ message: firstIssue, success: false });
-      return;
-    }
 
     startTransition(async () => {
       try {
         const { error } = await authClient.signUp.email({
-          email: parsed.data.email,
-          name: parsed.data.name,
-          password: parsed.data.password,
+          email: values.email,
+          name: values.name,
+          password: values.password,
           callbackURL: DEFAULT_LOGIN_REDIRECT,
         });
 
@@ -69,12 +60,13 @@ const RegisterForm = (): React.JSX.Element => {
         }
 
         setResponse({
-          message: "Registration successful! Check your inbox to verify your email.",
+          message:
+            "Registration successful! Check your inbox to verify your email.",
           success: true,
         });
 
         router.push(
-          `/auth/registered?accountId=${encodeURIComponent(parsed.data.email)}`
+          `/auth/registered?accountId=${encodeURIComponent(values.email)}`
         );
       } catch (err: unknown) {
         setResponse({
@@ -86,59 +78,132 @@ const RegisterForm = (): React.JSX.Element => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-3" noValidate>
-      <InputWithIcon
-        type="email"
-        placeholder={t("emailPlaceholder")}
-        icons={<Mail className="h-4 w-4" strokeWidth={1.5} />}
-        name="email"
-        id="email"
-        value={formData.email}
-        onChange={handleChange}
-      />
+    <Form {...form}>
+      <form
+        onSubmit={form.handleSubmit(onSubmit)}
+        className="space-y-3"
+        noValidate
+      >
+        <FormField
+          control={form.control}
+          name="email"
+          render={({ field }) => (
+            <FormItem>
+              <FormControl>
+                <div className="relative flex items-center">
+                  <Mail
+                    className="pointer-events-none absolute left-3 h-4 w-4 text-accent"
+                    strokeWidth={1.5}
+                  />
+                  <Input
+                    type="email"
+                    placeholder={t("emailPlaceholder")}
+                    className="pl-9"
+                    {...field}
+                  />
+                </div>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-      <InputWithIcon
-        type="text"
-        placeholder={t("namePlaceholder")}
-        icons={<User className="h-4 w-4" strokeWidth={1.5} />}
-        name="name"
-        id="name"
-        value={formData.name}
-        onChange={handleChange}
-      />
+        <FormField
+          control={form.control}
+          name="name"
+          render={({ field }) => (
+            <FormItem>
+              <FormControl>
+                <div className="relative flex items-center">
+                  <User
+                    className="pointer-events-none absolute left-3 h-4 w-4 text-accent"
+                    strokeWidth={1.5}
+                  />
+                  <Input
+                    type="text"
+                    placeholder={t("namePlaceholder")}
+                    className="pl-9"
+                    {...field}
+                  />
+                </div>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-      <InputWithIcon
-        type="password"
-        placeholder={t("passwordPlaceholder")}
-        icons={<Lock className="h-4 w-4" strokeWidth={1.5} />}
-        name="password"
-        id="password"
-        value={formData.password}
-        onChange={handleChange}
-      />
+        <FormField
+          control={form.control}
+          name="password"
+          render={({ field }) => (
+            <FormItem>
+              <FormControl>
+                <div className="relative flex items-center">
+                  <Lock
+                    className="pointer-events-none absolute left-3 h-4 w-4 text-accent"
+                    strokeWidth={1.5}
+                  />
+                  <Input
+                    type="password"
+                    placeholder={t("passwordPlaceholder")}
+                    className="pl-9"
+                    {...field}
+                  />
+                </div>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-      <InputWithIcon
-        type="password"
-        placeholder={t("confirmPasswordPlaceholder")}
-        icons={<Lock className="h-4 w-4" strokeWidth={1.5} />}
-        name="confirmPassword"
-        id="confirmPassword"
-        value={formData.confirmPassword}
-        onChange={handleChange}
-      />
+        <FormField
+          control={form.control}
+          name="confirmPassword"
+          render={({ field }) => (
+            <FormItem>
+              <FormControl>
+                <div className="relative flex items-center">
+                  <Lock
+                    className="pointer-events-none absolute left-3 h-4 w-4 text-accent"
+                    strokeWidth={1.5}
+                  />
+                  <Input
+                    type="password"
+                    placeholder={t("confirmPasswordPlaceholder")}
+                    className="pl-9"
+                    {...field}
+                  />
+                </div>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
-      {response.message && (
-        <Alert message={response.message} success={response.success} />
-      )}
+        {response.message && (
+          <div
+            role="alert"
+            className={cn(
+              "my-3 flex items-center justify-center gap-2 rounded-xl border px-3.5 py-2.5 text-xs font-medium sm:text-sm",
+              response.success
+                ? "border-success/30 bg-success/10 text-success"
+                : "border-danger/30 bg-danger/10 text-danger"
+            )}
+          >
+            {response.success ? (
+              <CheckCircle2 className="h-4 w-4 shrink-0" strokeWidth={1.5} />
+            ) : (
+              <AlertTriangle className="h-4 w-4 shrink-0" strokeWidth={1.5} />
+            )}
+            <span>{response.message}</span>
+          </div>
+        )}
 
-      <BasicButton
-        type="submit"
-        size="full"
-        text={isPending ? t("registering") : t("registerButton")}
-        disabled={isPending}
-        theme="primary"
-      />
-    </form>
+        <Button type="submit" className="w-full" disabled={isPending}>
+          {isPending ? t("registering") : t("registerButton")}
+        </Button>
+      </form>
+    </Form>
   );
 };
 

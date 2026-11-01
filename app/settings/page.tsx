@@ -7,7 +7,7 @@ import NameAndEmail from "@/components/settings/NameAndEmail";
 import SettingsCard from "@/components/settings/SettingsCard";
 import TokensDisplay from "@/components/settings/TokensDisplay";
 import UserProfileImage from "@/components/settings/UserProfileImage";
-import LinkButton from "@/components/ui/button/LinkButton";
+import { Button } from "@/components/ui/button";
 import { SessionProps } from "@/types/user";
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
@@ -37,12 +37,9 @@ const SettingsPage = async () => {
           </Link>
           <div className="flex items-center gap-3">
             <LocaleSwitcher />
-            <LinkButton
-              href="/workspaces"
-              size="small"
-              theme="primary"
-              text={t("backToChat")}
-            />
+            <Button asChild size="sm">
+              <Link href="/workspaces">{t("backToChat")}</Link>
+            </Button>
           </div>
         </div>
       </header>
