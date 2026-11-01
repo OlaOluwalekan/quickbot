@@ -1,7 +1,7 @@
 "use client";
 
-import { setChatInputHeight, setChatMode } from "@/features/generalSlice";
-import { AppDispatch, RootState } from "@/store";
+import { useUiStore } from "@/lib/stores/ui";
+import { useGenerationStore } from "@/lib/stores/generation";
 import { submitChatPrompt } from "@/utils/chat-stream-client";
 import { formatNumber } from "@/utils/format";
 import clsx from "clsx";
@@ -16,20 +16,25 @@ import {
   useState,
 } from "react";
 import { Image as ImageIcon, MessageSquare, Send } from "lucide-react";
-import { useDispatch, useSelector } from "react-redux";
 
 const ChatInput = ({ userId: _userId }: { userId: string }) => {
   const t = useTranslations("Chat");
   const textRef = useRef<HTMLTextAreaElement>(null);
   const router = useRouter();
   const pathname = usePathname();
-  const dispatch = useDispatch<AppDispatch>();
   const [text, setText] = useState("");
   const [tokens, setTokens] = useState<number | null>(null);
-  const { currentPageTitle, isStreaming, loadingResponse, chatMode } =
-    useSelector((store: RootState) => store.general);
 
-  const isBusy = isStreaming || loadingResponse;
+  const currentPageTitle = useUiStore((s) => s.currentPageTitle);
+  const chatMode = useUiStore((s) => s.chatMode);
+  const setChatMode = useUiStore((s) => s.setChatMode);
+  const setChatInputHeight = useUiStore((s) => s.setChatInputHeight);
+
+  const isStreaming = useGenerationStore((s) =>
+    Object.values(s.streams).some((st) => st.status === "streaming"),
+  );
+
+  const isBusy = isStreaming;
 
   useEffect(() => {
     if (textRef.current) {
@@ -56,7 +61,7 @@ const ChatInput = ({ userId: _userId }: { userId: string }) => {
       textRef.current.value = "";
       textRef.current.style.height = "48px";
     }
-    dispatch(setChatInputHeight("56px"));
+    setChatInputHeight("56px");
   };
 
   const handleChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
@@ -65,7 +70,7 @@ const ChatInput = ({ userId: _userId }: { userId: string }) => {
       textRef.current.style.height = "48px";
       const nextHeight = Math.min(textRef.current.scrollHeight, 180);
       textRef.current.style.height = `${nextHeight}px`;
-      dispatch(setChatInputHeight(`${nextHeight + 16}px`));
+      setChatInputHeight(`${nextHeight + 16}px`);
     }
   };
 
@@ -92,7 +97,6 @@ const ChatInput = ({ userId: _userId }: { userId: string }) => {
       prompt,
       chatId: activeChatId,
       mode: chatMode,
-      dispatch,
       onNavigateChat: (newChatId) => {
         router.push(`/workspaces/${newChatId}`);
         router.refresh();
@@ -119,7 +123,7 @@ const ChatInput = ({ userId: _userId }: { userId: string }) => {
     <div
       className={clsx(
         "w-full shrink-0 bg-bg pt-2 pb-3",
-        currentPageTitle === "" && "hidden"
+        currentPageTitle === "" && "hidden",
       )}
     >
       <div className="mx-auto w-full max-w-4xl px-2 sm:px-4">
@@ -132,13 +136,13 @@ const ChatInput = ({ userId: _userId }: { userId: string }) => {
             <div className="flex items-center gap-1 rounded-xl bg-surface-2 p-0.5">
               <button
                 type="button"
-                onClick={() => dispatch(setChatMode("text"))}
+                onClick={() => setChatMode("text")}
                 disabled={isBusy}
                 className={clsx(
                   "flex cursor-pointer items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors",
                   chatMode === "text"
                     ? "bg-surface text-accent shadow-xs"
-                    : "text-muted hover:text-fg"
+                    : "text-muted hover:text-fg",
                 )}
               >
                 <MessageSquare className="h-3.5 w-3.5" strokeWidth={1.5} />
@@ -146,13 +150,13 @@ const ChatInput = ({ userId: _userId }: { userId: string }) => {
               </button>
               <button
                 type="button"
-                onClick={() => dispatch(setChatMode("image"))}
+                onClick={() => setChatMode("image")}
                 disabled={isBusy}
                 className={clsx(
                   "flex cursor-pointer items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors",
                   chatMode === "image"
                     ? "bg-surface text-accent shadow-xs"
-                    : "text-muted hover:text-fg"
+                    : "text-muted hover:text-fg",
                 )}
               >
                 <ImageIcon className="h-3.5 w-3.5" strokeWidth={1.5} />
@@ -192,7 +196,7 @@ const ChatInput = ({ userId: _userId }: { userId: string }) => {
                 "mb-1 flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-2xl shadow-sm transition-all",
                 !isBusy && text.trim()
                   ? "bg-accent text-accent-fg hover:bg-accent-hover active:scale-95"
-                  : "cursor-not-allowed bg-surface-3 text-subtle"
+                  : "cursor-not-allowed bg-surface-3 text-subtle",
               )}
             >
               <Send className="h-4 w-4" strokeWidth={1.5} />

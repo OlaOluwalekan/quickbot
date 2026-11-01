@@ -1,9 +1,7 @@
 import ChatInput from "@/components/chats/ChatInput";
-import generalReducer from "@/features/generalSlice";
-import { GeneralSliceInit } from "@/types";
-import { configureStore } from "@reduxjs/toolkit";
+import { useUiStore } from "@/lib/stores/ui";
+import { useGenerationStore } from "@/lib/stores/generation";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { Provider } from "react-redux";
 import { usePathname, useRouter } from "next/navigation";
 import enMessages from "../messages/en.json";
 
@@ -28,40 +26,8 @@ jest.mock("next-intl", () => ({
   useLocale: () => "en",
 }));
 
-function createTestStore() {
-  const preloadedGeneral: GeneralSliceInit = {
-    theme: "light",
-    themeIsOpen: false,
-    mobileNavIsOpen: false,
-    profileDialogIsOpen: false,
-    aiResponse: "",
-    loadingResponse: false,
-    codeTheme: "light",
-    currentPageTitle: "Test Chat",
-    currentPageId: null,
-    chatMenuIsOpen: false,
-    chatMenuClass: "",
-    dialogData: null,
-    editPopUpIsOpen: false,
-    deletePopUpIsOpen: false,
-    chatInputHeight: "56px",
-    searchResultIsOpen: false,
-    streamingPrompt: "",
-    streamingText: "",
-    isStreaming: false,
-    chatMode: "text",
-    optimisticResponses: [],
-  };
-
-  return configureStore({
-    reducer: { general: generalReducer },
-    preloadedState: { general: preloadedGeneral },
-  });
-}
-
 describe("ChatInput Component", () => {
   const mockUserId = "userId1";
-  let store: ReturnType<typeof createTestStore>;
 
   beforeEach(() => {
     (useRouter as jest.Mock).mockReturnValue({
@@ -70,7 +36,13 @@ describe("ChatInput Component", () => {
     });
     (usePathname as jest.Mock).mockReturnValue("/workspaces");
 
-    store = createTestStore();
+    useUiStore.getState().resetTransientUi();
+    useUiStore.setState({
+      currentPageTitle: "Test Chat",
+      currentPageId: null,
+      chatMode: "text",
+    });
+    useGenerationStore.getState().clearAllStreams();
   });
 
   afterEach(() => {
@@ -78,11 +50,7 @@ describe("ChatInput Component", () => {
   });
 
   it("renders the ChatInput component correctly", () => {
-    render(
-      <Provider store={store}>
-        <ChatInput userId={mockUserId} />
-      </Provider>
-    );
+    render(<ChatInput userId={mockUserId} />);
 
     const textarea = screen.getByPlaceholderText(/Message Klecx/i);
     expect(textarea).toBeInTheDocument();
@@ -92,16 +60,12 @@ describe("ChatInput Component", () => {
 
     expect(screen.getByRole("button", { name: /Chat/i })).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /Create Image/i })
+      screen.getByRole("button", { name: /Create Image/i }),
     ).toBeInTheDocument();
   });
 
   it("updates the textarea value on change", () => {
-    render(
-      <Provider store={store}>
-        <ChatInput userId={mockUserId} />
-      </Provider>
-    );
+    render(<ChatInput userId={mockUserId} />);
 
     const textarea = screen.getByPlaceholderText(/Message Klecx/i);
     fireEvent.change(textarea, { target: { value: "Hello, Klecx!" } });
@@ -109,22 +73,14 @@ describe("ChatInput Component", () => {
   });
 
   it("disables the submit button when textarea is empty", () => {
-    render(
-      <Provider store={store}>
-        <ChatInput userId={mockUserId} />
-      </Provider>
-    );
+    render(<ChatInput userId={mockUserId} />);
 
     const submitBtn = screen.getByRole("button", { name: /Send/i });
     expect(submitBtn).toBeDisabled();
   });
 
   it("enables the submit button when textarea has text", () => {
-    render(
-      <Provider store={store}>
-        <ChatInput userId={mockUserId} />
-      </Provider>
-    );
+    render(<ChatInput userId={mockUserId} />);
 
     const textarea = screen.getByPlaceholderText(/Message Klecx/i);
     fireEvent.change(textarea, { target: { value: "Hello, Klecx!" } });
@@ -133,11 +89,7 @@ describe("ChatInput Component", () => {
   });
 
   it("adjusts textarea height on input change", () => {
-    render(
-      <Provider store={store}>
-        <ChatInput userId={mockUserId} />
-      </Provider>
-    );
+    render(<ChatInput userId={mockUserId} />);
 
     const textarea = screen.getByPlaceholderText(/Message Klecx/i);
     fireEvent.change(textarea, { target: { value: "Hello, Klecx!" } });

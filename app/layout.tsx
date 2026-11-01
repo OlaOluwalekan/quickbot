@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import StoreProvider from "@/providers/StoreProvider";
+import QueryProvider from "@/components/providers/query-provider";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
 import { NextIntlClientProvider } from "next-intl";
@@ -41,7 +41,7 @@ export default async function RootLayout({
     >
       <body className="bg-bg text-fg font-sans antialiased">
         <NextIntlClientProvider locale={locale} messages={messages}>
-          <StoreProvider>
+          <QueryProvider>
             <ThemeProvider
               attribute="data-theme"
               defaultTheme="system"
@@ -51,7 +51,7 @@ export default async function RootLayout({
               {children}
               <Toaster position="bottom-right" />
             </ThemeProvider>
-          </StoreProvider>
+          </QueryProvider>
         </NextIntlClientProvider>
       </body>
     </html>

@@ -5,9 +5,7 @@ import { ChangeEvent, useEffect, useState } from "react";
 import { ChatProps, ResponseProps } from "@/types/chats";
 import { ChatSearchResult, ResponseSearchResult } from "./SearchResult";
 import { usePathname } from "next/navigation";
-import { useDispatch, useSelector } from "react-redux";
-import { RootState } from "@/store";
-import { setSearchResultIsOpen } from "@/features/generalSlice";
+import { useUiStore } from "@/lib/stores/ui";
 import { useTranslations } from "next-intl";
 
 const Search = ({ userId }: { userId: string }) => {
@@ -16,10 +14,8 @@ const Search = ({ userId }: { userId: string }) => {
   const [results, setResults] = useState<(ChatProps | ResponseProps)[]>([]);
   const pathname = usePathname() || "/workspaces";
   const path = pathname.split("/");
-  const { searchResultIsOpen } = useSelector(
-    (store: RootState) => store.general
-  );
-  const dispatch = useDispatch();
+  const searchResultIsOpen = useUiStore((s) => s.searchResultIsOpen);
+  const setSearchResultIsOpen = useUiStore((s) => s.setSearchResultIsOpen);
 
   const lastPath = path[path.length - 1] || "";
   let workspaceId = "";
@@ -30,7 +26,7 @@ const Search = ({ userId }: { userId: string }) => {
     workspaceId = lastPath;
   }
   const [searchOption, setSearchOption] = useState(
-    workspaceId ? "this chat" : "all chats"
+    workspaceId ? "this chat" : "all chats",
   );
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -43,12 +39,12 @@ const Search = ({ userId }: { userId: string }) => {
 
   const search = async () => {
     if (!searchText.trim()) {
-      dispatch(setSearchResultIsOpen(false));
+      setSearchResultIsOpen(false);
       setResults([]);
       return;
     }
 
-    dispatch(setSearchResultIsOpen(true));
+    setSearchResultIsOpen(true);
     try {
       const params = new URLSearchParams({
         q: searchText.trim(),
@@ -107,7 +103,9 @@ const Search = ({ userId }: { userId: string }) => {
           className="bg-surface border-l border-border text-muted px-2.5 py-1.5 text-xs font-medium focus:outline-none cursor-pointer"
           onChange={(e) => setSearchOption(e.target.value)}
         >
-          {workspaceId && <option value="this chat">{t("searchThisChat")}</option>}
+          {workspaceId && (
+            <option value="this chat">{t("searchThisChat")}</option>
+          )}
           <option value="all chats">{t("searchAllChats")}</option>
         </select>
       </form>

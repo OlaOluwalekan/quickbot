@@ -1,19 +1,11 @@
 "use client";
 
-import {
-  setCurrentPageTitle,
-  setDeletePopUpOpen,
-  setEditPopUpOpen,
-  toggleChatMenuOpen,
-  toggleMobileNavOpen,
-} from "@/features/generalSlice";
-import { RootState } from "@/store";
+import { useUiStore } from "@/lib/stores/ui";
 import clsx from "clsx";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MouseEvent, useEffect, useTransition } from "react";
 import { MessageSquarePlus, X } from "lucide-react";
-import { useDispatch, useSelector } from "react-redux";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -59,15 +51,18 @@ const Sidebar = ({
   const t = useTranslations("Chat");
   const tCommon = useTranslations("Common");
   const router = useRouter();
-  const {
-    mobileNavIsOpen,
-    chatMenuIsOpen,
-    editPopUpIsOpen,
-    deletePopUpIsOpen,
-    dialogData,
-    currentPageId,
-  } = useSelector((store: RootState) => store.general);
-  const dispatch = useDispatch();
+  const mobileNavIsOpen = useUiStore((s) => s.mobileNavIsOpen);
+  const chatMenuIsOpen = useUiStore((s) => s.chatMenuIsOpen);
+  const editPopUpIsOpen = useUiStore((s) => s.editPopUpIsOpen);
+  const deletePopUpIsOpen = useUiStore((s) => s.deletePopUpIsOpen);
+  const dialogData = useUiStore((s) => s.dialogData);
+  const currentPageId = useUiStore((s) => s.currentPageId);
+  const setEditPopUpOpen = useUiStore((s) => s.setEditPopUpOpen);
+  const setDeletePopUpOpen = useUiStore((s) => s.setDeletePopUpOpen);
+  const setCurrentPageTitle = useUiStore((s) => s.setCurrentPageTitle);
+  const toggleMobileNavOpen = useUiStore((s) => s.toggleMobileNavOpen);
+  const toggleChatMenuOpen = useUiStore((s) => s.toggleChatMenuOpen);
+
   const [isRenaming, startRenameTransition] = useTransition();
   const [isDeleting, startDeleteTransition] = useTransition();
 
@@ -98,15 +93,15 @@ const Sidebar = ({
         const json = await res.json();
         if (res.ok && json.data) {
           toast.success(t("renameSuccess"));
-          dispatch(setEditPopUpOpen(false));
+          setEditPopUpOpen(false);
           const updatedTitle =
             json.data.title ||
             json.data.updatedChat?.title ||
             newTitleTrimmed;
           if (currentPageId === dialogData.id) {
-            dispatch(setCurrentPageTitle(updatedTitle));
+            setCurrentPageTitle(updatedTitle);
           }
-          dispatch(toggleMobileNavOpen(false));
+          toggleMobileNavOpen(false);
           router.refresh();
         } else {
           toast.error(t("renameError"));
@@ -127,8 +122,8 @@ const Sidebar = ({
         });
         if (res.ok) {
           toast.success(t("deleteSuccess"));
-          dispatch(setDeletePopUpOpen(false));
-          dispatch(toggleMobileNavOpen(false));
+          setDeletePopUpOpen(false);
+          toggleMobileNavOpen(false);
           if (currentPageId === dialogData.id) {
             router.push("/workspaces");
           }
@@ -157,14 +152,14 @@ const Sidebar = ({
       acc[dateKey] = group;
       return acc;
     },
-    {}
+    {},
   );
 
   useEffect(() => {
     if (!mobileNavIsOpen) {
-      dispatch(toggleChatMenuOpen(false));
+      toggleChatMenuOpen(false);
     }
-  }, [mobileNavIsOpen, dispatch]);
+  }, [mobileNavIsOpen, toggleChatMenuOpen]);
 
   return (
     <>
@@ -174,9 +169,9 @@ const Sidebar = ({
           "fixed inset-0 z-30 bg-overlay backdrop-blur-xs transition-opacity md:hidden",
           mobileNavIsOpen
             ? "pointer-events-auto opacity-100"
-            : "pointer-events-none opacity-0"
+            : "pointer-events-none opacity-0",
         )}
-        onClick={() => dispatch(toggleMobileNavOpen(false))}
+        onClick={() => toggleMobileNavOpen(false)}
       />
 
       {/* Sidebar Panel */}
@@ -185,7 +180,7 @@ const Sidebar = ({
           "fixed top-0 bottom-0 left-0 z-40 flex w-70 shrink-0 flex-col border-r border-border bg-surface text-fg transition-transform duration-300 ease-in-out md:static",
           mobileNavIsOpen
             ? "translate-x-0"
-            : "-translate-x-full md:translate-x-0"
+            : "-translate-x-full md:translate-x-0",
         )}
         onClick={(e: MouseEvent<HTMLElement>) => e.stopPropagation()}
       >
@@ -195,7 +190,7 @@ const Sidebar = ({
             <Link
               href="/"
               className="flex items-center gap-2"
-              onClick={() => dispatch(toggleMobileNavOpen(false))}
+              onClick={() => toggleMobileNavOpen(false)}
             >
               <Logo size="icon" />
               <AppName />
@@ -207,7 +202,7 @@ const Sidebar = ({
               aria-label="Close sidebar"
               tooltip="Close sidebar"
               className="md:hidden"
-              onClick={() => dispatch(toggleMobileNavOpen(false))}
+              onClick={() => toggleMobileNavOpen(false)}
             >
               <X className="h-4 w-4" strokeWidth={1.5} />
             </Button>
@@ -216,7 +211,7 @@ const Sidebar = ({
           <Button asChild className="w-full">
             <Link
               href="/workspaces"
-              onClick={() => dispatch(toggleMobileNavOpen(false))}
+              onClick={() => toggleMobileNavOpen(false)}
             >
               <MessageSquarePlus className="h-4 w-4" strokeWidth={1.5} />
               <span>{t("newChat")}</span>
@@ -232,7 +227,7 @@ const Sidebar = ({
           {/* Rename Workspace Dialog (react-hook-form + updateWorkspaceSchema) */}
           <Dialog
             open={editPopUpIsOpen}
-            onOpenChange={(open) => dispatch(setEditPopUpOpen(open))}
+            onOpenChange={(open) => setEditPopUpOpen(open)}
           >
             <DialogContent>
               <Form {...renameForm}>
@@ -264,7 +259,7 @@ const Sidebar = ({
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => dispatch(setEditPopUpOpen(false))}
+                      onClick={() => setEditPopUpOpen(false)}
                     >
                       {tCommon("cancel")}
                     </Button>
@@ -280,7 +275,7 @@ const Sidebar = ({
           {/* Delete Workspace ConfirmDialog */}
           <ConfirmDialog
             open={deletePopUpIsOpen}
-            onOpenChange={(open) => dispatch(setDeletePopUpOpen(open))}
+            onOpenChange={(open) => setDeletePopUpOpen(open)}
             title={t("deleteConfirmTitle")}
             description={t("deleteConfirmDescription", {
               title: dialogData?.title || "",

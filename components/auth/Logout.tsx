@@ -4,16 +4,20 @@ import clsx from "clsx";
 import { LogOut } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { authClient } from "@/lib/auth-client";
+import { clearAllClientCaches } from "@/components/providers/query-provider";
 
 const Logout = ({ styleClass }: { styleClass?: string }): React.JSX.Element => {
   const t = useTranslations("Chat");
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const handleSignOut = async () => {
     await authClient.signOut({
       fetchOptions: {
         onSuccess: () => {
+          clearAllClientCaches(queryClient);
           router.push("/auth/login");
           router.refresh();
         },
@@ -28,7 +32,7 @@ const Logout = ({ styleClass }: { styleClass?: string }): React.JSX.Element => {
         "flex justify-start items-center gap-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer",
         styleClass
           ? styleClass
-          : "w-full px-3 py-2 text-danger hover:bg-danger/10"
+          : "w-full px-3 py-2 text-danger hover:bg-danger/10",
       )}
       onClick={handleSignOut}
     >

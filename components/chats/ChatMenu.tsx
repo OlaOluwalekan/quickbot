@@ -1,28 +1,24 @@
 "use client";
 
-import {
-  setDeletePopUpOpen,
-  setEditPopUpOpen,
-  toggleChatMenuOpen,
-} from "@/features/generalSlice";
-import { RootState } from "@/store";
+import { useUiStore } from "@/lib/stores/ui";
 import { Pencil, Trash2 } from "lucide-react";
-import { useDispatch, useSelector } from "react-redux";
 import { useTranslations } from "next-intl";
 
 const ChatMenu = () => {
   const t = useTranslations("Common");
-  const { chatMenuClass } = useSelector((store: RootState) => store.general);
-  const dispatch = useDispatch();
+  const chatMenuClass = useUiStore((s) => s.chatMenuClass);
+  const setEditPopUpOpen = useUiStore((s) => s.setEditPopUpOpen);
+  const setDeletePopUpOpen = useUiStore((s) => s.setDeletePopUpOpen);
+  const toggleChatMenuOpen = useUiStore((s) => s.toggleChatMenuOpen);
 
   const handleEditClicked = () => {
-    dispatch(setEditPopUpOpen(true));
-    dispatch(toggleChatMenuOpen(false));
+    setEditPopUpOpen(true);
+    toggleChatMenuOpen(false);
   };
 
   const handleDeleteClicked = () => {
-    dispatch(setDeletePopUpOpen(true));
-    dispatch(toggleChatMenuOpen(false));
+    setDeletePopUpOpen(true);
+    toggleChatMenuOpen(false);
   };
 
   return (

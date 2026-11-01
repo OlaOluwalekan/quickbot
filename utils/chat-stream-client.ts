@@ -1,23 +1,11 @@
-import {
-  addOptimisticResponse,
-  appendStreamingText,
-  resetStreamingState,
-  setAIResponse,
-  setCurrentPageId,
-  setCurrentPageTitle,
-  setIsStreaming,
-  setLoadingResponse,
-  setStreamingPrompt,
-  setStreamingText,
-} from "@/features/generalSlice";
-import { AppDispatch } from "@/store";
+import { useUiStore } from "@/lib/stores/ui";
+import { useGenerationStore } from "@/lib/stores/generation";
 import { toast } from "sonner";
 
 interface SubmitPromptOptions {
   prompt: string;
   chatId?: string | null;
   mode: "text" | "image";
-  dispatch: AppDispatch;
   onNavigateChat: (chatId: string) => void;
   onRefresh: () => void;
 }
@@ -66,17 +54,17 @@ export async function submitChatPrompt({
   prompt,
   chatId,
   mode,
-  dispatch,
   onNavigateChat,
   onRefresh,
 }: SubmitPromptOptions): Promise<void> {
   const cleanPrompt = prompt.trim();
   if (!cleanPrompt) return;
 
-  dispatch(setStreamingPrompt(cleanPrompt));
-  dispatch(setStreamingText(""));
-  dispatch(setIsStreaming(true));
-  dispatch(setLoadingResponse(true));
+  const streamKey = chatId || "__new__";
+  const genStore = useGenerationStore.getState();
+  const uiStore = useUiStore.getState();
+
+  genStore.startStream(streamKey, { prompt: cleanPrompt });
 
   let resolvedChatId = chatId || "";
   const wasNewChat = !resolvedChatId;
@@ -99,10 +87,10 @@ export async function submitChatPrompt({
 
       const { response: savedResponse, chatId: newChatId } = json.data || {};
       if (savedResponse) {
-        dispatch(addOptimisticResponse(savedResponse));
+        useUiStore.getState().addOptimisticResponse(savedResponse);
       }
 
-      dispatch(resetStreamingState());
+      useGenerationStore.getState().resetStream(streamKey);
 
       if (wasNewChat && newChatId) {
         onNavigateChat(newChatId);
@@ -149,25 +137,24 @@ export async function submitChatPrompt({
         if (evt.event === "chat_created") {
           resolvedChatId = evt.data?.chatId || resolvedChatId;
           if (evt.data?.title) {
-            dispatch(setCurrentPageTitle(evt.data.title));
+            uiStore.setCurrentPageTitle(evt.data.title);
           }
           if (resolvedChatId) {
-            dispatch(setCurrentPageId(resolvedChatId));
+            uiStore.setCurrentPageId(resolvedChatId);
           }
         } else if (evt.event === "delta") {
           if (evt.data?.text) {
-            dispatch(appendStreamingText(evt.data.text));
+            useGenerationStore.getState().appendDelta(streamKey, evt.data.text);
           }
         } else if (evt.event === "completed") {
           const savedResponse = evt.data?.response;
           resolvedChatId = evt.data?.chatId || resolvedChatId;
 
           if (savedResponse) {
-            dispatch(addOptimisticResponse(savedResponse));
-            dispatch(setAIResponse(savedResponse.response || ""));
+            useUiStore.getState().addOptimisticResponse(savedResponse);
           }
 
-          dispatch(resetStreamingState());
+          useGenerationStore.getState().resetStream(streamKey);
 
           if (wasNewChat && resolvedChatId) {
             onNavigateChat(resolvedChatId);
@@ -183,6 +170,6 @@ export async function submitChatPrompt({
     console.error("[submitChatPrompt] Error:", error);
     toast.error(error instanceof Error ? error.message : "Failed to respond");
   } finally {
-    dispatch(resetStreamingState());
+    useGenerationStore.getState().resetStream(streamKey);
   }
 }

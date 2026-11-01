@@ -3,16 +3,15 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect } from "react";
-import { useDispatch } from "react-redux";
-import { setCurrentPageTitle } from "@/features/generalSlice";
+import { useUiStore } from "@/lib/stores/ui";
 import { Button } from "@/components/ui/button";
 
 const NotFound = () => {
-  const dispatch = useDispatch();
+  const setCurrentPageTitle = useUiStore((s) => s.setCurrentPageTitle);
 
   useEffect(() => {
-    dispatch(setCurrentPageTitle(""));
-  }, [dispatch]);
+    setCurrentPageTitle("");
+  }, [setCurrentPageTitle]);
 
   return (
     <div className="w-full h-full flex flex-col justify-center items-center gap-5">
