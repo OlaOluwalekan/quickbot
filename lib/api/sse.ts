@@ -161,3 +161,80 @@ export async function streamGeneration(
     }
   }
 }
+
+export async function streamRegeneration(
+  responseId: string,
+  body: {
+    idempotencyKey: string;
+    modelKey?: string;
+    think?: boolean;
+    language?: string;
+  },
+  handlers: GenerationSSEHandlers = {},
+  signal?: AbortSignal
+): Promise<void> {
+  const res = await fetch(`/api/v1/responses/${encodeURIComponent(responseId)}/regenerate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    signal,
+  });
+
+  if (!res.ok) {
+    let errData;
+    try {
+      errData = await res.json();
+    } catch {
+      errData = { error: { code: `http_${res.status}`, message: res.statusText } };
+    }
+    const err = errData.error || errData;
+    handlers.onError?.(err);
+    throw new Error(err.message || "Regeneration failed");
+  }
+
+  if (!res.body) {
+    throw new Error("Response body is null");
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  const parser = createParser({
+    onEvent: (event) => {
+      if (!event.data) return;
+      try {
+        const payload = JSON.parse(event.data);
+        switch (event.event) {
+            case "started":
+              handlers.onStarted?.(payload);
+              break;
+            case "status":
+              handlers.onStatus?.(payload);
+              break;
+            case "thought":
+              handlers.onThought?.(payload);
+              break;
+            case "delta":
+              handlers.onDelta?.(payload);
+              break;
+            case "usage":
+              handlers.onUsage?.(payload);
+              break;
+            case "completed":
+              handlers.onCompleted?.(payload);
+              break;
+            case "error":
+              handlers.onError?.(payload);
+              break;
+          }
+        } catch {
+          // Ignored
+        }
+      },
+    });
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    parser.feed(decoder.decode(value, { stream: true }));
+  }
+}

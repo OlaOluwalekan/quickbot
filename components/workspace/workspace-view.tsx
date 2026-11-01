@@ -3,20 +3,20 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { Brain, Sparkles, AlertCircle } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { useUiStore } from "@/lib/stores/ui";
 import {
   useGenerationStore,
-  type WorkspaceGenerationStream,
   DEFAULT_WORKSPACE_STREAM,
+  type WorkspaceGenerationStream,
 } from "@/lib/stores/generation";
-import { queryKeys } from "@/lib/api/hooks/query-keys";
+import { streamGeneration, streamRegeneration } from "@/lib/api/sse";
 import { useResponses } from "@/lib/api/hooks/responses";
-import { streamGeneration } from "@/lib/api/sse";
-import { Composer } from "./composer";
-import type { WorkspaceDto } from "@/lib/api/hooks/workspaces";
+import { queryKeys } from "@/lib/api/hooks/query-keys";
+import { Composer } from "@/components/workspace/composer";
+import { ResponseList } from "@/components/response/response-list";
+import type { ResponseItemData } from "@/components/response/response-card";
 import type { Actor } from "@/server/auth/session";
+import type { WorkspaceDto } from "@/lib/api/hooks/workspaces";
 
 export interface WorkspaceViewProps {
   workspace: WorkspaceDto;
@@ -71,35 +71,163 @@ export function WorkspaceView({
     }
   }, [initialResponses]);
 
-  // Combined responses from TanStack Query or local state
-  const displayedResponses = React.useMemo(() => {
+  // Combined responses formatted as ResponseItemData
+  const displayedResponses: ResponseItemData[] = React.useMemo(() => {
     if (responsesData && responsesData.pages.length > 0) {
       const items = responsesData.pages.flatMap((p) => p.items);
       if (items.length > 0) {
-        return items.map((r) => ({
-          id: r.id,
-          prompt: r.prompt,
-          content: (r as unknown as { response?: string; activeVersion?: { content?: string } }).response ||
-                   (r as unknown as { activeVersion?: { content?: string } }).activeVersion?.content || "",
-          createdAt: r.createdAt,
-        }));
+        return items.map((r) => {
+          const raw = r as unknown as {
+            kind?: string;
+            versionCount?: number;
+            activeVersion?: {
+              id: string;
+              number: number;
+              content: string;
+              originalContent?: string;
+              thoughtSummary?: string | null;
+              modelKey?: string | null;
+              edited?: boolean;
+              hasEdits?: boolean;
+              latestEditContent?: string | null;
+            };
+            response?: string;
+            latestEdit?: { content?: string };
+          };
+
+          const activeVer = raw.activeVersion;
+          const latestEdit = activeVer?.latestEditContent || raw.latestEdit?.content;
+          const effectiveContent =
+            latestEdit ||
+            activeVer?.content ||
+            raw.response ||
+            "";
+
+          return {
+            id: r.id,
+            workspaceId: workspace.id,
+            prompt: r.prompt,
+            kind: (raw.kind as "TEXT" | "IMAGE") || "TEXT",
+            content: effectiveContent,
+            response: effectiveContent,
+            versionCount: raw.versionCount || 1,
+            activeVersionId: r.activeVersionId || activeVer?.id,
+            createdAt: r.createdAt,
+            activeVersion: activeVer
+              ? {
+                  id: activeVer.id,
+                  number: activeVer.number || 1,
+                  content: effectiveContent,
+                  originalContent:
+                    activeVer.originalContent || activeVer.content || effectiveContent,
+                  thoughtSummary: activeVer.thoughtSummary,
+                  modelKey: activeVer.modelKey,
+                  edited: Boolean(activeVer.edited || activeVer.hasEdits || latestEdit),
+                  hasEdits: Boolean(activeVer.hasEdits || latestEdit),
+                  latestEditContent: latestEdit,
+                }
+              : null,
+          };
+        });
       }
     }
-    return localResponses;
-  }, [responsesData, localResponses]);
 
-  // Generation stream for this workspace
-  const stream: WorkspaceGenerationStream = useGenerationStore(
-    (s) => s.streams[workspace.id] ?? DEFAULT_WORKSPACE_STREAM,
-  );
+    return localResponses.map((r) => ({
+      id: r.id,
+      workspaceId: workspace.id,
+      prompt: r.prompt,
+      kind: "TEXT" as const,
+      content: r.content || "",
+      response: r.content || "",
+      versionCount: 1,
+      createdAt: r.createdAt,
+      activeVersion: {
+        id: "ver-" + r.id,
+        number: 1,
+        content: r.content || "",
+        originalContent: r.content || "",
+      },
+    }));
+  }, [responsesData, localResponses, workspace.id]);
 
   const [optimisticFirstPrompt, setOptimisticFirstPrompt] = React.useState<string | null>(null);
-  const [activeStage, setActiveStage] = React.useState<string | null>(null);
-  const scrollEndRef = React.useRef<HTMLDivElement>(null);
 
-  const scrollToBottom = React.useCallback(() => {
-    scrollEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, []);
+  // Execute or retry stream generation
+  const startStreamTurn = React.useCallback(
+    (promptText: string, idempotencyKey: string, options?: { modelKey?: string; kind?: "TEXT" | "IMAGE"; think?: boolean; language?: string }) => {
+      const genStore = useGenerationStore.getState();
+      genStore.startStream(workspace.id, { prompt: promptText });
+
+      const abortController = new AbortController();
+      genStore.setController(workspace.id, abortController);
+
+      streamGeneration(
+        workspace.id,
+        {
+          idempotencyKey,
+          prompt: promptText,
+          modelKey: options?.modelKey || "text-economy",
+          kind: options?.kind || "TEXT",
+          think: options?.think,
+          language: options?.language,
+        },
+        {
+          onStarted: (data) => {
+            useGenerationStore.getState().setGenerationId(workspace.id, data.generationId);
+          },
+          onStatus: (data) => {
+            useGenerationStore.getState().setProgress(workspace.id, data.stage);
+          },
+          onThought: (data) => {
+            useGenerationStore.getState().appendThought(workspace.id, data.text);
+          },
+          onDelta: (data) => {
+            useGenerationStore.getState().appendDelta(workspace.id, data.text);
+          },
+          onCompleted: (data) => {
+            useGenerationStore.getState().completeStream(workspace.id, data.content);
+            setLocalResponses((prev) => [
+              ...prev,
+              {
+                id: data.responseId || "res-" + Date.now(),
+                prompt: promptText,
+                content: data.content,
+                createdAt: new Date(),
+              },
+            ]);
+            setOptimisticFirstPrompt(null);
+            useGenerationStore.getState().setController(workspace.id, null);
+
+            // Invalidate caches
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.responses.all(actor.userId, workspace.id),
+            });
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.workspaces.all(actor.userId),
+            });
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.home.get(actor.userId),
+            });
+            router.refresh();
+          },
+          onError: (err) => {
+            useGenerationStore.getState().failStream(workspace.id, err.message || err.code);
+            useGenerationStore.getState().setController(workspace.id, null);
+          },
+        },
+        abortController.signal,
+      ).catch((err) => {
+        if (!abortController.signal.aborted) {
+          useGenerationStore.getState().failStream(
+            workspace.id,
+            err instanceof Error ? err.message : "Stream failed",
+          );
+          useGenerationStore.getState().setController(workspace.id, null);
+        }
+      });
+    },
+    [workspace.id, actor.userId, queryClient, router]
+  );
 
   // Check and consume pendingStart on mount
   React.useEffect(() => {
@@ -114,16 +242,7 @@ export function WorkspaceView({
 
     // Consume pendingStart
     genStore.consumePendingStart(workspace.id);
-
     setOptimisticFirstPrompt(pending.prompt);
-
-    // Start stream in store
-    genStore.startStream(workspace.id, {
-      prompt: pending.prompt,
-    });
-
-    const abortController = new AbortController();
-    genStore.setController(workspace.id, abortController);
 
     const idemKey =
       pending.idempotencyKey ||
@@ -131,178 +250,97 @@ export function WorkspaceView({
         ? crypto.randomUUID()
         : "idem-" + Math.random().toString(36).substring(2, 12));
 
-    streamGeneration(
-      workspace.id,
-      {
-        idempotencyKey: idemKey,
-        prompt: pending.prompt,
-        modelKey: pending.modelKey || "text-economy",
-        kind: pending.mode === "image" ? "IMAGE" : "TEXT",
-        think: pending.thinkHarder,
-        language: pending.language || undefined,
-      },
-      {
-        onStarted: (data) => {
-          useGenerationStore.getState().setGenerationId(workspace.id, data.generationId);
-        },
-        onStatus: (data) => {
-          setActiveStage(data.stage);
-          useGenerationStore.getState().setProgress(workspace.id, data.stage);
-        },
-        onThought: (data) => {
-          useGenerationStore.getState().appendThought(workspace.id, data.text);
-          scrollToBottom();
-        },
-        onDelta: (data) => {
-          useGenerationStore.getState().appendDelta(workspace.id, data.text);
-          scrollToBottom();
-        },
-        onCompleted: (data) => {
-          useGenerationStore.getState().completeStream(workspace.id, data.content);
-          setLocalResponses((prev) => [
-            ...prev,
-            {
-              id: data.responseId || "res-" + Date.now(),
-              prompt: pending.prompt,
-              content: data.content,
-              createdAt: new Date(),
-            },
-          ]);
-          setOptimisticFirstPrompt(null);
-          useGenerationStore.getState().setController(workspace.id, null);
-
-          // Invalidate cache so sidebar and recents reflect new activity
-          queryClient.invalidateQueries({
-            queryKey: queryKeys.responses.all(actor.userId, workspace.id),
-          });
-          queryClient.invalidateQueries({
-            queryKey: queryKeys.workspaces.all(actor.userId),
-          });
-          queryClient.invalidateQueries({
-            queryKey: queryKeys.home.get(actor.userId),
-          });
-          router.refresh();
-        },
-        onError: (err) => {
-          useGenerationStore.getState().failStream(workspace.id, err.message || err.code);
-          useGenerationStore.getState().setController(workspace.id, null);
-        },
-      },
-      abortController.signal,
-    ).catch((err) => {
-      if (!abortController.signal.aborted) {
-        useGenerationStore.getState().failStream(
-          workspace.id,
-          err instanceof Error ? err.message : "Stream failed",
-        );
-        useGenerationStore.getState().setController(workspace.id, null);
-      }
+    startStreamTurn(pending.prompt, idemKey, {
+      modelKey: pending.modelKey,
+      kind: pending.mode === "image" ? "IMAGE" : "TEXT",
+      think: pending.thinkHarder,
+      language: pending.language || undefined,
     });
+  }, [workspace.id, startStreamTurn]);
 
-    // We do NOT abort on cleanup here so the in-flight stream survives React StrictMode remounts.
-    // The abort controller is stored in the store and called on explicit cancelStream.
-  }, [workspace.id, actor.userId, queryClient, router, scrollToBottom]);
+  // Handle Turn Regeneration (Step 2.6 / 3.7)
+  const handleRegenerateTurn = React.useCallback(
+    (responseId: string) => {
+      const targetResponse = displayedResponses.find((r) => r.id === responseId);
+      if (!targetResponse) return;
 
-  const isStreaming = stream.status === "streaming";
-  const hasStreamOutput = Boolean(
-    isStreaming || stream.status === "failed" || (optimisticFirstPrompt && stream.text),
+      const genStore = useGenerationStore.getState();
+      genStore.startStream(workspace.id, { prompt: targetResponse.prompt });
+
+      const abortController = new AbortController();
+      genStore.setController(workspace.id, abortController);
+
+      const idemKey =
+        typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+          ? crypto.randomUUID()
+          : "regen-" + Date.now().toString(36) + Math.random().toString(36).substring(2, 8);
+
+      streamRegeneration(
+        responseId,
+        { idempotencyKey: idemKey },
+        {
+          onStarted: (data) => {
+            useGenerationStore.getState().setGenerationId(workspace.id, data.generationId);
+          },
+          onStatus: (data) => {
+            useGenerationStore.getState().setProgress(workspace.id, data.stage);
+          },
+          onThought: (data) => {
+            useGenerationStore.getState().appendThought(workspace.id, data.text);
+          },
+          onDelta: (data) => {
+            useGenerationStore.getState().appendDelta(workspace.id, data.text);
+          },
+          onCompleted: (data) => {
+            useGenerationStore.getState().completeStream(workspace.id, data.content);
+            useGenerationStore.getState().setController(workspace.id, null);
+
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.responses.all(actor.userId, workspace.id),
+            });
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.responses.versions(actor.userId, responseId),
+            });
+            router.refresh();
+          },
+          onError: (err) => {
+            useGenerationStore.getState().failStream(workspace.id, err.message || err.code);
+            useGenerationStore.getState().setController(workspace.id, null);
+          },
+        },
+        abortController.signal,
+      ).catch((err) => {
+        if (!abortController.signal.aborted) {
+          useGenerationStore.getState().failStream(
+            workspace.id,
+            err instanceof Error ? err.message : "Regeneration failed",
+          );
+          useGenerationStore.getState().setController(workspace.id, null);
+        }
+      });
+    },
+    [workspace.id, displayedResponses, actor.userId, queryClient, router]
+  );
+
+  // Handle Retry Failed Stream (uses new idempotency key)
+  const handleRetryFailed = React.useCallback(
+    (promptText: string, idempotencyKey: string) => {
+      startStreamTurn(promptText, idempotencyKey);
+    },
+    [startStreamTurn]
   );
 
   return (
     <div className="flex-1 flex flex-col h-full w-full overflow-hidden bg-bg">
-      {/* Scrollable Conversation Timeline */}
-      <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 space-y-6">
-        <div className="max-w-4xl mx-auto space-y-6">
-          {/* Past conversation responses */}
-          {displayedResponses.map((res, idx) => (
-            <div key={res.id} className="space-y-4">
-              {/* User Prompt */}
-              <div className="flex justify-end">
-                <div
-                  className={cn(
-                    "max-w-xl rounded-2xl bg-surface-2 border border-border px-4 py-2.5 text-sm sm:text-base text-fg shadow-xs",
-                    idx === 0 && !optimisticFirstPrompt && "vt-first-prompt",
-                  )}
-                >
-                  {res.prompt}
-                </div>
-              </div>
-
-              {/* Assistant Response */}
-              {res.content && (
-                <div className="flex gap-3 text-left">
-                  <div className="h-8 w-8 rounded-xl bg-accent-soft text-accent flex items-center justify-center shrink-0 border border-border">
-                    <Sparkles className="h-4 w-4" />
-                  </div>
-                  <div className="flex-1 rounded-2xl border border-border bg-surface p-4 sm:p-5 text-sm sm:text-base leading-relaxed text-fg shadow-xs">
-                    {res.content}
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
-
-          {/* Optimistic Prompt Bubble (with view-transition-name: first-prompt) */}
-          {optimisticFirstPrompt && (
-            <div className="flex justify-end">
-              <div
-                className="vt-first-prompt max-w-xl rounded-2xl bg-surface-2 border border-border px-4 py-2.5 text-sm sm:text-base text-fg shadow-xs"
-              >
-                {optimisticFirstPrompt}
-              </div>
-            </div>
-          )}
-
-          {/* Active Generation Stream / Thinking Panel */}
-          {hasStreamOutput && (
-            <div className="flex gap-3 text-left animate-fade-in">
-              <div className="h-8 w-8 rounded-xl bg-accent text-accent-fg flex items-center justify-center shrink-0 shadow-xs">
-                <Sparkles className="h-4 w-4" />
-              </div>
-              <div className="flex-1 space-y-3">
-                {/* Thinking / Progress Summary Panel */}
-                {(stream.thought || activeStage || isStreaming) && (
-                  <div className="rounded-xl border border-border bg-surface-2 p-3 space-y-2 text-xs">
-                    <div className="flex items-center gap-2 font-medium text-muted">
-                      <Brain className="h-3.5 w-3.5 animate-pulse text-accent" />
-                      <span className="capitalize">
-                        {activeStage ? `${activeStage}...` : "Thinking..."}
-                      </span>
-                    </div>
-                    {stream.thought && (
-                      <div className="font-mono text-[11px] text-muted whitespace-pre-wrap max-h-36 overflow-y-auto">
-                        {stream.thought}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Assistant Output Content */}
-                {stream.text && (
-                  <div className="rounded-2xl border border-border bg-surface p-4 sm:p-5 text-sm sm:text-base leading-relaxed text-fg shadow-xs whitespace-pre-wrap">
-                    {stream.text}
-                    {isStreaming && (
-                      <span className="inline-block h-4 w-1 bg-accent animate-pulse ml-0.5 align-middle" />
-                    )}
-                  </div>
-                )}
-
-                {/* Stream Error Card */}
-                {stream.status === "failed" && stream.error && (
-                  <div className="rounded-xl border border-danger/30 bg-danger/10 p-3 text-xs text-danger flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5">
-                      <AlertCircle className="h-4 w-4 shrink-0" />
-                      <span>{stream.error}</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          <div ref={scrollEndRef} className="h-2" />
-        </div>
-      </div>
+      {/* Response Timeline List */}
+      <ResponseList
+        workspaceId={workspace.id}
+        actor={actor}
+        responses={displayedResponses}
+        optimisticPrompt={optimisticFirstPrompt}
+        onRegenerateTurn={handleRegenerateTurn}
+        onRetryFailed={handleRetryFailed}
+      />
 
       {/* Fixed Bottom Composer with view-transition-name: composer */}
       <div className="border-t border-border/50 bg-bg/80 backdrop-blur-md px-4 sm:px-6 py-3 shrink-0">
