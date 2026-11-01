@@ -22,6 +22,7 @@ export interface PersistedUiSlice {
   sidebarCollapsed: boolean;
   rightPanelOpen: boolean;
   composerEnterToSend: boolean;
+  onboardingDismissed: boolean;
   drafts: Record<string, string>;
 }
 
@@ -32,6 +33,7 @@ export interface UiState extends PersistedUiSlice {
   setRightPanelOpen: (open: boolean) => void;
   toggleRightPanelOpen: () => void;
   setComposerEnterToSend: (enterToSend: boolean) => void;
+  setOnboardingDismissed: (dismissed: boolean) => void;
   setDraft: (workspaceId: string, text: string) => void;
   clearDraft: (workspaceId: string) => void;
   clearAllDrafts: () => void;
@@ -104,6 +106,7 @@ export function partializeUiState(state: UiState): PersistedUiSlice {
     sidebarCollapsed: state.sidebarCollapsed,
     rightPanelOpen: state.rightPanelOpen,
     composerEnterToSend: state.composerEnterToSend,
+    onboardingDismissed: state.onboardingDismissed,
     drafts: state.drafts,
   };
 }
@@ -114,6 +117,7 @@ export const useUiStore = create<UiState>()(
       sidebarCollapsed: false,
       rightPanelOpen: false,
       composerEnterToSend: true,
+      onboardingDismissed: false,
       drafts: {},
 
       ...initialTransientState,
@@ -133,6 +137,8 @@ export const useUiStore = create<UiState>()(
         set((state) => ({ rightPanelOpen: !state.rightPanelOpen })),
       setComposerEnterToSend: (composerEnterToSend) =>
         set({ composerEnterToSend }),
+      setOnboardingDismissed: (onboardingDismissed) =>
+        set({ onboardingDismissed }),
       setDraft: (workspaceId, text) =>
         set((state) => {
           const next = { ...state.drafts };

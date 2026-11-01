@@ -1,5 +1,6 @@
 import { getActor } from "@/server/auth/session";
 import ResponseList from "@/components/chats/ResponseList";
+import ChatInput from "@/components/chats/ChatInput";
 import NotFound from "@/components/not-found/NotFound";
 import { getWorkspace } from "@/server/services/workspace";
 import { getResponses } from "@/utils/actions/response";
@@ -31,6 +32,7 @@ const SingleWorkspacePage = async ({
         data={responses}
         image={(actor?.image ?? null) as string | null}
       />
+      <ChatInput userId={actor.userId} />
     </div>
   );
 };
