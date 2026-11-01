@@ -137,7 +137,22 @@
     "tokensRemaining": "{count} tokens restantes",
     "outOfTokens": "Te has quedado sin tokens. Por favor recarga tu saldo.",
     "promptRequired": "Por favor ingresa un prompt primero.",
-    "streamError": "Error al generar la respuesta. Inténtalo de nuevo."
+    "streamError": "Error al generar la respuesta. Inténtalo de nuevo.",
+    "attachDisabled": "Los archivos adjuntos estarán disponibles en la Fase 5",
+    "model": "Modelo",
+    "thinkHarder": "Pensar más a fondo",
+    "thinkHarderDesc": "Habilitar razonamiento más profundo y resúmenes de pensamiento",
+    "language": "Idioma",
+    "languageAuto": "Automático",
+    "queue": "Cola de solicitudes",
+    "queueDisabled": "La cola está vacía",
+    "stop": "Detener generación",
+    "generatingLive": "Generando...",
+    "generatingDone": "Completado",
+    "outOfCreditsReason": "Te has quedado sin créditos. Mejora tu plan para continuar.",
+    "upgradeCta": "Mejorar plan",
+    "createWorkspaceFailed": "Error al crear el espacio de trabajo. Haz clic en Reintentar.",
+    "retry": "Reintentar"
   },
   "Settings": {
     "title": "Configuración del Espacio",

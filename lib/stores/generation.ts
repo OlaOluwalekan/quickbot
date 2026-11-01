@@ -29,8 +29,24 @@ export const DEFAULT_WORKSPACE_STREAM: WorkspaceGenerationStream = {
 
 export const DRAFT_STREAM_KEY = "__new__";
 
+export interface PendingWorkspaceStart {
+  workspaceId: string;
+  prompt: string;
+  attachmentIds?: string[];
+  modelKey?: string;
+  idempotencyKey?: string;
+  mode?: "text" | "image";
+  thinkHarder?: boolean;
+  language?: string | null;
+}
+
 export interface GenerationStoreState {
   streams: Record<string, WorkspaceGenerationStream>;
+  controllers: Record<string, AbortController>;
+  setController: (workspaceId: string, controller: AbortController | null) => void;
+  pendingStart: PendingWorkspaceStart | null;
+  setPendingStart: (pending: PendingWorkspaceStart | null) => void;
+  consumePendingStart: (workspaceId: string) => PendingWorkspaceStart | null;
   startStream: (
     workspaceId: string,
     init?: { prompt?: string; generationId?: string | null }
@@ -49,6 +65,30 @@ export interface GenerationStoreState {
 
 export const useGenerationStore = create<GenerationStoreState>((set, get) => ({
   streams: {},
+  controllers: {},
+  pendingStart: null,
+
+  setController: (workspaceId, controller) =>
+    set((state) => {
+      const next = { ...state.controllers };
+      if (controller) {
+        next[workspaceId] = controller;
+      } else {
+        delete next[workspaceId];
+      }
+      return { controllers: next };
+    }),
+
+  setPendingStart: (pending) => set({ pendingStart: pending }),
+
+  consumePendingStart: (workspaceId) => {
+    const current = get().pendingStart;
+    if (current && current.workspaceId === workspaceId) {
+      set({ pendingStart: null });
+      return current;
+    }
+    return null;
+  },
 
   startStream: (workspaceId, init) =>
     set((state) => ({
@@ -154,8 +194,12 @@ export const useGenerationStore = create<GenerationStoreState>((set, get) => ({
 
   cancelStream: (workspaceId) =>
     set((state) => {
+      state.controllers[workspaceId]?.abort();
+      const nextControllers = { ...state.controllers };
+      delete nextControllers[workspaceId];
       const current = state.streams[workspaceId] ?? DEFAULT_WORKSPACE_STREAM;
       return {
+        controllers: nextControllers,
         streams: {
           ...state.streams,
           [workspaceId]: {
@@ -174,7 +218,13 @@ export const useGenerationStore = create<GenerationStoreState>((set, get) => ({
       return { streams: next };
     }),
 
-  clearAllStreams: () => set({ streams: {} }),
+  clearAllStreams: () => {
+    const controllers = get().controllers;
+    Object.values(controllers).forEach((c) => {
+      try { c.abort(); } catch {}
+    });
+    set({ streams: {}, controllers: {}, pendingStart: null });
+  },
 
   getStream: (workspaceId) => {
     const key = workspaceId || DRAFT_STREAM_KEY;

@@ -147,6 +147,7 @@ export function WorkspaceHome({
           userName={userName}
           prefilledPrompt={selectedPrompt}
           prefilledMode={selectedMode}
+          credits={homeData.credits}
         />
 
         {/* 6. Onboarding Checklist (for brand new accounts) */}

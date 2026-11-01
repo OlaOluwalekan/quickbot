@@ -137,7 +137,22 @@
     "tokensRemaining": "{count} jetons restants",
     "outOfTokens": "Vous n'avez plus de jetons. Veuillez recharger votre solde.",
     "promptRequired": "Veuillez d'abord saisir une invite.",
-    "streamError": "Échec de la génération de la réponse. Veuillez réessayer."
+    "streamError": "Échec de la génération de la réponse. Veuillez réessayer.",
+    "attachDisabled": "Les pièces jointes seront disponibles dans la Phase 5",
+    "model": "Modèle",
+    "thinkHarder": "Approfondir la réflexion",
+    "thinkHarderDesc": "Activer le raisonnement approfondi et les résumés de réflexion",
+    "language": "Langue",
+    "languageAuto": "Automatique",
+    "queue": "File d'attente de requêtes",
+    "queueDisabled": "La file d'attente est vide",
+    "stop": "Arrêter la génération",
+    "generatingLive": "Génération en cours...",
+    "generatingDone": "Terminé",
+    "outOfCreditsReason": "Vous n'avez plus de crédits. Mettez à niveau votre forfait pour continuer.",
+    "upgradeCta": "Mettre à niveau",
+    "createWorkspaceFailed": "Échec de création de l'espace de travail. Cliquez sur Réessayer.",
+    "retry": "Réessayer"
   },
   "Settings": {
     "title": "Paramètres de l'espace",
