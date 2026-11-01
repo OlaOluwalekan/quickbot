@@ -1,7 +1,9 @@
 import ChatInput from "@/components/chats/ChatInput";
+import generalReducer from "@/features/generalSlice";
+import { GeneralSliceInit } from "@/types";
+import { configureStore } from "@reduxjs/toolkit";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { Provider } from "react-redux";
-import configureMockStore from "redux-mock-store";
 import { usePathname, useRouter } from "next/navigation";
 import enMessages from "../messages/en.json";
 
@@ -26,11 +28,40 @@ jest.mock("next-intl", () => ({
   useLocale: () => "en",
 }));
 
-const mockStore = configureMockStore([]);
+function createTestStore() {
+  const preloadedGeneral: GeneralSliceInit = {
+    theme: "light",
+    themeIsOpen: false,
+    mobileNavIsOpen: false,
+    profileDialogIsOpen: false,
+    aiResponse: "",
+    loadingResponse: false,
+    codeTheme: "light",
+    currentPageTitle: "Test Chat",
+    currentPageId: null,
+    chatMenuIsOpen: false,
+    chatMenuClass: "",
+    dialogData: null,
+    editPopUpIsOpen: false,
+    deletePopUpIsOpen: false,
+    chatInputHeight: "56px",
+    searchResultIsOpen: false,
+    streamingPrompt: "",
+    streamingText: "",
+    isStreaming: false,
+    chatMode: "text",
+    optimisticResponses: [],
+  };
+
+  return configureStore({
+    reducer: { general: generalReducer },
+    preloadedState: { general: preloadedGeneral },
+  });
+}
 
 describe("ChatInput Component", () => {
   const mockUserId = "userId1";
-  let store: any;
+  let store: ReturnType<typeof createTestStore>;
 
   beforeEach(() => {
     (useRouter as jest.Mock).mockReturnValue({
@@ -39,15 +70,7 @@ describe("ChatInput Component", () => {
     });
     (usePathname as jest.Mock).mockReturnValue("/workspaces");
 
-    store = mockStore({
-      general: {
-        currentPageTitle: "Test Chat",
-        chatInputHeight: "56px",
-        isStreaming: false,
-        loadingResponse: false,
-        chatMode: "text",
-      },
-    });
+    store = createTestStore();
   });
 
   afterEach(() => {
@@ -67,7 +90,6 @@ describe("ChatInput Component", () => {
     const submitBtn = screen.getByRole("button", { name: /Send/i });
     expect(submitBtn).toBeInTheDocument();
 
-    // Check mode selector buttons exist
     expect(screen.getByRole("button", { name: /Chat/i })).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /Create Image/i })

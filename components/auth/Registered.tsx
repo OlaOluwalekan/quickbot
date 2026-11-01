@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { ChangeEvent, FormEvent, useEffect, useState, useTransition } from "react";
 import InputWithIcon from "../ui/inputs/InputWithIcon";
-import { FaEnvelope, FaEnvelopeCircleCheck } from "react-icons/fa6";
+import { Mail, MailCheck } from "lucide-react";
 import BasicButton from "../ui/button/BasicButton";
 import Alert from "../alert/Alert";
 import { useTranslations } from "next-intl";
@@ -92,18 +92,18 @@ const Registered = ({
   };
 
   return (
-    <div className="w-full max-w-md rounded-3xl border border-slate-200/90 dark:border-slate-800/90 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl p-6 sm:p-8 shadow-2xl shadow-indigo-500/10 text-center">
-      <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/25 text-indigo-500 flex items-center justify-center text-2xl mx-auto mb-4">
-        <FaEnvelopeCircleCheck />
+    <div className="w-full max-w-md rounded-3xl border border-border bg-surface/90 backdrop-blur-xl p-6 sm:p-8 shadow-lg text-center">
+      <div className="w-14 h-14 rounded-2xl bg-accent-soft border border-border text-accent flex items-center justify-center text-2xl mx-auto mb-4">
+        <MailCheck className="h-6 w-6" strokeWidth={1.5} />
       </div>
 
-      <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white mb-2">
+      <h1 className="text-2xl font-extrabold text-fg mb-2">
         {t("registeredTitle")}
       </h1>
 
       <form onSubmit={handleSubmit} className="space-y-4 mt-4" noValidate>
         {email ? (
-          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+          <p className="text-xs sm:text-sm text-muted leading-relaxed">
             {t("registeredDescription")}
           </p>
         ) : (
@@ -116,7 +116,7 @@ const Registered = ({
         <InputWithIcon
           type="email"
           placeholder={t("emailPlaceholder")}
-          icons={<FaEnvelope />}
+          icons={<Mail className="h-4 w-4" strokeWidth={1.5} />}
           name="email"
           value={userEmail}
           onChange={(e: ChangeEvent<HTMLInputElement>) =>

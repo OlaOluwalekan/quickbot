@@ -46,7 +46,7 @@ const Template = async ({ children }: { children: ReactNode }) => {
     : undefined;
 
   return (
-    <div className="flex h-dvh w-full flex-col overflow-hidden bg-slate-50 text-slate-900 dark:bg-[#090d16] dark:text-slate-100">
+    <div className="flex h-dvh w-full flex-col overflow-hidden bg-bg text-fg">
       {/* Mobile Header */}
       <ChatMobileHeader userId={(actor?.userId ?? "") as string} />
 

@@ -9,12 +9,12 @@ import {
 } from "@/features/generalSlice";
 import { RootState } from "@/store";
 import InputWithIcon from "../ui/inputs/InputWithIcon";
-import { FaEdit } from "react-icons/fa";
+import { Pencil } from "lucide-react";
 import { ChangeEvent, FormEvent, MouseEvent, useState, useTransition } from "react";
 import BasicButton from "../ui/button/BasicButton";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 
 const EditPopup = () => {
   const t = useTranslations("Chat");
@@ -62,20 +62,20 @@ const EditPopup = () => {
       <form
         onSubmit={handleSubmit}
         onClick={(e: MouseEvent) => e.stopPropagation()}
-        className="w-[92%] max-w-md rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-2xl space-y-4"
+        className="w-[92%] max-w-md rounded-2xl border border-border bg-surface p-6 shadow-lg space-y-4"
       >
-        <div className="flex items-center gap-3 text-indigo-600 dark:text-indigo-400">
-          <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center shrink-0">
-            <FaEdit className="text-lg" />
+        <div className="flex items-center gap-3 text-accent">
+          <div className="w-10 h-10 rounded-xl bg-accent-soft flex items-center justify-center shrink-0">
+            <Pencil className="h-5 w-5" strokeWidth={1.5} />
           </div>
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+          <h3 className="text-lg font-bold text-fg">
             {t("renameChat")}
           </h3>
         </div>
 
         <InputWithIcon
           type="text"
-          icons={<FaEdit />}
+          icons={<Pencil className="h-4 w-4" strokeWidth={1.5} />}
           name="chatTitle"
           value={chatTitle}
           placeholder={t("renamePlaceholder")}

@@ -10,10 +10,10 @@ export const sizeClass = (size: string) =>
 
 export const themeClass = (theme: "primary" | "outline" | "base") =>
   clsx({
-    "bg-gradient-to-r from-indigo-600 to-sky-500 text-white border border-transparent shadow-md shadow-indigo-500/20 hover:shadow-indigo-500/30":
+    "bg-accent text-accent-fg border border-transparent shadow-sm hover:bg-accent-hover":
       theme === "primary",
-    "border border-slate-300 dark:border-slate-700 bg-transparent text-slate-800 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800":
+    "border border-border-strong bg-transparent text-fg hover:bg-surface-2":
       theme === "outline",
-    "border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800":
+    "border border-border bg-surface text-fg hover:bg-surface-2":
       theme === "base",
   });

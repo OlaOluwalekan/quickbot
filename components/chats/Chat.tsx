@@ -11,7 +11,7 @@ import { ChatProps } from "@/types/chats";
 import clsx from "clsx";
 import Link from "next/link";
 import { MouseEvent } from "react";
-import { FaEllipsisVertical, FaRegMessage } from "react-icons/fa6";
+import { MessageSquare, MoreVertical } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 
 const Chat = ({ chat }: { chat: ChatProps }) => {
@@ -43,8 +43,8 @@ const Chat = ({ chat }: { chat: ChatProps }) => {
         className={clsx(
           "group w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-xl text-xs sm:text-sm transition-colors",
           isActive
-            ? "bg-indigo-600/20 text-white font-medium border border-indigo-500/30"
-            : "text-slate-300 hover:bg-slate-800/80 hover:text-white"
+            ? "bg-accent-soft text-accent font-medium border border-border"
+            : "text-muted hover:bg-surface-2 hover:text-fg"
         )}
       >
         <Link
@@ -52,10 +52,11 @@ const Chat = ({ chat }: { chat: ChatProps }) => {
           className="flex-1 min-w-0 flex items-center gap-2.5 truncate"
           onClick={() => dispatch(toggleMobileNavOpen(false))}
         >
-          <FaRegMessage
+          <MessageSquare
+            strokeWidth={1.5}
             className={clsx(
-              "text-xs shrink-0",
-              isActive ? "text-indigo-400" : "text-slate-500"
+              "h-3.5 w-3.5 shrink-0",
+              isActive ? "text-accent" : "text-subtle"
             )}
           />
           <span className="truncate">{chat.title}</span>
@@ -65,11 +66,11 @@ const Chat = ({ chat }: { chat: ChatProps }) => {
           onClick={handleClick}
           aria-label="Conversation options"
           className={clsx(
-            "a-modal p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/70 transition-opacity cursor-pointer shrink-0",
+            "a-modal p-1.5 rounded-lg text-subtle hover:text-fg hover:bg-surface-3 transition-opacity cursor-pointer shrink-0",
             chat.id
           )}
         >
-          <FaEllipsisVertical className="text-xs" />
+          <MoreVertical className="h-3.5 w-3.5" strokeWidth={1.5} />
         </button>
       </div>
     </div>

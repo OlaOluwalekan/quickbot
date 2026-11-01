@@ -3,9 +3,8 @@
 import clsx from "clsx";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChangeEvent, FormEvent, useEffect, useState, useTransition } from "react";
-import { FaCheckCircle, FaTimesCircle } from "react-icons/fa";
+import { CheckCircle2, Mail, XCircle } from "lucide-react";
 import InputWithIcon from "../ui/inputs/InputWithIcon";
-import { FaEnvelope } from "react-icons/fa6";
 import BasicButton from "../ui/button/BasicButton";
 import LinkButton from "../ui/button/LinkButton";
 import { useTranslations } from "next-intl";
@@ -109,13 +108,13 @@ const VerificationForm = (): React.JSX.Element => {
   };
 
   return (
-    <div className="w-full max-w-md rounded-3xl border border-slate-200/90 dark:border-slate-800/90 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl p-6 sm:p-8 shadow-2xl shadow-indigo-500/10 text-center flex flex-col items-center gap-4">
-      <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white">
+    <div className="w-full max-w-md rounded-3xl border border-border bg-surface/90 backdrop-blur-xl p-6 sm:p-8 shadow-lg text-center flex flex-col items-center gap-4">
+      <h1 className="text-2xl font-extrabold text-fg">
         {t("verifyingTitle")}
       </h1>
 
       {isPending && (
-        <p className="text-sm text-slate-500 dark:text-slate-400">
+        <p className="text-sm text-muted">
           {t("verifyingSubtitle")}
         </p>
       )}
@@ -125,12 +124,16 @@ const VerificationForm = (): React.JSX.Element => {
           className={clsx(
             "w-full text-sm flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl border font-medium",
             response.success
-              ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
-              : "bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-400"
+              ? "bg-success/10 border-success/30 text-success"
+              : "bg-danger/10 border-danger/30 text-danger"
           )}
         >
           <span>
-            {response.success ? <FaCheckCircle /> : <FaTimesCircle />}
+            {response.success ? (
+              <CheckCircle2 className="h-4 w-4" strokeWidth={1.5} />
+            ) : (
+              <XCircle className="h-4 w-4" strokeWidth={1.5} />
+            )}
           </span>
           <p>{response.message}</p>
         </div>
@@ -141,7 +144,7 @@ const VerificationForm = (): React.JSX.Element => {
           <InputWithIcon
             type="email"
             placeholder={t("emailPlaceholder")}
-            icons={<FaEnvelope />}
+            icons={<Mail className="h-4 w-4" strokeWidth={1.5} />}
             name="email"
             value={userEmail}
             onChange={(e: ChangeEvent<HTMLInputElement>) =>

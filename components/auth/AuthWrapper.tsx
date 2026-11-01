@@ -6,11 +6,11 @@ import LocaleSwitcher from "../general/LocaleSwitcher";
 
 const AuthWrapper = ({ children }: { children: ReactNode }) => {
   return (
-    <div className="min-h-screen w-full flex flex-col justify-between bg-slate-50 dark:bg-[#090d16] relative overflow-hidden px-4 py-6">
+    <div className="min-h-screen w-full flex flex-col justify-between bg-bg relative overflow-hidden px-4 py-6">
       {/* Ambient Radial Accents */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 w-[500px] h-[300px] rounded-full bg-gradient-to-tr from-indigo-500/20 via-sky-500/15 to-purple-500/10 blur-3xl"
+        className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 w-[500px] h-[300px] rounded-full bg-accent-soft blur-3xl"
       />
 
       {/* Top Navigation Bar */}
@@ -27,7 +27,7 @@ const AuthWrapper = ({ children }: { children: ReactNode }) => {
         {children}
       </div>
 
-      <div className="text-center text-xs text-slate-400 dark:text-slate-500 z-20">
+      <div className="text-center text-xs text-subtle z-20">
         © {new Date().getFullYear()} Klecx
       </div>
     </div>

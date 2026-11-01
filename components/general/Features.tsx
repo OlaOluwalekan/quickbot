@@ -1,13 +1,13 @@
 "use client";
 
 import {
-  FaBolt,
-  FaChartPie,
-  FaCode,
-  FaImage,
-  FaMagnifyingGlass,
-  FaNetworkWired,
-} from "react-icons/fa6";
+  Code2,
+  Image as ImageIcon,
+  Network,
+  PieChart,
+  Search,
+  Zap,
+} from "lucide-react";
 import Feature from "./Feature";
 import { useTranslations } from "next-intl";
 
@@ -17,37 +17,37 @@ const Features = () => {
   const features = [
     {
       id: "1",
-      icon: <FaBolt />,
+      icon: <Zap className="h-5 w-5" strokeWidth={1.5} />,
       title: t("feature1Title"),
       text: t("feature1Desc"),
     },
     {
       id: "2",
-      icon: <FaImage />,
+      icon: <ImageIcon className="h-5 w-5" strokeWidth={1.5} />,
       title: t("feature2Title"),
       text: t("feature2Desc"),
     },
     {
       id: "3",
-      icon: <FaNetworkWired />,
+      icon: <Network className="h-5 w-5" strokeWidth={1.5} />,
       title: t("feature3Title"),
       text: t("feature3Desc"),
     },
     {
       id: "4",
-      icon: <FaMagnifyingGlass />,
+      icon: <Search className="h-5 w-5" strokeWidth={1.5} />,
       title: t("feature4Title"),
       text: t("feature4Desc"),
     },
     {
       id: "5",
-      icon: <FaCode />,
+      icon: <Code2 className="h-5 w-5" strokeWidth={1.5} />,
       title: t("feature5Title"),
       text: t("feature5Desc"),
     },
     {
       id: "6",
-      icon: <FaChartPie />,
+      icon: <PieChart className="h-5 w-5" strokeWidth={1.5} />,
       title: t("feature6Title"),
       text: t("feature6Desc"),
     },
@@ -56,13 +56,13 @@ const Features = () => {
   return (
     <section id="features" className="py-14 sm:py-20 w-full">
       <div className="text-center max-w-2xl mx-auto mb-12">
-        <span className="text-xs font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">
+        <span className="text-xs font-bold uppercase tracking-widest text-accent">
           {t("featuresBadge")}
         </span>
-        <h2 className="mt-2 text-2xl sm:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+        <h2 className="mt-2 text-2xl sm:text-4xl font-extrabold tracking-tight text-fg">
           {t("featuresHeading")}
         </h2>
-        <p className="mt-3 text-sm sm:text-base text-slate-600 dark:text-slate-400">
+        <p className="mt-3 text-sm sm:text-base text-muted">
           {t("featuresSubheading")}
         </p>
       </div>

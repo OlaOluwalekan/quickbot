@@ -1,22 +1,29 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import StoreProvider from "@/providers/StoreProvider";
-import ThemeProvider from "@/providers/ThemeProvider";
-import Theme from "@/components/theme/Theme";
-import { Toaster } from "react-hot-toast";
+import { ThemeProvider } from "next-themes";
+import { Toaster } from "sonner";
 import { NextIntlClientProvider } from "next-intl";
-import { getLocale, getMessages, getTranslations } from "next-intl/server";
+import { getLocale, getMessages } from "next-intl/server";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
 
-export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations("Metadata");
-  return {
-    title: t("title"),
-    description: t("description"),
-  };
-}
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
+  display: "swap",
+});
+
+export const metadata: Metadata = {
+  title: "Klecx",
+  description:
+    "Collaborative AI workspace for research, writing, and knowledge organization.",
+};
 
 export default async function RootLayout({
   children,
@@ -27,23 +34,22 @@ export default async function RootLayout({
   const messages = await getMessages();
 
   return (
-    <html lang={locale} suppressHydrationWarning>
-      <body
-        suppressHydrationWarning
-        className={`main bg-base-100 text-base-content dark:bg-dark-base-100 dark:text-dark-base-content antialiased selection:bg-indigo-500/20 selection:text-indigo-500 ${inter.className}`}
-      >
+    <html
+      lang={locale}
+      suppressHydrationWarning
+      className={`${inter.variable} ${jetbrainsMono.variable}`}
+    >
+      <body className="bg-bg text-fg font-sans antialiased">
         <NextIntlClientProvider locale={locale} messages={messages}>
           <StoreProvider>
-            <ThemeProvider>
+            <ThemeProvider
+              attribute="data-theme"
+              defaultTheme="system"
+              enableSystem
+              disableTransitionOnChange
+            >
               {children}
-              <Theme />
-              <Toaster
-                position="top-right"
-                toastOptions={{
-                  className:
-                    "!bg-slate-900 !text-slate-100 !border !border-slate-800 !rounded-xl !text-sm",
-                }}
-              />
+              <Toaster position="bottom-right" />
             </ThemeProvider>
           </StoreProvider>
         </NextIntlClientProvider>

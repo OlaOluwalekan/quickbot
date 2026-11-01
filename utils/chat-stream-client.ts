@@ -11,7 +11,7 @@ import {
   setStreamingText,
 } from "@/features/generalSlice";
 import { AppDispatch } from "@/store";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 
 interface SubmitPromptOptions {
   prompt: string;

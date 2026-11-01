@@ -33,6 +33,7 @@ jobs:
       - run: npx prisma validate
       - run: npx prisma migrate deploy # proves migrations apply to an empty DB
       - run: npm run lint
+      - run: npm run check:tokens
       - run: npm run typecheck
       - run: npm test -- --ci
       - run: npm run build

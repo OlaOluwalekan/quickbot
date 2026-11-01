@@ -8,7 +8,7 @@ const InlineCode = ({
   props: any;
 }) => {
   return (
-    <code {...props} className="rounded bg-base-200/50 px-1 py-0.5">
+    <code {...props} className="rounded bg-surface-3 font-mono px-1 py-0.5">
       {children}
     </code>
   );

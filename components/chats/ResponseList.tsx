@@ -13,7 +13,7 @@ import {
 } from "@/features/generalSlice";
 import ResponseMD from "./markdown/ResponseMD";
 import UserImage from "./UserImage";
-import { FaWandMagicSparkles } from "react-icons/fa6";
+import { Sparkles } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 const ResponseList = ({
@@ -40,7 +40,6 @@ const ResponseList = ({
 
   const currentChatId = data[0]?.chatId;
 
-  // On mount or chat switch, reset ancestor scroll offsets and scroll to bottom
   useEffect(() => {
     if (!currentChatId) return;
     dispatch(clearOptimisticResponses());
@@ -58,7 +57,6 @@ const ResponseList = ({
     });
 
     if (containerRef.current) {
-      // Ensure any ancestor element that might have been scrolled by scrollIntoView is reset
       let parent = containerRef.current.parentElement;
       while (parent && parent !== document.body) {
         if (parent.scrollTop > 0) {
@@ -87,7 +85,6 @@ const ResponseList = ({
   const handleScroll = () => {
     if (!containerRef.current) return;
     const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
-    // Track if user is near bottom (within 150px) to auto-scroll, or has intentionally scrolled up
     isAutoScrollingRef.current = scrollHeight - scrollTop - clientHeight < 150;
   };
 
@@ -103,7 +100,7 @@ const ResponseList = ({
     <div
       ref={containerRef}
       onScroll={handleScroll}
-      className="flex-1 min-h-0 overflow-y-auto w-full pt-4 pb-6 flex flex-col scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-700 hover:scrollbar-thumb-slate-400 dark:hover:scrollbar-thumb-slate-600 scrollbar-track-transparent"
+      className="flex-1 min-h-0 overflow-y-auto w-full pt-4 pb-6 flex flex-col"
     >
       {mergedResponses.map((response) => (
         <Response key={response.id} response={response} image={image} />
@@ -118,7 +115,7 @@ const ResponseList = ({
               <div className="shrink-0">
                 <UserImage image={image} />
               </div>
-              <div className="bg-gradient-to-br from-indigo-600 to-indigo-500 text-white py-3 px-4 rounded-2xl rounded-br-xs shadow-sm text-sm sm:text-base whitespace-pre-wrap break-words">
+              <div className="bg-accent text-accent-fg py-3 px-4 rounded-2xl rounded-br-xs shadow-sm text-sm sm:text-base whitespace-pre-wrap break-words">
                 {streamingPrompt}
               </div>
             </div>
@@ -127,39 +124,39 @@ const ResponseList = ({
           {/* Klecx Live Streaming Bubble */}
           <div className="w-full flex justify-start">
             <div className="w-full max-w-[95%] sm:max-w-[88%] flex gap-3 items-start">
-              <div className="shrink-0 w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500/20 to-sky-500/20 border border-indigo-500/30 flex justify-center items-center text-indigo-500 animate-pulse mt-0.5">
-                <FaWandMagicSparkles className="text-base" />
+              <div className="shrink-0 w-9 h-9 rounded-xl bg-accent-soft border border-border flex justify-center items-center text-accent animate-pulse mt-0.5">
+                <Sparkles className="h-4 w-4" strokeWidth={1.5} />
               </div>
 
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1.5 text-xs">
-                  <span className="font-bold bg-gradient-to-r from-indigo-500 to-sky-500 bg-clip-text text-transparent">
+                  <span className="font-bold text-accent">
                     Klecx
                   </span>
-                  <span className="text-slate-400 dark:text-slate-500 animate-pulse">
+                  <span className="text-subtle animate-pulse">
                     {chatMode === "image"
                       ? t("generatingImage")
                       : t("generating")}
                   </span>
                 </div>
 
-                <div className="rounded-2xl rounded-tl-xs border border-indigo-500/30 bg-white dark:bg-slate-900/90 p-4 shadow-sm text-slate-800 dark:text-slate-100">
+                <div className="rounded-2xl rounded-tl-xs border border-border bg-surface p-4 shadow-sm text-fg">
                   {chatMode === "image" ? (
-                    <div className="w-full max-w-sm h-64 rounded-xl bg-gradient-to-r from-slate-200 via-indigo-500/10 to-slate-200 dark:from-slate-800 dark:via-indigo-500/15 dark:to-slate-800 animate-pulse flex flex-col items-center justify-center gap-2 text-slate-500 dark:text-slate-400">
-                      <FaWandMagicSparkles className="text-2xl text-indigo-500 animate-spin" />
+                    <div className="w-full max-w-sm h-64 rounded-xl bg-surface-2 animate-pulse flex flex-col items-center justify-center gap-2 text-muted">
+                      <Sparkles className="h-6 w-6 text-accent animate-spin" strokeWidth={1.5} />
                       <span className="text-xs font-medium">
                         {t("generatingImage")}
                       </span>
                     </div>
                   ) : streamingText ? (
-                    <div className="markdown prose prose-slate dark:prose-invert max-w-none text-sm sm:text-base whitespace-pre-wrap break-words leading-relaxed">
+                    <div className="markdown max-w-none text-sm sm:text-base whitespace-pre-wrap break-words leading-relaxed">
                       <ResponseMD response={streamingText} />
                     </div>
                   ) : (
                     <div className="flex items-center gap-1.5 py-2">
-                      <span className="w-2 h-2 rounded-full bg-indigo-500 animate-bounce" />
-                      <span className="w-2 h-2 rounded-full bg-sky-500 animate-bounce [animation-delay:150ms]" />
-                      <span className="w-2 h-2 rounded-full bg-indigo-400 animate-bounce [animation-delay:300ms]" />
+                      <span className="w-2 h-2 rounded-full bg-accent animate-bounce" />
+                      <span className="w-2 h-2 rounded-full bg-accent animate-bounce [animation-delay:150ms]" />
+                      <span className="w-2 h-2 rounded-full bg-accent animate-bounce [animation-delay:300ms]" />
                     </div>
                   )}
                 </div>

@@ -8,8 +8,7 @@ import { RootState } from "@/store";
 import clsx from "clsx";
 import Link from "next/link";
 import { MouseEvent, useEffect } from "react";
-import { BiSolidMessageSquareAdd } from "react-icons/bi";
-import { FaXmark } from "react-icons/fa6";
+import { MessageSquarePlus, X } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import ChatList from "./ChatList";
 import UserProfile from "./user-profile/UserProfile";
@@ -68,7 +67,7 @@ const Sidebar = ({
       {/* Mobile Backdrop */}
       <div
         className={clsx(
-          "fixed inset-0 z-30 bg-slate-950/60 backdrop-blur-xs transition-opacity md:hidden",
+          "fixed inset-0 z-30 bg-overlay backdrop-blur-xs transition-opacity md:hidden",
           mobileNavIsOpen
             ? "pointer-events-auto opacity-100"
             : "pointer-events-none opacity-0"
@@ -79,7 +78,7 @@ const Sidebar = ({
       {/* Sidebar Panel */}
       <aside
         className={clsx(
-          "fixed top-0 bottom-0 left-0 z-40 flex w-70 shrink-0 flex-col border-r border-slate-800/90 bg-slate-900 text-slate-100 transition-transform duration-300 ease-in-out md:static",
+          "fixed top-0 bottom-0 left-0 z-40 flex w-70 shrink-0 flex-col border-r border-border bg-surface text-fg transition-transform duration-300 ease-in-out md:static",
           mobileNavIsOpen
             ? "translate-x-0"
             : "-translate-x-full md:translate-x-0"
@@ -87,7 +86,7 @@ const Sidebar = ({
         onClick={(e: MouseEvent<HTMLElement>) => e.stopPropagation()}
       >
         {/* Brand Header & New Chat CTA */}
-        <div className="flex flex-col gap-3 border-b border-slate-800/80 p-3.5">
+        <div className="flex flex-col gap-3 border-b border-border p-3.5">
           <div className="flex items-center justify-between">
             <Link
               href="/"
@@ -100,19 +99,19 @@ const Sidebar = ({
             <button
               type="button"
               aria-label="Close sidebar"
-              className="cursor-pointer rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-white md:hidden"
+              className="cursor-pointer rounded-lg p-2 text-muted hover:bg-surface-2 hover:text-fg md:hidden"
               onClick={() => dispatch(toggleMobileNavOpen(false))}
             >
-              <FaXmark />
+              <X className="h-4 w-4" strokeWidth={1.5} />
             </button>
           </div>
 
           <Link
             href="/workspaces"
             onClick={() => dispatch(toggleMobileNavOpen(false))}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-linear-to-r from-indigo-600 to-sky-500 px-3 py-2.5 text-sm font-semibold text-white shadow-md shadow-indigo-500/20 transition-all hover:opacity-95"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-3 py-2.5 text-sm font-semibold text-accent-fg shadow-sm transition-all hover:bg-accent-hover"
           >
-            <BiSolidMessageSquareAdd className="text-base" />
+            <MessageSquarePlus className="h-4 w-4" strokeWidth={1.5} />
             <span>{t("newChat")}</span>
           </Link>
         </div>

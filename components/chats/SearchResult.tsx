@@ -18,7 +18,7 @@ export const ChatSearchResult = ({
   return (
     <Link
       href={`/workspaces/${result.id}`}
-      className='px-2 py-3 hover:bg-base-300/30 block'
+      className='px-2 py-3 hover:bg-surface-2 block rounded-lg'
       onClick={() => setSearchText('')}
       dangerouslySetInnerHTML={{ __html: render }}
     ></Link>
@@ -53,10 +53,10 @@ export const ResponseSearchResult = ({
   return (
     <Link
       href={`/workspaces/${result.chatId}#${result.id}`}
-      className='px-2 py-1 hover:bg-base-300/30 flex flex-col'
+      className='px-2 py-1 hover:bg-surface-2 flex flex-col rounded-lg'
       onClick={() => setSearchText('')}
     >
-      <span className='text-[10px] bg-primary/30 px-1 py-[1px] rounded-sm w-fit'>
+      <span className='text-[10px] bg-accent-soft text-accent px-1.5 py-0.5 rounded-sm w-fit'>
         {title}
       </span>
       <div dangerouslySetInnerHTML={{ __html: render }}></div>
