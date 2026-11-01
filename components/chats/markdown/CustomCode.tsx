@@ -6,9 +6,7 @@ import {
 import { Check, Copy, Moon, Sun } from "lucide-react";
 import clsx from "clsx";
 import { ReactNode, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { RootState } from "@/store";
-import { setCodeTheme } from "@/features/generalSlice";
+import { useUiStore } from "@/lib/stores/ui";
 
 const CustomCode = ({
   language,
@@ -20,11 +18,11 @@ const CustomCode = ({
   props: any;
 }) => {
   const [isCopied, setIsCopied] = useState(false);
-  const { codeTheme } = useSelector((store: RootState) => store.general);
-  const dispatch = useDispatch();
+  const codeTheme = useUiStore((s) => s.codeTheme);
+  const setCodeTheme = useUiStore((s) => s.setCodeTheme);
 
   const toggleCodeTheme = () => {
-    dispatch(setCodeTheme(codeTheme === "light" ? "dark" : "light"));
+    setCodeTheme(codeTheme === "light" ? "dark" : "light");
   };
 
   const handleCopyCode = (code: string) => {
@@ -58,7 +56,7 @@ const CustomCode = ({
             type="button"
             className={clsx(
               "text-sm transition-colors cursor-pointer",
-              isCopied ? "text-success" : "text-muted hover:text-fg"
+              isCopied ? "text-success" : "text-muted hover:text-fg",
             )}
             onClick={() => handleCopyCode(String(children))}
             title="Copy code"

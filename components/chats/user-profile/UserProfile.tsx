@@ -1,20 +1,16 @@
 "use client";
 
-import { RootState } from "@/store";
 import clsx from "clsx";
-import { useDispatch, useSelector } from "react-redux";
 import UserImage from "../UserImage";
-import { toggleProfileDialogOpen } from "@/features/generalSlice";
+import { useUiStore } from "@/lib/stores/ui";
 import ProfileDialog from "./ProfileDialog";
 import { formatNumber } from "@/utils/format";
 import { useTranslations } from "next-intl";
 
 const UserProfile = ({ data }: { data: any }) => {
   const tCommon = useTranslations("Common");
-  const { profileDialogIsOpen } = useSelector(
-    (store: RootState) => store.general
-  );
-  const dispatch = useDispatch();
+  const profileDialogIsOpen = useUiStore((s) => s.profileDialogIsOpen);
+  const toggleProfileDialogOpen = useUiStore((s) => s.toggleProfileDialogOpen);
 
   return (
     <div className="w-full relative p-2.5 border-t border-border">
@@ -23,10 +19,10 @@ const UserProfile = ({ data }: { data: any }) => {
         type="button"
         className={clsx(
           "a-modal w-full flex justify-start items-center gap-2.5 px-2.5 py-2 rounded-xl text-fg transition-colors cursor-pointer",
-          profileDialogIsOpen ? "bg-surface-2" : "hover:bg-surface-2"
+          profileDialogIsOpen ? "bg-surface-2" : "hover:bg-surface-2",
         )}
         title={data?.name as string}
-        onClick={() => dispatch(toggleProfileDialogOpen(!profileDialogIsOpen))}
+        onClick={() => toggleProfileDialogOpen(!profileDialogIsOpen)}
       >
         <UserImage image={data?.image} />
         <div className="flex flex-1 min-w-0 items-center justify-between gap-2">

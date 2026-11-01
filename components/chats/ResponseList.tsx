@@ -3,14 +3,8 @@
 import { ResponseProps } from "@/types/chats";
 import React, { useEffect, useMemo, useRef, useTransition } from "react";
 import Response from "./Response";
-import { useDispatch, useSelector } from "react-redux";
-import { RootState } from "@/store";
-
-import {
-  clearOptimisticResponses,
-  setCurrentPageId,
-  setCurrentPageTitle,
-} from "@/features/generalSlice";
+import { useUiStore } from "@/lib/stores/ui";
+import { useGenerationStore } from "@/lib/stores/generation";
 import ResponseMD from "./markdown/ResponseMD";
 import UserImage from "./UserImage";
 import { Sparkles } from "lucide-react";
@@ -27,30 +21,37 @@ const ResponseList = ({
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const isAutoScrollingRef = useRef(true);
-  const {
-    isStreaming,
-    streamingPrompt,
-    streamingText,
-    chatMode,
-    currentPageTitle,
-    optimisticResponses,
-  } = useSelector((store: RootState) => store.general);
-  const [, startTransition] = useTransition();
-  const dispatch = useDispatch();
+
+  const chatMode = useUiStore((s) => s.chatMode);
+  const currentPageTitle = useUiStore((s) => s.currentPageTitle);
+  const optimisticResponses = useUiStore((s) => s.optimisticResponses);
+  const clearOptimisticResponses = useUiStore(
+    (s) => s.clearOptimisticResponses,
+  );
+  const setCurrentPageTitle = useUiStore((s) => s.setCurrentPageTitle);
+  const setCurrentPageId = useUiStore((s) => s.setCurrentPageId);
 
   const currentChatId = data[0]?.chatId;
+  const streamState = useGenerationStore((s) =>
+    currentChatId ? s.streams[currentChatId] : undefined,
+  );
+  const isStreaming = streamState?.status === "streaming";
+  const streamingPrompt = streamState?.prompt ?? "";
+  const streamingText = streamState?.text ?? "";
+
+  const [, startTransition] = useTransition();
 
   useEffect(() => {
     if (!currentChatId) return;
-    dispatch(clearOptimisticResponses());
+    clearOptimisticResponses();
     startTransition(() => {
       fetch(`/api/v1/workspaces/${currentChatId}`)
         .then((r) => r.json())
         .then((res) => {
           const ws = res?.data?.workspace || res?.data?.chat || res?.data;
           if (ws?.id && ws?.title) {
-            dispatch(setCurrentPageTitle(ws.title));
-            dispatch(setCurrentPageId(ws.id));
+            setCurrentPageTitle(ws.title);
+            setCurrentPageId(ws.id);
           }
         })
         .catch(() => {});
@@ -66,7 +67,12 @@ const ResponseList = ({
       }
       containerRef.current.scrollTop = containerRef.current.scrollHeight;
     }
-  }, [currentChatId, dispatch]);
+  }, [
+    currentChatId,
+    clearOptimisticResponses,
+    setCurrentPageTitle,
+    setCurrentPageId,
+  ]);
 
   useEffect(() => {
     if (currentPageTitle) {
@@ -77,7 +83,7 @@ const ResponseList = ({
   const mergedResponses = useMemo(() => {
     const existingIds = new Set(data.map((item) => item.id));
     const extras = optimisticResponses.filter(
-      (item) => item.chatId === currentChatId && !existingIds.has(item.id)
+      (item) => item.chatId === currentChatId && !existingIds.has(item.id),
     );
     return [...data, ...extras];
   }, [data, optimisticResponses, currentChatId]);
@@ -130,9 +136,7 @@ const ResponseList = ({
 
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1.5 text-xs">
-                  <span className="font-bold text-accent">
-                    Klecx
-                  </span>
+                  <span className="font-bold text-accent">Klecx</span>
                   <span className="text-subtle animate-pulse">
                     {chatMode === "image"
                       ? t("generatingImage")
@@ -143,7 +147,10 @@ const ResponseList = ({
                 <div className="rounded-2xl rounded-tl-xs border border-border bg-surface p-4 shadow-sm text-fg">
                   {chatMode === "image" ? (
                     <div className="w-full max-w-sm h-64 rounded-xl bg-surface-2 animate-pulse flex flex-col items-center justify-center gap-2 text-muted">
-                      <Sparkles className="h-6 w-6 text-accent animate-spin" strokeWidth={1.5} />
+                      <Sparkles
+                        className="h-6 w-6 text-accent animate-spin"
+                        strokeWidth={1.5}
+                      />
                       <span className="text-xs font-medium">
                         {t("generatingImage")}
                       </span>

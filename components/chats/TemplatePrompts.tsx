@@ -1,17 +1,12 @@
 "use client";
 
-import {
-  clearOptimisticResponses,
-  setCurrentPageId,
-  setCurrentPageTitle,
-} from "@/features/generalSlice";
-import { AppDispatch, RootState } from "@/store";
+import { useUiStore } from "@/lib/stores/ui";
+import { useGenerationStore } from "@/lib/stores/generation";
 import { submitChatPrompt } from "@/utils/chat-stream-client";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { ArrowUpRight, Sparkles } from "lucide-react";
-import { useDispatch, useSelector } from "react-redux";
 import ResponseMD from "./markdown/ResponseMD";
 
 const TemplatePrompts = ({
@@ -22,17 +17,25 @@ const TemplatePrompts = ({
   userId: string;
 }) => {
   const t = useTranslations("Chat");
-  const dispatch = useDispatch<AppDispatch>();
-  const { isStreaming, streamingPrompt, streamingText, chatMode } = useSelector(
-    (store: RootState) => store.general
+  const chatMode = useUiStore((s) => s.chatMode);
+  const setCurrentPageTitle = useUiStore((s) => s.setCurrentPageTitle);
+  const setCurrentPageId = useUiStore((s) => s.setCurrentPageId);
+  const clearOptimisticResponses = useUiStore(
+    (s) => s.clearOptimisticResponses,
   );
+
+  const streamState = useGenerationStore((s) => s.streams["__new__"]);
+  const isStreaming = streamState?.status === "streaming";
+  const streamingPrompt = streamState?.prompt ?? "";
+  const streamingText = streamState?.text ?? "";
+
   const router = useRouter();
 
   useEffect(() => {
-    dispatch(setCurrentPageTitle(t("newChat")));
-    dispatch(setCurrentPageId(null));
-    dispatch(clearOptimisticResponses());
-  }, [dispatch, t]);
+    setCurrentPageTitle(t("newChat"));
+    setCurrentPageId(null);
+    clearOptimisticResponses();
+  }, [setCurrentPageTitle, setCurrentPageId, clearOptimisticResponses, t]);
 
   const handleSelectPrompt = async (promptText: string) => {
     if (isStreaming) return;
@@ -41,7 +44,6 @@ const TemplatePrompts = ({
       prompt: promptText,
       chatId: null,
       mode: chatMode,
-      dispatch,
       onNavigateChat: (newChatId) => {
         router.push(`/workspaces/${newChatId}`);
         router.refresh();
@@ -58,7 +60,9 @@ const TemplatePrompts = ({
         <div className="w-full max-w-2xl bg-surface border border-border rounded-3xl p-5 shadow-md mb-8">
           <div className="flex items-center gap-2 mb-3 text-xs font-semibold uppercase tracking-wider text-accent">
             <Sparkles className="animate-spin h-4 w-4" strokeWidth={1.5} />
-            <span>{chatMode === "image" ? t("generatingImage") : t("generating")}</span>
+            <span>
+              {chatMode === "image" ? t("generatingImage") : t("generating")}
+            </span>
           </div>
           {streamingPrompt && (
             <p className="text-sm font-medium text-fg mb-3 pb-3 border-b border-border">
@@ -80,9 +84,7 @@ const TemplatePrompts = ({
             <h2 className="text-2xl font-bold tracking-tight text-fg">
               {t("welcomeTitle")}
             </h2>
-            <p className="text-sm text-muted mt-1">
-              {t("welcomeSubtitle")}
-            </p>
+            <p className="text-sm text-muted mt-1">{t("welcomeSubtitle")}</p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-2xl">
