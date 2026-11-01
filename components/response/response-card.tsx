@@ -48,6 +48,7 @@ import {
 } from "@/components/ui/dialog";
 import { ThinkingPanel } from "./thinking-panel";
 import { EditResponse } from "./edit-response";
+import { Markdown } from "@/components/markdown";
 import {
   useResponseVersions,
   useSwitchActiveVersion,
@@ -459,8 +460,8 @@ export function ResponseCard({
               </Dialog>
             </div>
           ) : (
-            <div className="leading-relaxed select-text overflow-x-auto whitespace-pre-wrap break-words">
-              {displayedContent}
+            <div className="leading-relaxed select-text">
+              <Markdown content={displayedContent} />
             </div>
           )}
 
