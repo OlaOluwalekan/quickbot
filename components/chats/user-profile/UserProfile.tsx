@@ -17,13 +17,13 @@ const UserProfile = ({ data }: { data: any }) => {
   const dispatch = useDispatch();
 
   return (
-    <div className="w-full relative p-2.5 border-t border-slate-800/80">
+    <div className="w-full relative p-2.5 border-t border-border">
       {profileDialogIsOpen && <ProfileDialog data={data} />}
       <button
         type="button"
         className={clsx(
-          "a-modal w-full flex justify-start items-center gap-2.5 px-2.5 py-2 rounded-xl text-slate-100 transition-colors cursor-pointer",
-          profileDialogIsOpen ? "bg-slate-800" : "hover:bg-slate-800/70"
+          "a-modal w-full flex justify-start items-center gap-2.5 px-2.5 py-2 rounded-xl text-fg transition-colors cursor-pointer",
+          profileDialogIsOpen ? "bg-surface-2" : "hover:bg-surface-2"
         )}
         title={data?.name as string}
         onClick={() => dispatch(toggleProfileDialogOpen(!profileDialogIsOpen))}
@@ -33,7 +33,7 @@ const UserProfile = ({ data }: { data: any }) => {
           <p className="text-xs sm:text-sm font-medium truncate">
             {data?.name}
           </p>
-          <span className="text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full shrink-0">
+          <span className="text-[11px] font-semibold bg-success/15 text-success border border-success/30 px-2 py-0.5 rounded-full shrink-0">
             {formatNumber(data?.token ?? 0)} {tCommon("tokens").toLowerCase()}
           </span>
         </div>

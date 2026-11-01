@@ -2,11 +2,9 @@
 
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { useEffect } from 'react'
 import CustomCode from './CustomCode'
 import InlineCode from './InlineCode'
 import CustomOl from './CustomOl'
-import { convertToHTML } from '@/utils/markdown'
 import CustomUl from './CustomUl'
 import CustomLi from './CustomLi'
 import CustomLink from './CustomLink'
@@ -18,10 +16,6 @@ interface CodeProps {
 }
 
 const ResponseMD = ({ response }: { response: string }) => {
-  useEffect(() => {
-    convertToHTML(response)
-  }, [])
-
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}

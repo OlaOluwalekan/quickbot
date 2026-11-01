@@ -10,9 +10,9 @@ import {
 import { FormEvent, MouseEvent, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import BasicButton from "../ui/button/BasicButton";
-import { FaExclamationTriangle } from "react-icons/fa";
+import { AlertTriangle } from "lucide-react";
 import { useTranslations } from "next-intl";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 
 const DeletePopup = () => {
   const t = useTranslations("Chat");
@@ -55,18 +55,18 @@ const DeletePopup = () => {
       <form
         onSubmit={handleSubmit}
         onClick={(e: MouseEvent) => e.stopPropagation()}
-        className="w-[92%] max-w-md rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-2xl space-y-4"
+        className="w-[92%] max-w-md rounded-2xl border border-border bg-surface p-6 shadow-lg space-y-4"
       >
-        <div className="flex items-center gap-3 text-rose-500">
-          <div className="w-10 h-10 rounded-xl bg-rose-500/10 flex items-center justify-center shrink-0">
-            <FaExclamationTriangle className="text-lg" />
+        <div className="flex items-center gap-3 text-danger">
+          <div className="w-10 h-10 rounded-xl bg-danger/10 flex items-center justify-center shrink-0">
+            <AlertTriangle className="h-5 w-5" strokeWidth={1.5} />
           </div>
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+          <h3 className="text-lg font-bold text-fg">
             {t("deleteConfirmTitle")}
           </h3>
         </div>
 
-        <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+        <p className="text-xs sm:text-sm text-muted leading-relaxed">
           {t("deleteConfirmDescription", { title: dialogData?.title || "" })}
         </p>
 
@@ -81,7 +81,7 @@ const DeletePopup = () => {
           <button
             type="submit"
             disabled={isPending}
-            className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-sm font-semibold transition-colors cursor-pointer disabled:opacity-50"
+            className="px-4 py-2 rounded-xl bg-danger text-accent-fg hover:opacity-90 text-sm font-semibold transition-colors cursor-pointer disabled:opacity-50"
           >
             {isPending ? tCommon("loading") : t("confirmDelete")}
           </button>

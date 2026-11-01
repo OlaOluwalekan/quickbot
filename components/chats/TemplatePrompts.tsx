@@ -10,10 +10,7 @@ import { submitChatPrompt } from "@/utils/chat-stream-client";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import {
-  FaArrowUpRightFromSquare,
-  FaWandMagicSparkles,
-} from "react-icons/fa6";
+import { ArrowUpRight, Sparkles } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import ResponseMD from "./markdown/ResponseMD";
 
@@ -58,18 +55,18 @@ const TemplatePrompts = ({
   return (
     <div className="flex flex-col items-center justify-center p-4 max-w-3xl mx-auto w-full">
       {isStreaming ? (
-        <div className="w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-3xl p-5 shadow-xl shadow-indigo-500/5 mb-8">
-          <div className="flex items-center gap-2 mb-3 text-xs font-semibold uppercase tracking-wider text-indigo-500">
-            <FaWandMagicSparkles className="animate-spin text-sm" />
+        <div className="w-full max-w-2xl bg-surface border border-border rounded-3xl p-5 shadow-md mb-8">
+          <div className="flex items-center gap-2 mb-3 text-xs font-semibold uppercase tracking-wider text-accent">
+            <Sparkles className="animate-spin h-4 w-4" strokeWidth={1.5} />
             <span>{chatMode === "image" ? t("generatingImage") : t("generating")}</span>
           </div>
           {streamingPrompt && (
-            <p className="text-sm font-medium text-slate-800 dark:text-slate-200 mb-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+            <p className="text-sm font-medium text-fg mb-3 pb-3 border-b border-border">
               {streamingPrompt}
             </p>
           )}
           {streamingText && (
-            <div className="text-sm text-slate-600 dark:text-slate-300">
+            <div className="text-sm text-muted">
               <ResponseMD response={streamingText} />
             </div>
           )}
@@ -77,13 +74,13 @@ const TemplatePrompts = ({
       ) : (
         <>
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-500 mb-3">
-              <FaWandMagicSparkles className="text-xl" />
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-accent-soft text-accent mb-3">
+              <Sparkles className="h-6 w-6" strokeWidth={1.5} />
             </div>
-            <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+            <h2 className="text-2xl font-bold tracking-tight text-fg">
               {t("welcomeTitle")}
             </h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            <p className="text-sm text-muted mt-1">
               {t("welcomeSubtitle")}
             </p>
           </div>
@@ -94,17 +91,20 @@ const TemplatePrompts = ({
                 key={idx}
                 type="button"
                 onClick={() => handleSelectPrompt(item.name)}
-                className="group flex flex-col items-start p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900/60 hover:bg-slate-50 dark:hover:bg-slate-800/80 hover:border-indigo-500/30 transition-all text-left shadow-xs cursor-pointer"
+                className="group flex flex-col items-start p-4 rounded-2xl border border-border bg-surface hover:bg-surface-2 hover:border-border-strong transition-all text-left shadow-xs cursor-pointer"
               >
                 <div className="flex items-center justify-between w-full mb-1">
                   {item.domain && (
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-indigo-500 bg-indigo-500/10 px-2 py-0.5 rounded-full">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-accent bg-accent-soft px-2 py-0.5 rounded-full">
                       {item.domain}
                     </span>
                   )}
-                  <FaArrowUpRightFromSquare className="text-xs text-slate-400 group-hover:text-indigo-500 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all ml-auto" />
+                  <ArrowUpRight
+                    className="h-3.5 w-3.5 text-subtle group-hover:text-accent group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all ml-auto"
+                    strokeWidth={1.5}
+                  />
                 </div>
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
+                <span className="text-sm font-medium text-fg group-hover:text-accent">
                   {item.name}
                 </span>
               </button>

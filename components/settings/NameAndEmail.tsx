@@ -2,10 +2,9 @@
 
 import { SessionProps } from "@/types/user";
 import { ChangeEvent, FormEvent, useState, useTransition } from "react";
-import { FaEdit, FaTimes } from "react-icons/fa";
-import { FaCheck, FaUser } from "react-icons/fa6";
+import { Check, Pencil, User, X } from "lucide-react";
 import InputWithIcon from "../ui/inputs/InputWithIcon";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 
@@ -50,7 +49,7 @@ const NameAndEmail = ({ user }: { user: SessionProps }) => {
   };
 
   return (
-    <div className="flex flex-col items-center sm:items-start w-full gap-1.5 text-slate-900 dark:text-slate-100">
+    <div className="flex flex-col items-center sm:items-start w-full gap-1.5 text-fg">
       {isEditing ? (
         <form
           onSubmit={handleSubmit}
@@ -61,14 +60,14 @@ const NameAndEmail = ({ user }: { user: SessionProps }) => {
             placeholder={t("fullName")}
             value={name}
             name="name"
-            icons={<FaUser />}
+            icons={<User className="h-4 w-4" strokeWidth={1.5} />}
             onChange={(e: ChangeEvent<HTMLInputElement>) =>
               setName(e.target.value)
             }
           />
           {isPending ? (
             <span
-              className="animate-spin inline-block w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full shrink-0"
+              className="animate-spin inline-block w-5 h-5 border-2 border-accent border-t-transparent rounded-full shrink-0"
               role="status"
               aria-label="loading"
             />
@@ -77,17 +76,17 @@ const NameAndEmail = ({ user }: { user: SessionProps }) => {
               <button
                 type="submit"
                 aria-label="Save name"
-                className="w-8 h-8 flex justify-center items-center text-emerald-500 hover:bg-emerald-500/15 rounded-lg cursor-pointer"
+                className="w-8 h-8 flex justify-center items-center text-success hover:bg-success/15 rounded-lg cursor-pointer"
               >
-                <FaCheck />
+                <Check className="h-4 w-4" strokeWidth={1.5} />
               </button>
               <button
                 type="button"
                 aria-label="Cancel edit"
-                className="w-8 h-8 flex justify-center items-center text-rose-500 hover:bg-rose-500/15 rounded-lg cursor-pointer"
+                className="w-8 h-8 flex justify-center items-center text-danger hover:bg-danger/15 rounded-lg cursor-pointer"
                 onClick={handleCancel}
               >
-                <FaTimes />
+                <X className="h-4 w-4" strokeWidth={1.5} />
               </button>
             </div>
           )}
@@ -98,17 +97,17 @@ const NameAndEmail = ({ user }: { user: SessionProps }) => {
           <button
             type="button"
             aria-label="Edit name"
-            className="w-8 h-8 flex justify-center items-center text-slate-400 hover:text-indigo-500 hover:bg-indigo-500/10 rounded-lg transition-colors cursor-pointer"
+            className="w-8 h-8 flex justify-center items-center text-subtle hover:text-accent hover:bg-accent-soft rounded-lg transition-colors cursor-pointer"
             onClick={() => setIsEditing(true)}
           >
-            <FaEdit className="text-sm" />
+            <Pencil className="h-3.5 w-3.5" strokeWidth={1.5} />
           </button>
         </div>
       )}
-      <span className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+      <span className="text-xs sm:text-sm text-muted">
         {user?.email}
       </span>
-      <span className="text-[11px] text-slate-400 dark:text-slate-500">
+      <span className="text-[11px] text-subtle">
         {t("emailReadOnly")}
       </span>
     </div>

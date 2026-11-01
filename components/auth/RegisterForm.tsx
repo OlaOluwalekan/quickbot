@@ -2,7 +2,7 @@
 
 import { ChangeEvent, FormEvent, useEffect, useState, useTransition } from "react";
 import InputWithIcon from "../ui/inputs/InputWithIcon";
-import { FaEnvelope, FaLock, FaUser } from "react-icons/fa6";
+import { Lock, Mail, User } from "lucide-react";
 import BasicButton from "../ui/button/BasicButton";
 import Alert from "../alert/Alert";
 import { useRouter } from "next/navigation";
@@ -90,7 +90,7 @@ const RegisterForm = (): React.JSX.Element => {
       <InputWithIcon
         type="email"
         placeholder={t("emailPlaceholder")}
-        icons={<FaEnvelope />}
+        icons={<Mail className="h-4 w-4" strokeWidth={1.5} />}
         name="email"
         id="email"
         value={formData.email}
@@ -100,7 +100,7 @@ const RegisterForm = (): React.JSX.Element => {
       <InputWithIcon
         type="text"
         placeholder={t("namePlaceholder")}
-        icons={<FaUser />}
+        icons={<User className="h-4 w-4" strokeWidth={1.5} />}
         name="name"
         id="name"
         value={formData.name}
@@ -110,7 +110,7 @@ const RegisterForm = (): React.JSX.Element => {
       <InputWithIcon
         type="password"
         placeholder={t("passwordPlaceholder")}
-        icons={<FaLock />}
+        icons={<Lock className="h-4 w-4" strokeWidth={1.5} />}
         name="password"
         id="password"
         value={formData.password}
@@ -120,7 +120,7 @@ const RegisterForm = (): React.JSX.Element => {
       <InputWithIcon
         type="password"
         placeholder={t("confirmPasswordPlaceholder")}
-        icons={<FaLock />}
+        icons={<Lock className="h-4 w-4" strokeWidth={1.5} />}
         name="confirmPassword"
         id="confirmPassword"
         value={formData.confirmPassword}

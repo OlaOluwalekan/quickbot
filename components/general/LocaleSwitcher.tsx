@@ -4,7 +4,7 @@ import React, { useTransition } from "react";
 import { useLocale } from "next-intl";
 import { useRouter } from "next/navigation";
 import { Locale, LOCALE_COOKIE, localeNames, locales } from "@/i18n/config";
-import { HiOutlineGlobeAlt } from "react-icons/hi2";
+import { Globe } from "lucide-react";
 
 interface LocaleSwitcherProps {
   compact?: boolean;
@@ -29,23 +29,23 @@ const LocaleSwitcher: React.FC<LocaleSwitcherProps> = ({
 
   return (
     <div
-      className={`inline-flex items-center gap-1.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md px-2.5 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 shadow-xs transition-all ${
+      className={`inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface/80 backdrop-blur-md px-2.5 py-1.5 text-xs font-medium text-fg shadow-xs transition-all ${
         isPending ? "opacity-60 pointer-events-none" : ""
       } ${className}`}
     >
-      <HiOutlineGlobeAlt className="text-base text-indigo-500 shrink-0" />
+      <Globe className="h-4 w-4 text-accent shrink-0" strokeWidth={1.5} />
       <select
         aria-label="Select language"
         value={currentLocale}
         onChange={(e) => handleLocaleChange(e.target.value as Locale)}
         disabled={isPending}
-        className="bg-transparent text-xs font-semibold text-slate-700 dark:text-slate-200 focus:outline-none cursor-pointer pr-1"
+        className="bg-transparent text-xs font-semibold text-fg focus:outline-none cursor-pointer pr-1"
       >
         {locales.map((loc) => (
           <option
             key={loc}
             value={loc}
-            className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100"
+            className="bg-surface text-fg"
           >
             {compact ? loc.toUpperCase() : localeNames[loc]}
           </option>

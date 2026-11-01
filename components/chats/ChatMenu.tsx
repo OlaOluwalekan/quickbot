@@ -6,7 +6,7 @@ import {
   toggleChatMenuOpen,
 } from "@/features/generalSlice";
 import { RootState } from "@/store";
-import { FaPen, FaTrash } from "react-icons/fa6";
+import { Pencil, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { useTranslations } from "next-intl";
 
@@ -27,7 +27,7 @@ const ChatMenu = () => {
 
   return (
     <div
-      className="w-40 rounded-xl border border-slate-700 bg-slate-900 text-slate-100 shadow-xl p-1.5 absolute right-3 z-50"
+      className="w-40 rounded-xl border border-border bg-surface text-fg shadow-lg p-1.5 absolute right-3 z-50"
       style={{
         top: chatMenuClass,
       }}
@@ -35,17 +35,17 @@ const ChatMenu = () => {
       <button
         type="button"
         onClick={handleEditClicked}
-        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-slate-200 hover:bg-slate-800 transition-colors cursor-pointer"
+        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-fg hover:bg-surface-2 transition-colors cursor-pointer"
       >
-        <FaPen className="text-indigo-400" />
+        <Pencil className="h-3.5 w-3.5 text-accent" strokeWidth={1.5} />
         <span>{t("edit")}</span>
       </button>
       <button
         type="button"
         onClick={handleDeleteClicked}
-        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
+        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-danger hover:bg-danger/10 transition-colors cursor-pointer"
       >
-        <FaTrash />
+        <Trash2 className="h-3.5 w-3.5" strokeWidth={1.5} />
         <span>{t("delete")}</span>
       </button>
     </div>

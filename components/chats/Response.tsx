@@ -5,19 +5,18 @@ import React, { useState } from "react";
 import UserImage from "./UserImage";
 import { format } from "date-fns";
 import {
-  FaCopy,
-  FaDownload,
-  FaExpand,
-  FaRegCircleStop,
-  FaWandMagicSparkles,
-  FaXmark,
-} from "react-icons/fa6";
-import { HiMiniSpeakerWave } from "react-icons/hi2";
+  Check,
+  Copy,
+  Download,
+  Maximize2,
+  Sparkles,
+  Square,
+  Volume2,
+  X,
+} from "lucide-react";
 import ResponseMD from "./markdown/ResponseMD";
 import clsx from "clsx";
-import { MdLibraryAddCheck } from "react-icons/md";
 import { handleStop, readAloud } from "@/utils/speak";
-import { marked } from "marked";
 import { useTranslations } from "next-intl";
 
 const Response = ({
@@ -37,9 +36,11 @@ const Response = ({
     response.type === "IMAGE" || Boolean(response.imageUrl);
 
   const parseMarkdownToText = (markdown: string) => {
-    const html = marked(markdown);
-    const doc = new DOMParser().parseFromString(html as string, "text/html");
-    return doc.body.textContent || "";
+    return markdown
+      .replace(/```[\s\S]*?```/g, " ")
+      .replace(/[#*_`~>\[\]()!-]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
   };
 
   const handleCopyQuestion = (text: string) => {
@@ -95,8 +96,8 @@ const Response = ({
       {/* User Prompt Bubble */}
       <div className="w-full flex justify-end">
         <div className="max-w-[85%] sm:max-w-[75%] flex flex-col items-end">
-          <div className="flex items-center gap-2 mb-1.5 text-xs text-slate-500 dark:text-slate-400">
-            <span className="font-semibold text-slate-700 dark:text-slate-300">
+          <div className="flex items-center gap-2 mb-1.5 text-xs text-muted">
+            <span className="font-semibold text-fg">
               You
             </span>
             {formattedTime && <time>{formattedTime}</time>}
@@ -107,7 +108,7 @@ const Response = ({
               <UserImage image={image} />
             </div>
 
-            <div className="bg-gradient-to-br from-indigo-600 to-indigo-500 text-white py-3 px-4 rounded-2xl rounded-br-xs shadow-sm text-sm sm:text-base whitespace-pre-wrap break-words leading-relaxed">
+            <div className="bg-accent text-accent-fg py-3 px-4 rounded-2xl rounded-br-xs shadow-sm text-sm sm:text-base whitespace-pre-wrap break-words leading-relaxed">
               {response.question}
             </div>
           </div>
@@ -119,12 +120,16 @@ const Response = ({
               className={clsx(
                 "p-1 rounded-md text-xs transition-colors cursor-pointer",
                 isCopied
-                  ? "text-emerald-500"
-                  : "text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                  ? "text-success"
+                  : "text-subtle hover:text-fg"
               )}
               onClick={() => handleCopyQuestion(response.question)}
             >
-              {isCopied ? <MdLibraryAddCheck /> : <FaCopy />}
+              {isCopied ? (
+                <Check className="h-3.5 w-3.5" strokeWidth={1.5} />
+              ) : (
+                <Copy className="h-3.5 w-3.5" strokeWidth={1.5} />
+              )}
             </button>
           </div>
         </div>
@@ -133,22 +138,22 @@ const Response = ({
       {/* Klecx AI Response Bubble */}
       <div className="w-full flex justify-start">
         <div className="w-full max-w-[95%] sm:max-w-[88%] flex gap-3 items-start">
-          <div className="shrink-0 w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500/15 to-sky-500/15 border border-indigo-500/25 flex justify-center items-center text-indigo-600 dark:text-indigo-400 shadow-2xs mt-0.5">
-            <FaWandMagicSparkles className="text-base" />
+          <div className="shrink-0 w-9 h-9 rounded-xl bg-accent-soft border border-border flex justify-center items-center text-accent shadow-2xs mt-0.5">
+            <Sparkles className="h-4 w-4" strokeWidth={1.5} />
           </div>
 
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1.5 text-xs text-slate-500 dark:text-slate-400">
-              <span className="font-bold bg-gradient-to-r from-indigo-500 to-sky-500 bg-clip-text text-transparent">
+            <div className="flex items-center gap-2 mb-1.5 text-xs text-muted">
+              <span className="font-bold text-accent">
                 Klecx
               </span>
               {formattedTime && <time>{formattedTime}</time>}
             </div>
 
-            <div className="rounded-2xl rounded-tl-xs border border-slate-200/80 dark:border-slate-800/90 bg-white dark:bg-slate-900/90 p-4 shadow-xs text-slate-800 dark:text-slate-100 overflow-hidden">
+            <div className="rounded-2xl rounded-tl-xs border border-border bg-surface p-4 shadow-xs text-fg overflow-hidden">
               {isImageResponse && response.imageUrl ? (
                 <div className="flex flex-col gap-3">
-                  <div className="relative group rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-950/5 max-w-md">
+                  <div className="relative group rounded-xl overflow-hidden border border-border bg-surface-2 max-w-md">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={response.imageUrl}
@@ -160,47 +165,51 @@ const Response = ({
                         type="button"
                         onClick={() => setLightboxOpen(true)}
                         title="Expand image"
-                        className="p-2 rounded-lg bg-slate-900/80 text-white hover:bg-slate-900 backdrop-blur-xs cursor-pointer"
+                        className="p-2 rounded-lg bg-surface/90 text-fg hover:bg-surface backdrop-blur-xs cursor-pointer"
                       >
-                        <FaExpand className="text-xs" />
+                        <Maximize2 className="h-3.5 w-3.5" strokeWidth={1.5} />
                       </button>
                       <button
                         type="button"
                         onClick={handleDownloadImage}
                         title={t("downloadImage")}
-                        className="p-2 rounded-lg bg-slate-900/80 text-white hover:bg-slate-900 backdrop-blur-xs cursor-pointer"
+                        className="p-2 rounded-lg bg-surface/90 text-fg hover:bg-surface backdrop-blur-xs cursor-pointer"
                       >
-                        <FaDownload className="text-xs" />
+                        <Download className="h-3.5 w-3.5" strokeWidth={1.5} />
                       </button>
                     </div>
                   </div>
                   {response.response && (
-                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300">
+                    <p className="text-xs sm:text-sm text-muted">
                       {response.response}
                     </p>
                   )}
                 </div>
               ) : (
-                <div className="markdown prose prose-slate dark:prose-invert max-w-none text-sm sm:text-base whitespace-pre-wrap break-words leading-relaxed">
+                <div className="markdown max-w-none text-sm sm:text-base whitespace-pre-wrap break-words leading-relaxed">
                   <ResponseMD response={response.response} />
                 </div>
               )}
             </div>
 
             {/* Action Bar */}
-            <div className="flex items-center gap-3 mt-1.5 pl-1 text-slate-400 dark:text-slate-500">
+            <div className="flex items-center gap-3 mt-1.5 pl-1 text-subtle">
               <button
                 type="button"
                 title={t("copyResponse")}
                 className={clsx(
                   "inline-flex items-center gap-1 p-1 rounded-md text-xs transition-colors cursor-pointer",
                   responseIsCopied
-                    ? "text-emerald-500"
-                    : "hover:text-slate-700 dark:hover:text-slate-200"
+                    ? "text-success"
+                    : "hover:text-fg"
                 )}
                 onClick={() => handleCopyResponse(response.response)}
               >
-                {responseIsCopied ? <MdLibraryAddCheck /> : <FaCopy />}
+                {responseIsCopied ? (
+                  <Check className="h-3.5 w-3.5" strokeWidth={1.5} />
+                ) : (
+                  <Copy className="h-3.5 w-3.5" strokeWidth={1.5} />
+                )}
               </button>
 
               {!isImageResponse && (
@@ -209,15 +218,15 @@ const Response = ({
                   className={clsx(
                     "inline-flex items-center gap-1 p-1 rounded-md text-xs transition-colors cursor-pointer",
                     isReadingAloud
-                      ? "text-rose-500"
-                      : "hover:text-slate-700 dark:hover:text-slate-200"
+                      ? "text-danger"
+                      : "hover:text-fg"
                   )}
                   onClick={handleReadClicked}
                 >
                   {isReadingAloud ? (
-                    <FaRegCircleStop />
+                    <Square className="h-3.5 w-3.5" strokeWidth={1.5} />
                   ) : (
-                    <HiMiniSpeakerWave />
+                    <Volume2 className="h-3.5 w-3.5" strokeWidth={1.5} />
                   )}
                 </button>
               )}
@@ -226,9 +235,9 @@ const Response = ({
                 <button
                   type="button"
                   onClick={handleDownloadImage}
-                  className="inline-flex items-center gap-1 p-1 rounded-md text-xs hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1 p-1 rounded-md text-xs hover:text-fg transition-colors cursor-pointer"
                 >
-                  <FaDownload />
+                  <Download className="h-3.5 w-3.5" strokeWidth={1.5} />
                   <span>{t("downloadImage")}</span>
                 </button>
               )}
@@ -240,7 +249,7 @@ const Response = ({
       {/* Image Lightbox Modal */}
       {lightboxOpen && response.imageUrl && (
         <div
-          className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-overlay backdrop-blur-md flex items-center justify-center p-4"
           onClick={() => setLightboxOpen(false)}
         >
           <div
@@ -250,15 +259,15 @@ const Response = ({
             <button
               type="button"
               onClick={() => setLightboxOpen(false)}
-              className="absolute -top-10 right-0 p-2 rounded-full bg-slate-800 text-white hover:bg-slate-700 cursor-pointer"
+              className="absolute -top-10 right-0 p-2 rounded-full bg-surface text-fg hover:bg-surface-2 cursor-pointer"
             >
-              <FaXmark />
+              <X className="h-4 w-4" strokeWidth={1.5} />
             </button>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={response.imageUrl}
               alt={response.question || t("generatedImageAlt")}
-              className="max-w-full max-h-[82vh] object-contain rounded-2xl border border-slate-800 shadow-2xl"
+              className="max-w-full max-h-[82vh] object-contain rounded-2xl border border-border shadow-lg"
             />
           </div>
         </div>

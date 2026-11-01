@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { FaUserCircle } from "react-icons/fa";
+import { UserCircle2 } from "lucide-react";
 
 const UserImage = ({ image }: { image: string | null }) => {
   return (
@@ -13,7 +13,7 @@ const UserImage = ({ image }: { image: string | null }) => {
           className="rounded-[50%]"
         />
       ) : (
-        <FaUserCircle className="text-[30px]" />
+        <UserCircle2 className="h-[30px] w-[30px] text-muted" strokeWidth={1.5} />
       )}
     </article>
   );

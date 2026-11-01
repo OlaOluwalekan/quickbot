@@ -1,6 +1,6 @@
 "use client";
 
-import { FaSearch } from "react-icons/fa";
+import { Search as SearchIcon } from "lucide-react";
 import { ChangeEvent, useEffect, useState } from "react";
 import { ChatProps, ResponseProps } from "@/types/chats";
 import { ChatSearchResult, ResponseSearchResult } from "./SearchResult";
@@ -85,16 +85,16 @@ const Search = ({ userId }: { userId: string }) => {
   return (
     <div className="relative">
       <form
-        className="a-modal flex items-center rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100/80 dark:bg-slate-800/70 overflow-hidden"
+        className="a-modal flex items-center rounded-xl border border-border bg-surface-2 overflow-hidden"
         onSubmit={handleSubmit}
       >
         <label className="flex items-center gap-2 px-3 py-1.5 flex-1 min-w-0">
-          <span className="text-indigo-500 text-xs shrink-0">
-            <FaSearch />
+          <span className="text-accent text-xs shrink-0">
+            <SearchIcon className="h-3.5 w-3.5" strokeWidth={1.5} />
           </span>
           <input
             type="text"
-            className="w-full min-w-[100px] sm:min-w-[160px] bg-transparent text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none text-xs"
+            className="w-full min-w-[100px] sm:min-w-[160px] bg-transparent text-fg placeholder:text-subtle focus:outline-none text-xs"
             placeholder={t("searchPlaceholder")}
             value={searchText}
             onChange={handleChange}
@@ -104,7 +104,7 @@ const Search = ({ userId }: { userId: string }) => {
         <select
           aria-label="Search scope"
           value={searchOption}
-          className="bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 px-2.5 py-1.5 text-xs font-medium focus:outline-none cursor-pointer"
+          className="bg-surface border-l border-border text-muted px-2.5 py-1.5 text-xs font-medium focus:outline-none cursor-pointer"
           onChange={(e) => setSearchOption(e.target.value)}
         >
           {workspaceId && <option value="this chat">{t("searchThisChat")}</option>}
@@ -113,13 +113,13 @@ const Search = ({ userId }: { userId: string }) => {
       </form>
 
       {searchResultIsOpen && (
-        <div className="fixed sm:absolute z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 w-[92vw] sm:w-[420px] right-0 top-14 sm:top-11 px-4 py-3 shadow-2xl rounded-2xl text-xs sm:text-sm max-h-[380px] overflow-y-auto scrollbar-thin">
+        <div className="fixed sm:absolute z-50 bg-surface border border-border text-fg w-[92vw] sm:w-[420px] right-0 top-14 sm:top-11 px-4 py-3 shadow-lg rounded-2xl text-xs sm:text-sm max-h-[380px] overflow-y-auto">
           {results.length === 0 ? (
-            <div className="py-4 text-center text-slate-400">
+            <div className="py-4 text-center text-subtle">
               {t("noSearchResults")}
             </div>
           ) : (
-            <div className="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
+            <div className="flex flex-col divide-y divide-border">
               {results.map((result) => (
                 <div key={result.id} className="py-1.5">
                   {"title" in result ? (

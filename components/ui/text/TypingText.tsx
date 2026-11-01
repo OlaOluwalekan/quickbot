@@ -1,14 +1,13 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Irish_Grover, Inter } from 'next/font/google'
 import clsx from 'clsx'
 
 interface TypingEffectProps {
   texts: string[]
-  typingSpeed?: number // Optional, default typing speed in milliseconds.
-  backspaceSpeed?: number // Speed for deleting each character
-  pauseDuration?: number // Pause between typing and backspacing (in ms)
+  typingSpeed?: number
+  backspaceSpeed?: number
+  pauseDuration?: number
   className?: string
   cursorStyleClass?: string
 }
@@ -23,14 +22,13 @@ const TypingText = ({
 }: TypingEffectProps) => {
   const [displayedText, setDisplayedText] = useState<string>('')
   const [cursorVisible, setCursorVisible] = useState<boolean>(true)
-  const [currentIndex, setCurrentIndex] = useState<number>(0) // Track current string
-  const [isTyping, setIsTyping] = useState<boolean>(true) // Track whether we're typing or backspacing
+  const [currentIndex, setCurrentIndex] = useState<number>(0)
+  const [isTyping, setIsTyping] = useState<boolean>(true)
 
   useEffect(() => {
     let intervalId: NodeJS.Timeout
 
     if (isTyping) {
-      // Typing effect
       const currentText = texts[currentIndex] ?? ""
       let index = displayedText.length
 
@@ -40,12 +38,11 @@ const TypingText = ({
           setDisplayedText((prev) => prev + nextChar)
           index++
         } else {
-          clearInterval(intervalId) // Stop when the word is fully typed
-          setTimeout(() => setIsTyping(false), pauseDuration) // Pause before backspacing
+          clearInterval(intervalId)
+          setTimeout(() => setIsTyping(false), pauseDuration)
         }
       }, typingSpeed)
     } else {
-      // Backspacing effect
       let index = displayedText.length
 
       intervalId = setInterval(() => {
@@ -53,14 +50,14 @@ const TypingText = ({
           setDisplayedText((prev) => prev.slice(0, -1))
           index--
         } else {
-          clearInterval(intervalId) // Stop when the word is fully erased
-          setCurrentIndex((prevIndex) => (prevIndex + 1) % texts.length) // Move to next text
-          setIsTyping(true) // Start typing the next text
+          clearInterval(intervalId)
+          setCurrentIndex((prevIndex) => (prevIndex + 1) % texts.length)
+          setIsTyping(true)
         }
       }, backspaceSpeed)
     }
 
-    return () => clearInterval(intervalId) // Cleanup interval on unmount
+    return () => clearInterval(intervalId)
   }, [
     isTyping,
     currentIndex,
@@ -72,12 +69,11 @@ const TypingText = ({
   ])
 
   useEffect(() => {
-    // Cursor blinking effect
     const cursorIntervalId = setInterval(() => {
       setCursorVisible((prev) => !prev)
-    }, 500) // Toggle every 500ms
+    }, 500)
 
-    return () => clearInterval(cursorIntervalId) // Cleanup interval on unmount
+    return () => clearInterval(cursorIntervalId)
   }, [])
 
   return (
@@ -96,16 +92,3 @@ const TypingText = ({
 }
 
 export default TypingText
-
-// return (
-//   <h2 className={`font-semibold inline text-4xl ${irish.className}`}>
-//     {displayedText}
-//     <span
-//       className={`inline text-3xl ${
-//         cursorVisible ? "opacity-50" : "opacity-0"
-//       } ${inter.className}`}
-//     >
-//       |
-//     </span>
-//   </h2>
-// );

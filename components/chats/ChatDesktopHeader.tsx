@@ -9,9 +9,9 @@ const ChatDesktopHeader = ({ userId }: { userId: string }) => {
   const { currentPageTitle } = useSelector((store: RootState) => store.general);
 
   return (
-    <header className="hidden md:flex items-center justify-between px-6 py-3 border-b border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-slate-900/70 backdrop-blur-md shrink-0 z-20">
+    <header className="hidden md:flex items-center justify-between px-6 py-3 border-b border-border bg-surface/80 backdrop-blur-md shrink-0 z-20">
       <div className="flex items-center gap-3 min-w-0">
-        <h2 className="text-base font-bold text-slate-900 dark:text-white truncate max-w-md">
+        <h2 className="text-base font-bold text-fg truncate max-w-md">
           {currentPageTitle}
         </h2>
       </div>

@@ -2,7 +2,7 @@
 
 import { ChangeEvent, FormEvent, useEffect, useState, useTransition } from "react";
 import InputWithIcon from "../ui/inputs/InputWithIcon";
-import { FaEnvelope, FaLock } from "react-icons/fa6";
+import { Lock, Mail } from "lucide-react";
 import BasicButton from "../ui/button/BasicButton";
 import { useRouter } from "next/navigation";
 import Alert from "../alert/Alert";
@@ -118,7 +118,7 @@ const LoginForm = (): React.JSX.Element => {
       <InputWithIcon
         type="email"
         placeholder={t("emailPlaceholder")}
-        icons={<FaEnvelope />}
+        icons={<Mail className="h-4 w-4" strokeWidth={1.5} />}
         name="email"
         value={formData.email}
         onChange={handleChange}
@@ -126,7 +126,7 @@ const LoginForm = (): React.JSX.Element => {
       <InputWithIcon
         type="password"
         placeholder={t("passwordPlaceholder")}
-        icons={<FaLock />}
+        icons={<Lock className="h-4 w-4" strokeWidth={1.5} />}
         name="password"
         value={formData.password}
         onChange={handleChange}
@@ -135,7 +135,7 @@ const LoginForm = (): React.JSX.Element => {
       <div className="flex justify-end pt-1">
         <Link
           href="/auth/forgot-password"
-          className="text-xs font-medium text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 transition-colors"
+          className="text-xs font-medium text-muted hover:text-accent transition-colors"
         >
           {t("forgotPasswordLink")}
         </Link>

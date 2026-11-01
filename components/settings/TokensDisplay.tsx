@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { formatNumber } from "@/utils/format";
 import { format } from "date-fns";
-import { FaCoins } from "react-icons/fa6";
+import { Coins } from "lucide-react";
 
 interface TokenUsageRecord {
   id: string;
@@ -40,16 +40,16 @@ const TokensDisplay = ({ user }: { user: SessionProps }) => {
 
   return (
     <div className="flex flex-col gap-5 w-full">
-      <div className="rounded-2xl border border-indigo-500/25 bg-gradient-to-br from-indigo-500/10 via-sky-500/5 to-transparent p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="rounded-2xl border border-border bg-surface-2 p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="space-y-1">
-          <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
-            <FaCoins />
+          <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-accent">
+            <Coins className="h-4 w-4" strokeWidth={1.5} />
             <span>{t("tokenBalanceTitle")}</span>
           </div>
-          <p className="text-3xl font-extrabold text-slate-900 dark:text-white">
+          <p className="text-3xl font-extrabold text-fg">
             {formatNumber(tokens)}
           </p>
-          <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md">
+          <p className="text-xs text-muted max-w-md">
             {t("tokenBalanceSubtitle")}
           </p>
         </div>
@@ -70,17 +70,17 @@ const TokensDisplay = ({ user }: { user: SessionProps }) => {
 
       {/* Recent Token Activity Table */}
       <div className="space-y-2.5">
-        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+        <h4 className="text-xs font-bold uppercase tracking-wider text-subtle">
           {t("usageHistoryTitle")}
         </h4>
         {history.length === 0 ? (
-          <p className="text-xs text-slate-500 dark:text-slate-400 py-3">
+          <p className="text-xs text-muted py-3">
             {t("noTokenUsage")}
           </p>
         ) : (
-          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+          <div className="rounded-2xl border border-border overflow-hidden">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400">
+              <thead className="bg-surface-2 text-muted">
                 <tr>
                   <th className="py-2.5 px-3 font-semibold">
                     {t("usageDate")}
@@ -90,10 +90,10 @@ const TokensDisplay = ({ user }: { user: SessionProps }) => {
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              <tbody className="divide-y divide-border">
                 {history.map((item) => (
                   <tr key={item.id}>
-                    <td className="py-2 px-3 text-slate-600 dark:text-slate-300">
+                    <td className="py-2 px-3 text-muted">
                       {(() => {
                         try {
                           return format(
@@ -105,7 +105,7 @@ const TokensDisplay = ({ user }: { user: SessionProps }) => {
                         }
                       })()}
                     </td>
-                    <td className="py-2 px-3 text-right font-mono font-semibold text-indigo-600 dark:text-indigo-400">
+                    <td className="py-2 px-3 text-right font-mono font-semibold text-accent">
                       -{item.token}
                     </td>
                   </tr>

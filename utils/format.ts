@@ -1,4 +1,3 @@
-import numeral from 'numeral'
 import {
   formatDistanceToNow,
   isToday,
@@ -9,19 +8,23 @@ import {
 } from 'date-fns'
 
 /**
- * Formats a given number according to the specified format string.
+ * Formats a given number using Intl.NumberFormat.
  *
  * @param number - The number to be formatted.
- * @param formatStr - The format string defining the desired number format.
- *                    Defaults to "0,0" which formats the number with commas as thousand separators.
- * @returns The formatted number as a string.
+ * @param _formatStr - Legacy format string parameter (retained for signature compatibility).
+ * @returns The formatted number as a string with thousand separators.
  */
 export const formatNumber = (
   number: number,
-  formatStr: string = '0,0'
+  _formatStr: string = '0,0'
 ): string => {
-  const result = numeral(number).format(formatStr)
-  return result
+  if (!Number.isFinite(number)) return '0'
+  const decimalMatch = _formatStr.match(/\.([0]+)/)
+  const fractionDigits = decimalMatch?.[1] ? decimalMatch[1].length : 0
+  return new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
+  }).format(number)
 }
 
 export const formatCustomDate = (dateString: string) => {
@@ -86,7 +89,7 @@ export function getSnippetWithHighlight(
   let snippet = text.substring(snippetStart, snippetEnd)
   snippet = snippet.replace(
     searchRegex,
-    (found: string) => `<span class="bg-yellow">${found}</span>`
+    (found: string) => `<span class="bg-accent-soft">${found}</span>`
   )
 
   return snippet
