@@ -2,6 +2,22 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { ChatProps, ResponseProps } from "@/types/chats";
 
+export const SIDEBAR_COOKIE_NAME = "sidebar";
+
+export function writeSidebarCookie(collapsed: boolean): void {
+  if (typeof document === "undefined") return;
+  const value = collapsed ? "collapsed" : "expanded";
+  document.cookie = `${SIDEBAR_COOKIE_NAME}=${value}; path=/; max-age=31536000; samesite=lax`;
+}
+
+export function parseSidebarCookie(raw?: string | null): boolean {
+  if (!raw) return false;
+  const normalized = raw.trim().toLowerCase();
+  return (
+    normalized === "collapsed" || normalized === "true" || normalized === "1"
+  );
+}
+
 export interface PersistedUiSlice {
   sidebarCollapsed: boolean;
   rightPanelOpen: boolean;
@@ -22,10 +38,13 @@ export interface UiState extends PersistedUiSlice {
 
   // Transient UI state (never persisted to localStorage)
   mobileNavIsOpen: boolean;
+  commandPaletteOpen: boolean;
   profileDialogIsOpen: boolean;
   codeTheme: "light" | "dark";
   currentPageTitle: string;
   currentPageId: string | null;
+  currentProjectId: string | null;
+  currentProjectName: string | null;
   chatMenuIsOpen: boolean;
   chatMenuClass: string;
   dialogData: ChatProps | null;
@@ -38,10 +57,15 @@ export interface UiState extends PersistedUiSlice {
 
   // Transient actions
   toggleMobileNavOpen: (open: boolean) => void;
+  setCommandPaletteOpen: (open: boolean) => void;
   toggleProfileDialogOpen: (open: boolean) => void;
   setCodeTheme: (theme: "light" | "dark") => void;
   setCurrentPageTitle: (title: string) => void;
   setCurrentPageId: (id: string | null) => void;
+  setCurrentProject: (project: {
+    id: string | null;
+    name: string | null;
+  }) => void;
   toggleChatMenuOpen: (open: boolean) => void;
   setChatMenuClass: (cls: string) => void;
   setDialogData: (data: ChatProps | null) => void;
@@ -57,10 +81,13 @@ export interface UiState extends PersistedUiSlice {
 
 const initialTransientState = {
   mobileNavIsOpen: false,
+  commandPaletteOpen: false,
   profileDialogIsOpen: false,
   codeTheme: "light" as const,
   currentPageTitle: "New Chat",
   currentPageId: null as string | null,
+  currentProjectId: null as string | null,
+  currentProjectName: null as string | null,
   chatMenuIsOpen: false,
   chatMenuClass: "",
   dialogData: null as ChatProps | null,
@@ -91,9 +118,16 @@ export const useUiStore = create<UiState>()(
 
       ...initialTransientState,
 
-      setSidebarCollapsed: (sidebarCollapsed) => set({ sidebarCollapsed }),
+      setSidebarCollapsed: (sidebarCollapsed) => {
+        writeSidebarCookie(sidebarCollapsed);
+        set({ sidebarCollapsed });
+      },
       toggleSidebarCollapsed: () =>
-        set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
+        set((state) => {
+          const next = !state.sidebarCollapsed;
+          writeSidebarCookie(next);
+          return { sidebarCollapsed: next };
+        }),
       setRightPanelOpen: (rightPanelOpen) => set({ rightPanelOpen }),
       toggleRightPanelOpen: () =>
         set((state) => ({ rightPanelOpen: !state.rightPanelOpen })),
@@ -118,11 +152,15 @@ export const useUiStore = create<UiState>()(
       clearAllDrafts: () => set({ drafts: {} }),
 
       toggleMobileNavOpen: (mobileNavIsOpen) => set({ mobileNavIsOpen }),
+      setCommandPaletteOpen: (commandPaletteOpen) =>
+        set({ commandPaletteOpen }),
       toggleProfileDialogOpen: (profileDialogIsOpen) =>
         set({ profileDialogIsOpen }),
       setCodeTheme: (codeTheme) => set({ codeTheme }),
       setCurrentPageTitle: (currentPageTitle) => set({ currentPageTitle }),
       setCurrentPageId: (currentPageId) => set({ currentPageId }),
+      setCurrentProject: ({ id, name }) =>
+        set({ currentProjectId: id, currentProjectName: name }),
       toggleChatMenuOpen: (chatMenuIsOpen) => set({ chatMenuIsOpen }),
       setChatMenuClass: (chatMenuClass) => set({ chatMenuClass }),
       setDialogData: (dialogData) => set({ dialogData }),
@@ -153,9 +191,9 @@ export const useUiStore = create<UiState>()(
               getItem: () => null,
               setItem: () => {},
               removeItem: () => {},
-            }
+            },
       ),
       partialize: partializeUiState,
-    }
-  )
+    },
+  ),
 );
