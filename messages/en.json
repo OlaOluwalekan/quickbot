@@ -137,7 +137,22 @@
     "tokensRemaining": "{count} tokens left",
     "outOfTokens": "You have run out of tokens. Please top up your balance.",
     "promptRequired": "Please enter a prompt first.",
-    "streamError": "Failed to generate response. Please try again."
+    "streamError": "Failed to generate response. Please try again.",
+    "attachDisabled": "Attachments will be available in Phase 5",
+    "model": "Model",
+    "thinkHarder": "Think harder",
+    "thinkHarderDesc": "Enable deeper reasoning and thinking summaries",
+    "language": "Language",
+    "languageAuto": "Auto",
+    "queue": "Prompt Queue",
+    "queueDisabled": "Queue is empty",
+    "stop": "Stop generating",
+    "generatingLive": "Generating...",
+    "generatingDone": "Done",
+    "outOfCreditsReason": "You are out of credits. Upgrade your plan to continue.",
+    "upgradeCta": "Upgrade Plan",
+    "createWorkspaceFailed": "Failed to create workspace. Click Retry to try again.",
+    "retry": "Retry"
   },
   "Settings": {
     "title": "Workspace Settings",

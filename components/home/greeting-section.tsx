@@ -9,12 +9,14 @@ export interface GreetingSectionProps {
   userName: string;
   prefilledPrompt?: string;
   prefilledMode?: "text" | "image";
+  credits?: { plan: string; balance: number };
 }
 
 export function GreetingSection({
   userName,
   prefilledPrompt = "",
   prefilledMode,
+  credits,
 }: GreetingSectionProps) {
   const tHome = useTranslations("Home");
 
@@ -47,6 +49,7 @@ export function GreetingSection({
           initialPrompt={prefilledPrompt}
           initialMode={prefilledMode}
           autoFocus={false}
+          credits={credits}
         />
       </div>
     </section>

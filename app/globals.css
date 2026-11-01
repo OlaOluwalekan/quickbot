@@ -161,7 +161,32 @@
     outline-offset: 2px;
   }
 
+
+/* Step 3.6 View Transitions */
+::view-transition-old(composer),
+::view-transition-new(composer) {
+  animation-duration: var(--dur);
+  animation-timing-function: var(--ease);
+}
+
+::view-transition-old(first-prompt),
+::view-transition-new(first-prompt) {
+  animation-duration: var(--dur);
+  animation-timing-function: var(--ease);
+}
+
+.vt-composer {
+  view-transition-name: composer;
+}
+
+.vt-first-prompt {
+  view-transition-name: first-prompt;
+}
+
   @media (prefers-reduced-motion: reduce) {
+    ::view-transition-group(*),
+    ::view-transition-old(*),
+    ::view-transition-new(*),
     *,
     ::before,
     ::after {

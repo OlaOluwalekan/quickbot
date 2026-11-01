@@ -1,9 +1,11 @@
+import { notFound } from "next/navigation";
 import { getActor } from "@/server/auth/session";
-import ResponseList from "@/components/chats/ResponseList";
-import ChatInput from "@/components/chats/ChatInput";
-import NotFound from "@/components/not-found/NotFound";
 import { getWorkspace } from "@/server/services/workspace";
-import { getResponses } from "@/utils/actions/response";
+import { listWorkspaceResponses } from "@/server/services/response";
+import { WorkspaceView } from "@/components/workspace/workspace-view";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 const SingleWorkspacePage = async ({
   params,
@@ -12,28 +14,40 @@ const SingleWorkspacePage = async ({
 }) => {
   const actor = await getActor();
   if (!actor) {
-    return <NotFound />;
+    notFound();
   }
 
   const workspaceId = (await params).id;
 
+  let workspace;
   try {
-    await getWorkspace(actor, workspaceId);
+    workspace = await getWorkspace(actor, workspaceId);
   } catch {
-    return <NotFound />;
+    notFound();
   }
 
-  const responsesRes = await getResponses(workspaceId);
-  const responses = responsesRes.data?.responses || [];
+  const responsesPage = await listWorkspaceResponses(actor, workspaceId, {
+    limit: 50,
+  }).catch(() => ({ items: [], nextCursor: null }));
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 w-full h-full overflow-hidden">
-      <ResponseList
-        data={responses}
-        image={(actor?.image ?? null) as string | null}
-      />
-      <ChatInput userId={actor.userId} />
-    </div>
+    <WorkspaceView
+      workspace={{
+        id: workspace.id,
+        title: workspace.title,
+        createdBy: workspace.ownerId,
+        projectId: workspace.projectId,
+        createdAt: workspace.createdAt.toISOString(),
+        updatedAt: workspace.updatedAt.toISOString(),
+      }}
+      initialResponses={responsesPage.items.map((r) => ({
+        id: r.id,
+        prompt: r.prompt,
+        content: r.activeVersion?.content || "",
+        createdAt: r.createdAt,
+      }))}
+      actor={actor}
+    />
   );
 };
 
