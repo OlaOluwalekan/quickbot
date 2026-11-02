@@ -1,6 +1,6 @@
 import { getActor } from "@/server/auth/session";
 import Logout from "@/components/auth/Logout";
-import LocaleSwitcher from "@/components/general/LocaleSwitcher";
+import LocaleSwitcher from "@/components/layout/locale-switcher";
 import AppName from "@/components/logo/AppName";
 import Logo from "@/components/logo/Logo";
 import NameAndEmail from "@/components/settings/NameAndEmail";

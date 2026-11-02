@@ -62,7 +62,8 @@ export function ResponseList({
   const isStreaming = stream.status === "streaming";
   const isFailed = stream.status === "failed";
   const isCompleted = stream.status === "completed";
-  const currentPrompt = optimisticPrompt || (!isCompleted && stream.prompt ? stream.prompt : null);
+  const currentPrompt =
+    optimisticPrompt || (!isCompleted && stream.prompt ? stream.prompt : null);
   const showActiveTurn = Boolean(currentPrompt || isStreaming || isFailed);
 
   // Track online status
@@ -91,18 +92,21 @@ export function ResponseList({
   }, []);
 
   // Jump to latest handler
-  const scrollToBottom = React.useCallback((behavior: ScrollBehavior = "smooth") => {
-    const el = containerRef.current;
-    if (!el) return;
-    if (typeof el.scrollTo === "function") {
-      el.scrollTo({
-        top: el.scrollHeight,
-        behavior,
-      });
-    } else {
-      el.scrollTop = el.scrollHeight;
-    }
-  }, []);
+  const scrollToBottom = React.useCallback(
+    (behavior: ScrollBehavior = "smooth") => {
+      const el = containerRef.current;
+      if (!el) return;
+      if (typeof el.scrollTo === "function") {
+        el.scrollTo({
+          top: el.scrollHeight,
+          behavior,
+        });
+      } else {
+        el.scrollTop = el.scrollHeight;
+      }
+    },
+    []
+  );
 
   // Auto-scroll on stream tokens or new responses ONLY if within 120px threshold
   React.useEffect(() => {
@@ -112,7 +116,13 @@ export function ResponseList({
     if (distanceFromBottom <= 120) {
       scrollToBottom("smooth");
     }
-  }, [responses.length, stream.text, stream.thought, isStreaming, scrollToBottom]);
+  }, [
+    responses.length,
+    stream.text,
+    stream.thought,
+    isStreaming,
+    scrollToBottom,
+  ]);
 
   // Handle retry with fresh idempotency key
   const handleRetry = () => {
@@ -120,26 +130,33 @@ export function ResponseList({
     const freshIdemKey =
       typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
         ? crypto.randomUUID()
-        : "retry-" + Date.now().toString(36) + Math.random().toString(36).substring(2, 8);
+        : "retry-" +
+          Date.now().toString(36) +
+          Math.random().toString(36).substring(2, 8);
     onRetryFailed(currentPrompt, freshIdemKey);
   };
 
   // Detect 402 / insufficient credits error
   const isCreditsError = Boolean(
     stream.error &&
-      (stream.error === "402" ||
-        stream.error.toLowerCase().includes("credit") ||
-        stream.error === "insufficient_credits")
+    (stream.error === "402" ||
+      stream.error.toLowerCase().includes("credit") ||
+      stream.error === "insufficient_credits")
   );
 
   return (
-    <div className={cn("relative flex-1 flex flex-col h-full w-full overflow-hidden", className)}>
+    <div
+      className={cn(
+        "relative flex h-full w-full flex-1 flex-col overflow-hidden",
+        className
+      )}
+    >
       {/* Offline Banner */}
       {!isOnline && (
         <div
           role="status"
           aria-live="polite"
-          className="bg-danger/10 border-b border-danger/20 px-4 py-2 text-xs font-medium text-danger flex items-center justify-center gap-2 select-none"
+          className="bg-danger/10 border-danger/20 text-danger flex items-center justify-center gap-2 border-b px-4 py-2 text-xs font-medium select-none"
         >
           <WifiOff className="h-4 w-4 shrink-0" />
           <span>{t("offline")}</span>
@@ -150,9 +167,9 @@ export function ResponseList({
       <div
         ref={containerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto px-3 sm:px-6 py-6 space-y-6 scroll-smooth"
+        className="flex-1 space-y-6 overflow-y-auto scroll-smooth px-3 py-6 sm:px-6"
       >
-        <div className="max-w-4xl mx-auto space-y-6">
+        <div className="mx-auto max-w-4xl space-y-6">
           {/* Historical Responses */}
           {responses.map((res, idx) => (
             <ResponseCard
@@ -164,7 +181,9 @@ export function ResponseList({
               onRegenerate={onRegenerateTurn}
               onDelete={onDeleteResponse}
               isFirstPrompt={idx === 0 && !optimisticPrompt}
-              className={cn(idx === 0 && !optimisticPrompt && "vt-first-prompt")}
+              className={cn(
+                idx === 0 && !optimisticPrompt && "vt-first-prompt"
+              )}
             />
           ))}
 
@@ -176,7 +195,7 @@ export function ResponseList({
                 <div className="flex justify-end">
                   <div
                     className={cn(
-                      "max-w-2xl rounded-2xl bg-surface-2 border border-border px-4 py-2.5 text-sm sm:text-base text-fg shadow-2xs whitespace-pre-wrap leading-relaxed select-text",
+                      "bg-surface-2 border-border text-fg max-w-2xl rounded-2xl border px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap shadow-2xs select-text sm:text-base",
                       responses.length === 0 && "vt-first-prompt"
                     )}
                   >
@@ -187,12 +206,12 @@ export function ResponseList({
 
               {/* Streaming Output / Thinking Panel */}
               {(isStreaming || stream.text || stream.thought) && (
-                <div className="flex gap-3 text-left animate-fade-in">
-                  <div className="h-8 w-8 rounded-xl bg-accent text-accent-fg flex items-center justify-center shrink-0 shadow-2xs">
-                    <Sparkles className="h-4 w-4 animate-spin-slow" />
+                <div className="animate-fade-in flex gap-3 text-left">
+                  <div className="bg-accent text-accent-fg flex h-8 w-8 shrink-0 items-center justify-center rounded-xl shadow-2xs">
+                    <Sparkles className="animate-spin-slow h-4 w-4" />
                   </div>
 
-                  <div className="flex-1 min-w-0 rounded-2xl border border-border bg-surface p-4 sm:p-5 text-sm sm:text-base text-fg shadow-2xs space-y-3.5">
+                  <div className="border-border bg-surface text-fg min-w-0 flex-1 space-y-3.5 rounded-2xl border p-4 text-sm shadow-2xs sm:p-5 sm:text-base">
                     {/* Live Thinking Panel */}
                     <ThinkingPanel
                       stage={stream.progressLabel}
@@ -203,20 +222,20 @@ export function ResponseList({
 
                     {/* Stream Output Text with Soft Caret */}
                     {stream.text ? (
-                      <div className="leading-relaxed select-text overflow-x-auto whitespace-pre-wrap break-words">
+                      <div className="overflow-x-auto leading-relaxed wrap-break-word whitespace-pre-wrap select-text">
                         {stream.text}
                         {isStreaming && (
                           <span
                             aria-hidden="true"
-                            className="inline-block w-2 h-4 ml-0.5 bg-accent rounded-2xs align-middle animate-pulse"
+                            className="bg-accent rounded-2xs ml-0.5 inline-block h-4 w-2 animate-pulse align-middle"
                           />
                         )}
                       </div>
                     ) : isStreaming ? (
-                      <div className="flex items-center gap-2 text-fg-muted italic text-xs sm:text-sm py-1">
+                      <div className="text-fg-muted flex items-center gap-2 py-1 text-xs italic sm:text-sm">
                         <span
                           aria-hidden="true"
-                          className="inline-block w-2 h-4 bg-accent/70 rounded-2xs animate-pulse"
+                          className="bg-accent/70 rounded-2xs inline-block h-4 w-2 animate-pulse"
                         />
                         <span>{t("thinking")}</span>
                       </div>
@@ -229,20 +248,22 @@ export function ResponseList({
               {isCreditsError && (
                 <div
                   role="alert"
-                  className="rounded-2xl border border-warning/30 bg-warning/10 p-4 sm:p-5 text-fg space-y-3 shadow-2xs"
+                  className="border-warning/30 bg-warning/10 text-fg space-y-3 rounded-2xl border p-4 shadow-2xs sm:p-5"
                 >
-                  <div className="flex items-center gap-2 text-warning font-semibold text-sm">
+                  <div className="text-warning flex items-center gap-2 text-sm font-semibold">
                     <CreditCard className="h-4 w-4" />
                     <span>{t("outOfCredits")}</span>
                   </div>
-                  <p className="text-xs sm:text-sm text-fg-muted">
+                  <p className="text-fg-muted text-xs sm:text-sm">
                     {tChat("outOfCreditsReason")}
                   </p>
                   <div className="pt-1">
-                    <Button size="sm" asChild className="bg-accent text-accent-fg hover:bg-accent/90 text-xs">
-                      <Link href="/settings">
-                        {t("upgradePlan")}
-                      </Link>
+                    <Button
+                      size="sm"
+                      asChild
+                      className="bg-accent text-accent-fg hover:bg-accent/90 text-xs"
+                    >
+                      <Link href="/settings">{t("upgradePlan")}</Link>
                     </Button>
                   </div>
                 </div>
@@ -252,14 +273,14 @@ export function ResponseList({
               {isFailed && !isCreditsError && (
                 <div
                   role="alert"
-                  className="rounded-2xl border border-danger/30 bg-danger/5 p-4 sm:p-5 text-fg space-y-3 shadow-2xs"
+                  className="border-danger/30 bg-danger/5 text-fg space-y-3 rounded-2xl border p-4 shadow-2xs sm:p-5"
                 >
-                  <div className="flex items-center gap-2 text-danger font-semibold text-sm">
+                  <div className="text-danger flex items-center gap-2 text-sm font-semibold">
                     <AlertCircle className="h-4 w-4" />
                     <span>{tChat("streamError")}</span>
                   </div>
                   {stream.error && (
-                    <p className="text-xs text-danger/80 font-mono bg-danger/10 px-2.5 py-1.5 rounded-lg">
+                    <p className="text-danger/80 bg-danger/10 rounded-lg px-2.5 py-1.5 font-mono text-xs">
                       {stream.error}
                     </p>
                   )}
@@ -270,9 +291,9 @@ export function ResponseList({
                         size="sm"
                         variant="outline"
                         onClick={handleRetry}
-                        className="text-xs border-danger/40 text-danger hover:bg-danger/10"
+                        className="border-danger/40 text-danger hover:bg-danger/10 text-xs"
                       >
-                        <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                        <RotateCcw className="mr-1 h-3.5 w-3.5" />
                         <span>{t("tryAgain")}</span>
                       </Button>
                     </div>
@@ -288,13 +309,13 @@ export function ResponseList({
 
       {/* Floating "Jump to latest" Pill */}
       {showJumpToLatest && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 animate-fade-in">
+        <div className="animate-fade-in absolute bottom-4 left-1/2 z-20 -translate-x-1/2">
           <button
             type="button"
             onClick={() => scrollToBottom("smooth")}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-surface-2/95 text-fg text-xs font-medium border border-border shadow-md hover:bg-surface transition-all duration-150 backdrop-blur-xs cursor-pointer select-none"
+            className="bg-surface-2/95 text-fg border-border hover:bg-surface flex cursor-pointer items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-medium shadow-md backdrop-blur-xs transition-all duration-150 select-none"
           >
-            <ArrowDown className="h-3.5 w-3.5 text-accent animate-bounce" />
+            <ArrowDown className="text-accent h-3.5 w-3.5 animate-bounce" />
             <span>{t("jumpToLatest")}</span>
           </button>
         </div>

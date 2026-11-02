@@ -1,7 +1,12 @@
-import Home from "@/app/page";
+import Home from "@/app/(marketing)/page";
 import QueryProvider from "@/components/providers/query-provider";
-import { render, screen, waitFor } from "@testing-library/react";
-import enMessages from "../messages/en.json";
+import { render, screen } from "@testing-library/react";
+import enMessages from "@/messages/en.json";
+
+function getNestedValue(obj: any, path: string): any {
+  if (!obj || !path) return undefined;
+  return path.split(".").reduce((acc, part) => (acc ? acc[part] : undefined), obj);
+}
 
 jest.mock("next/navigation", () => ({
   useRouter: () => ({
@@ -12,51 +17,46 @@ jest.mock("next/navigation", () => ({
 }));
 
 jest.mock("next-intl", () => ({
-  useTranslations: (namespace: keyof typeof enMessages) => {
+  useTranslations: (namespace?: string) => {
     return (key: string, values?: Record<string, any>) => {
-      const ns = (enMessages as any)[namespace] || {};
-      let template = ns[key] || key;
-      if (values) {
+      let resolved: any;
+      if (namespace) {
+        resolved = getNestedValue(enMessages, `${namespace}.${key}`);
+      }
+      if (resolved === undefined) {
+        resolved = getNestedValue(enMessages, key);
+      }
+      if (resolved === undefined) {
+        resolved = getNestedValue(enMessages, `Common.${key}`);
+      }
+      if (resolved === undefined) {
+        resolved = key;
+      }
+      if (typeof resolved === "string" && values) {
         Object.entries(values).forEach(([k, v]) => {
-          template = template.replace(`{${k}}`, String(v));
+          resolved = resolved.replace(new RegExp(`\\{${k}\\}`, "g"), String(v));
         });
       }
-      return template;
+      return resolved;
     };
   },
   useLocale: () => "en",
 }));
 
 describe("Home Component", () => {
-  jest.setTimeout(30000);
-
-  it("renders the Klecx home page component correctly", async () => {
+  it("renders the Klecx marketing landing page correctly", () => {
     render(
       <QueryProvider>
         <Home />
-      </QueryProvider>,
+      </QueryProvider>
     );
 
-    // Check that Klecx app name is rendered
-    expect(screen.getAllByText(/Klecx/i)[0]).toBeInTheDocument();
-
-    // Check that the hero headline and localized typing text are rendered
+    // Check that headline is rendered
     expect(
-      screen.getByText(/Think faster\. Create bolder with/i),
+      screen.getByRole("heading", { level: 1, name: /think in workspaces, not threads/i })
     ).toBeInTheDocument();
 
-    await waitFor(
-      () =>
-        expect(
-          screen.getByText(/Stream real-time answers with zero lag/i),
-        ).toBeInTheDocument(),
-      { timeout: 25000 },
-    );
-
-    // Check that link button to register page is present
-    const registerLink = screen.getAllByRole("link", {
-      name: /Start Free Workspace|Get Started/i,
-    })[0];
-    expect(registerLink).toBeInTheDocument();
+    // Check that CTAs are present
+    expect(screen.getAllByRole("link", { name: /start free/i }).length).toBeGreaterThan(0);
   });
 });
