@@ -49,6 +49,23 @@ export interface CreditsLowData {
   upgradeUrl: string;
 }
 
+
+export interface SupportAckData {
+  ticketId: string;
+  topic: string;
+  message: string;
+  name?: string;
+}
+
+export interface SupportNotificationData {
+  ticketId: string;
+  senderEmail: string;
+  topic: string;
+  message: string;
+  diagnostics?: string;
+  userId?: string;
+}
+
 export interface PaymentFailedData {
   reason?: string;
   retryUrl: string;
@@ -63,6 +80,8 @@ export interface EmailTemplateMap {
   "share-created": ShareCreatedData;
   "credits-low": CreditsLowData;
   "payment-failed": PaymentFailedData;
+  "support-ack": SupportAckData;
+  "support-notification": SupportNotificationData;
 }
 
 export type EmailTemplateName = keyof EmailTemplateMap;

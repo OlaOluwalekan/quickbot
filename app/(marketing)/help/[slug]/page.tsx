@@ -1,0 +1,95 @@
+import * as React from "react";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { ArrowLeft, Clock, Tag, MessageSquare } from "lucide-react";
+import { getArticleBySlug, getAllArticles } from "@/lib/help/articles";
+import { Markdown } from "@/components/markdown";
+import { Button } from "@/components/ui/button";
+
+interface HelpArticlePageProps {
+  params: Promise<{ slug: string }>;
+}
+
+export async function generateStaticParams() {
+  const articles = getAllArticles();
+  return articles.map((a) => ({ slug: a.slug }));
+}
+
+export async function generateMetadata({ params }: HelpArticlePageProps) {
+  const { slug } = await params;
+  const article = getArticleBySlug(slug);
+  if (!article) return { title: "Article Not Found · Klecx Help" };
+
+  return {
+    title: `${article.title} · Klecx Help Center`,
+    description: article.description,
+  };
+}
+
+export default async function HelpArticlePage({ params }: HelpArticlePageProps) {
+  const { slug } = await params;
+  const article = getArticleBySlug(slug);
+
+  if (!article) {
+    notFound();
+  }
+
+  return (
+    <div className="py-12 md:py-16">
+      <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 space-y-10">
+        {/* Navigation & Breadcrumbs */}
+        <div className="flex items-center justify-between border-b border-border pb-4">
+          <Link
+            href="/help"
+            className="inline-flex items-center gap-2 text-xs font-medium text-fg-muted hover:text-fg transition-colors"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            <span>Back to Help Center</span>
+          </Link>
+
+          <div className="flex items-center gap-3 text-xs text-fg-subtle">
+            <span className="inline-flex items-center gap-1 rounded-md bg-surface-2 px-2.5 py-1 font-medium text-fg-muted">
+              <Tag className="h-3 w-3 text-accent" />
+              {article.category}
+            </span>
+            <span className="flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              {article.readTime}
+            </span>
+          </div>
+        </div>
+
+        {/* Article Header */}
+        <div className="space-y-3">
+          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-fg">
+            {article.title}
+          </h1>
+          <p className="text-base text-fg-muted leading-relaxed">
+            {article.description}
+          </p>
+        </div>
+
+        {/* Article Body */}
+        <div className="rounded-2xl border border-border/70 bg-surface p-6 sm:p-10 shadow-2xs">
+          <Markdown content={article.content} />
+        </div>
+
+        {/* Footer Support CTA */}
+        <div className="rounded-2xl border border-border/80 bg-surface-2/40 p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="space-y-1 text-center sm:text-left">
+            <h4 className="text-sm font-bold text-fg">Was this guide helpful?</h4>
+            <p className="text-xs text-fg-muted">
+              If your question wasn't answered, our support team is available to assist you.
+            </p>
+          </div>
+          <Button asChild size="sm" variant="outline" className="shrink-0">
+            <Link href="/support" className="flex items-center gap-2">
+              <MessageSquare className="h-3.5 w-3.5" />
+              <span>Contact Support</span>
+            </Link>
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}

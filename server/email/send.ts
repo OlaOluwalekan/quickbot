@@ -18,6 +18,8 @@ import { renderPasswordChanged } from "./templates/password-changed";
 import { renderShareCreated } from "./templates/share-created";
 import { renderCreditsLow } from "./templates/credits-low";
 import { renderPaymentFailed } from "./templates/payment-failed";
+import { renderSupportAck } from "./templates/support-ack";
+import { renderSupportNotification } from "./templates/support-notification";
 
 export type {
   EmailTemplateMap,
@@ -146,6 +148,18 @@ export async function renderEmail<T extends EmailTemplateName>(
       );
     case "credits-low":
       return renderCreditsLow(data as EmailTemplateMap["credits-low"], t, to);
+    case "support-ack":
+      return renderSupportAck(
+        data as EmailTemplateMap["support-ack"],
+        t,
+        to
+      );
+    case "support-notification":
+      return renderSupportNotification(
+        data as EmailTemplateMap["support-notification"],
+        t,
+        to
+      );
     case "payment-failed":
       return renderPaymentFailed(
         data as EmailTemplateMap["payment-failed"],

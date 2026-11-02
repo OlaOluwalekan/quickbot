@@ -68,7 +68,7 @@
     "passwordPlaceholder": "Entrez votre mot de passe",
     "passwordLabel": "Mot de passe",
     "confirmPasswordPlaceholder": "Confirmez votre mot de passe",
-    "confirmPasswordLabel": "Confirmer le mot de passe",
+    "confirmPasswordLabel": "Confirmer le Mot de Passe",
     "loginTitle": "Bon retour",
     "loginSubtitle": "Connectez-vous à votre espace Klecx pour continuer",
     "loginButton": "Se connecter",
@@ -82,9 +82,9 @@
     "registering": "Création du compte...",
     "alreadyHaveAccount": "Vous avez déjà un compte ?",
     "signInLink": "Se connecter",
-    "forgotPasswordTitle": "Réinitialiser le mot de passe",
-    "forgotPasswordSubtitle": "Entrez votre adresse e-mail et nous vous enverrons un lien de vérification.",
-    "sendResetLink": "Envoyer le lien",
+    "forgotPasswordTitle": "Mot de Passe Oublié",
+    "forgotPasswordSubtitle": "Saisissez votre email pour recevoir un lien de réinitialisation.",
+    "sendResetLink": "Envoyer le Lien",
     "backToLogin": "Retour à la connexion",
     "registeredTitle": "Vérifiez votre boîte de réception",
     "registeredDescription": "Nous avons envoyé un lien de vérification à votre adresse e-mail. Cliquez sur le lien pour activer votre compte Klecx.",
@@ -96,7 +96,35 @@
     "verifyingTitle": "Vérification de votre e-mail",
     "verifyingSubtitle": "Veuillez patienter pendant que nous validons votre jeton...",
     "verifiedSuccess": "E-mail vérifié ! Redirection vers la connexion...",
-    "verifiedError": "La vérification a échoué ou le lien a expiré."
+    "verifiedError": "La vérification a échoué ou le lien a expiré.",
+    "sendingResetLink": "Envoi en cours...",
+    "resetLinkSentTitle": "Vérifiez vos emails",
+    "resetLinkSentDesc": "Si un compte existe pour {email}, un lien de réinitialisation a été envoyé.",
+    "backToSignIn": "Retour à la Connexion",
+    "rememberPassword": "Vous vous souvenez de votre mot de passe ?",
+    "resetPasswordTitle": "Réinitialiser le Mot de Passe",
+    "resetPasswordSubtitle": "Créez un nouveau mot de passe fort.",
+    "newPasswordLabel": "Nouveau Mot de Passe",
+    "resetPasswordButton": "Enregistrer le Nouveau Mot de Passe",
+    "resettingPassword": "Mise à jour...",
+    "resetSuccessTitle": "Mot de passe réinitialisé !",
+    "resetSuccessDesc": "Votre mot de passe a été mis à jour et les autres sessions ont été révoquées.",
+    "invalidTokenTitle": "Lien invalide ou expiré",
+    "invalidTokenDesc": "Ce lien de réinitialisation n'est plus valide. Veuillez faire une nouvelle demande.",
+    "requestNewLink": "Demander un nouveau lien",
+    "strengthWeak": "Faible (minimum 10 caractères)",
+    "strengthMedium": "Moyen",
+    "strengthStrong": "Mot de passe fort",
+    "passwordsDoNotMatch": "Les mots de passe ne correspondent pas.",
+    "verifyEmailTitle": "Vérifiez Votre Email",
+    "verifyEmailSubtitle": "Confirmation de votre adresse email.",
+    "verifySuccessTitle": "Email vérifié !",
+    "verifySuccessDesc": "Votre adresse email a été confirmée avec succès.",
+    "proceedToWorkspaces": "Accéder aux Espaces de Travail",
+    "resendVerifyEmail": "Renvoyer l'Email de Confirmation",
+    "resending": "Envoi en cours...",
+    "resendCooldown": "Renvoi disponible dans {seconds}s",
+    "resendSent": "Email de confirmation envoyé !"
   },
   "Chat": {
     "newChat": "Nouvelle discussion",
@@ -257,6 +285,15 @@
       "bodyWithReason": "Nous n'avons pas pu prélever votre paiement en raison de : {reason}. Veuillez mettre à jour votre moyen de paiement pour maintenir votre abonnement actif.",
       "button": "Mettre à jour le paiement",
       "disclaimer": "Nous relancerons automatiquement la tentative de paiement dans les prochains jours."
+    },
+    "supportAck": {
+      "subject": "Nous avons bien reçu votre demande d'assistance [#{ticketId}]",
+      "heading": "Demande d'assistance reçue",
+      "greeting": "Bonjour,",
+      "greetingWithName": "Bonjour {name},",
+      "body": "Merci d'avoir contacté l'assistance Klecx. Nous avons bien reçu votre demande concernant \"{topic}\" (Ticket #{ticketId}).",
+      "quoteNotice": "Votre message :",
+      "responseTimeNotice": "Notre équipe traite chaque demande dans un délai de ≤ 3 jours ouvrés."
     }
   },
   "AppShell": {
@@ -447,7 +484,8 @@
       "language": "Langue",
       "toggleTheme": "Changer de thème",
       "openMenu": "Ouvrir le menu",
-      "closeMenu": "Fermer le menu"
+      "closeMenu": "Fermer le menu",
+      "help": "Aide"
     },
     "footer": {
       "tagline": "Pensez en espaces de travail, pas en fils. Organisez vos réflexions en projets, conservez les versions et collaborez proprement.",
@@ -463,7 +501,9 @@
       "cookies": "Politique de cookies",
       "trustTitle": "Confiance & Transparence",
       "trustDisclosure": "Klecx est une interface indépendante conçue sur des modèles d'IA tiers (actuellement Google Gemini). Nous facturons en toute transparence selon les coûts réels de calcul, sans pratiques trompeuses.",
-      "allRightsReserved": "Tous droits réservés."
+      "allRightsReserved": "Tous droits réservés.",
+      "help": "Centre d'aide",
+      "support": "Contacter le support"
     },
     "hero": {
       "badge": "Des espaces de travail, pas des fils de discussion",
@@ -750,5 +790,165 @@
       "emailLabel": "Courriel :",
       "tryFree": "Essayer Klecx gratuitement"
     }
+  },
+  "Legal": {
+    "lastUpdated": "Dernière mise à jour : Novembre 2026",
+    "englishNotice": "Ce document est rédigé en anglais pour des raisons de précision juridique.",
+    "privacy": {
+      "title": "Politique de Confidentialité",
+      "subtitle": "Pratiques claires concernant vos données personnelles.",
+      "storageHeading": "1. What We Store",
+      "storageBody": "We collect and store account information (email address, display name, profile image if provided), authentication tokens, workspace metadata, prompts, AI responses, version edit histories, and files you upload to Cloudinary.",
+      "processorsHeading": "2. Third-Party Sub-Processors",
+      "processorsBody": "We process your data using dedicated enterprise providers: Google Gemini (generative AI models and inference), Cloudinary (secure asset and image hosting), Resend (transactional email delivery), and Creem (payment processing, subscriptions, and merchant of record). We do not sell your personal data or provide training data to public model pools.",
+      "retentionHeading": "3. Data Retention & Deletion",
+      "retentionBody": "Soft-deleted workspaces and conversations remain recoverable in your trash for 30 days, after which they are permanently purged from database tables and storage buckets. Automated backups are rotated and expired on a 30-day rolling cycle.",
+      "rightsHeading": "4. Your Rights (GDPR & CCPA)",
+      "rightsBody": "You have the right to access, export, rectify, or permanently delete your account and all associated workspace data at any time directly through your Account Settings. If you submit a deletion request, all associated personal records and credentials are erased.",
+      "childrenHeading": "5. Age Restrictions",
+      "childrenBody": "Klecx is designed for professional and educational adult productivity. It is not intended for or directed at children under the age of 18 (or under 16 in applicable European jurisdictions). We do not knowingly collect personal data from minors.",
+      "contactHeading": "6. Contact Our Privacy Team",
+      "contactBody": "For privacy inquiries, data subject access requests, or regulatory questions, contact privacy@mail.klecx.vyraxity.com or support@mail.klecx.vyraxity.com."
+    },
+    "terms": {
+      "title": "Conditions d'Utilisation",
+      "subtitle": "Conditions régissant l'utilisation de Klecx et abonnements.",
+      "accountHeading": "1. Account Terms",
+      "accountBody": "You must be 18 years or older to create an account. You are responsible for safeguarding your login credentials and for all activities that occur under your account.",
+      "creditsHeading": "2. Credits, Subscriptions & Refunds",
+      "creditsBody": "Subscriptions provide recurring credit allocations every billing period. Monthly plan credits do not roll over to subsequent months and expire at cycle reset. Paid credit packs remain valid while your account is in good standing. Refunds may be requested within 14 days of billing if technical issues prevented normal usage.",
+      "sharingHeading": "3. Public Links & Workspace Sharing",
+      "sharingBody": "When you generate a public share link (/s/:token), the conversation is accessible to anyone holding the URL. You are solely responsible for ensuring shared conversations do not contain confidential secrets, credentials, or proprietary third-party data.",
+      "ownershipHeading": "4. Intellectual Property & Ownership",
+      "ownershipBody": "As between you and Klecx, you retain ownership of all original text and content you submit. Subject to applicable model terms and copyright law, you own the rights to the outputs generated by AI models in your workspaces.",
+      "disclaimerHeading": "5. AI Output Disclaimer",
+      "disclaimerBody": "Outputs are generated by probabilistic machine learning models. Klecx does not guarantee the factual accuracy, completeness, or reliability of any AI-generated response. You must review and verify critical code, medical, financial, or legal suggestions before relying on them.",
+      "terminationHeading": "6. Termination & Governing Law",
+      "terminationBody": "We reserve the right to suspend or terminate accounts that violate our Acceptable Use Policy. These terms are governed by and construed in accordance with the laws of Delaware, United States, without regard to conflict of law principles."
+    },
+    "acceptableUse": {
+      "title": "Politique d'Utilisation Acceptable",
+      "subtitle": "Normes de sécurité et cas interdits.",
+      "prohibitedHeading": "1. Prohibited Use Cases",
+      "prohibitedIntro": "To maintain platform safety and comply with partner policies, the following activities are strictly prohibited on Klecx:",
+      "prohibitedItems": [
+        "Explicit sexual, pornographic, or NSFW content generation.",
+        "Romantic AI companionship or synthetic intimacy role-play.",
+        "Harassment, hate speech, defamation, or promoting violence against individuals or groups.",
+        "Malware creation, exploit development, phishing, or cybersecurity attacks.",
+        "Fraud, identity theft, unauthorized impersonation, or deception.",
+        "Face-swapping, deepfakes, or manipulating the likeness of real living people without explicit consent.",
+        "Academic dishonesty, plagiarism, or acting as an 'essay mill' for school submissions.",
+        "Any activity that violates local, state, federal, or international law.",
+        "Circumventing rate limits, credit constraints, or security safeguards."
+      ],
+      "enforcementHeading": "2. Monitoring & Enforcement",
+      "enforcementBody": "We employ automated rate-limiting, keyword filtering, and abuse detection. Violations of this policy will result in immediate content blocking, prompt termination, temporary suspension, or permanent account revocation without refund.",
+      "reportingHeading": "3. How to Report Abuse",
+      "reportingBody": "If you detect abusive content, prompt misuse, or copyright infringement created using Klecx, report it immediately to our dedicated abuse inbox at abuse@mail.klecx.vyraxity.com. We investigate all valid reports within 24 hours."
+    },
+    "cookies": {
+      "title": "Politique des Cookies",
+      "subtitle": "Nous n'utilisons que des cookies strictement essentiels.",
+      "overviewHeading": "1. Essential Cookies Only",
+      "overviewBody": "Klecx does not use third-party advertising cookies, cross-site trackers, or marketing pixels. We only set first-party cookies necessary for authentication, session security, and user preferences.",
+      "cookieTableHeading": "2. Cookies We Set",
+      "cookieNameHeader": "Cookie Name",
+      "cookiePurposeHeader": "Purpose",
+      "cookieDurationHeader": "Duration",
+      "cookieAuth": "Authentication session token and csrf validation.",
+      "cookieLocale": "Stores your selected interface language preference.",
+      "cookieTheme": "Remembers light, dark, or system color theme.",
+      "cookieSidebar": "Remembers collapsed or expanded sidebar state.",
+      "durationSession": "30 days (rolling)",
+      "durationYear": "1 year",
+      "durationState": "Persistent local preference"
+    }
+  },
+  "Help": {
+    "title": "Centre d'Aide & Documentation",
+    "subtitle": "Découvrez comment maîtriser les espaces de travail, gérer les crédits et collaborer.",
+    "searchPlaceholder": "Rechercher des articles, fonctionnalités...",
+    "popularArticles": "Guides Populaires",
+    "categories": "Catégories",
+    "allCategories": "Toutes les catégories",
+    "readTime": "de lecture",
+    "articlesFound": "{count} articles trouvés",
+    "noResultsTitle": "Aucun article trouvé",
+    "noResultsDesc": "Modifiez votre recherche ou parcourez les catégories ci-dessus.",
+    "backToHelp": "Retour au Centre d'Aide",
+    "needMoreHelp": "Vous avez encore des questions ?",
+    "needMoreHelpDesc": "Notre équipe technique et support est à votre disposition.",
+    "contactSupport": "Contacter le Support"
+  },
+  "Support": {
+    "title": "Contacter le Support",
+    "subtitle": "Une question ou un problème ? Contactez-nous. Réponse sous ≤ 3 jours ouvrés.",
+    "guaranteeBanner": "Engagement : notre équipe d'ingénierie répond à toutes les demandes sous ≤ 3 jours ouvrés.",
+    "formTitle": "Soumettre une Demande",
+    "emailLabel": "Votre Adresse Email",
+    "emailPlaceholder": "nom@exemple.com",
+    "nameLabel": "Votre Nom",
+    "namePlaceholder": "Jean Dupont",
+    "topicLabel": "Comment pouvons-nous vous aider ?",
+    "topicPlaceholder": "Choisissez un sujet...",
+    "topics": {
+      "general": "Question Générale",
+      "billing": "Facturation & Abonnements",
+      "account": "Compte & Connexion",
+      "bug": "Signalement de Bug ou Problème Technique",
+      "feature": "Demande de Fonctionnalité",
+      "other": "Autre"
+    },
+    "messageLabel": "Message",
+    "messagePlaceholder": "Décrivez votre problème en détail (jusqu'à 5 000 caractères)...",
+    "diagnosticsTitle": "Diagnostics Système",
+    "diagnosticsNotice": "Vous pouvez joindre des métadonnées techniques non sensibles de votre navigateur.",
+    "diagnosticsCheckbox": "Joindre les diagnostics techniques non sensibles (navigateur, OS, version)",
+    "diagnosticsPrivacy": "Nous ne joignons jamais le contenu de vos conversations sans accord explicite.",
+    "submitButton": "Envoyer la Demande",
+    "submittingButton": "Envoi en cours...",
+    "successTitle": "Demande Bien Reçue !",
+    "successMessage": "Votre ticket a été enregistré et un accusé de réception a été envoyé à votre adresse email.",
+    "ticketIdNotice": "Identifiant du ticket : {ticketId}",
+    "sendAnother": "Envoyer un Autre Message",
+    "directEmailNotice": "Vous pouvez aussi nous contacter directement à",
+    "abuseNotice": "Pour signaler un abus, écrivez à"
+  },
+  "Status": {
+    "title": "État du Système",
+    "subtitle": "Disponibilité et état opérationnel en temps réel des services Klecx.",
+    "allOperational": "Tous les Systèmes Sont Opérationnels",
+    "uptimeNotice": "Nos services visent une disponibilité de ≥ 99.9%. Consultez notre moniteur externe.",
+    "viewMonitor": "Moniteur Externe de Disponibilité",
+    "servicesHeading": "Services Principaux",
+    "operational": "Opérationnel",
+    "degraded": "Performances Dégradées",
+    "outage": "Interruption de Service",
+    "lastChecked": "Dernière vérification : En direct",
+    "services": {
+      "ai": {
+        "name": "AI Inference & Generation Engine",
+        "desc": "Google Gemini 2.5 Flash & Pro model streaming endpoints."
+      },
+      "auth": {
+        "name": "Authentication & Sessions",
+        "desc": "Better Auth user accounts, verification, and session storage."
+      },
+      "db": {
+        "name": "PostgreSQL Database & Cache",
+        "desc": "Prisma data persistence, workspaces, and Upstash Redis rate limits."
+      },
+      "storage": {
+        "name": "Asset & File Storage",
+        "desc": "Cloudinary CDN media storage and document attachment processing."
+      },
+      "email": {
+        "name": "Transactional Email Service",
+        "desc": "Resend email delivery for verifications, password resets, and support."
+      }
+    },
+    "incidentHeading": "Incidents Récents",
+    "noIncidents": "Aucun incident signalé au cours des 90 derniers jours."
   }
 }

@@ -1,0 +1,33 @@
+---
+title: "Sharing Workspaces"
+slug: "sharing"
+category: "Collaboration & Sharing"
+description: "How to generate public share links, manage privacy, and revoke shared access."
+readTime: "3 min read"
+keywords: ["share", "public link", "privacy", "revoke", "read-only"]
+---
+
+# Sharing Workspaces
+
+Klecx allows you to share valuable AI research, code explanations, and documentation with teammates, clients, or the public via secure read-only links.
+
+## Creating a Share Link
+
+1. Open the workspace you want to share.
+2. Click the **Share** button located in the top navigation bar.
+3. Choose your sharing permissions:
+   - **Public Read-Only Link**: Anyone with the link can view the conversation.
+   - **Snapshot vs Live**: Choose whether visitors see the conversation as it exists today (snapshot) or see future responses in real time.
+4. Click **Create Link** and copy the generated URL (`/s/:token`).
+
+## Important Security Information
+
+- **URL Access**: Public share links are accessible to anyone who possesses the exact link URL. Avoid pasting confidential credentials or proprietary secrets into conversations before sharing.
+- **Search Engine Indexing**: All public share routes (`/s/*`) explicitly transmit `noindex, nofollow` robot headers to prevent search engines from indexing your shared conversations.
+
+## Revoking a Share Link
+
+You maintain total control over your shared content. At any time:
+1. Re-open the **Share** dialog.
+2. Click **Revoke Link**.
+3. The URL immediately stops serving content and displays an expiration notice to subsequent visitors.

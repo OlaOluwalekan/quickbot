@@ -1,0 +1,36 @@
+---
+title: "Troubleshooting & FAQs"
+slug: "troubleshooting"
+category: "Troubleshooting"
+description: "Resolutions for common issues: generation halts, credit errors, and connectivity."
+readTime: "3 min read"
+keywords: ["troubleshooting", "errors", "retry", "support", "faq", "connection"]
+---
+
+# Troubleshooting & FAQs
+
+If you run into an unexpected issue while using Klecx, this guide covers the most frequent questions and diagnostic steps.
+
+## Generation Halts or "Thinking" Appears Stuck
+
+If a generation shows a pulsing indicator but doesn't stream tokens after 15 seconds:
+1. **Network Disconnection**: Check your internet connection. Server-sent events (SSE) require an uninterrupted streaming connection.
+2. **Click Retry**: If a generation fails or drops, an inline **Retry** banner will appear. Clicking **Retry** generates a fresh idempotency key so you are never charged double credits.
+3. **Model Outage**: Check our public status dashboard at [/status](/status) to see if Google Gemini or downstream infrastructure is experiencing elevated latency.
+
+## "Insufficient Credits" Banner
+
+If you receive a 402 Insufficient Credits notice:
+- Your workspace prompt requires more credits than your current balance holds.
+- Switch to an Economy model (`Gemini Flash`) to reduce credit requirements, or upgrade your plan in [/pricing](/pricing).
+
+## Reset Password Link Not Received
+
+If you requested a password recovery email but have not received it:
+1. Check your spam and promotions folder.
+2. Ensure you entered the exact email address used during account creation.
+3. Note that password reset requests are rate-limited to 3 attempts per hour to protect accounts against automated abuse.
+
+## Contacting Support
+
+If your problem persists, submit a ticket via [/support](/support) or email our engineering team directly at `support@mail.klecx.vyraxity.com`. We respond within ≤ 3 business days.

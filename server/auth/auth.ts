@@ -85,6 +85,7 @@ export const auth = betterAuth({
     requireEmailVerification: true,
     minPasswordLength: 10,
     maxPasswordLength: 128,
+    revokeSessionsOnPasswordReset: true,
     sendResetPassword: async ({ user, url }) => {
       await sendEmail("reset-password", user.email, { url });
     },

@@ -31,6 +31,7 @@ export function MarketingHeader() {
     { label: t("features"), href: "/features" },
     { label: t("pricing"), href: "/pricing" },
     { label: t("about"), href: "/about" },
+    { label: t("help"), href: "/help" },
   ];
 
   return (

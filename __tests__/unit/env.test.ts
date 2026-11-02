@@ -28,6 +28,7 @@ describe("server/env validation", () => {
       expect(result.data.DATABASE_URL).toBe(baseValidEnv.DATABASE_URL);
       expect(result.data.BETTER_AUTH_SECRET).toBe(baseValidEnv.BETTER_AUTH_SECRET);
       expect(result.data.SUPPORT_EMAIL).toBe("support@mail.klecx.vyraxity.com");
+      expect(result.data.ABUSE_EMAIL).toBe("abuse@mail.klecx.vyraxity.com");
       expect(result.data.GEMINI_TEXT_MODEL_ECONOMY).toBeDefined();
       expect(result.data.GEMINI_TEXT_MODEL_STANDARD).toBeDefined();
     }

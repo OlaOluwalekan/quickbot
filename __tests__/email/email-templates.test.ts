@@ -47,6 +47,20 @@ describe("Step 1.7 — Transactional Email Module", () => {
       remainingCredits: 150,
       upgradeUrl: "https://klecx.vyraxity.com/settings/tokens",
     },
+    "support-ack": {
+      ticketId: "tk_12345678",
+      topic: "Billing question",
+      message: "How do I upgrade my plan?",
+      name: "Dave",
+    },
+    "support-notification": {
+      ticketId: "tk_12345678",
+      senderEmail: "dave@example.com",
+      topic: "Billing question",
+      message: "How do I upgrade my plan?",
+      diagnostics: '{"browser": "Chrome"}',
+      userId: "user_abc123",
+    },
     "payment-failed": {
       reason: "Card expired",
       retryUrl: "https://klecx.vyraxity.com/settings/billing",
@@ -62,6 +76,8 @@ describe("Step 1.7 — Transactional Email Module", () => {
     "share-created",
     "credits-low",
     "payment-failed",
+    "support-ack",
+    "support-notification",
   ];
 
   describe("Localization & Template Rendering", () => {
