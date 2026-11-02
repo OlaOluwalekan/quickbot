@@ -6,12 +6,12 @@ import { useRouter } from "next/navigation";
 import { Locale, LOCALE_COOKIE, localeNames, locales } from "@/i18n/config";
 import { Globe } from "lucide-react";
 
-interface LocaleSwitcherProps {
+export interface LocaleSwitcherProps {
   compact?: boolean;
   className?: string;
 }
 
-const LocaleSwitcher: React.FC<LocaleSwitcherProps> = ({
+export const LocaleSwitcher: React.FC<LocaleSwitcherProps> = ({
   compact = false,
   className = "",
 }) => {
@@ -29,7 +29,7 @@ const LocaleSwitcher: React.FC<LocaleSwitcherProps> = ({
 
   return (
     <div
-      className={`inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface/80 backdrop-blur-md px-2.5 py-1.5 text-xs font-medium text-fg shadow-xs transition-all ${
+      className={`inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface/80 backdrop-blur-md px-2.5 py-1.5 text-xs font-medium text-fg shadow-2xs transition-all ${
         isPending ? "opacity-60 pointer-events-none" : ""
       } ${className}`}
     >
@@ -42,11 +42,7 @@ const LocaleSwitcher: React.FC<LocaleSwitcherProps> = ({
         className="bg-transparent text-xs font-semibold text-fg focus:outline-none cursor-pointer pr-1"
       >
         {locales.map((loc) => (
-          <option
-            key={loc}
-            value={loc}
-            className="bg-surface text-fg"
-          >
+          <option key={loc} value={loc} className="bg-surface text-fg">
             {compact ? loc.toUpperCase() : localeNames[loc]}
           </option>
         ))}

@@ -109,16 +109,16 @@ export function ResponseCard({
   const t = useTranslations("Response");
   const [isEditing, setIsEditing] = React.useState(false);
   const [isPromptExpanded, setIsPromptExpanded] = React.useState(false);
-  const [viewMode, setViewMode] = React.useState<"edited" | "original">("edited");
+  const [viewMode, setViewMode] = React.useState<"edited" | "original">(
+    "edited"
+  );
   const [copied, setCopied] = React.useState(false);
   const [lightboxOpen, setLightboxOpen] = React.useState(false);
   const [mobileSheetOpen, setMobileSheetOpen] = React.useState(false);
 
   // Queries & Mutations
-  const { data: versionsData, isLoading: isLoadingVersions } = useResponseVersions(
-    userId,
-    response.id
-  );
+  const { data: versionsData, isLoading: isLoadingVersions } =
+    useResponseVersions(userId, response.id);
   const switchVersionMutation = useSwitchActiveVersion(userId, workspaceId);
   const createEditMutation = useCreateResponseEdit(userId, workspaceId);
 
@@ -130,7 +130,7 @@ export function ResponseCard({
   const activeVersionId = response.activeVersionId || activeVer?.id;
   const activeNumber =
     activeVer?.number ||
-    (versions.findIndex((v) => v.id === activeVersionId) + 1) ||
+    versions.findIndex((v) => v.id === activeVersionId) + 1 ||
     1;
 
   // Content resolution (viewing edited vs original)
@@ -143,12 +143,15 @@ export function ResponseCard({
 
   const hasEdits = Boolean(
     activeVer?.edited ||
-      activeVer?.hasEdits ||
-      (activeVer?.latestEditContent && activeVer.latestEditContent !== originalText)
+    activeVer?.hasEdits ||
+    (activeVer?.latestEditContent &&
+      activeVer.latestEditContent !== originalText)
   );
 
-  const editedText = activeVer?.latestEditContent || activeVer?.content || originalText;
-  const displayedContent = hasEdits && viewMode === "original" ? originalText : editedText;
+  const editedText =
+    activeVer?.latestEditContent || activeVer?.content || originalText;
+  const displayedContent =
+    hasEdits && viewMode === "original" ? originalText : editedText;
 
   // Prompt truncation helper (> 6 lines or > 300 chars)
   const isPromptLong =
@@ -156,10 +159,9 @@ export function ResponseCard({
 
   // Model key formatting
   const modelKey = activeVer?.modelKey || "text-economy";
-  const modelName =
-    modelKey.includes("pro")
-      ? t("modelPro")
-      : modelKey.includes("economy")
+  const modelName = modelKey.includes("pro")
+    ? t("modelPro")
+    : modelKey.includes("economy")
       ? t("modelEconomy")
       : t("modelStandard");
 
@@ -230,27 +232,27 @@ export function ResponseCard({
 
   const isImageResponse =
     response.kind === "IMAGE" ||
-    displayedContent.startsWith("http") &&
+    (displayedContent.startsWith("http") &&
       (displayedContent.includes("cloudinary") ||
-        displayedContent.match(/\.(jpeg|jpg|gif|png|webp)(\?.*)?$/i) !== null);
+        displayedContent.match(/\.(jpeg|jpg|gif|png|webp)(\?.*)?$/i) !== null));
 
   return (
     <div
       id={`response-${response.id}`}
       style={{ contentVisibility: "auto", containIntrinsicSize: "0 180px" }}
-      className={cn("space-y-4 group", className)}
+      className={cn("group space-y-4", className)}
     >
       {/* 1. User Prompt Bubble */}
       <div className="flex justify-end">
         <div
           className={cn(
-            "max-w-2xl rounded-2xl bg-surface-2 border border-border px-4 py-2.5 text-sm sm:text-base text-fg shadow-2xs",
+            "bg-surface-2 border-border text-fg max-w-2xl rounded-2xl border px-4 py-2.5 text-sm shadow-2xs sm:text-base",
             isFirstPrompt && "vt-first-prompt"
           )}
         >
           <div
             className={cn(
-              "whitespace-pre-wrap leading-relaxed select-text",
+              "leading-relaxed whitespace-pre-wrap select-text",
               isFirstPrompt && "vt-first-prompt",
               !isPromptExpanded && isPromptLong && "line-clamp-6"
             )}
@@ -261,7 +263,7 @@ export function ResponseCard({
             <button
               type="button"
               onClick={() => setIsPromptExpanded(!isPromptExpanded)}
-              className="mt-1 flex items-center gap-1 text-xs font-medium text-accent hover:underline cursor-pointer"
+              className="text-accent mt-1 flex cursor-pointer items-center gap-1 text-xs font-medium hover:underline"
             >
               {isPromptExpanded ? (
                 <>
@@ -284,25 +286,28 @@ export function ResponseCard({
         {/* Left Author / Brand Avatar */}
         <div className="shrink-0 pt-0.5">
           {memberCount > 1 && response.author ? (
-            <Avatar className="h-8 w-8 rounded-xl border border-border">
-              <AvatarFallback className="text-xs bg-surface-2 font-medium">
+            <Avatar className="border-border h-8 w-8 rounded-xl border">
+              <AvatarFallback className="bg-surface-2 text-xs font-medium">
                 {response.author.name?.charAt(0) || "U"}
               </AvatarFallback>
             </Avatar>
           ) : (
-            <div className="h-8 w-8 rounded-xl bg-accent-soft text-accent flex items-center justify-center border border-border shadow-2xs">
+            <div className="bg-accent-soft text-accent border-border flex h-8 w-8 items-center justify-center rounded-xl border shadow-2xs">
               <Sparkles className="h-4 w-4" />
             </div>
           )}
         </div>
 
         {/* Main Response Box */}
-        <div className="flex-1 min-w-0 rounded-2xl border border-border bg-surface p-4 sm:p-5 text-sm sm:text-base text-fg shadow-2xs space-y-3.5">
+        <div className="border-border text-fg min-w-0 flex-1 space-y-3.5 rounded-2xl p-4 text-sm shadow-2xs sm:p-5 sm:text-base">
           {/* Card Header: Badges & Version Switcher */}
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 pb-3">
+          <div className="border-border/60 flex flex-wrap items-center justify-between gap-2 border-b pb-3">
             <div className="flex flex-wrap items-center gap-2">
               {/* Model Badge */}
-              <Badge variant="outline" className="text-xs font-medium bg-surface-2">
+              <Badge
+                variant="outline"
+                className="bg-surface-2 text-xs font-medium"
+              >
                 {modelName}
               </Badge>
 
@@ -316,30 +321,36 @@ export function ResponseCard({
                     current: activeNumber,
                     total: versionCount,
                   })}
-                  className="flex items-center gap-1 px-1.5 py-0.5 rounded-lg border border-border bg-surface-2 text-xs font-mono text-fg select-none focus:outline-hidden focus:ring-1 focus:ring-accent"
+                  className="border-border bg-surface-2 text-fg focus:ring-accent flex items-center gap-1 rounded-lg border px-1.5 py-0.5 font-mono text-xs select-none focus:ring-1 focus:outline-hidden"
                 >
                   <button
                     type="button"
                     onClick={() => handleSwitchVersion("prev")}
-                    disabled={activeNumber <= 1 || switchVersionMutation.isPending}
+                    disabled={
+                      activeNumber <= 1 || switchVersionMutation.isPending
+                    }
                     aria-label={t("previousVersion")}
-                    className="p-0.5 rounded hover:bg-surface disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                    className="hover:bg-surface cursor-pointer rounded p-0.5 disabled:cursor-not-allowed disabled:opacity-30"
                   >
                     <ChevronLeft className="h-3.5 w-3.5" />
                   </button>
 
                   <span className="px-1 text-[11px] font-medium">
-                    {t("version", { current: activeNumber, total: versionCount })}
+                    {t("version", {
+                      current: activeNumber,
+                      total: versionCount,
+                    })}
                   </span>
 
                   <button
                     type="button"
                     onClick={() => handleSwitchVersion("next")}
                     disabled={
-                      activeNumber >= versionCount || switchVersionMutation.isPending
+                      activeNumber >= versionCount ||
+                      switchVersionMutation.isPending
                     }
                     aria-label={t("nextVersion")}
-                    className="p-0.5 rounded hover:bg-surface disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                    className="hover:bg-surface cursor-pointer rounded p-0.5 disabled:cursor-not-allowed disabled:opacity-30"
                   >
                     <ChevronRight className="h-3.5 w-3.5" />
                   </button>
@@ -351,7 +362,7 @@ export function ResponseCard({
                 <div className="flex items-center gap-1">
                   <Badge
                     variant="outline"
-                    className="text-[11px] bg-accent-soft text-accent border-accent/30 font-medium"
+                    className="bg-accent-soft text-accent border-accent/30 text-[11px] font-medium"
                   >
                     {t("edited")}
                   </Badge>
@@ -361,7 +372,7 @@ export function ResponseCard({
                     onClick={() =>
                       setViewMode(viewMode === "edited" ? "original" : "edited")
                     }
-                    className="text-[11px] font-medium text-fg-muted hover:text-fg hover:underline cursor-pointer flex items-center gap-1 ml-1"
+                    className="text-fg-muted hover:text-fg ml-1 flex cursor-pointer items-center gap-1 text-[11px] font-medium hover:underline"
                   >
                     {viewMode === "edited" ? (
                       <>
@@ -380,17 +391,17 @@ export function ResponseCard({
             </div>
 
             {/* Quick header action icons */}
-            <div className="flex items-center gap-1 text-fg-muted">
+            <div className="text-fg-muted flex items-center gap-1">
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
                 onClick={handleCopy}
                 aria-label={copied ? t("copied") : t("copy")}
-                className="h-7 w-7 text-fg-muted hover:text-fg"
+                className="text-fg-muted hover:text-fg h-7 w-7"
               >
                 {copied ? (
-                  <Check className="h-3.5 w-3.5 text-accent" />
+                  <Check className="text-accent h-3.5 w-3.5" />
                 ) : (
                   <Copy className="h-3.5 w-3.5" />
                 )}
@@ -413,31 +424,34 @@ export function ResponseCard({
             />
           ) : isImageResponse ? (
             <div className="space-y-3">
-              <div className="relative group/img overflow-hidden rounded-xl border border-border bg-surface-2 max-w-lg aspect-square">
+              <div className="group/img border-border bg-surface-2 relative aspect-square max-w-lg overflow-hidden rounded-xl border">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={displayedContent}
                   alt={response.prompt}
-                  className="w-full h-full object-cover transition-transform duration-300 group-hover/img:scale-[1.02]"
+                  className="h-full w-full object-cover transition-transform duration-300 group-hover/img:scale-[1.02]"
                 />
-                <div className="absolute inset-0 bg-overlay opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                <div className="bg-overlay absolute inset-0 flex items-center justify-center gap-2 opacity-0 transition-opacity group-hover/img:opacity-100">
                   <Button
                     size="sm"
                     variant="secondary"
                     onClick={() => setLightboxOpen(true)}
-                    className="text-xs h-8"
+                    className="h-8 text-xs"
                   >
-                    <Maximize2 className="h-3.5 w-3.5 mr-1" />
+                    <Maximize2 className="mr-1 h-3.5 w-3.5" />
                     Preview
                   </Button>
                   <Button
                     size="sm"
                     variant="secondary"
                     asChild
-                    className="text-xs h-8"
+                    className="h-8 text-xs"
                   >
-                    <a href={displayedContent} download={`klecx-${response.id}.png`}>
-                      <Download className="h-3.5 w-3.5 mr-1" />
+                    <a
+                      href={displayedContent}
+                      download={`klecx-${response.id}.png`}
+                    >
+                      <Download className="mr-1 h-3.5 w-3.5" />
                       {t("downloadImage" as any) || "Download"}
                     </a>
                   </Button>
@@ -446,7 +460,7 @@ export function ResponseCard({
 
               {/* Lightbox Dialog */}
               <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
-                <DialogContent className="max-w-4xl p-2 bg-bg/95 backdrop-blur-md">
+                <DialogContent className="bg-bg/95 max-w-4xl p-2 backdrop-blur-md">
                   <DialogHeader className="sr-only">
                     <DialogTitle>{response.prompt}</DialogTitle>
                   </DialogHeader>
@@ -454,7 +468,7 @@ export function ResponseCard({
                   <img
                     src={displayedContent}
                     alt={response.prompt}
-                    className="w-full h-auto max-h-[85vh] object-contain rounded-lg"
+                    className="h-auto max-h-[85vh] w-full rounded-lg object-contain"
                   />
                 </DialogContent>
               </Dialog>
@@ -468,21 +482,21 @@ export function ResponseCard({
           {/* Card Footer Actions (Desktop & Mobile) */}
           {!isEditing && (
             <TooltipProvider delayDuration={200}>
-              <div className="flex items-center justify-between pt-2 border-t border-border/50 text-xs text-fg-muted">
+              <div className="border-border/50 text-fg-muted flex items-center justify-between border-t pt-2 text-xs">
                 {/* Primary Actions */}
-                <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap">
+                <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
                   {/* Copy */}
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
                     onClick={handleCopy}
-                    className="h-8 px-2.5 text-xs text-fg-muted hover:text-fg"
+                    className="text-fg-muted hover:text-fg h-8 px-2.5 text-xs"
                   >
                     {copied ? (
-                      <Check className="h-3.5 w-3.5 mr-1 text-accent" />
+                      <Check className="text-accent mr-1 h-3.5 w-3.5" />
                     ) : (
-                      <Copy className="h-3.5 w-3.5 mr-1" />
+                      <Copy className="mr-1 h-3.5 w-3.5" />
                     )}
                     <span>{copied ? t("copied") : t("copy")}</span>
                   </Button>
@@ -495,10 +509,13 @@ export function ResponseCard({
                       size="sm"
                       onClick={() => onRegenerate(response.id)}
                       disabled={isRegenerating}
-                      className="h-8 px-2.5 text-xs text-fg-muted hover:text-fg"
+                      className="text-fg-muted hover:text-fg h-8 px-2.5 text-xs"
                     >
                       <RotateCcw
-                        className={cn("h-3.5 w-3.5 mr-1", isRegenerating && "animate-spin")}
+                        className={cn(
+                          "mr-1 h-3.5 w-3.5",
+                          isRegenerating && "animate-spin"
+                        )}
                       />
                       <span>{t("regenerate")}</span>
                     </Button>
@@ -510,9 +527,9 @@ export function ResponseCard({
                     variant="ghost"
                     size="sm"
                     onClick={() => setIsEditing(true)}
-                    className="h-8 px-2.5 text-xs text-fg-muted hover:text-fg"
+                    className="text-fg-muted hover:text-fg h-8 px-2.5 text-xs"
                   >
-                    <Edit2 className="h-3.5 w-3.5 mr-1" />
+                    <Edit2 className="mr-1 h-3.5 w-3.5" />
                     <span>{t("edit")}</span>
                   </Button>
 
@@ -524,9 +541,9 @@ export function ResponseCard({
                         variant="ghost"
                         size="sm"
                         disabled
-                        className="h-8 px-2 text-xs text-fg-muted/50 hidden sm:inline-flex cursor-not-allowed"
+                        className="text-fg-muted/50 hidden h-8 cursor-not-allowed px-2 text-xs sm:inline-flex"
                       >
-                        <Volume2 className="h-3.5 w-3.5 mr-1" />
+                        <Volume2 className="mr-1 h-3.5 w-3.5" />
                         <span>{t("readAloud")}</span>
                       </Button>
                     </TooltipTrigger>
@@ -543,9 +560,9 @@ export function ResponseCard({
                         variant="ghost"
                         size="sm"
                         disabled
-                        className="h-8 px-2 text-xs text-fg-muted/50 hidden md:inline-flex cursor-not-allowed"
+                        className="text-fg-muted/50 hidden h-8 cursor-not-allowed px-2 text-xs md:inline-flex"
                       >
-                        <Share2 className="h-3.5 w-3.5 mr-1" />
+                        <Share2 className="mr-1 h-3.5 w-3.5" />
                         <span>{t("share")}</span>
                       </Button>
                     </TooltipTrigger>
@@ -562,9 +579,9 @@ export function ResponseCard({
                         variant="ghost"
                         size="sm"
                         disabled
-                        className="h-8 px-2 text-xs text-fg-muted/50 hidden md:inline-flex cursor-not-allowed"
+                        className="text-fg-muted/50 hidden h-8 cursor-not-allowed px-2 text-xs md:inline-flex"
                       >
-                        <FileDown className="h-3.5 w-3.5 mr-1" />
+                        <FileDown className="mr-1 h-3.5 w-3.5" />
                         <span>{t("export")}</span>
                       </Button>
                     </TooltipTrigger>
@@ -582,15 +599,18 @@ export function ResponseCard({
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-fg-muted hover:text-fg"
+                        className="text-fg-muted hover:text-fg h-8 w-8"
                         aria-label={t("moreOptions")}
                       >
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-48">
-                      <DropdownMenuItem onClick={handleCopyLink} className="cursor-pointer">
-                        <LinkIcon className="h-4 w-4 mr-2" />
+                      <DropdownMenuItem
+                        onClick={handleCopyLink}
+                        className="cursor-pointer"
+                      >
+                        <LinkIcon className="mr-2 h-4 w-4" />
                         <span>{t("copyLink")}</span>
                       </DropdownMenuItem>
 
@@ -599,9 +619,9 @@ export function ResponseCard({
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
                             onClick={() => onDelete(response.id)}
-                            className="cursor-pointer text-danger focus:text-danger focus:bg-danger/10"
+                            className="text-danger focus:text-danger focus:bg-danger/10 cursor-pointer"
                           >
-                            <Trash2 className="h-4 w-4 mr-2" />
+                            <Trash2 className="mr-2 h-4 w-4" />
                             <span>{t("delete")}</span>
                           </DropdownMenuItem>
                         </>

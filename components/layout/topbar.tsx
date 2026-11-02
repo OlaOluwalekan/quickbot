@@ -27,7 +27,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useUiStore } from "@/lib/stores/ui";
-import LocaleSwitcher from "@/components/general/LocaleSwitcher";
+import LocaleSwitcher from "@/components/layout/locale-switcher";
 import type { SidebarProjectItem, SidebarWorkspaceItem } from "./types";
 
 export interface TopbarProps {

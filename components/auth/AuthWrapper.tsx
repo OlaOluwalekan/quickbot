@@ -2,7 +2,7 @@ import { ReactNode } from "react";
 import Link from "next/link";
 import Logo from "../logo/Logo";
 import AppName from "../logo/AppName";
-import LocaleSwitcher from "../general/LocaleSwitcher";
+import LocaleSwitcher from "@/components/layout/locale-switcher";
 
 const AuthWrapper = ({ children }: { children: ReactNode }) => {
   return (
