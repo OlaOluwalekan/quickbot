@@ -879,7 +879,11 @@
     "backToHelp": "Retour au Centre d'Aide",
     "needMoreHelp": "Vous avez encore des questions ?",
     "needMoreHelpDesc": "Notre équipe technique et support est à votre disposition.",
-    "contactSupport": "Contacter le Support"
+    "contactSupport": "Contacter le Support",
+    "helpfulQuestion": "Ce guide vous a-t-il été utile ?",
+    "helpfulDesc": "Si votre question n'a pas trouvé de réponse, notre équipe de support est là pour vous aider.",
+    "readGuide": "Lire le guide",
+    "resetFilters": "Réinitialiser les filtres"
   },
   "Support": {
     "title": "Contacter le Support",
@@ -913,7 +917,18 @@
     "ticketIdNotice": "Identifiant du ticket : {ticketId}",
     "sendAnother": "Envoyer un Autre Message",
     "directEmailNotice": "Vous pouvez aussi nous contacter directement à",
-    "abuseNotice": "Pour signaler un abus, écrivez à"
+    "abuseNotice": "Pour signaler un abus, écrivez à",
+    "badge": "Assistance & Support",
+    "headerDesc": "Une question ou un problème technique ? Notre équipe est à votre disposition.",
+    "promisedResponse": "Délai de réponse garanti :",
+    "promisedResponseDesc": "Nous examinons chaque demande personnellement et répondons sous ≤ 3 jours ouvrés.",
+    "directInboxHeading": "Boîte Directe d'Assistance",
+    "directInboxDesc": "Vous préférez envoyer un email ? Écrivez-nous directement :",
+    "abuseInboxHeading": "Signalement d'Abus",
+    "abuseInboxDesc": "Pour les signalements de sécurité ou manquements aux règles :",
+    "quickAnswersHeading": "Vous cherchez une réponse rapide ?",
+    "quickAnswersDesc": "Consultez nos guides détaillés dans le Centre d'Aide.",
+    "visitHelpCenter": "Accéder au Centre d'Aide"
   },
   "Status": {
     "title": "État du Système",

@@ -130,7 +130,7 @@ export function HelpCenterView({ articles, categories }: HelpCenterViewProps) {
                 </div>
 
                 <div className="text-xs font-semibold text-accent flex items-center gap-1 pt-1">
-                  <span>Read guide</span>
+                  <span>{t("readGuide")}</span>
                   <ArrowRight className="h-3 w-3 group-hover:translate-x-1 transition-transform" />
                 </div>
               </Link>
@@ -149,7 +149,7 @@ export function HelpCenterView({ articles, categories }: HelpCenterViewProps) {
                 setSelectedCategory(null);
               }}
             >
-              Reset filters
+              {t("resetFilters")}
             </Button>
           </div>
         )}

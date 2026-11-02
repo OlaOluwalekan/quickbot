@@ -1,6 +1,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { ArrowLeft, Clock, Tag, MessageSquare } from "lucide-react";
 import { getArticleBySlug, getAllArticles } from "@/lib/help/articles";
 import { Markdown } from "@/components/markdown";
@@ -34,6 +35,8 @@ export default async function HelpArticlePage({ params }: HelpArticlePageProps) 
     notFound();
   }
 
+  const t = await getTranslations("Help");
+
   return (
     <div className="py-12 md:py-16">
       <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 space-y-10">
@@ -44,7 +47,7 @@ export default async function HelpArticlePage({ params }: HelpArticlePageProps) 
             className="inline-flex items-center gap-2 text-xs font-medium text-fg-muted hover:text-fg transition-colors"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
-            <span>Back to Help Center</span>
+            <span>{t("backToHelp")}</span>
           </Link>
 
           <div className="flex items-center gap-3 text-xs text-fg-subtle">
@@ -77,15 +80,13 @@ export default async function HelpArticlePage({ params }: HelpArticlePageProps) 
         {/* Footer Support CTA */}
         <div className="rounded-2xl border border-border/80 bg-surface-2/40 p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="space-y-1 text-center sm:text-left">
-            <h4 className="text-sm font-bold text-fg">Was this guide helpful?</h4>
-            <p className="text-xs text-fg-muted">
-              If your question wasn't answered, our support team is available to assist you.
-            </p>
+            <h4 className="text-sm font-bold text-fg">{t("helpfulQuestion")}</h4>
+            <p className="text-xs text-fg-muted">{t("helpfulDesc")}</p>
           </div>
           <Button asChild size="sm" variant="outline" className="shrink-0">
             <Link href="/support" className="flex items-center gap-2">
               <MessageSquare className="h-3.5 w-3.5" />
-              <span>Contact Support</span>
+              <span>{t("contactSupport")}</span>
             </Link>
           </Button>
         </div>

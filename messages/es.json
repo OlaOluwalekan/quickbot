@@ -879,7 +879,11 @@
     "backToHelp": "Volver al Centro de Ayuda",
     "needMoreHelp": "¿Aún tiene preguntas?",
     "needMoreHelpDesc": "Nuestro equipo de ingeniería y soporte está listo para asistirle.",
-    "contactSupport": "Contactar Soporte"
+    "contactSupport": "Contactar Soporte",
+    "helpfulQuestion": "¿Fue útil esta guía?",
+    "helpfulDesc": "Si su pregunta no fue respondida, nuestro equipo de soporte está disponible para ayudarle.",
+    "readGuide": "Leer guía",
+    "resetFilters": "Restablecer filtros"
   },
   "Support": {
     "title": "Contactar Soporte",
@@ -913,7 +917,18 @@
     "ticketIdNotice": "ID de su ticket: {ticketId}",
     "sendAnother": "Enviar Otro Mensaje",
     "directEmailNotice": "También puede escribirnos directamente a",
-    "abuseNotice": "Para reportar abusos, contacte a"
+    "abuseNotice": "Para reportar abusos, contacte a",
+    "badge": "Mesa de Ayuda y Soporte",
+    "headerDesc": "¿Tiene alguna pregunta o encontró un error técnico? Nuestro equipo está disponible para asistirle.",
+    "promisedResponse": "Compromiso de respuesta:",
+    "promisedResponseDesc": "Revisamos cada solicitud personalmente y respondemos en ≤ 3 días hábiles.",
+    "directInboxHeading": "Bandeja Directa de Soporte",
+    "directInboxDesc": "¿Prefiere escribir por correo? Envíe sus consultas directamente:",
+    "abuseInboxHeading": "Bandeja de Confianza y Abusos",
+    "abuseInboxDesc": "Para reportes de seguridad o violaciones de uso aceptable:",
+    "quickAnswersHeading": "¿Busca respuestas rápidas?",
+    "quickAnswersDesc": "Consulte nuestras guías en el Centro de Ayuda.",
+    "visitHelpCenter": "Visitar Centro de Ayuda"
   },
   "Status": {
     "title": "Estado del Sistema",

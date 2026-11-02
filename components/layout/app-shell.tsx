@@ -130,7 +130,7 @@ export function AppShell({
 
   const activeWorkspace = React.useMemo(
     () => workspaces.find((w) => w.id === activeWorkspaceId) ?? null,
-    [workspaces, activeWorkspaceId],
+    [workspaces, activeWorkspaceId]
   );
 
   // Global keyboard shortcuts: `[` for sidebar collapse, `Ctrl/⌘ + K` for Command Palette
@@ -182,7 +182,7 @@ export function AppShell({
 
     const previous = workspaces;
     setWorkspaces((prev) =>
-      prev.map((w) => (w.id === workspaceId ? { ...w, title: trimmed } : w)),
+      prev.map((w) => (w.id === workspaceId ? { ...w, title: trimmed } : w))
     );
 
     try {
@@ -203,7 +203,7 @@ export function AppShell({
 
   const handleMoveWorkspace = async (
     workspaceId: string,
-    projectId: string | null,
+    projectId: string | null
   ) => {
     const previous = workspaces;
     const targetProjectName = projectId
@@ -214,8 +214,8 @@ export function AppShell({
       prev.map((w) =>
         w.id === workspaceId
           ? { ...w, projectId, projectName: targetProjectName }
-          : w,
-      ),
+          : w
+      )
     );
 
     try {
@@ -311,10 +311,10 @@ export function AppShell({
   return (
     <div
       style={{ "--sidebar-w": sidebarWidthVar } as React.CSSProperties}
-      className="grid h-dvh w-full grid-cols-1 md:grid-cols-[var(--sidebar-w)_minmax(0,1fr)_auto] overflow-hidden bg-bg text-fg pb-[env(safe-area-inset-bottom)]"
+      className="bg-bg text-fg grid h-dvh w-full grid-cols-1 overflow-hidden pb-[env(safe-area-inset-bottom)] md:grid-cols-[var(--sidebar-w)_minmax(0,1fr)_auto]"
     >
       {/* Desktop Sidebar Column */}
-      <div className="hidden md:flex h-full min-h-0 overflow-hidden">
+      <div className="hidden h-full min-h-0 overflow-hidden md:flex">
         <Sidebar
           user={user}
           collapsed={collapsed}
@@ -344,7 +344,7 @@ export function AppShell({
       >
         <SheetContent
           side="left"
-          className="w-[280px] p-0 border-r border-border bg-surface md:hidden"
+          className="border-border bg-surface w-70 border-r p-0 md:hidden"
         >
           <SheetTitle className="sr-only">{t("openNavigation")}</SheetTitle>
           <SheetDescription className="sr-only">
@@ -403,10 +403,10 @@ export function AppShell({
       {rightPanelOpen && (
         <aside
           aria-label={t("rightPanelTitle")}
-          className="hidden lg:flex h-full w-80 shrink-0 flex-col border-l border-border bg-surface text-fg"
+          className="border-border bg-surface text-fg hidden h-full w-80 shrink-0 flex-col border-l lg:flex"
         >
-          <div className="flex h-14 items-center justify-between border-b border-border px-4">
-            <h2 className="text-sm font-semibold text-fg">
+          <div className="border-border flex h-14 items-center justify-between border-b px-4">
+            <h2 className="text-fg text-sm font-semibold">
               {t("rightPanelTitle")}
             </h2>
             <Button
@@ -419,7 +419,7 @@ export function AppShell({
               <X className="h-4 w-4" strokeWidth={1.5} />
             </Button>
           </div>
-          <div className="flex flex-1 items-center justify-center p-6 text-center text-xs text-subtle">
+          <div className="text-subtle flex flex-1 items-center justify-center p-6 text-center text-xs">
             {t("rightPanelEmpty")}
           </div>
         </aside>
@@ -492,7 +492,7 @@ export function AppShell({
           <Form {...createProjectForm}>
             <form
               onSubmit={createProjectForm.handleSubmit(
-                handleCreateProjectSubmit,
+                handleCreateProjectSubmit
               )}
               className="space-y-4"
             >

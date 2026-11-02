@@ -879,7 +879,11 @@
     "backToHelp": "Back to Help Center",
     "needMoreHelp": "Still have questions?",
     "needMoreHelpDesc": "Our engineering and customer support team is here to assist you with any questions or technical issues.",
-    "contactSupport": "Contact Support"
+    "contactSupport": "Contact Support",
+    "helpfulQuestion": "Was this guide helpful?",
+    "helpfulDesc": "If your question was not answered, our support team is available to assist you.",
+    "readGuide": "Read guide",
+    "resetFilters": "Reset filters"
   },
   "Support": {
     "title": "Contact Support",
@@ -913,7 +917,18 @@
     "ticketIdNotice": "Your Support Ticket ID: {ticketId}",
     "sendAnother": "Send Another Message",
     "directEmailNotice": "You can also email us directly at",
-    "abuseNotice": "To report platform violations or abuse, please contact"
+    "abuseNotice": "To report platform violations or abuse, please contact",
+    "badge": "Support & Help Desk",
+    "headerDesc": "Have a question, encountered an unexpected bug, or want to discuss requirements? Our engineering team is here to assist.",
+    "promisedResponse": "Promised Response Time:",
+    "promisedResponseDesc": "We review every ticket personally and respond within ≤ 3 business days.",
+    "directInboxHeading": "Direct Support Inbox",
+    "directInboxDesc": "Prefer writing an email? Send inquiries directly to our team:",
+    "abuseInboxHeading": "Trust & Abuse Inbox",
+    "abuseInboxDesc": "For security reports or acceptable use violations:",
+    "quickAnswersHeading": "Looking for quick answers?",
+    "quickAnswersDesc": "Check out our searchable guides in the Help Center.",
+    "visitHelpCenter": "Visit Help Center"
   },
   "Status": {
     "title": "System Status",

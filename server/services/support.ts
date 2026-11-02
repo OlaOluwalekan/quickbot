@@ -9,7 +9,6 @@ import type { SupportTicketInput } from "@/lib/schemas/support";
  * Strips ASCII control characters (0x00 - 0x1F except tab, CR, LF, and 0x7F DEL)
  */
 function stripControlCharacters(str: string): string {
-  // eslint-disable-next-line no-control-regex
   return str.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
 }
 
@@ -37,7 +36,7 @@ export async function createSupportTicket(
       email: cleanEmail,
       topic: cleanTopic,
       message: cleanMessage,
-      diagnostics: (input.diagnostics as any) ?? undefined,
+      diagnostics: input.diagnostics ? JSON.parse(JSON.stringify(input.diagnostics)) : undefined,
     },
   });
 
