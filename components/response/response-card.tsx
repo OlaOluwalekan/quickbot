@@ -53,6 +53,7 @@ import {
   useResponseVersions,
   useSwitchActiveVersion,
   useCreateResponseEdit,
+  type ResponseVersionDto,
 } from "@/lib/api/hooks/responses";
 
 export interface ResponseItemData {
@@ -122,16 +123,48 @@ export function ResponseCard({
   const switchVersionMutation = useSwitchActiveVersion(userId, workspaceId);
   const createEditMutation = useCreateResponseEdit(userId, workspaceId);
 
-  const versions = versionsData?.versions || [];
-  const versionCount = response.versionCount || versions.length || 1;
+  // Local state for optimistic version switching
+  const [selectedVersionId, setSelectedVersionId] = React.useState<string | null>(null);
 
-  // Active version details
-  const activeVer = response.activeVersion;
-  const activeVersionId = response.activeVersionId || activeVer?.id;
+  // Sync selectedVersionId when response.activeVersionId changes
+  React.useEffect(() => {
+    if (response.activeVersionId) {
+      setSelectedVersionId(response.activeVersionId);
+    }
+  }, [response.activeVersionId]);
+
+  // Support both raw array ResponseVersionDto[] and { versions: ResponseVersionDto[] }
+  const versions: ResponseVersionDto[] = React.useMemo(() => {
+    if (Array.isArray(versionsData)) {
+      return versionsData;
+    }
+    if (
+      versionsData &&
+      Array.isArray((versionsData as unknown as { versions?: ResponseVersionDto[] }).versions)
+    ) {
+      return (versionsData as unknown as { versions: ResponseVersionDto[] }).versions;
+    }
+    return [];
+  }, [versionsData]);
+
+  // Current active version resolution
+  const currentActiveId =
+    selectedVersionId || response.activeVersionId || response.activeVersion?.id;
+
+  const activeVerFromList = versions.find((v) => v.id === currentActiveId);
+  const activeVer = activeVerFromList || response.activeVersion;
+
+  const versionCount = Math.max(
+    response.versionCount || 1,
+    versions.length
+  );
+
   const activeNumber =
-    activeVer?.number ||
-    versions.findIndex((v) => v.id === activeVersionId) + 1 ||
-    1;
+    activeVerFromList?.number ||
+    activeVerFromList?.versionNumber ||
+    (versions.length > 0 && currentActiveId
+      ? versions.findIndex((v) => v.id === currentActiveId) + 1
+      : response.activeVersion?.number || 1);
 
   // Content resolution (viewing edited vs original)
   const originalText =
@@ -167,10 +200,12 @@ export function ResponseCard({
 
   // Version navigation
   const handleSwitchVersion = (direction: "prev" | "next") => {
-    if (versions.length === 0) return;
+    if (versions.length <= 1) return;
     const currentIdx = versions.findIndex(
-      (v) => v.id === (activeVersionId || activeVer?.id)
+      (v) => v.id === currentActiveId
     );
+    if (currentIdx === -1) return;
+
     let targetIdx = currentIdx;
     if (direction === "prev" && currentIdx > 0) {
       targetIdx = currentIdx - 1;
@@ -178,12 +213,22 @@ export function ResponseCard({
       targetIdx = currentIdx + 1;
     }
 
-    const targetVersion = versions[targetIdx];
-    if (targetIdx !== currentIdx && targetVersion) {
-      switchVersionMutation.mutate({
-        responseId: response.id,
-        input: { versionId: targetVersion.id },
-      });
+    if (targetIdx !== currentIdx) {
+      const targetVersion = versions[targetIdx];
+      if (targetVersion) {
+        setSelectedVersionId(targetVersion.id);
+        switchVersionMutation.mutate(
+          {
+            responseId: response.id,
+            input: { versionId: targetVersion.id },
+          },
+          {
+            onError: () => {
+              setSelectedVersionId(currentActiveId || null);
+            },
+          }
+        );
+      }
     }
   };
 
@@ -327,7 +372,9 @@ export function ResponseCard({
                     type="button"
                     onClick={() => handleSwitchVersion("prev")}
                     disabled={
-                      activeNumber <= 1 || switchVersionMutation.isPending
+                      activeNumber <= 1 ||
+                      switchVersionMutation.isPending ||
+                      versions.length <= 1
                     }
                     aria-label={t("previousVersion")}
                     className="hover:bg-surface cursor-pointer rounded p-0.5 disabled:cursor-not-allowed disabled:opacity-30"
@@ -347,7 +394,8 @@ export function ResponseCard({
                     onClick={() => handleSwitchVersion("next")}
                     disabled={
                       activeNumber >= versionCount ||
-                      switchVersionMutation.isPending
+                      switchVersionMutation.isPending ||
+                      versions.length <= 1
                     }
                     aria-label={t("nextVersion")}
                     className="hover:bg-surface cursor-pointer rounded p-0.5 disabled:cursor-not-allowed disabled:opacity-30"

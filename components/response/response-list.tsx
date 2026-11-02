@@ -53,6 +53,7 @@ export function ResponseList({
   const bottomSentinelRef = React.useRef<HTMLDivElement>(null);
   const [showJumpToLatest, setShowJumpToLatest] = React.useState(false);
   const [isOnline, setIsOnline] = React.useState(true);
+  const userScrolledUpRef = React.useRef(false);
 
   // Stream state for current workspace from generation store
   const stream: WorkspaceGenerationStream = useGenerationStore(
@@ -81,14 +82,24 @@ export function ResponseList({
     };
   }, []);
 
-  // Scroll position monitor (120px threshold)
+  // Reset user-scrolled state when a new generation begins or prompt is submitted
+  React.useEffect(() => {
+    if (isStreaming || optimisticPrompt) {
+      userScrolledUpRef.current = false;
+      setShowJumpToLatest(false);
+    }
+  }, [isStreaming, optimisticPrompt]);
+
+  // Scroll position monitor: tracks if user explicitly scrolled away from bottom
   const handleScroll = React.useCallback(() => {
     const el = containerRef.current;
     if (!el) return;
 
     const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-    // Show jump pill if scrolled up > 120px from bottom
-    setShowJumpToLatest(distanceFromBottom > 120);
+    // If user scrolled up by more than 80px from bottom, respect their scroll position
+    const isScrolledUp = distanceFromBottom > 80;
+    userScrolledUpRef.current = isScrolledUp;
+    setShowJumpToLatest(isScrolledUp);
   }, []);
 
   // Jump to latest handler
@@ -108,20 +119,28 @@ export function ResponseList({
     []
   );
 
-  // Auto-scroll on stream tokens or new responses ONLY if within 120px threshold
+  const handleJumpToLatest = React.useCallback(() => {
+    userScrolledUpRef.current = false;
+    setShowJumpToLatest(false);
+    scrollToBottom("smooth");
+  }, [scrollToBottom]);
+
+  // Auto-scroll on stream chunks or new responses to the latest available chunk,
+  // except when the user has scrolled up, in which case it remains at the user's position.
   React.useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-    if (distanceFromBottom <= 120) {
-      scrollToBottom("smooth");
-    }
+
+    // If user deliberately scrolled away, keep their scroll position
+    if (userScrolledUpRef.current) return;
+
+    // Auto-scroll directly to bottom
+    el.scrollTop = el.scrollHeight;
   }, [
     responses.length,
     stream.text,
     stream.thought,
     isStreaming,
-    scrollToBottom,
   ]);
 
   // Handle retry with fresh idempotency key
@@ -167,7 +186,7 @@ export function ResponseList({
       <div
         ref={containerRef}
         onScroll={handleScroll}
-        className="flex-1 space-y-6 overflow-y-auto scroll-smooth px-3 py-6 sm:px-6"
+        className="flex-1 space-y-6 overflow-y-auto px-3 py-6 sm:px-6"
       >
         <div className="mx-auto max-w-4xl space-y-6">
           {/* Historical Responses */}
@@ -312,7 +331,7 @@ export function ResponseList({
         <div className="animate-fade-in absolute bottom-4 left-1/2 z-20 -translate-x-1/2">
           <button
             type="button"
-            onClick={() => scrollToBottom("smooth")}
+            onClick={handleJumpToLatest}
             className="bg-surface-2/95 text-fg border-border hover:bg-surface flex cursor-pointer items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-medium shadow-md backdrop-blur-xs transition-all duration-150 select-none"
           >
             <ArrowDown className="text-accent h-3.5 w-3.5 animate-bounce" />

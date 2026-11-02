@@ -48,11 +48,30 @@ export interface ResponsesViewFilter {
 export interface ResponseVersionDto {
   id: string;
   responseId: string;
-  versionNumber: number;
+  number?: number;
+  versionNumber?: number;
+  status?: string;
   content: string;
-  modelId?: string | null;
+  originalContent?: string;
   thoughtSummary?: string | null;
+  modelKey?: string | null;
+  modelId?: string | null;
+  providerModelId?: string | null;
+  promptVersion?: number;
+  generationId?: string | null;
+  createdById?: string;
   createdAt: string;
+  isActive?: boolean;
+  edited?: boolean;
+  hasEdits?: boolean;
+  editCount?: number;
+  latestEdit?: {
+    id: string;
+    revision: number;
+    editorId: string;
+    createdAt: string;
+  } | null;
+  latestEditContent?: string | null;
 }
 
 /**
@@ -104,10 +123,7 @@ export function useResponseVersions(
     queryKey: queryKeys.responses.versions(userId, responseId ?? ""),
     enabled: Boolean(userId && responseId),
     queryFn: ({ signal }) =>
-      api<{
-        activeVersionId: string | null;
-        versions: ResponseVersionDto[];
-      }>(`/api/v1/responses/${responseId}/versions`, { signal }),
+      api<ResponseVersionDto[] | { activeVersionId: string | null; versions: ResponseVersionDto[] }>(`/api/v1/responses/${responseId}/versions`, { signal }),
   });
 }
 
