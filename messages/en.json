@@ -978,5 +978,54 @@
     },
     "incidentHeading": "Recent Incidents",
     "noIncidents": "No incidents or outages reported in the past 90 days."
+  },
+  "Errors": {
+    "notFound": {
+      "title": "Page not found",
+      "description": "The page you are looking for does not exist or has been moved.",
+      "searchPlaceholder": "Search help articles or guides...",
+      "searchButton": "Search",
+      "popularLinksHeading": "Helpful destinations:",
+      "homeLink": "Home",
+      "workspacesLink": "Workspaces",
+      "helpLink": "Help Center",
+      "supportLink": "Contact Support",
+      "statusLink": "System Status"
+    },
+    "workspaceNotFound": {
+      "title": "Workspace not found",
+      "description": "This workspace does not exist or you do not have access.",
+      "backButton": "Back to Workspaces",
+      "homeButton": "Home"
+    },
+    "generalError": {
+      "title": "Something went wrong",
+      "description": "An unexpected error occurred while processing your request. No need to worry — your data is safe.",
+      "digestLabel": "Error Reference ID:",
+      "retryButton": "Try again",
+      "reportButton": "Report this issue",
+      "homeButton": "Return home"
+    },
+    "appError": {
+      "title": "Workspace encountered an issue",
+      "description": "We could not load this workspace view. Please try reloading or return to your workspaces list.",
+      "retryButton": "Reload view",
+      "workspacesButton": "Back to Workspaces",
+      "reportButton": "Report problem"
+    },
+    "maintenance": {
+      "badge": "Scheduled Maintenance",
+      "title": "We will be right back",
+      "description": "Klecx is currently undergoing scheduled platform upgrades to improve performance and stability. Services will resume shortly.",
+      "statusNotice": "Check real-time infrastructure availability on our status page.",
+      "viewStatus": "System Status",
+      "supportNotice": "Urgent inquiry? Reach our team at"
+    },
+    "offline": {
+      "message": "You are currently offline. Check your internet connection.",
+      "reconnecting": "Reconnecting...",
+      "retryButton": "Retry connection",
+      "dismiss": "Dismiss"
+    }
   }
 }

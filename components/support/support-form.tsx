@@ -31,6 +31,18 @@ export function SupportForm() {
     }
   }, [session, name, email]);
 
+  // Prefill error reference digest if navigated from error page
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      const digest = new URLSearchParams(window.location.search).get("digest");
+      if (digest) {
+        setTopic("bug");
+        setMessage((prev) => prev || `Error Reference ID: ${digest}\n\n`);
+        setAttachDiagnostics(true);
+      }
+    }
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);

@@ -32,7 +32,7 @@ export function EmptyState({
       )}
       <h3 className="text-base font-semibold text-fg">{title}</h3>
       {description && (
-        <p className="mt-1 max-w-md text-sm text-muted">{description}</p>
+        <p className="mt-1 max-w-md text-sm text-fg-muted">{description}</p>
       )}
       {action && <div className="mt-4 flex items-center gap-2">{action}</div>}
     </div>
