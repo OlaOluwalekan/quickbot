@@ -244,6 +244,61 @@ describe("Step 3.7 — Conversation UI (Response cards, versions, thinking, edit
       });
     });
 
+    it("switches versions when clicking Prev and Next buttons", async () => {
+      const client = createAppQueryClient();
+
+      render(
+        <QueryProvider client={client}>
+          <ResponseCard
+            response={sampleResponse}
+            workspaceId="ws-123"
+            userId={mockActor.userId}
+          />
+        </QueryProvider>
+      );
+
+      const prevBtn = screen.getByRole("button", { name: /previous version/i });
+      const nextBtn = screen.getByRole("button", { name: /next version/i });
+
+      // Initially on Version 2 of 2: next is disabled
+      expect(nextBtn).toBeDisabled();
+
+      // Wait until versions query resolves so prevBtn becomes enabled
+      await waitFor(() => {
+        expect(prevBtn).not.toBeDisabled();
+      });
+
+      // Click prev button to switch to version 1
+      fireEvent.click(prevBtn);
+
+      await waitFor(() => {
+        expect(global.fetch).toHaveBeenCalledWith(
+          expect.stringContaining("/api/v1/responses/res-1/versions"),
+          expect.objectContaining({
+            method: "PATCH",
+            body: JSON.stringify({ versionId: "ver-1" }),
+          })
+        );
+      });
+
+      // Now on Version 1: prev is disabled, next is enabled
+      expect(prevBtn).toBeDisabled();
+      expect(nextBtn).not.toBeDisabled();
+
+      // Click next button to return to version 2
+      fireEvent.click(nextBtn);
+
+      await waitFor(() => {
+        expect(global.fetch).toHaveBeenCalledWith(
+          expect.stringContaining("/api/v1/responses/res-1/versions"),
+          expect.objectContaining({
+            method: "PATCH",
+            body: JSON.stringify({ versionId: "ver-2" }),
+          })
+        );
+      });
+    });
+
     it("toggles between Viewing edited and View original", () => {
       const client = createAppQueryClient();
 
