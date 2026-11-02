@@ -4,7 +4,7 @@ const AppName = () => {
   const t = useTranslations("Common");
 
   return (
-    <span className="font-extrabold tracking-tight text-fg">
+    <span className="sr-only">
       {t("appName")}
     </span>
   );

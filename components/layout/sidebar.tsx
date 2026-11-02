@@ -328,20 +328,19 @@ export function Sidebar({
         {/* Top Brand + Collapse Rail Toggle */}
         <div
           className={cn(
-            "border-border flex h-14 shrink-0 items-center border-b px-3",
-            isCollapsedRail ? "justify-center" : "justify-between"
+            "border-border relative flex h-14 shrink-0 items-center border-b transition-all duration-200",
+            isCollapsedRail ? "justify-center px-0" : "justify-between px-3"
           )}
         >
-          {!isCollapsedRail && (
-            <Link
-              href="/workspaces"
-              onClick={onNavigate}
-              className="focus-visible:ring-ring flex items-center gap-2 rounded-md focus-visible:ring-2 focus-visible:outline-none"
-            >
-              <Logo size="icon" />
-              <AppName />
-            </Link>
-          )}
+          <Link
+            href="/workspaces"
+            onClick={onNavigate}
+            className="focus-visible:ring-ring flex items-center rounded-md focus-visible:ring-2 focus-visible:outline-none"
+            aria-label="Klecx"
+          >
+            <Logo size="icon" collapsed={isCollapsedRail} />
+            <AppName />
+          </Link>
 
           {!isMobileDrawer && (
             <Tooltip>
@@ -355,6 +354,12 @@ export function Sidebar({
                   }
                   aria-expanded={!isCollapsedRail}
                   onClick={onToggleCollapsed}
+                  className={cn(
+                    "transition-all duration-200",
+                    isCollapsedRail
+                      ? "bg-surface/90 hover:bg-surface-2 absolute inset-0 m-auto h-9 w-9 opacity-0 hover:opacity-100"
+                      : "opacity-100"
+                  )}
                 >
                   {isCollapsedRail ? (
                     <PanelLeftOpen className="h-4 w-4" strokeWidth={1.5} />

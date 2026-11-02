@@ -1,3 +1,8 @@
+export type LogoSize = "icon" | "text" | "small" | "normal" | "medium" | "large";
+
 export interface LogoProps {
-  size: 'icon' | 'text' | 'small' | 'normal' | 'medium' | 'large'
+  size?: LogoSize;
+  collapsed?: boolean;
+  className?: string;
+  markClassName?: string;
 }
