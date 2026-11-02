@@ -1,0 +1,32 @@
+---
+title: "Partager des espaces de travail"
+category: "collaboration-sharing"
+description: "Comment générer des liens de partage publics, gérer la confidentialité et révoquer un accès partagé."
+keywords: ["partager", "lien public", "confidentialité", "révoquer", "lecture seule"]
+sourceVersion: 1
+---
+
+# Partager des espaces de travail
+
+Klecx vous permet de partager des analyses d'IA pertinentes, des explications de code et des synthèses avec vos collègues, clients ou avec le public via des liens sécurisés en lecture seule.
+
+## Créer un lien de partage
+
+1. Ouvrez l'espace de travail que vous souhaitez partager.
+2. Cliquez sur le bouton **Partager** situé dans la barre de navigation supérieure.
+3. Choisissez vos options de partage :
+   - **Lien public en lecture seule** : Toute personne disposant du lien peut consulter la conversation.
+   - **Instantané ou direct** : Choisissez si les visiteurs voient la conversation telle qu'elle existe aujourd'hui (instantané) ou s'ils suivent les futures réponses en direct.
+4. Cliquez sur **Créer le lien** et copiez l'URL générée (`/s/:token`).
+
+## Informations de sécurité importantes
+
+- **Accès par URL** : Les liens de partage publics sont accessibles à quiconque possède l'adresse exacte. Évitez de copier des identifiants confidentiels ou des secrets propriétaires dans les conversations avant de les partager.
+- **Indexation par les moteurs de recherche** : Toutes les routes de partage public (`/s/*`) transmettent explicitement des en-têtes de robots `noindex, nofollow` afin d'empêcher les moteurs de recherche d'indexer vos échanges partagés.
+
+## Révoquer un lien de partage
+
+Vous conservez le contrôle total sur vos contenus partagés. À tout moment :
+1. Ouvrez de nouveau la boîte de dialogue **Partager**.
+2. Cliquez sur **Révoquer le lien**.
+3. L'URL cesse immédiatement de délivrer le contenu et affiche un avis d'expiration à tout nouveau visiteur.

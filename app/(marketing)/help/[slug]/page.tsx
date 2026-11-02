@@ -1,9 +1,9 @@
 import * as React from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getTranslations } from "next-intl/server";
-import { ArrowLeft, Clock, Tag, MessageSquare } from "lucide-react";
-import { getArticleBySlug, getAllArticles } from "@/lib/help/articles";
+import { getLocale, getTranslations } from "next-intl/server";
+import { ArrowLeft, Clock, Tag, MessageSquare, Info } from "lucide-react";
+import { getArticle } from "@/lib/help/articles";
 import { Markdown } from "@/components/markdown";
 import { Button } from "@/components/ui/button";
 
@@ -11,25 +11,24 @@ interface HelpArticlePageProps {
   params: Promise<{ slug: string }>;
 }
 
-export async function generateStaticParams() {
-  const articles = getAllArticles();
-  return articles.map((a) => ({ slug: a.slug }));
-}
-
 export async function generateMetadata({ params }: HelpArticlePageProps) {
   const { slug } = await params;
-  const article = getArticleBySlug(slug);
-  if (!article) return { title: "Article Not Found · Klecx Help" };
+  const locale = await getLocale();
+  const article = getArticle(locale, slug);
+  const t = await getTranslations("Help");
+
+  if (!article) return { title: t("articleNotFoundTitle") };
 
   return {
-    title: `${article.title} · Klecx Help Center`,
+    title: `${article.title} ${t("articleTitleSuffix")}`,
     description: article.description,
   };
 }
 
 export default async function HelpArticlePage({ params }: HelpArticlePageProps) {
   const { slug } = await params;
-  const article = getArticleBySlug(slug);
+  const locale = await getLocale();
+  const article = getArticle(locale, slug);
 
   if (!article) {
     notFound();
@@ -53,14 +52,25 @@ export default async function HelpArticlePage({ params }: HelpArticlePageProps) 
           <div className="flex items-center gap-3 text-xs text-fg-subtle">
             <span className="inline-flex items-center gap-1 rounded-md bg-surface-2 px-2.5 py-1 font-medium text-fg-muted">
               <Tag className="h-3 w-3 text-accent" />
-              {article.category}
+              {t(`categories.${article.categoryKey}`)}
             </span>
             <span className="flex items-center gap-1">
               <Clock className="h-3 w-3" />
-              {article.readTime}
+              {t("readMinutes", { count: article.readMinutes })}
             </span>
           </div>
         </div>
+
+        {/* Fallback translation notice */}
+        {article.isFallback && (
+          <div
+            role="note"
+            className="flex items-center gap-3 rounded-xl border border-accent/30 bg-accent/10 px-4 py-3 text-xs text-accent"
+          >
+            <Info className="h-4 w-4 shrink-0" />
+            <span>{t("notTranslated")}</span>
+          </div>
+        )}
 
         {/* Article Header */}
         <div className="space-y-3">
@@ -73,7 +83,10 @@ export default async function HelpArticlePage({ params }: HelpArticlePageProps) 
         </div>
 
         {/* Article Body */}
-        <div className="rounded-2xl border border-border/70 bg-surface p-6 sm:p-10 shadow-2xs">
+        <div
+          lang={article.isFallback ? "en" : undefined}
+          className="rounded-2xl border border-border/70 bg-surface p-6 sm:p-10 shadow-2xs"
+        >
           <Markdown content={article.content} />
         </div>
 

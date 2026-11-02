@@ -870,7 +870,13 @@
     "subtitle": "Aprenda a dominar los espacios de trabajo, organizar proyectos y gestionar créditos.",
     "searchPlaceholder": "Buscar artículos, funciones, flujos de trabajo...",
     "popularArticles": "Guías Populares",
-    "categories": "Categorías",
+    "categories": {
+      "getting-started": "Primeros pasos",
+      "features-workflows": "Funciones y flujos",
+      "billing-account": "Facturación y cuenta",
+      "collaboration-sharing": "Colaboración y uso compartido",
+      "troubleshooting": "Solución de problemas"
+    },
     "allCategories": "Todas las categorías",
     "readTime": "de lectura",
     "articlesFound": "{count} artículos encontrados",
@@ -883,7 +889,14 @@
     "helpfulQuestion": "¿Fue útil esta guía?",
     "helpfulDesc": "Si su pregunta no fue respondida, nuestro equipo de soporte está disponible para ayudarle.",
     "readGuide": "Leer guía",
-    "resetFilters": "Restablecer filtros"
+    "resetFilters": "Restablecer filtros",
+    "readMinutes": "{count, plural, one {# min de lectura} other {# min de lectura}}",
+    "filteredBy": "Filtrado por: {category}",
+    "notTranslated": "Este artículo aún no ha sido traducido a su idioma y se muestra en inglés.",
+    "metaTitle": "Centro de ayuda y documentación · Klecx",
+    "metaDescription": "Guías, documentación y tutoriales con búsqueda para usar los espacios de trabajo y modelos de IA de Klecx.",
+    "articleTitleSuffix": "· Centro de ayuda de Klecx",
+    "articleNotFoundTitle": "Artículo no encontrado · Ayuda de Klecx"
   },
   "Support": {
     "title": "Contactar Soporte",

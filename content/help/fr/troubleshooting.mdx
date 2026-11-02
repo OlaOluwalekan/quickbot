@@ -1,0 +1,35 @@
+---
+title: "Dépannage et FAQ"
+category: "troubleshooting"
+description: "Résolutions des problèmes courants : arrêts de génération, erreurs de crédits et connectivité."
+keywords: ["dépannage", "erreurs", "réessayer", "support", "faq", "connexion"]
+sourceVersion: 1
+---
+
+# Dépannage et FAQ
+
+Si vous rencontrez un comportement inattendu lors de l'utilisation de Klecx, ce guide détaille les questions les plus fréquentes ainsi que les étapes de diagnostic.
+
+## La génération s'arrête ou « Réflexion » semble bloquée
+
+Si une génération affiche un indicateur d'attente mais ne produit aucun jeton au bout de 15 secondes :
+1. **Déconnexion réseau** : Vérifiez votre connexion Internet. Les événements envoyés par le serveur (SSE) nécessitent une connexion continue de flux.
+2. **Cliquez sur Réessayer** : Si une génération échoue ou est interrompue, une bannière intégrée **Réessayer** s'affiche. Cliquer sur **Réessayer** génère une nouvelle clé d'idempotence afin d'éviter tout double débit de crédits.
+3. **Incident de modèle** : Consultez notre tableau de bord public sur [/status](/status) pour vérifier si Google Gemini ou notre infrastructure rencontrent une latence accrue.
+
+## Bannière « Crédits insuffisants »
+
+Si vous recevez un message 402 Crédits insuffisants :
+- Votre prompt demande davantage de crédits que le solde dont vous disposez actuellement.
+- Basculez vers un modèle Économique (`Gemini Flash`) pour réduire le coût en crédits, ou mettez à niveau votre forfait sur [/pricing](/pricing).
+
+## Lien de réinitialisation de mot de passe non reçu
+
+Si vous avez demandé un e-mail de réinitialisation de mot de passe mais ne l'avez pas reçu :
+1. Vérifiez vos dossiers de courriers indésirables (spams) et promotions.
+2. Assurez-vous d'avoir saisi l'adresse e-mail exacte employée lors de l'inscription.
+3. Notez que les demandes de réinitialisation sont limitées à 3 tentatives par heure afin de protéger les comptes contre les abus automatisés.
+
+## Contacter le support
+
+Si votre problème persiste, envoyez un ticket via [/support](/support) ou écrivez directement à notre équipe technique à `support@mail.klecx.vyraxity.com`. Nous répondons sous 3 jours ouvrés au maximum.

@@ -1,0 +1,24 @@
+---
+title: "Resaltar y preguntar"
+category: "features-workflows"
+description: "Cómo seleccionar frases específicas en cualquier respuesta para formular preguntas de seguimiento precisas."
+keywords: ["resaltar", "preguntar", "seguimiento", "cita", "contexto", "selección"]
+sourceVersion: 1
+---
+
+# Resaltar y preguntar
+
+En informes de investigación extensos o explicaciones de código detalladas, formular una pregunta de seguimiento a menudo exige citar un párrafo específico. Klecx optimiza este proceso con **Resaltar y preguntar**.
+
+## Cómo funciona
+
+1. **Seleccione cualquier texto**: En cualquier tarjeta de respuesta generada, use el ratón o trackpad para resaltar una frase, oración o fila de tabla.
+2. **Menú contextual flotante**: Aparecerá un menú de acción flotante junto a su selección con la opción **"Preguntar sobre esto"**.
+3. **Cita automática de contexto**: Al hacer clic en el botón, el extracto seleccionado se inserta automáticamente en su compositor como una cita en bloque, lo que le permite hacer preguntas como:
+   - *"¿Puede explicar esta parte en términos más sencillos?"*
+   - *"Proporcione una implementación en TypeScript para este paso."*
+   - *"¿Existen casos límite con respecto a esta recomendación?"*
+
+## Anclaje de texto robusto
+
+Klecx utiliza internamente el estándar **TextQuoteSelector** de la W3C. Incluso si las respuestas se vuelven a formatear o procesar, sus puntos de anclaje seleccionados se mantienen referenciados de forma fidedigna en el historial de la conversación.

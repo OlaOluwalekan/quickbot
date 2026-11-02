@@ -1,0 +1,35 @@
+---
+title: "Solución de problemas y preguntas frecuentes"
+category: "troubleshooting"
+description: "Resoluciones para incidencias comunes: interrupciones de generación, errores de créditos y conectividad."
+keywords: ["solución de problemas", "errores", "reintentar", "soporte", "preguntas frecuentes", "conexión"]
+sourceVersion: 1
+---
+
+# Solución de problemas y preguntas frecuentes
+
+Si experimenta una incidencia inesperada al usar Klecx, esta guía detalla las preguntas más habituales y los pasos de diagnóstico.
+
+## La generación se detiene o "Pensando" parece bloqueado
+
+Si una generación muestra un indicador parpadeante pero no transmite tokens tras 15 segundos:
+1. **Desconexión de red**: Compruebe su conexión a Internet. Los eventos enviados por el servidor (SSE) requieren una conexión de transmisión continua.
+2. **Haga clic en Reintentar**: Si una generación falla o se interrumpe, aparecerá un aviso de **Reintentar**. Al pulsar en **Reintentar** se genera una nueva clave de idempotencia para no cobrar créditos por duplicado.
+3. **Incidencia del modelo**: Revise nuestro panel de estado público en [/status](/status) para verificar si Google Gemini o la infraestructura secundaria presentan una latencia elevada.
+
+## Aviso de "Créditos insuficientes"
+
+Si recibe una notificación 402 de Créditos insuficientes:
+- Su instrucción requiere más créditos de los disponibles actualmente en su saldo.
+- Cambie a un modelo Económico (`Gemini Flash`) para reducir el gasto de créditos, o mejore su plan en [/pricing](/pricing).
+
+## Enlace de restablecimiento de contraseña no recibido
+
+Si solicitó un correo electrónico de recuperación de contraseña y no lo ha recibido:
+1. Revise sus carpetas de correo no deseado (spam) y promociones.
+2. Asegúrese de haber introducido exactamente el correo electrónico utilizado al registrar la cuenta.
+3. Tenga en cuenta que las solicitudes de restablecimiento de contraseña están limitadas a 3 intentos por hora para proteger las cuentas frente a abusos automatizados.
+
+## Contactar con soporte
+
+Si la incidencia continúa, envíe un ticket a través de [/support](/support) o escriba a nuestro equipo de ingeniería directamente a `support@mail.klecx.vyraxity.com`. Respondemos en un plazo máximo de 3 días laborables.
