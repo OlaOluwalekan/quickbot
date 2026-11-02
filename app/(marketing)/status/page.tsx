@@ -1,12 +1,27 @@
-"use client";
-
 import * as React from "react";
-import { useTranslations } from "next-intl";
+import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { CheckCircle2, Activity, ExternalLink, ShieldCheck, Cpu, Key, Database, Cloud, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export default function StatusPage() {
-  const t = useTranslations("Status");
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("Status");
+  return {
+    title: `${t("title")} · System Status`,
+    description: t("subtitle"),
+    alternates: {
+      canonical: "/status",
+    },
+    openGraph: {
+      title: `${t("title")} · System Status`,
+      description: t("subtitle"),
+      url: "/status",
+    },
+  };
+}
+
+export default async function StatusPage() {
+  const t = await getTranslations("Status");
 
   const services = [
     {

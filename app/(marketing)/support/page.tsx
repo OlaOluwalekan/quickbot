@@ -1,13 +1,25 @@
 import * as React from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { Mail, Clock, ShieldAlert, BookOpen, ArrowRight } from "lucide-react";
 import { SupportForm } from "@/components/support/support-form";
 
-export const metadata = {
-  title: "Contact Support · Klecx",
-  description: "Get in touch with the Klecx support team. We respond to all inquiries within 3 business days.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("Support");
+  return {
+    title: `${t("title")} · Klecx`,
+    description: t("headerDesc"),
+    alternates: {
+      canonical: "/support",
+    },
+    openGraph: {
+      title: `${t("title")} · Klecx`,
+      description: t("headerDesc"),
+      url: "/support",
+    },
+  };
+}
 
 export default async function SupportPage() {
   const t = await getTranslations("Support");

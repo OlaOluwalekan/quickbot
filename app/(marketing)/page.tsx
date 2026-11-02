@@ -1,4 +1,6 @@
 import * as React from "react";
+import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import {
   MarketingHero,
   MarketingFeatureList,
@@ -7,11 +9,21 @@ import {
   MarketingCTA,
 } from "@/components/marketing";
 
-export const metadata = {
-  title: "Klecx — Think in workspaces, not threads",
-  description:
-    "Organize AI work into projects, keep every answer's versions, and ask questions about any passage without losing your train of thought.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("Landing");
+  return {
+    title: "Workspaces, not threads",
+    description: t("heroDescription"),
+    alternates: {
+      canonical: "/",
+    },
+    openGraph: {
+      title: "Workspaces, not threads · Klecx",
+      description: t("heroDescription"),
+      url: "/",
+    },
+  };
+}
 
 export default function MarketingLandingPage() {
   return (

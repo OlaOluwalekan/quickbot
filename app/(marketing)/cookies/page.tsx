@@ -1,12 +1,27 @@
-"use client";
-
 import * as React from "react";
-import { useTranslations } from "next-intl";
+import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { LegalNav } from "@/components/marketing/legal-nav";
 import { Cookie, ShieldCheck, Database, Lock } from "lucide-react";
 
-export default function CookiesPage() {
-  const t = useTranslations("Legal");
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("Legal");
+  return {
+    title: `${t("cookies.title")} · Klecx`,
+    description: t("cookies.subtitle"),
+    alternates: {
+      canonical: "/cookies",
+    },
+    openGraph: {
+      title: `${t("cookies.title")} · Klecx`,
+      description: t("cookies.subtitle"),
+      url: "/cookies",
+    },
+  };
+}
+
+export default async function CookiesPage() {
+  const t = await getTranslations("Legal");
 
   const cookiesList = [
     {

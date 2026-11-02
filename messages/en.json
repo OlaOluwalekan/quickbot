@@ -1,6 +1,6 @@
 {
   "Metadata": {
-    "title": "Klecx | Your AI Companion & Creative Studio",
+    "title": "Klecx | Your AI Workspace & Collaboration Studio",
     "description": "Stream real-time AI answers, generate studio-grade visuals, and accelerate your workflow with Klecx."
   },
   "Common": {
@@ -127,7 +127,7 @@
     "resendSent": "Verification email sent! Check your inbox."
   },
   "Chat": {
-    "newChat": "New Chat",
+    "newChat": "New Workspace",
     "welcomeTitle": "How can Klecx help you today?",
     "welcomeSubtitle": "Ask a complex question, write code, or switch to Image Mode to generate custom artwork.",
     "templateGreeting": "How can Klecx help you today?",

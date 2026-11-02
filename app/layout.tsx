@@ -19,10 +19,62 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
+const siteUrl =
+  process.env.NEXT_PUBLIC_APP_URL ||
+  process.env.APP_URL ||
+  "https://klecx.com";
+
 export const metadata: Metadata = {
-  title: "Klecx",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "Klecx — Workspaces, not threads",
+    template: "%s · Klecx",
+  },
   description:
-    "Collaborative AI workspace for research, writing, and knowledge organization.",
+    "Collaborative AI workspace for research, writing, and knowledge organization. Keep response versions, annotate passages, and organize work into projects.",
+  applicationName: "Klecx",
+  authors: [{ name: "Klecx Team" }],
+  keywords: [
+    "AI workspace",
+    "collaborative AI",
+    "prompt engineering",
+    "response versions",
+    "passage reasoning",
+    "AI research",
+  ],
+  manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico", sizes: "any" },
+    ],
+    apple: [{ url: "/apple-icon.png", sizes: "180x180" }],
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: siteUrl,
+    siteName: "Klecx",
+    title: "Klecx — Workspaces, not threads",
+    description:
+      "Collaborative AI workspace for research, writing, and knowledge organization. Keep response versions, annotate passages, and organize work into projects.",
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "Klecx AI Workspace",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Klecx — Workspaces, not threads",
+    description:
+      "Collaborative AI workspace for research, writing, and knowledge organization.",
+    images: ["/twitter-image"],
+    creator: "@klecx",
+  },
 };
 
 export default async function RootLayout({

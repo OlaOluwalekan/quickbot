@@ -2,6 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionCookie } from "better-auth/cookies";
 import { authRoutes, DEFAULT_LOGIN_REDIRECT, publicRoutes } from "./utils/routes";
 
+function attachSecurityHeaders(res: NextResponse, pathname: string) {
+  const isPrivateRoute =
+    pathname.startsWith("/workspaces") ||
+    pathname.startsWith("/projects") ||
+    pathname.startsWith("/settings") ||
+    pathname.startsWith("/s/") ||
+    pathname.startsWith("/api/");
+
+  if (isPrivateRoute) {
+    res.headers.set("X-Robots-Tag", "noindex, nofollow");
+  }
+  return res;
+}
+
 export async function proxy(req: NextRequest) {
   const { nextUrl } = req;
   const { pathname } = nextUrl;
@@ -13,12 +27,12 @@ export async function proxy(req: NextRequest) {
     pathname.startsWith("/api/cron") ||
     pathname.startsWith("/s/")
   ) {
-    return NextResponse.next();
+    return attachSecurityHeaders(NextResponse.next(), pathname);
   }
 
   // API routes handle their own authorization via route() / getActor()
   if (pathname.startsWith("/api/")) {
-    return NextResponse.next();
+    return attachSecurityHeaders(NextResponse.next(), pathname);
   }
 
   const sessionCookie = getSessionCookie(req);
@@ -33,16 +47,22 @@ export async function proxy(req: NextRequest) {
 
   if (isAuthRoute) {
     if (isLoggedIn) {
-      return NextResponse.redirect(new URL(DEFAULT_LOGIN_REDIRECT, nextUrl));
+      return attachSecurityHeaders(
+        NextResponse.redirect(new URL(DEFAULT_LOGIN_REDIRECT, nextUrl)),
+        pathname,
+      );
     }
-    return NextResponse.next();
+    return attachSecurityHeaders(NextResponse.next(), pathname);
   }
 
   if (!isLoggedIn && !isPublicRoute) {
-    return NextResponse.redirect(new URL("/auth/login", nextUrl));
+    return attachSecurityHeaders(
+      NextResponse.redirect(new URL("/auth/login", nextUrl)),
+      pathname,
+    );
   }
 
-  return NextResponse.next();
+  return attachSecurityHeaders(NextResponse.next(), pathname);
 }
 
 export default proxy;

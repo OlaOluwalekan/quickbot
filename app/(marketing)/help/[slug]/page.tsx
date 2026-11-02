@@ -7,11 +7,13 @@ import { getArticle } from "@/lib/help/articles";
 import { Markdown } from "@/components/markdown";
 import { Button } from "@/components/ui/button";
 
+import type { Metadata } from "next";
+
 interface HelpArticlePageProps {
   params: Promise<{ slug: string }>;
 }
 
-export async function generateMetadata({ params }: HelpArticlePageProps) {
+export async function generateMetadata({ params }: HelpArticlePageProps): Promise<Metadata> {
   const { slug } = await params;
   const locale = await getLocale();
   const article = getArticle(locale, slug);
@@ -19,9 +21,18 @@ export async function generateMetadata({ params }: HelpArticlePageProps) {
 
   if (!article) return { title: t("articleNotFoundTitle") };
 
+  const pageTitle = `${article.title} ${t("articleTitleSuffix")}`;
   return {
-    title: `${article.title} ${t("articleTitleSuffix")}`,
+    title: pageTitle,
     description: article.description,
+    alternates: {
+      canonical: `/help/${slug}`,
+    },
+    openGraph: {
+      title: `${pageTitle} · Klecx`,
+      description: article.description,
+      url: `/help/${slug}`,
+    },
   };
 }
 
