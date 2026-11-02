@@ -1,19 +1,29 @@
 import fs from "fs";
 import path from "path";
+import {
+  HelpArticle,
+  HelpArticleMeta,
+  HELP_CATEGORY_KEYS,
+  HelpCategoryKey,
+  foldText,
+  matchesQuery,
+  getCategoryKeys,
+  toMeta,
+} from "./shared";
 
-export interface HelpArticle {
-  slug: string;
-  title: string;
-  category: string;
-  description: string;
-  readTime: string;
-  keywords: string[];
-  content: string;
+export * from "./shared";
+
+export const SUPPORTED_LOCALES = ["en", "fr", "es"] as const;
+export type HelpLocale = (typeof SUPPORTED_LOCALES)[number];
+
+export function toHelpLocale(locale?: string): HelpLocale {
+  if (locale && (SUPPORTED_LOCALES as readonly string[]).includes(locale)) {
+    return locale as HelpLocale;
+  }
+  return "en";
 }
 
-const HELP_DIR = path.join(process.cwd(), "content", "help");
-
-function parseFrontmatter(rawContent: string): { data: Record<string, any>; content: string } {
+export function parseFrontmatter(rawContent: string): { data: Record<string, any>; content: string } {
   const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/.exec(rawContent);
   if (!match) {
     return { data: {}, content: rawContent };
@@ -34,11 +44,15 @@ function parseFrontmatter(rawContent: string): { data: Record<string, any>; cont
 
     if (val.startsWith('"') && val.endsWith('"')) {
       val = val.slice(1, -1);
+    } else if (val.startsWith("'") && val.endsWith("'")) {
+      val = val.slice(1, -1);
     } else if (val.startsWith("[") && val.endsWith("]")) {
       val = val
         .slice(1, -1)
         .split(",")
         .map((s: string) => s.trim().replace(/^["']|["']$/g, ""));
+    } else if (!isNaN(Number(val)) && val !== "") {
+      val = Number(val);
     }
     data[key] = val;
   }
@@ -46,27 +60,77 @@ function parseFrontmatter(rawContent: string): { data: Record<string, any>; cont
   return { data, content: body };
 }
 
-export function getAllArticles(): HelpArticle[] {
+function countWords(text: string): number {
+  return text.trim().split(/\s+/).filter(Boolean).length;
+}
+
+function computeReadMinutes(content: string): number {
+  const words = countWords(content);
+  return Math.max(1, Math.round(words / 200));
+}
+
+function getBaseHelpDir(): string {
+  return process.env.HELP_CONTENT_DIR || path.join(process.cwd(), "content", "help");
+}
+
+export function getHelpSlugs(): string[] {
+  const enDir = path.join(getBaseHelpDir(), "en");
+  if (!fs.existsSync(enDir)) {
+    return [];
+  }
+  return fs
+    .readdirSync(enDir)
+    .filter((f) => f.endsWith(".mdx") || f.endsWith(".md"))
+    .map((f) => f.replace(/\.mdx?$/, ""));
+}
+
+export function getArticles(locale?: string): HelpArticle[] {
   try {
-    if (!fs.existsSync(HELP_DIR)) {
+    const baseDir = getBaseHelpDir();
+    const targetLocale = toHelpLocale(locale);
+    const enDir = path.join(baseDir, "en");
+    const targetDir = path.join(/*turbopackIgnore: true*/ baseDir, targetLocale);
+
+    if (!fs.existsSync(enDir)) {
       return [];
     }
-    const filenames = fs.readdirSync(HELP_DIR).filter((f) => f.endsWith(".mdx") || f.endsWith(".md"));
+
+    const enFiles = fs
+      .readdirSync(enDir)
+      .filter((f) => f.endsWith(".mdx") || f.endsWith(".md"));
+
     const articles: HelpArticle[] = [];
 
-    for (const file of filenames) {
-      const fullPath = path.join(HELP_DIR, file);
-      const fileContents = fs.readFileSync(fullPath, "utf8");
+    for (const enFile of enFiles) {
+      const slug = enFile.replace(/\.mdx?$/, "");
+      let filePath = path.join(enDir, enFile);
+      let isFallback = targetLocale !== "en";
+
+      if (targetLocale !== "en" && fs.existsSync(/*turbopackIgnore: true*/ targetDir)) {
+        // Look for matching file in target locale (.mdx or .md)
+        const targetPathMdx = path.join(targetDir, `${slug}.mdx`);
+        const targetPathMd = path.join(targetDir, `${slug}.md`);
+
+        if (fs.existsSync(targetPathMdx)) {
+          filePath = targetPathMdx;
+          isFallback = false;
+        } else if (fs.existsSync(targetPathMd)) {
+          filePath = targetPathMd;
+          isFallback = false;
+        }
+      }
+
+      const fileContents = fs.readFileSync(filePath, "utf8");
       const { data, content } = parseFrontmatter(fileContents);
-      const slug: string = (data.slug as string) || file.replace(/\.mdx?$/, "");
 
       articles.push({
         slug,
         title: data.title || slug,
-        category: data.category || "General",
+        categoryKey: data.category || "getting-started",
         description: data.description || "",
-        readTime: data.readTime || "2 min read",
         keywords: Array.isArray(data.keywords) ? data.keywords : [],
+        readMinutes: computeReadMinutes(content),
+        isFallback,
         content,
       });
     }
@@ -78,28 +142,15 @@ export function getAllArticles(): HelpArticle[] {
   }
 }
 
-export function getArticleBySlug(slug: string): HelpArticle | null {
-  const articles = getAllArticles();
+export function getArticle(locale: string | undefined, slug: string): HelpArticle | null {
+  const articles = getArticles(locale);
   return articles.find((a) => a.slug === slug) ?? null;
 }
 
-export function getCategories(): string[] {
-  const articles = getAllArticles();
-  const set = new Set<string>();
-  articles.forEach((a) => set.add(a.category));
-  return Array.from(set);
-}
-
-export function searchArticles(query: string, articles = getAllArticles()): HelpArticle[] {
-  const q = query.trim().toLowerCase();
-  if (!q) return articles;
-
-  return articles.filter((a) => {
-    return (
-      a.title.toLowerCase().includes(q) ||
-      a.description.toLowerCase().includes(q) ||
-      a.keywords.some((k) => k.toLowerCase().includes(q)) ||
-      a.category.toLowerCase().includes(q)
-    );
-  });
-}
+// Backward-compatible exports
+export const getAllArticles = (locale?: string) => getArticles(locale);
+export const getArticleBySlug = (slug: string, locale?: string) => getArticle(locale, slug);
+export const getCategories = () => HELP_CATEGORY_KEYS;
+export const searchArticles = (query: string, articles = getArticles()) => {
+  return articles.filter((a) => matchesQuery(a, query));
+};

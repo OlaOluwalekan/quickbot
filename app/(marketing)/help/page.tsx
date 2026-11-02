@@ -1,15 +1,20 @@
 import * as React from "react";
-import { getAllArticles, getCategories } from "@/lib/help/articles";
+import { getLocale, getTranslations } from "next-intl/server";
+import { getArticles, toMeta } from "@/lib/help/articles";
 import { HelpCenterView } from "@/components/help/help-center-view";
 
-export const metadata = {
-  title: "Help Center & Documentation · Klecx",
-  description: "Searchable guides, documentation, and tutorials for using Klecx workspaces and AI models.",
-};
+export async function generateMetadata() {
+  const t = await getTranslations("Help");
+  return {
+    title: t("metaTitle"),
+    description: t("metaDescription"),
+  };
+}
 
-export default function HelpPage() {
-  const articles = getAllArticles();
-  const categories = getCategories();
+export default async function HelpPage() {
+  const locale = await getLocale();
+  const articles = getArticles(locale);
+  const metaArticles = articles.map(toMeta);
 
-  return <HelpCenterView articles={articles} categories={categories} />;
+  return <HelpCenterView articles={metaArticles} />;
 }

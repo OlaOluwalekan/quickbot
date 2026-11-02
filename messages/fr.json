@@ -870,7 +870,13 @@
     "subtitle": "Découvrez comment maîtriser les espaces de travail, gérer les crédits et collaborer.",
     "searchPlaceholder": "Rechercher des articles, fonctionnalités...",
     "popularArticles": "Guides Populaires",
-    "categories": "Catégories",
+    "categories": {
+      "getting-started": "Premiers pas",
+      "features-workflows": "Fonctionnalités et flux",
+      "billing-account": "Facturation et compte",
+      "collaboration-sharing": "Collaboration et partage",
+      "troubleshooting": "Dépannage"
+    },
     "allCategories": "Toutes les catégories",
     "readTime": "de lecture",
     "articlesFound": "{count} articles trouvés",
@@ -883,7 +889,14 @@
     "helpfulQuestion": "Ce guide vous a-t-il été utile ?",
     "helpfulDesc": "Si votre question n'a pas trouvé de réponse, notre équipe de support est là pour vous aider.",
     "readGuide": "Lire le guide",
-    "resetFilters": "Réinitialiser les filtres"
+    "resetFilters": "Réinitialiser les filtres",
+    "readMinutes": "{count, plural, one {# min de lecture} other {# min de lecture}}",
+    "filteredBy": "Filtré par : {category}",
+    "notTranslated": "Cet article n'a pas encore été traduit dans votre langue et s'affiche en anglais.",
+    "metaTitle": "Centre d'aide et documentation · Klecx",
+    "metaDescription": "Guides, documentation et tutoriels consultables pour utiliser les espaces de travail et modèles d'IA Klecx.",
+    "articleTitleSuffix": "· Centre d'aide Klecx",
+    "articleNotFoundTitle": "Article introuvable · Aide Klecx"
   },
   "Support": {
     "title": "Contacter le Support",

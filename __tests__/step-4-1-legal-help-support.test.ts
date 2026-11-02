@@ -1,7 +1,8 @@
 /**
  * @jest-environment node
  */
-import { getAllArticles, getArticleBySlug, searchArticles, getCategories } from "@/lib/help/articles";
+import { getArticles, getArticle, searchArticles, getCategories } from "@/lib/help/articles";
+import { matchesQuery } from "@/lib/help/shared";
 import { createSupportTicket } from "@/server/services/support";
 import { db } from "@/server/db/client";
 import { publicRoutes, authRoutes } from "@/utils/routes";
@@ -32,7 +33,7 @@ describe("Step 4.1 — Legal, Help Center, Support and Password-Recovery", () =>
 
   describe("Help Center Articles & Search Engine", () => {
     it("loads all 12 specified static MDX articles", () => {
-      const articles = getAllArticles();
+      const articles = getArticles("en");
       expect(articles.length).toBeGreaterThanOrEqual(12);
 
       const requiredSlugs = [
@@ -51,12 +52,12 @@ describe("Step 4.1 — Legal, Help Center, Support and Password-Recovery", () =>
       ];
 
       for (const slug of requiredSlugs) {
-        const found = getArticleBySlug(slug);
+        const found = getArticle("en", slug);
         expect(found).not.toBeNull();
         expect(found?.title).toBeTruthy();
         expect(found?.content).toBeTruthy();
-        expect(found?.readTime).toBeTruthy();
-        expect(found?.category).toBeTruthy();
+        expect(found?.readMinutes).toBeGreaterThan(0);
+        expect(found?.categoryKey).toBeTruthy();
       }
     });
 
@@ -64,13 +65,17 @@ describe("Step 4.1 — Legal, Help Center, Support and Password-Recovery", () =>
       const results = searchArticles("credits");
       expect(results.length).toBeGreaterThanOrEqual(1);
       expect(results.some((a) => a.slug === "credits-and-plans")).toBe(true);
+
+      const enArticles = getArticles("en");
+      const creditsArticle = enArticles.find((a) => a.slug === "credits-and-plans")!;
+      expect(matchesQuery(creditsArticle, "crédits")).toBe(true);
     });
 
-    it("retrieves distinct categories", () => {
+    it("retrieves distinct category keys", () => {
       const categories = getCategories();
-      expect(categories).toContain("Getting Started");
-      expect(categories).toContain("Billing & Account");
-      expect(categories).toContain("Features & Workflows");
+      expect(categories).toContain("getting-started");
+      expect(categories).toContain("billing-account");
+      expect(categories).toContain("features-workflows");
     });
   });
 

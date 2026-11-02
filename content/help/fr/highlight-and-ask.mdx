@@ -1,0 +1,24 @@
+---
+title: "Surligner et demander"
+category: "features-workflows"
+description: "Comment sélectionner des passages précis dans une réponse pour poser des questions de suivi ciblées."
+keywords: ["surligner", "demander", "suivi", "citation", "contexte", "sélection"]
+sourceVersion: 1
+---
+
+# Surligner et demander
+
+Dans les rapports d'analyse volumineux ou les explications techniques détaillées, poser une question de suivi nécessite fréquemment de citer un paragraphe précis. Klecx simplifie ce processus grâce à la fonctionnalité **Surligner et demander**.
+
+## Comment ça fonctionne
+
+1. **Sélectionnez un texte** : Dans n'importe quelle carte de réponse, mettez en surbrillance une phrase, un paragraphe ou une ligne de tableau avec votre souris ou pavé tactile.
+2. **Infobulle contextuelle** : Un menu d'action flottant s'affiche à côté de votre sélection avec l'option **« Poser une question là-dessus »**.
+3. **Citation automatique du contexte** : Cliquer sur ce bouton insère automatiquement l'extrait sélectionné sous forme de bloc de citation dans votre compositeur, vous permettant de formuler des questions telles que :
+   - *« Pouvez-vous expliquer cette partie plus simplement ? »*
+   - *« Fournissez une implémentation TypeScript pour cette étape. »*
+   - *« Existe-t-il des cas particuliers pour cette recommandation ? »*
+
+## Ancrage de texte robuste
+
+Klecx exploite le standard **TextQuoteSelector** du W3C en arrière-plan. Même lorsque les réponses sont recalculées ou remises en forme, vos points d'ancrage surlignés restent fidèlement référencés dans l'historique de la conversation.

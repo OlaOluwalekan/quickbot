@@ -870,7 +870,13 @@
     "subtitle": "Learn how to master workspaces, organize projects, manage credits, and leverage AI models.",
     "searchPlaceholder": "Search articles, features, workflows...",
     "popularArticles": "Popular Guides",
-    "categories": "Categories",
+    "categories": {
+      "getting-started": "Getting Started",
+      "features-workflows": "Features & Workflows",
+      "billing-account": "Billing & Account",
+      "collaboration-sharing": "Collaboration & Sharing",
+      "troubleshooting": "Troubleshooting"
+    },
     "allCategories": "All Categories",
     "readTime": "read",
     "articlesFound": "{count} articles found",
@@ -883,7 +889,14 @@
     "helpfulQuestion": "Was this guide helpful?",
     "helpfulDesc": "If your question was not answered, our support team is available to assist you.",
     "readGuide": "Read guide",
-    "resetFilters": "Reset filters"
+    "resetFilters": "Reset filters",
+    "readMinutes": "{count, plural, one {# min read} other {# min read}}",
+    "filteredBy": "Filtered by: {category}",
+    "notTranslated": "This article has not been translated into your language yet and is displayed in English.",
+    "metaTitle": "Help Center & Documentation · Klecx",
+    "metaDescription": "Searchable guides, documentation, and tutorials for using Klecx workspaces and AI models.",
+    "articleTitleSuffix": "· Klecx Help Center",
+    "articleNotFoundTitle": "Article Not Found · Klecx Help"
   },
   "Support": {
     "title": "Contact Support",
