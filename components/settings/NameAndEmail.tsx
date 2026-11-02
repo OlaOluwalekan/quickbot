@@ -1,13 +1,14 @@
 "use client";
 
 import { SessionProps } from "@/types/user";
-import { ChangeEvent, FormEvent, useState, useTransition } from "react";
-import { FaEdit, FaTimes } from "react-icons/fa";
-import { FaCheck, FaUser } from "react-icons/fa6";
-import InputWithIcon from "../ui/inputs/InputWithIcon";
-import toast from "react-hot-toast";
+import { FormEvent, useState, useTransition } from "react";
+import { Check, Pencil, User, X } from "lucide-react";
+import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
 
 const NameAndEmail = ({ user }: { user: SessionProps }) => {
   const t = useTranslations("Settings");
@@ -50,65 +51,73 @@ const NameAndEmail = ({ user }: { user: SessionProps }) => {
   };
 
   return (
-    <div className="flex flex-col items-center sm:items-start w-full gap-1.5 text-slate-900 dark:text-slate-100">
+    <div className="flex flex-col items-center sm:items-start w-full gap-1.5 text-fg">
       {isEditing ? (
         <form
           onSubmit={handleSubmit}
           className="flex items-center gap-2 w-full max-w-xs"
         >
-          <InputWithIcon
-            type="text"
-            placeholder={t("fullName")}
-            value={name}
-            name="name"
-            icons={<FaUser />}
-            onChange={(e: ChangeEvent<HTMLInputElement>) =>
-              setName(e.target.value)
-            }
-          />
-          {isPending ? (
-            <span
-              className="animate-spin inline-block w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full shrink-0"
-              role="status"
-              aria-label="loading"
+          <div className="relative flex flex-1 items-center">
+            <User
+              className="pointer-events-none absolute left-3 h-4 w-4 text-accent"
+              strokeWidth={1.5}
             />
+            <Input
+              type="text"
+              placeholder={t("fullName")}
+              value={name}
+              name="name"
+              onChange={(e) => setName(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          {isPending ? (
+            <Spinner size="sm" />
           ) : (
             <div className="flex items-center gap-1 shrink-0">
-              <button
+              <Button
                 type="submit"
+                variant="ghost"
+                size="icon"
                 aria-label="Save name"
-                className="w-8 h-8 flex justify-center items-center text-emerald-500 hover:bg-emerald-500/15 rounded-lg cursor-pointer"
+                tooltip="Save name"
+                className="text-success hover:bg-success/15"
               >
-                <FaCheck />
-              </button>
-              <button
+                <Check className="h-4 w-4" strokeWidth={1.5} />
+              </Button>
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon"
                 aria-label="Cancel edit"
-                className="w-8 h-8 flex justify-center items-center text-rose-500 hover:bg-rose-500/15 rounded-lg cursor-pointer"
+                tooltip="Cancel edit"
+                className="text-danger hover:bg-danger/15"
                 onClick={handleCancel}
               >
-                <FaTimes />
-              </button>
+                <X className="h-4 w-4" strokeWidth={1.5} />
+              </Button>
             </div>
           )}
         </form>
       ) : (
         <div className="flex items-center gap-2">
           <h2 className="text-xl font-bold tracking-tight">{name}</h2>
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon"
             aria-label="Edit name"
-            className="w-8 h-8 flex justify-center items-center text-slate-400 hover:text-indigo-500 hover:bg-indigo-500/10 rounded-lg transition-colors cursor-pointer"
+            tooltip="Edit name"
             onClick={() => setIsEditing(true)}
           >
-            <FaEdit className="text-sm" />
-          </button>
+            <Pencil className="h-3.5 w-3.5" strokeWidth={1.5} />
+          </Button>
         </div>
       )}
-      <span className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+      <span className="text-xs sm:text-sm text-muted">
         {user?.email}
       </span>
-      <span className="text-[11px] text-slate-400 dark:text-slate-500">
+      <span className="text-[11px] text-subtle">
         {t("emailReadOnly")}
       </span>
     </div>

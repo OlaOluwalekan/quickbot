@@ -1,0 +1,325 @@
+"use client";
+
+import * as React from "react";
+import { useTranslations } from "next-intl";
+import Link from "next/link";
+import {
+  ArrowDown,
+  AlertCircle,
+  RotateCcw,
+  Sparkles,
+  WifiOff,
+  CreditCard,
+  AlertTriangle,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { ResponseCard, type ResponseItemData } from "./response-card";
+import { ThinkingPanel } from "./thinking-panel";
+import {
+  useGenerationStore,
+  DEFAULT_WORKSPACE_STREAM,
+  type WorkspaceGenerationStream,
+} from "@/lib/stores/generation";
+import type { Actor } from "@/server/auth/session";
+
+export interface ResponseListProps {
+  workspaceId: string;
+  actor: Actor;
+  responses: ResponseItemData[];
+  optimisticPrompt?: string | null;
+  memberCount?: number;
+  onRegenerateTurn?: (responseId: string) => void;
+  onRetryFailed?: (prompt: string, idempotencyKey: string) => void;
+  onDeleteResponse?: (responseId: string) => void;
+  className?: string;
+}
+
+export function ResponseList({
+  workspaceId,
+  actor,
+  responses,
+  optimisticPrompt,
+  memberCount = 1,
+  onRegenerateTurn,
+  onRetryFailed,
+  onDeleteResponse,
+  className,
+}: ResponseListProps) {
+  const t = useTranslations("Response");
+  const tChat = useTranslations("Chat");
+
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const bottomSentinelRef = React.useRef<HTMLDivElement>(null);
+  const [showJumpToLatest, setShowJumpToLatest] = React.useState(false);
+  const [isOnline, setIsOnline] = React.useState(true);
+
+  // Stream state for current workspace from generation store
+  const stream: WorkspaceGenerationStream = useGenerationStore(
+    (s) => s.streams[workspaceId] ?? DEFAULT_WORKSPACE_STREAM
+  );
+
+  const isStreaming = stream.status === "streaming";
+  const isFailed = stream.status === "failed";
+  const isCompleted = stream.status === "completed";
+  const currentPrompt =
+    optimisticPrompt || (!isCompleted && stream.prompt ? stream.prompt : null);
+  const showActiveTurn = Boolean(currentPrompt || isStreaming || isFailed);
+
+  // Track online status
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    setIsOnline(navigator.onLine);
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
+  // Scroll position monitor (120px threshold)
+  const handleScroll = React.useCallback(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    // Show jump pill if scrolled up > 120px from bottom
+    setShowJumpToLatest(distanceFromBottom > 120);
+  }, []);
+
+  // Jump to latest handler
+  const scrollToBottom = React.useCallback(
+    (behavior: ScrollBehavior = "smooth") => {
+      const el = containerRef.current;
+      if (!el) return;
+      if (typeof el.scrollTo === "function") {
+        el.scrollTo({
+          top: el.scrollHeight,
+          behavior,
+        });
+      } else {
+        el.scrollTop = el.scrollHeight;
+      }
+    },
+    []
+  );
+
+  // Auto-scroll on stream tokens or new responses ONLY if within 120px threshold
+  React.useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    if (distanceFromBottom <= 120) {
+      scrollToBottom("smooth");
+    }
+  }, [
+    responses.length,
+    stream.text,
+    stream.thought,
+    isStreaming,
+    scrollToBottom,
+  ]);
+
+  // Handle retry with fresh idempotency key
+  const handleRetry = () => {
+    if (!onRetryFailed || !currentPrompt) return;
+    const freshIdemKey =
+      typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : "retry-" +
+          Date.now().toString(36) +
+          Math.random().toString(36).substring(2, 8);
+    onRetryFailed(currentPrompt, freshIdemKey);
+  };
+
+  // Detect 402 / insufficient credits error
+  const isCreditsError = Boolean(
+    stream.error &&
+    (stream.error === "402" ||
+      stream.error.toLowerCase().includes("credit") ||
+      stream.error === "insufficient_credits")
+  );
+
+  return (
+    <div
+      className={cn(
+        "relative flex h-full w-full flex-1 flex-col overflow-hidden",
+        className
+      )}
+    >
+      {/* Offline Banner */}
+      {!isOnline && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="bg-danger/10 border-danger/20 text-danger flex items-center justify-center gap-2 border-b px-4 py-2 text-xs font-medium select-none"
+        >
+          <WifiOff className="h-4 w-4 shrink-0" />
+          <span>{t("offline")}</span>
+        </div>
+      )}
+
+      {/* Scrollable Timeline */}
+      <div
+        ref={containerRef}
+        onScroll={handleScroll}
+        className="flex-1 space-y-6 overflow-y-auto scroll-smooth px-3 py-6 sm:px-6"
+      >
+        <div className="mx-auto max-w-4xl space-y-6">
+          {/* Historical Responses */}
+          {responses.map((res, idx) => (
+            <ResponseCard
+              key={res.id}
+              response={res}
+              workspaceId={workspaceId}
+              userId={actor.userId}
+              memberCount={memberCount}
+              onRegenerate={onRegenerateTurn}
+              onDelete={onDeleteResponse}
+              isFirstPrompt={idx === 0 && !optimisticPrompt}
+              className={cn(
+                idx === 0 && !optimisticPrompt && "vt-first-prompt"
+              )}
+            />
+          ))}
+
+          {/* Active Generation Turn (Optimistic Prompt + Thinking + Streaming Bubble) */}
+          {showActiveTurn && (
+            <div className="space-y-4 pt-2">
+              {/* Optimistic Prompt Bubble */}
+              {currentPrompt && (
+                <div className="flex justify-end">
+                  <div
+                    className={cn(
+                      "bg-surface-2 border-border text-fg max-w-2xl rounded-2xl border px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap shadow-2xs select-text sm:text-base",
+                      responses.length === 0 && "vt-first-prompt"
+                    )}
+                  >
+                    {currentPrompt}
+                  </div>
+                </div>
+              )}
+
+              {/* Streaming Output / Thinking Panel */}
+              {(isStreaming || stream.text || stream.thought) && (
+                <div className="animate-fade-in flex gap-3 text-left">
+                  <div className="bg-accent text-accent-fg flex h-8 w-8 shrink-0 items-center justify-center rounded-xl shadow-2xs">
+                    <Sparkles className="animate-spin-slow h-4 w-4" />
+                  </div>
+
+                  <div className="border-border bg-surface text-fg min-w-0 flex-1 space-y-3.5 rounded-2xl border p-4 text-sm shadow-2xs sm:p-5 sm:text-base">
+                    {/* Live Thinking Panel */}
+                    <ThinkingPanel
+                      stage={stream.progressLabel}
+                      thoughtSummary={stream.thought}
+                      isStreaming={isStreaming}
+                      defaultOpen={true}
+                    />
+
+                    {/* Stream Output Text with Soft Caret */}
+                    {stream.text ? (
+                      <div className="overflow-x-auto leading-relaxed wrap-break-word whitespace-pre-wrap select-text">
+                        {stream.text}
+                        {isStreaming && (
+                          <span
+                            aria-hidden="true"
+                            className="bg-accent rounded-2xs ml-0.5 inline-block h-4 w-2 animate-pulse align-middle"
+                          />
+                        )}
+                      </div>
+                    ) : isStreaming ? (
+                      <div className="text-fg-muted flex items-center gap-2 py-1 text-xs italic sm:text-sm">
+                        <span
+                          aria-hidden="true"
+                          className="bg-accent/70 rounded-2xs inline-block h-4 w-2 animate-pulse"
+                        />
+                        <span>{t("thinking")}</span>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              )}
+
+              {/* Insufficient Credits State (402) */}
+              {isCreditsError && (
+                <div
+                  role="alert"
+                  className="border-warning/30 bg-warning/10 text-fg space-y-3 rounded-2xl border p-4 shadow-2xs sm:p-5"
+                >
+                  <div className="text-warning flex items-center gap-2 text-sm font-semibold">
+                    <CreditCard className="h-4 w-4" />
+                    <span>{t("outOfCredits")}</span>
+                  </div>
+                  <p className="text-fg-muted text-xs sm:text-sm">
+                    {tChat("outOfCreditsReason")}
+                  </p>
+                  <div className="pt-1">
+                    <Button
+                      size="sm"
+                      asChild
+                      className="bg-accent text-accent-fg hover:bg-accent/90 text-xs"
+                    >
+                      <Link href="/settings">{t("upgradePlan")}</Link>
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Failed Generation State (with Localized Error & Try Again) */}
+              {isFailed && !isCreditsError && (
+                <div
+                  role="alert"
+                  className="border-danger/30 bg-danger/5 text-fg space-y-3 rounded-2xl border p-4 shadow-2xs sm:p-5"
+                >
+                  <div className="text-danger flex items-center gap-2 text-sm font-semibold">
+                    <AlertCircle className="h-4 w-4" />
+                    <span>{tChat("streamError")}</span>
+                  </div>
+                  {stream.error && (
+                    <p className="text-danger/80 bg-danger/10 rounded-lg px-2.5 py-1.5 font-mono text-xs">
+                      {stream.error}
+                    </p>
+                  )}
+                  {onRetryFailed && currentPrompt && (
+                    <div className="pt-1">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={handleRetry}
+                        className="border-danger/40 text-danger hover:bg-danger/10 text-xs"
+                      >
+                        <RotateCcw className="mr-1 h-3.5 w-3.5" />
+                        <span>{t("tryAgain")}</span>
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div ref={bottomSentinelRef} className="h-2 w-full" />
+        </div>
+      </div>
+
+      {/* Floating "Jump to latest" Pill */}
+      {showJumpToLatest && (
+        <div className="animate-fade-in absolute bottom-4 left-1/2 z-20 -translate-x-1/2">
+          <button
+            type="button"
+            onClick={() => scrollToBottom("smooth")}
+            className="bg-surface-2/95 text-fg border-border hover:bg-surface flex cursor-pointer items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-medium shadow-md backdrop-blur-xs transition-all duration-150 select-none"
+          >
+            <ArrowDown className="text-accent h-3.5 w-3.5 animate-bounce" />
+            <span>{t("jumpToLatest")}</span>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}

@@ -1,0 +1,205 @@
+import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
+import type { ChatProps, ResponseProps } from "@/types/chats";
+
+export const SIDEBAR_COOKIE_NAME = "sidebar";
+
+export function writeSidebarCookie(collapsed: boolean): void {
+  if (typeof document === "undefined") return;
+  const value = collapsed ? "collapsed" : "expanded";
+  document.cookie = `${SIDEBAR_COOKIE_NAME}=${value}; path=/; max-age=31536000; samesite=lax`;
+}
+
+export function parseSidebarCookie(raw?: string | null): boolean {
+  if (!raw) return false;
+  const normalized = raw.trim().toLowerCase();
+  return (
+    normalized === "collapsed" || normalized === "true" || normalized === "1"
+  );
+}
+
+export interface PersistedUiSlice {
+  sidebarCollapsed: boolean;
+  rightPanelOpen: boolean;
+  composerEnterToSend: boolean;
+  onboardingDismissed: boolean;
+  drafts: Record<string, string>;
+}
+
+export interface UiState extends PersistedUiSlice {
+  // Persisted actions
+  setSidebarCollapsed: (collapsed: boolean) => void;
+  toggleSidebarCollapsed: () => void;
+  setRightPanelOpen: (open: boolean) => void;
+  toggleRightPanelOpen: () => void;
+  setComposerEnterToSend: (enterToSend: boolean) => void;
+  setOnboardingDismissed: (dismissed: boolean) => void;
+  setDraft: (workspaceId: string, text: string) => void;
+  clearDraft: (workspaceId: string) => void;
+  clearAllDrafts: () => void;
+
+  // Transient UI state (never persisted to localStorage)
+  mobileNavIsOpen: boolean;
+  commandPaletteOpen: boolean;
+  profileDialogIsOpen: boolean;
+  codeTheme: "light" | "dark";
+  currentPageTitle: string;
+  currentPageId: string | null;
+  currentProjectId: string | null;
+  currentProjectName: string | null;
+  chatMenuIsOpen: boolean;
+  chatMenuClass: string;
+  dialogData: ChatProps | null;
+  editPopUpIsOpen: boolean;
+  deletePopUpIsOpen: boolean;
+  chatInputHeight: string;
+  searchResultIsOpen: boolean;
+  chatMode: "text" | "image";
+  optimisticResponses: ResponseProps[];
+
+  // Transient actions
+  toggleMobileNavOpen: (open: boolean) => void;
+  setCommandPaletteOpen: (open: boolean) => void;
+  toggleProfileDialogOpen: (open: boolean) => void;
+  setCodeTheme: (theme: "light" | "dark") => void;
+  setCurrentPageTitle: (title: string) => void;
+  setCurrentPageId: (id: string | null) => void;
+  setCurrentProject: (project: {
+    id: string | null;
+    name: string | null;
+  }) => void;
+  toggleChatMenuOpen: (open: boolean) => void;
+  setChatMenuClass: (cls: string) => void;
+  setDialogData: (data: ChatProps | null) => void;
+  setEditPopUpOpen: (open: boolean) => void;
+  setDeletePopUpOpen: (open: boolean) => void;
+  setChatInputHeight: (height: string) => void;
+  setSearchResultIsOpen: (open: boolean) => void;
+  setChatMode: (mode: "text" | "image") => void;
+  addOptimisticResponse: (response: ResponseProps) => void;
+  clearOptimisticResponses: () => void;
+  resetTransientUi: () => void;
+}
+
+const initialTransientState = {
+  mobileNavIsOpen: false,
+  commandPaletteOpen: false,
+  profileDialogIsOpen: false,
+  codeTheme: "light" as const,
+  currentPageTitle: "New Chat",
+  currentPageId: null as string | null,
+  currentProjectId: null as string | null,
+  currentProjectName: null as string | null,
+  chatMenuIsOpen: false,
+  chatMenuClass: "",
+  dialogData: null as ChatProps | null,
+  editPopUpIsOpen: false,
+  deletePopUpIsOpen: false,
+  chatInputHeight: "56px",
+  searchResultIsOpen: false,
+  chatMode: "text" as const,
+  optimisticResponses: [] as ResponseProps[],
+};
+
+export function partializeUiState(state: UiState): PersistedUiSlice {
+  return {
+    sidebarCollapsed: state.sidebarCollapsed,
+    rightPanelOpen: state.rightPanelOpen,
+    composerEnterToSend: state.composerEnterToSend,
+    onboardingDismissed: state.onboardingDismissed,
+    drafts: state.drafts,
+  };
+}
+
+export const useUiStore = create<UiState>()(
+  persist(
+    (set) => ({
+      sidebarCollapsed: false,
+      rightPanelOpen: false,
+      composerEnterToSend: true,
+      onboardingDismissed: false,
+      drafts: {},
+
+      ...initialTransientState,
+
+      setSidebarCollapsed: (sidebarCollapsed) => {
+        writeSidebarCookie(sidebarCollapsed);
+        set({ sidebarCollapsed });
+      },
+      toggleSidebarCollapsed: () =>
+        set((state) => {
+          const next = !state.sidebarCollapsed;
+          writeSidebarCookie(next);
+          return { sidebarCollapsed: next };
+        }),
+      setRightPanelOpen: (rightPanelOpen) => set({ rightPanelOpen }),
+      toggleRightPanelOpen: () =>
+        set((state) => ({ rightPanelOpen: !state.rightPanelOpen })),
+      setComposerEnterToSend: (composerEnterToSend) =>
+        set({ composerEnterToSend }),
+      setOnboardingDismissed: (onboardingDismissed) =>
+        set({ onboardingDismissed }),
+      setDraft: (workspaceId, text) =>
+        set((state) => {
+          const next = { ...state.drafts };
+          if (!text) {
+            delete next[workspaceId];
+          } else {
+            next[workspaceId] = text;
+          }
+          return { drafts: next };
+        }),
+      clearDraft: (workspaceId) =>
+        set((state) => {
+          const next = { ...state.drafts };
+          delete next[workspaceId];
+          return { drafts: next };
+        }),
+      clearAllDrafts: () => set({ drafts: {} }),
+
+      toggleMobileNavOpen: (mobileNavIsOpen) => set({ mobileNavIsOpen }),
+      setCommandPaletteOpen: (commandPaletteOpen) =>
+        set({ commandPaletteOpen }),
+      toggleProfileDialogOpen: (profileDialogIsOpen) =>
+        set({ profileDialogIsOpen }),
+      setCodeTheme: (codeTheme) => set({ codeTheme }),
+      setCurrentPageTitle: (currentPageTitle) => set({ currentPageTitle }),
+      setCurrentPageId: (currentPageId) => set({ currentPageId }),
+      setCurrentProject: ({ id, name }) =>
+        set({ currentProjectId: id, currentProjectName: name }),
+      toggleChatMenuOpen: (chatMenuIsOpen) => set({ chatMenuIsOpen }),
+      setChatMenuClass: (chatMenuClass) => set({ chatMenuClass }),
+      setDialogData: (dialogData) => set({ dialogData }),
+      setEditPopUpOpen: (editPopUpIsOpen) => set({ editPopUpIsOpen }),
+      setDeletePopUpOpen: (deletePopUpIsOpen) => set({ deletePopUpIsOpen }),
+      setChatInputHeight: (chatInputHeight) => set({ chatInputHeight }),
+      setSearchResultIsOpen: (searchResultIsOpen) =>
+        set({ searchResultIsOpen }),
+      setChatMode: (chatMode) => set({ chatMode }),
+      addOptimisticResponse: (response) =>
+        set((state) => {
+          if (state.optimisticResponses.some((r) => r.id === response.id)) {
+            return state;
+          }
+          return {
+            optimisticResponses: [...state.optimisticResponses, response],
+          };
+        }),
+      clearOptimisticResponses: () => set({ optimisticResponses: [] }),
+      resetTransientUi: () => set({ ...initialTransientState }),
+    }),
+    {
+      name: "klecx-ui-store",
+      storage: createJSONStorage(() =>
+        typeof window !== "undefined"
+          ? window.localStorage
+          : {
+              getItem: () => null,
+              setItem: () => {},
+              removeItem: () => {},
+            },
+      ),
+      partialize: partializeUiState,
+    },
+  ),
+);

@@ -16,6 +16,20 @@ const nextConfig = {
       },
     ],
   },
+  async redirects() {
+    return [
+      {
+        source: "/chat/:id",
+        destination: "/workspaces/:id",
+        permanent: true,
+      },
+      {
+        source: "/chat",
+        destination: "/workspaces",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default withNextIntl(nextConfig);

@@ -1,11 +1,6 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../server/db/generated"
 }
 
 datasource db {
@@ -13,91 +8,335 @@ datasource db {
 }
 
 enum UserRole {
+  USER
   ADMIN
+}
+
+enum ProjectRole {
+  VIEWER
+  COMMENTER
+  EDITOR
+  ADMIN
+}
+
+enum WorkspaceRole {
+  NONE
+  VIEWER
+  COMMENTER
+  EDITOR
+  ADMIN
+}
+
+enum TitleSource {
+  AUTO
   USER
 }
 
 model User {
-  id            String    @id @default(uuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  password      String?
-  tokens        Int       @default(10000)
-  role          UserRole  @default(USER)
-  accounts      Account[]
-  chat          Chat[]
+  id                   String            @id
+  name                 String
+  email                String            @unique
+  emailVerified        Boolean           @default(false)
+  image                String?
+  role                 UserRole          @default(USER)
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+  sessions             Session[]
+  accounts             Account[]
+  projects             Project[]
+  workspaces           Workspace[]
+  projectMemberships   ProjectMember[]
+  workspaceMemberships WorkspaceMember[]
+  creditAccount        CreditAccount?
+  preference           UserPreference?
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
 }
 
 model Account {
-  id                String  @id @default(uuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String?
-  access_token      String?
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String?
-  session_state     String?
+  id                    String    @id
+  userId                String
+  accountId             String
+  providerId            String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
+  @@unique([providerId, accountId])
+  @@index([userId])
+  @@map("accounts")
 }
 
-model VerificationToken {
-  id      String   @id @default(uuid())
-  email   String
-  token   String   @unique
-  expires DateTime
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  @@unique([email, token])
+  @@index([identifier])
+  @@map("verifications")
 }
 
-model Chat {
-  id        String     @id @default(uuid())
-  title     String
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  createdBy String
-  response  Response[]
+model Project {
+  id          String          @id @default(uuid(7))
+  ownerId     String
+  name        String
+  description String?
+  archivedAt  DateTime?
+  deletedAt   DateTime?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  owner       User            @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  workspaces  Workspace[]
+  members     ProjectMember[]
 
-  user User @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  @@index([ownerId, deletedAt, updatedAt(sort: Desc)])
+  @@map("projects")
 }
 
-enum ResponseType {
+model Workspace {
+  id             String            @id @default(uuid(7))
+  ownerId        String
+  projectId      String?
+  title          String
+  titleSource    TitleSource       @default(AUTO)
+  archivedAt     DateTime?
+  deletedAt      DateTime?
+  lastActivityAt DateTime          @default(now())
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  owner          User              @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  project        Project?          @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  members        WorkspaceMember[]
+  responses      Response[]
+  generations    Generation[]
+
+  @@index([ownerId, deletedAt, lastActivityAt(sort: Desc)])
+  @@index([projectId, deletedAt])
+  @@map("workspaces")
+}
+
+model ProjectMember {
+  id          String      @id @default(uuid(7))
+  projectId   String
+  userId      String
+  role        ProjectRole
+  invitedById String
+  createdAt   DateTime    @default(now())
+  project     Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@index([userId])
+  @@map("project_members")
+}
+
+model WorkspaceMember {
+  id          String        @id @default(uuid(7))
+  workspaceId String
+  userId      String
+  role        WorkspaceRole
+  invitedById String
+  createdAt   DateTime      @default(now())
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([userId])
+  @@map("workspace_members")
+}
+
+enum LedgerType {
+  GRANT
+  RESERVE
+  SETTLE
+  RELEASE
+  REFUND
+  EXPIRE
+  ADJUST
+}
+
+model CreditAccount {
+  id           String         @id @default(uuid(7))
+  userId       String         @unique @map("user_id")
+  planBalance  Int            @default(0) @map("plan_balance")
+  topupBalance Int            @default(0) @map("topup_balance")
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ledger       CreditLedger[]
+
+  @@map("credit_accounts")
+}
+
+model CreditLedger {
+  id             String        @id @default(uuid(7))
+  accountId      String        @map("account_id")
+  type           LedgerType
+  planDelta      Int           @map("plan_delta")
+  topupDelta     Int           @map("topup_delta")
+  planAfter      Int           @map("plan_after")
+  topupAfter     Int           @map("topup_after")
+  generationId   String?       @map("generation_id")
+  actorId        String?       @map("actor_id")
+  reason         String?
+  estimated      Boolean       @default(false)
+  idempotencyKey String        @unique @map("idempotency_key")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  account        CreditAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId, createdAt(sort: Desc)])
+  @@index([generationId])
+  @@map("credit_ledger")
+}
+
+
+enum ResponseKind {
   TEXT
   IMAGE
 }
 
+enum ResponseOrigin {
+  DIRECT
+  PROMOTED
+}
+
+enum VersionStatus {
+  STREAMING
+  COMPLETE
+  FAILED
+}
+
 model Response {
-  id            String       @id @default(uuid())
-  chatId        String
-  question      String
-  response      String
-  type          ResponseType @default(TEXT)
-  imageUrl      String?      @db.Text
-  mimeType      String?
-  interactionId String?
-  createdAt     DateTime     @default(now())
-  chat          Chat         @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  id              String            @id @default(uuid(7))
+  workspaceId     String            @map("workspace_id")
+  createdById     String            @map("created_by_id")
+  prompt          String            @db.Text
+  kind            ResponseKind      @default(TEXT)
+  origin          ResponseOrigin    @default(DIRECT)
+  sortAt          DateTime          @default(now()) @map("sort_at")
+  activeVersionId String?           @unique @map("active_version_id")
+  deletedAt       DateTime?         @map("deleted_at")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  workspace       Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  versions        ResponseVersion[]
+
+  @@index([workspaceId, deletedAt, sortAt, id])
+  @@map("responses")
 }
 
-model TokenUsage {
-  id         String   @id @default(uuid())
-  userId     String
-  responseId String
-  token      Int
-  usedAt     DateTime @default(now())
+model ResponseVersion {
+  id              String         @id @default(uuid(7))
+  responseId      String         @map("response_id")
+  number          Int
+  status          VersionStatus  @default(STREAMING)
+  content         String         @default("") @db.Text
+  thoughtSummary  String?        @map("thought_summary") @db.Text
+  modelKey        String         @map("model_key")
+  providerModelId String         @map("provider_model_id")
+  promptVersion   String         @map("prompt_version")
+  generationId    String?        @unique @map("generation_id")
+  createdById     String         @map("created_by_id")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  response        Response       @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  edits           ResponseEdit[]
+
+  @@unique([responseId, number])
+  @@index([responseId, createdAt])
+  @@map("response_versions")
 }
 
-model TemplatePrompt {
-  id       String   @id @default(uuid())
-  prompt   String
-  category String
-  createAt DateTime @default(now())
+model ResponseEdit {
+  id        String          @id @default(uuid(7))
+  versionId String          @map("version_id")
+  revision  Int
+  content   String          @db.Text
+  editorId  String          @map("editor_id")
+  createdAt DateTime        @default(now()) @map("created_at")
+  version   ResponseVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+
+  @@unique([versionId, revision])
+  @@map("response_edits")
+}
+
+
+enum GenStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum GenKind {
+  TEXT
+  IMAGE
+  ANNOTATION_REPLY
+  QUESTION_BATCH
+  TITLE
+  SPEECH
+}
+
+model Generation {
+  id              String      @id @default(uuid(7))
+  workspaceId     String      @map("workspace_id")
+  responseId      String?     @map("response_id")
+  versionId       String?     @map("version_id")
+  actorId         String      @map("actor_id")
+  billedAccountId String      @map("billed_account_id")
+  kind            GenKind
+  status          GenStatus   @default(QUEUED)
+  modelKey        String      @map("model_key")
+  providerModelId String      @map("provider_model_id")
+  promptVersion   String      @map("prompt_version")
+  idempotencyKey  String      @map("idempotency_key")
+  reservedCredits Int         @default(0) @map("reserved_credits")
+  chargedCredits  Int         @default(0) @map("charged_credits")
+  usage           Json?
+  errorCode       String?     @map("error_code")
+  startedAt       DateTime?   @map("started_at")
+  finishedAt      DateTime?   @map("finished_at")
+  createdAt       DateTime    @default(now()) @map("created_at")
+
+  workspace       Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([actorId, idempotencyKey])
+  @@index([workspaceId, createdAt])
+  @@index([status, startedAt])
+  @@index([billedAccountId, createdAt])
+  @@map("generations")
+}
+
+model UserPreference {
+  userId     String   @id @map("user_id")
+  uiLocale   String?  @map("ui_locale")
+  aiLanguage String?  @map("ai_language")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preferences")
 }

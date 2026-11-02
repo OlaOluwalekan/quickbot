@@ -1,17 +1,17 @@
 "use client";
 
 import Image from "next/image";
-import LinkButton from "../ui/button/LinkButton";
+import Link from "next/link";
 import { useEffect } from "react";
-import { useDispatch } from "react-redux";
-import { setCurrentPageTitle } from "@/features/generalSlice";
+import { useUiStore } from "@/lib/stores/ui";
+import { Button } from "@/components/ui/button";
 
 const NotFound = () => {
-  const dispatch = useDispatch();
+  const setCurrentPageTitle = useUiStore((s) => s.setCurrentPageTitle);
 
   useEffect(() => {
-    dispatch(setCurrentPageTitle(""));
-  }, []);
+    setCurrentPageTitle("");
+  }, [setCurrentPageTitle]);
 
   return (
     <div className="w-full h-full flex flex-col justify-center items-center gap-5">
@@ -25,13 +25,17 @@ const NotFound = () => {
         />
       </div>
       <div className="flex flex-col justify-center items-center gap-2">
-        <p className="text-xl font-semibold">
+        <p className="text-xl font-semibold text-fg">
           Sorry! This page cannot be found
         </p>
-        <p>It has either been removed or does not exist</p>
+        <p className="text-sm text-muted">
+          It has either been removed or does not exist
+        </p>
       </div>
       <div>
-        <LinkButton size="medium" text="Back Home" href="/" theme="primary" />
+        <Button asChild>
+          <Link href="/">Back Home</Link>
+        </Button>
       </div>
     </div>
   );

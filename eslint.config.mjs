@@ -3,6 +3,14 @@ import typescript from "eslint-config-next/typescript";
 
 /** @type {import('eslint').Linter.Config[]} */
 const eslintConfig = [
+  {
+    ignores: [
+      ".next/**",
+      "node_modules/**",
+      "coverage/**",
+      "server/db/generated/**",
+    ],
+  },
   ...coreWebVitals,
   ...typescript,
   {

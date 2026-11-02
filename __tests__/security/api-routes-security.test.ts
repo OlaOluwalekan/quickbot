@@ -1,142 +1,114 @@
 /**
  * @jest-environment node
  */
+const mockGetSession = jest.fn();
 
-jest.mock("server-only", () => {});
-jest.mock("../../auth", () => ({
-  signIn: jest.fn(),
-  auth: jest.fn(),
-}));
-jest.mock("../../utils/db", () => ({
-  db: {
-    user: {
-      findUnique: jest.fn(),
-      create: jest.fn(),
-    },
-    verificationToken: {
-      findFirst: jest.fn(),
-      delete: jest.fn(),
-      create: jest.fn(),
+jest.mock("../../server/auth/auth", () => ({
+  auth: {
+    api: {
+      getSession: (...args: unknown[]) => mockGetSession(...args),
     },
   },
 }));
-jest.mock("../../utils/emails/send-verification-email", () => ({
-  sendVerificationEmail: jest.fn().mockResolvedValue({ success: true }),
-}));
 
-import { POST as registerHandler } from "../../app/api/auth/register/route";
-import { POST as resendHandler } from "../../app/api/auth/resend-verification/route";
-import { POST as loginHandler } from "../../app/api/auth/login/route";
-import { db } from "../../utils/db";
-import bcrypt from "bcryptjs";
+import { NextRequest } from "next/server";
+import { getActor } from "../../server/auth/session";
+import { route } from "../../server/http/route";
 
-describe("Security: API Route Response Leak Prevention", () => {
-  beforeAll(() => {
-    process.env.AUTH_SECRET = "test-auth-secret-key-32-characters-minimum";
+describe("Security: Better Auth Session & Bearer Token Resolution (Step 1.3)", () => {
+  beforeEach(() => {
+    mockGetSession.mockReset();
   });
 
-  test("register route NEVER leaks verification token or password hash", async () => {
-    (db.user.findUnique as jest.Mock).mockResolvedValue(null);
-    (db.user.create as jest.Mock).mockResolvedValue({
-      id: "new-user-123",
-      email: "newuser@example.com",
-      name: "New User",
-      password: "$2a$10$hashedPasswordThatMustNeverBeReturned",
-    });
-    (db.verificationToken.create as jest.Mock).mockResolvedValue({
-      id: "vt-1",
-      email: "newuser@example.com",
-      token: "secret-token-12345",
-      expires: new Date(),
-    });
-
-    const req = {
-      json: async () => ({
-        email: "newuser@example.com",
-        name: "New User",
-        password: "ValidPassword123!",
-        confirmPassword: "ValidPassword123!",
-      }),
-    } as any;
-
-    const res = await registerHandler(req);
-    const body = await res.json();
-
-    expect(res.status).toBe(201);
-    expect(body.success).toBe(true);
-    expect(body.data.id).toBe("new-user-123");
-    expect(body.data.email).toBe("newuser@example.com");
-
-    // CRITICAL: Token and password must NOT be in the response
-    expect(body.data.token).toBeUndefined();
-    expect(body.data.password).toBeUndefined();
-    expect(JSON.stringify(body)).not.toContain("secret-token-12345");
-    expect(JSON.stringify(body)).not.toContain("hashedPassword");
-  });
-
-  test("resend-verification route NEVER leaks token or exposes user existence", async () => {
-    (db.user.findUnique as jest.Mock).mockResolvedValue({
-      id: "u-1",
-      email: "exists@example.com",
-      emailVerified: null,
-    });
-    (db.verificationToken.create as jest.Mock).mockResolvedValue({
-      token: "leak-attempt-token",
+  test("getActor resolves Actor from Bearer token or cookie headers via Better Auth", async () => {
+    mockGetSession.mockResolvedValue({
+      user: {
+        id: "usr_01",
+        email: "alice@example.com",
+        name: "Alice",
+        role: "USER",
+        image: null,
+      },
+      session: {
+        id: "sess_01",
+      },
     });
 
-    const req = {
-      json: async () => ({ email: "exists@example.com" }),
-    } as any;
+    const req = new NextRequest("http://localhost:3000/api/v1/workspaces", {
+      headers: {
+        Authorization: "Bearer valid_session_token_123",
+      },
+    });
 
-    const res = await resendHandler(req);
-    const body = await res.json();
-
-    expect(res.status).toBe(200);
-    expect(body.message).toBe("If the account exists, an email was sent");
-    expect(body.data).toBeNull();
-    expect(JSON.stringify(body)).not.toContain("leak-attempt-token");
-  });
-
-  test("login route returns generic 401 error with no account enumeration", async () => {
-    // Non-existent user
-    (db.user.findUnique as jest.Mock).mockResolvedValue(null);
-
-    const req = {
-      json: async () => ({ email: "unknown@example.com", password: "password123" }),
-    } as any;
-
-    const res = await loginHandler(req);
-    const body = await res.json();
-
-    expect(res.status).toBe(401);
-    expect(body.message).toBe("Invalid email or password");
-    expect(body.data).toBeNull();
-  });
-
-  test("login route success response NEVER contains password hash", async () => {
-    const passwordHash = await bcrypt.hash("MyValidPass123!", 10);
-    (db.user.findUnique as jest.Mock).mockResolvedValue({
-      id: "user-legit",
-      name: "Legit User",
-      email: "legit@example.com",
-      image: null,
-      emailVerified: new Date(),
+    const actor = await getActor(req);
+    expect(actor).toEqual({
+      userId: "usr_01",
       role: "USER",
-      tokens: 100,
-      password: passwordHash,
+      sessionId: "sess_01",
+      email: "alice@example.com",
+      name: "Alice",
+      image: null,
+    });
+    expect(mockGetSession).toHaveBeenCalledTimes(1);
+    const passedHeaders = mockGetSession.mock.calls[0][0].headers as Headers;
+    expect(passedHeaders.get("authorization")).toBe(
+      "Bearer valid_session_token_123"
+    );
+  });
+
+  test("route() authenticates requests carrying Authorization: Bearer <token>", async () => {
+    mockGetSession.mockResolvedValue({
+      user: {
+        id: "usr_mobile_01",
+        email: "mobile@example.com",
+        name: "Mobile User",
+        role: "USER",
+      },
+      session: {
+        id: "sess_mobile_01",
+      },
     });
 
-    const req = {
-      json: async () => ({ email: "legit@example.com", password: "MyValidPass123!" }),
-    } as any;
+    const handler = route({
+      handler: async ({ actor }) => ({
+        userId: actor.userId,
+        sessionId: actor.sessionId,
+      }),
+    });
 
-    const res = await loginHandler(req);
-    const body = await res.json();
+    const req = new NextRequest("http://localhost:3000/api/v1/me", {
+      headers: {
+        Authorization: "Bearer mobile_bearer_token",
+      },
+    });
 
+    const res = await handler(req);
     expect(res.status).toBe(200);
-    expect(body.success).toBe(true);
-    expect(body.data.id).toBe("user-legit");
-    expect(body.data.password).toBeUndefined();
-    expect(JSON.stringify(body)).not.toContain(passwordHash);
+    const body = await res.json();
+    expect(body).toEqual({
+      data: {
+        userId: "usr_mobile_01",
+        sessionId: "sess_mobile_01",
+      },
+    });
+  });
+
+  test("route() rejects invalid/expired Bearer token with 401 unauthorized", async () => {
+    mockGetSession.mockResolvedValue(null);
+
+    const handler = route({
+      handler: async ({ actor }) => ({ userId: actor.userId }),
+    });
+
+    const req = new NextRequest("http://localhost:3000/api/v1/me", {
+      headers: {
+        Authorization: "Bearer invalid_or_expired_token",
+      },
+    });
+
+    const res = await handler(req);
+    expect(res.status).toBe(401);
+    const body = await res.json();
+    expect(body.error.code).toBe("unauthorized");
   });
 });

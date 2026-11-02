@@ -18,6 +18,7 @@ export EMAIL_FROM="Klecx <ci@example.com>"
 npx prisma validate
 npx prisma migrate deploy
 npm run lint
+npm run check:tokens
 npm run typecheck
 npm test -- --ci
 npm run build

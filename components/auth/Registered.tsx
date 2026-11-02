@@ -1,12 +1,14 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ChangeEvent, FormEvent, useEffect, useState, useTransition } from "react";
-import InputWithIcon from "../ui/inputs/InputWithIcon";
-import { FaEnvelope, FaEnvelopeCircleCheck } from "react-icons/fa6";
-import BasicButton from "../ui/button/BasicButton";
-import Alert from "../alert/Alert";
+import { FormEvent, useEffect, useState, useTransition } from "react";
+import { AlertTriangle, CheckCircle2, Mail, MailCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { authClient } from "@/lib/auth-client";
+import { DEFAULT_LOGIN_REDIRECT } from "@/utils/routes";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 const RESEND_SECONDS = 15;
 
@@ -23,11 +25,9 @@ const Registered = ({
   const [response, setResponse] = useState<{
     message: string;
     success: boolean;
-    data: any;
   }>({
     message: "",
     success: false,
-    data: null,
   });
   const [count, setCount] = useState(0);
 
@@ -39,10 +39,6 @@ const Registered = ({
     }
   }, [email, router]);
 
-  const handleResendClick = () => {
-    setCount(RESEND_SECONDS);
-  };
-
   useEffect(() => {
     let interval: NodeJS.Timeout | undefined;
     if (count > 0) {
@@ -53,93 +49,106 @@ const Registered = ({
     return () => clearInterval(interval);
   }, [count]);
 
-  useEffect(() => {
-    const interval = setTimeout(() => {
-      setResponse({ message: "", success: false, data: null });
-    }, 3500);
-
-    return () => clearTimeout(interval);
-  }, [response]);
-
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setResponse({ message: "", success: false, data: null });
+    const targetEmail = (userEmail || email || "").trim();
+    if (!targetEmail) return;
+    setResponse({ message: "", success: false });
 
     startSendingEmail(async () => {
       try {
-        const res = await fetch("/api/auth/resend-verification", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: userEmail || email }),
+        await authClient.sendVerificationEmail({
+          email: targetEmail,
+          callbackURL: DEFAULT_LOGIN_REDIRECT,
         });
-        const json = await res.json();
         setResponse({
-          message: json.message || "If the account exists, an email was sent",
-          success: json.success ?? true,
-          data: null,
+          message: "If the account exists, a verification email was sent.",
+          success: true,
         });
-        handleResendClick();
+        setCount(RESEND_SECONDS);
       } catch (err: unknown) {
         setResponse({
-          message: err instanceof Error ? err.message : "Failed to send verification email",
+          message:
+            err instanceof Error
+              ? err.message
+              : "Failed to send verification email",
           success: false,
-          data: null,
         });
       }
     });
   };
 
   return (
-    <div className="w-full max-w-md rounded-3xl border border-slate-200/90 dark:border-slate-800/90 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl p-6 sm:p-8 shadow-2xl shadow-indigo-500/10 text-center">
-      <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/25 text-indigo-500 flex items-center justify-center text-2xl mx-auto mb-4">
-        <FaEnvelopeCircleCheck />
+    <div className="w-full max-w-md rounded-3xl border border-border bg-surface/90 backdrop-blur-xl p-6 sm:p-8 shadow-lg text-center">
+      <div className="w-14 h-14 rounded-2xl bg-accent-soft border border-border text-accent flex items-center justify-center text-2xl mx-auto mb-4">
+        <MailCheck className="h-6 w-6" strokeWidth={1.5} />
       </div>
 
-      <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white mb-2">
+      <h1 className="text-2xl font-extrabold text-fg mb-2">
         {t("registeredTitle")}
       </h1>
 
       <form onSubmit={handleSubmit} className="space-y-4 mt-4" noValidate>
         {email ? (
-          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+          <p className="text-xs sm:text-sm text-muted leading-relaxed">
             {t("registeredDescription")}
           </p>
         ) : (
-          <Alert
-            message="No account email provided. Redirecting..."
-            success={false}
-          />
+          <div
+            role="alert"
+            className="flex items-center justify-center gap-2 rounded-xl border border-danger/30 bg-danger/10 px-3.5 py-2.5 text-xs font-medium text-danger"
+          >
+            <AlertTriangle className="h-4 w-4 shrink-0" strokeWidth={1.5} />
+            <span>No account email provided. Redirecting...</span>
+          </div>
         )}
 
-        <InputWithIcon
-          type="email"
-          placeholder={t("emailPlaceholder")}
-          icons={<FaEnvelope />}
-          name="email"
-          value={userEmail}
-          onChange={(e: ChangeEvent<HTMLInputElement>) =>
-            setUserEmail(e.target.value)
-          }
-          readonly={true}
-        />
+        <div className="relative flex items-center">
+          <Mail
+            className="pointer-events-none absolute left-3 h-4 w-4 text-subtle"
+            strokeWidth={1.5}
+          />
+          <Input
+            type="email"
+            placeholder={t("emailPlaceholder")}
+            name="email"
+            value={userEmail}
+            onChange={(e) => setUserEmail(e.target.value)}
+            readOnly
+            className="bg-surface-2 pl-9 text-muted"
+          />
+        </div>
 
         {response.message && (
-          <Alert message={response.message} success={response.success} />
+          <div
+            role="alert"
+            className={cn(
+              "flex items-center justify-center gap-2 rounded-xl border px-3.5 py-2.5 text-xs font-medium sm:text-sm",
+              response.success
+                ? "border-success/30 bg-success/10 text-success"
+                : "border-danger/30 bg-danger/10 text-danger"
+            )}
+          >
+            {response.success ? (
+              <CheckCircle2 className="h-4 w-4 shrink-0" strokeWidth={1.5} />
+            ) : (
+              <AlertTriangle className="h-4 w-4 shrink-0" strokeWidth={1.5} />
+            )}
+            <span>{response.message}</span>
+          </div>
         )}
 
-        <BasicButton
+        <Button
           type="submit"
-          text={
-            sendingEmail
-              ? tCommon("loading")
-              : count > 0
-              ? `${t("resendEmailLink")} (${count}s)`
-              : t("resendEmailLink")
-          }
-          size="full"
-          theme="primary"
+          className="w-full"
           disabled={sendingEmail || count > 0 || !userEmail}
-        />
+        >
+          {sendingEmail
+            ? tCommon("loading")
+            : count > 0
+            ? `${t("resendEmailLink")} (${count}s)`
+            : t("resendEmailLink")}
+        </Button>
       </form>
     </div>
   );

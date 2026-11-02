@@ -13,4 +13,4 @@ export const apiAuthPrefix = '/api/auth'
 
 export const apiRoutes = '/api'
 
-export const DEFAULT_LOGIN_REDIRECT = '/chat'
+export const DEFAULT_LOGIN_REDIRECT = '/workspaces'
