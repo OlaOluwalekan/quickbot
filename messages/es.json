@@ -1,6 +1,6 @@
 {
   "Metadata": {
-    "title": "Klecx | Tu Compañero de IA y Estudio Creativo",
+    "title": "Klecx | Tu espacio de trabajo y estudio de colaboración con IA",
     "description": "Obtén respuestas de IA en tiempo real, genera imágenes de calidad de estudio y acelera tu flujo de trabajo con Klecx."
   },
   "Common": {
@@ -127,7 +127,7 @@
     "resendSent": "¡Correo de verificación enviado!"
   },
   "Chat": {
-    "newChat": "Nuevo Chat",
+    "newChat": "Nuevo espacio de trabajo",
     "welcomeTitle": "¿Cómo puede ayudarte Klecx hoy?",
     "welcomeSubtitle": "Haz una pregunta compleja, escribe código o cambia al Modo Imagen para generar arte personalizado.",
     "templateGreeting": "¿Cómo puede ayudarte Klecx hoy?",

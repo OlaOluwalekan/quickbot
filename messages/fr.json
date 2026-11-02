@@ -1,6 +1,6 @@
 {
   "Metadata": {
-    "title": "Klecx | Votre Compagnon IA & Studio Créatif",
+    "title": "Klecx | Votre espace de travail et studio de collaboration basés sur l’IA",
     "description": "Obtenez des réponses IA en temps réel, générez des visuels de qualité studio et accélérez votre flux de travail avec Klecx."
   },
   "Common": {
@@ -127,7 +127,7 @@
     "resendSent": "Email de confirmation envoyé !"
   },
   "Chat": {
-    "newChat": "Nouvelle discussion",
+    "newChat": "Nouvel espace de travail",
     "welcomeTitle": "Comment Klecx peut-il vous aider aujourd'hui ?",
     "welcomeSubtitle": "Posez une question complexe, écrivez du code ou passez en mode Image pour générer des illustrations sur mesure.",
     "templateGreeting": "Comment Klecx peut-il vous aider aujourd'hui ?",

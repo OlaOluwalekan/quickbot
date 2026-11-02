@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { getActor } from "@/server/auth/session";
 import Logout from "@/components/auth/Logout";
 import LocaleSwitcher from "@/components/layout/locale-switcher";
@@ -11,6 +12,14 @@ import { Button } from "@/components/ui/button";
 import { SessionProps } from "@/types/user";
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Settings",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 const SettingsPage = async () => {
   const actor = await getActor();

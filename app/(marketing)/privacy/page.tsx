@@ -1,12 +1,27 @@
-"use client";
-
 import * as React from "react";
-import { useTranslations } from "next-intl";
+import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { LegalNav } from "@/components/marketing/legal-nav";
 import { Shield, Lock, Server, Clock, UserCheck, AlertTriangle, Mail } from "lucide-react";
 
-export default function PrivacyPage() {
-  const t = useTranslations("Legal");
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("Legal");
+  return {
+    title: `${t("privacy.title")} · Klecx`,
+    description: t("privacy.subtitle"),
+    alternates: {
+      canonical: "/privacy",
+    },
+    openGraph: {
+      title: `${t("privacy.title")} · Klecx`,
+      description: t("privacy.subtitle"),
+      url: "/privacy",
+    },
+  };
+}
+
+export default async function PrivacyPage() {
+  const t = await getTranslations("Legal");
 
   return (
     <div className="py-12 md:py-16">

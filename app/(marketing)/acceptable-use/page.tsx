@@ -1,12 +1,27 @@
-"use client";
-
 import * as React from "react";
-import { useTranslations } from "next-intl";
+import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { LegalNav } from "@/components/marketing/legal-nav";
 import { CheckCircle2, AlertOctagon, ShieldAlert, Mail, Lock } from "lucide-react";
 
-export default function AcceptableUsePage() {
-  const t = useTranslations("Legal");
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("Legal");
+  return {
+    title: `${t("acceptableUse.title")} · Klecx`,
+    description: t("acceptableUse.subtitle"),
+    alternates: {
+      canonical: "/acceptable-use",
+    },
+    openGraph: {
+      title: `${t("acceptableUse.title")} · Klecx`,
+      description: t("acceptableUse.subtitle"),
+      url: "/acceptable-use",
+    },
+  };
+}
+
+export default async function AcceptableUsePage() {
+  const t = await getTranslations("Legal");
 
   // Get raw items array
   const rawItems = t.raw("acceptableUse.prohibitedItems") as string[];

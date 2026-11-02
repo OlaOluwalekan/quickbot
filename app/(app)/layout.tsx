@@ -1,4 +1,5 @@
 import { ReactNode } from "react";
+import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { requireActor } from "@/server/auth/session";
 import { getAccountByUserId } from "@/server/services/credits";
@@ -11,6 +12,13 @@ import type {
   SidebarProjectItem,
   SidebarWorkspaceItem,
 } from "@/components/layout/types";
+
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const actor = await requireActor();
