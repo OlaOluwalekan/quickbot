@@ -20,6 +20,22 @@ export async function proxy(req: NextRequest) {
   const { nextUrl } = req;
   const { pathname } = nextUrl;
 
+  // Maintenance mode handling (Step 4.3)
+  if (process.env.MAINTENANCE_MODE === "true") {
+    if (
+      pathname !== "/maintenance" &&
+      pathname !== "/status" &&
+      !pathname.startsWith("/api/health") &&
+      !pathname.startsWith("/api/ready")
+    ) {
+      return attachSecurityHeaders(
+        NextResponse.redirect(new URL("/maintenance", nextUrl)),
+        pathname,
+      );
+    }
+    return attachSecurityHeaders(NextResponse.next(), pathname);
+  }
+
   // Leave Better Auth, webhooks, cron jobs, and shared links public
   if (
     pathname.startsWith("/api/auth") ||
@@ -40,7 +56,8 @@ export async function proxy(req: NextRequest) {
 
   const isPublicRoute =
     publicRoutes.includes(pathname) ||
-    pathname.startsWith("/help/");
+    pathname.startsWith("/help/") ||
+    pathname === "/maintenance";
 
   const isAuthRoute =
     authRoutes.includes(pathname);

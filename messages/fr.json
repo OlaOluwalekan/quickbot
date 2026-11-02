@@ -978,5 +978,54 @@
     },
     "incidentHeading": "Incidents Récents",
     "noIncidents": "Aucun incident signalé au cours des 90 derniers jours."
+  },
+  "Errors": {
+    "notFound": {
+      "title": "Page introuvable",
+      "description": "La page que vous recherchez n'existe pas ou a été déplacée.",
+      "searchPlaceholder": "Rechercher des articles d'aide...",
+      "searchButton": "Rechercher",
+      "popularLinksHeading": "Destinations utiles :",
+      "homeLink": "Accueil",
+      "workspacesLink": "Espaces de travail",
+      "helpLink": "Centre d'aide",
+      "supportLink": "Contacter le support",
+      "statusLink": "État du système"
+    },
+    "workspaceNotFound": {
+      "title": "Espace de travail introuvable",
+      "description": "Cet espace de travail n'existe pas ou vous n'y avez pas accès.",
+      "backButton": "Retour aux espaces de travail",
+      "homeButton": "Accueil"
+    },
+    "generalError": {
+      "title": "Une erreur est survenue",
+      "description": "Une erreur inattendue s'est produite. Rassurez-vous, vos données sont en sécurité.",
+      "digestLabel": "Identifiant de référence :",
+      "retryButton": "Réessayer",
+      "reportButton": "Signaler ce problème",
+      "homeButton": "Retour à l'accueil"
+    },
+    "appError": {
+      "title": "Un problème est survenu dans l'espace",
+      "description": "Impossible de charger cet affichage. Veuillez actualiser ou revenir à la liste de vos espaces.",
+      "retryButton": "Recharger",
+      "workspacesButton": "Retour aux espaces de travail",
+      "reportButton": "Signaler le problème"
+    },
+    "maintenance": {
+      "badge": "Maintenance programmée",
+      "title": "Nous revenons bientôt",
+      "description": "Klecx fait actuellement l'objet d'une maintenance programmée pour améliorer ses performances et sa stabilité. Les services reprendront sous peu.",
+      "statusNotice": "Consultez la disponibilité de notre infrastructure en temps réel.",
+      "viewStatus": "État du système",
+      "supportNotice": "Une urgence ? Contactez-nous à"
+    },
+    "offline": {
+      "message": "Vous êtes actuellement hors ligne. Vérifiez votre connexion internet.",
+      "reconnecting": "Reconnexion en cours...",
+      "retryButton": "Réessayer la connexion",
+      "dismiss": "Ignorer"
+    }
   }
 }

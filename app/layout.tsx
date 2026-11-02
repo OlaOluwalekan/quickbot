@@ -4,6 +4,7 @@ import "./globals.css";
 import QueryProvider from "@/components/providers/query-provider";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
+import { OfflineBanner } from "@/components/offline/offline-banner";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 
@@ -100,6 +101,7 @@ export default async function RootLayout({
               enableSystem
               disableTransitionOnChange
             >
+              <OfflineBanner />
               {children}
               <Toaster position="bottom-right" />
             </ThemeProvider>

@@ -978,5 +978,54 @@
     },
     "incidentHeading": "Incidentes Recientes",
     "noIncidents": "No se han reportado incidentes en los últimos 90 días."
+  },
+  "Errors": {
+    "notFound": {
+      "title": "Página no encontrada",
+      "description": "La página que buscas no existe o ha sido movida.",
+      "searchPlaceholder": "Buscar artículos de ayuda o guías...",
+      "searchButton": "Buscar",
+      "popularLinksHeading": "Destinos útiles:",
+      "homeLink": "Inicio",
+      "workspacesLink": "Espacios de trabajo",
+      "helpLink": "Centro de ayuda",
+      "supportLink": "Contactar soporte",
+      "statusLink": "Estado del sistema"
+    },
+    "workspaceNotFound": {
+      "title": "Espacio de trabajo no encontrado",
+      "description": "Este espacio de trabajo no existe o no tienes acceso.",
+      "backButton": "Volver a los espacios de trabajo",
+      "homeButton": "Inicio"
+    },
+    "generalError": {
+      "title": "Algo salió mal",
+      "description": "Ocurrió un error inesperado al procesar tu solicitud. No te preocupes, tus datos están a salvo.",
+      "digestLabel": "ID de referencia del error:",
+      "retryButton": "Intentar de nuevo",
+      "reportButton": "Informar sobre este problema",
+      "homeButton": "Volver al inicio"
+    },
+    "appError": {
+      "title": "El espacio encontró un problema",
+      "description": "No pudimos cargar esta vista del espacio de trabajo. Intenta recargar o regresa a tu lista de espacios.",
+      "retryButton": "Recargar vista",
+      "workspacesButton": "Volver a los espacios de trabajo",
+      "reportButton": "Informar sobre el problema"
+    },
+    "maintenance": {
+      "badge": "Mantenimiento programado",
+      "title": "Volveremos enseguida",
+      "description": "Klecx está experimentando un mantenimiento programado para mejorar el rendimiento y la estabilidad. Los servicios se reanudarán pronto.",
+      "statusNotice": "Consulta la disponibilidad en tiempo real en nuestra página de estado.",
+      "viewStatus": "Estado del sistema",
+      "supportNotice": "¿Consulta urgente? Contáctanos en"
+    },
+    "offline": {
+      "message": "Actualmente estás sin conexión. Verifica tu conexión a internet.",
+      "reconnecting": "Reconectando...",
+      "retryButton": "Reintentar conexión",
+      "dismiss": "Descartar"
+    }
   }
 }
