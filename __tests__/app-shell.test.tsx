@@ -44,9 +44,10 @@ jest.mock("next-themes", () => ({
 jest.mock("next-intl", () => ({
   useTranslations: (namespace: string) => {
     return (key: string, values?: Record<string, unknown>) => {
-      const ns = (
-        enMessages as unknown as Record<string, Record<string, string>>
-      )[namespace] || {};
+      const ns =
+        (enMessages as unknown as Record<string, Record<string, string>>)[
+          namespace
+        ] || {};
       let template = ns[key] || key;
       if (values) {
         Object.entries(values).forEach(([k, v]) => {
@@ -155,7 +156,7 @@ function renderAppShell(initialCollapsed = false) {
       >
         <div data-testid="workspace-canvas">Main Workspace Content</div>
       </AppShell>
-    </QueryProvider>,
+    </QueryProvider>
   );
 }
 
@@ -190,7 +191,7 @@ describe("Step 3.4 — AppShell, Sidebar, Topbar, Mobile Drawer & Command Palett
     renderAppShell(false);
     const expandedSidebar = screen.getByLabelText("Sidebar navigation");
     expect(expandedSidebar).toHaveAttribute("data-collapsed", "false");
-    expect(expandedSidebar).toHaveClass("w-[280px]");
+    expect(expandedSidebar).toHaveClass("w-70");
   });
 
   it("toggles sidebar via button and '[' keyboard shortcut, persisting to cookie and Zustand store", () => {
@@ -223,7 +224,7 @@ describe("Step 3.4 — AppShell, Sidebar, Topbar, Mobile Drawer & Command Palett
     expect(getDateBucket(now.toISOString(), now)).toBe("today");
     expect(getDateBucket(yesterday.toISOString(), now)).toBe("yesterday");
     expect(getDateBucket(threeDaysAgo.toISOString(), now)).toBe(
-      "previous7Days",
+      "previous7Days"
     );
     expect(getDateBucket(twentyDaysAgo.toISOString(), now)).toBe("older");
 
@@ -282,7 +283,7 @@ describe("Step 3.4 — AppShell, Sidebar, Topbar, Mobile Drawer & Command Palett
     fireEvent.keyDown(input, { key: "Escape" });
     expect(fetchMock).not.toHaveBeenCalled();
     expect(
-      screen.getByRole("button", { name: /Bernoulli Numbers/i }),
+      screen.getByRole("button", { name: /Bernoulli Numbers/i })
     ).toBeInTheDocument();
 
     // Click again, change title, and press Enter -> saves via PATCH
@@ -300,7 +301,7 @@ describe("Step 3.4 — AppShell, Sidebar, Topbar, Mobile Drawer & Command Palett
     });
     expect(fetchMock.mock.calls[0][0]).toBe("/api/v1/workspaces/ws-today");
     expect(
-      screen.getByRole("button", { name: /Updated Bernoulli Title/i }),
+      screen.getByRole("button", { name: /Updated Bernoulli Title/i })
     ).toBeInTheDocument();
   });
 
@@ -315,16 +316,14 @@ describe("Step 3.4 — AppShell, Sidebar, Topbar, Mobile Drawer & Command Palett
     fireEvent.click(panelBtn);
     expect(panelBtn).toHaveAttribute("aria-pressed", "true");
     expect(
-      screen.getByRole("complementary", { name: /Annotations & Notes/i }),
+      screen.getByRole("complementary", { name: /Annotations & Notes/i })
     ).toBeInTheDocument();
 
     // Open Command Palette via Ctrl+K
     fireEvent.keyDown(window, { key: "k", ctrlKey: true });
     expect(useUiStore.getState().commandPaletteOpen).toBe(true);
     expect(
-      screen.getByPlaceholderText(
-        /Search workspaces, projects, or commands/i,
-      ),
+      screen.getByPlaceholderText(/Search workspaces, projects, or commands/i)
     ).toBeInTheDocument();
   });
 });
