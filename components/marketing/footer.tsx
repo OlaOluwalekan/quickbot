@@ -55,6 +55,16 @@ export function MarketingFooter() {
                 </Link>
               </li>
               <li>
+                <Link href="/help" className="hover:text-fg transition-colors">
+                  {t("help")}
+                </Link>
+              </li>
+              <li>
+                <Link href="/support" className="hover:text-fg transition-colors">
+                  {t("support")}
+                </Link>
+              </li>
+              <li>
                 <Link href="/status" className="hover:text-fg transition-colors">
                   {t("status")}
                 </Link>

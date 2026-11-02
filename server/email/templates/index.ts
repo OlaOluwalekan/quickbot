@@ -10,3 +10,5 @@ export * from "./password-changed";
 export * from "./share-created";
 export * from "./credits-low";
 export * from "./payment-failed";
+export * from "./support-ack";
+export * from "./support-notification";

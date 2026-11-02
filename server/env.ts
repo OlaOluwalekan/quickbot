@@ -15,6 +15,7 @@ export const envSchema = z
     RESEND_API_KEY: z.string().startsWith("re_"),
     EMAIL_FROM: z.string().min(3),
     SUPPORT_EMAIL: z.string().min(3).default("support@mail.klecx.vyraxity.com"),
+    ABUSE_EMAIL: z.string().min(3).default("abuse@mail.klecx.vyraxity.com"),
     GITHUB_CLIENT_ID: z.string().optional(),
     GITHUB_CLIENT_SECRET: z.string().optional(),
     GOOGLE_CLIENT_ID: z.string().optional(),
@@ -89,6 +90,7 @@ export function validateEnv(input: Record<string, unknown> = process.env) {
     GEMINI_TEXT_MODEL_STANDARD: input.GEMINI_TEXT_MODEL_STANDARD || undefined,
     GEMINI_IMAGE_MODEL: input.GEMINI_IMAGE_MODEL || undefined,
     SUPPORT_EMAIL: input.SUPPORT_EMAIL || undefined,
+    ABUSE_EMAIL: input.ABUSE_EMAIL || undefined,
     UPSTASH_REDIS_REST_URL: input.UPSTASH_REDIS_REST_URL || undefined,
     UPSTASH_REDIS_REST_TOKEN: input.UPSTASH_REDIS_REST_TOKEN || undefined,
     TRUST_PROXY:

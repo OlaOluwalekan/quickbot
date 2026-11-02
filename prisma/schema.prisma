@@ -49,6 +49,7 @@ model User {
   workspaceMemberships WorkspaceMember[]
   creditAccount        CreditAccount?
   preference           UserPreference?
+  supportTickets       SupportTicket[]
 
   @@map("users")
 }
@@ -339,4 +340,28 @@ model UserPreference {
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_preferences")
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+model SupportTicket {
+  id          String       @id @default(uuid(7))
+  userId      String?      @map("user_id")
+  email       String
+  topic       String
+  message     String       @db.Text
+  diagnostics Json?
+  status      TicketStatus @default(OPEN)
+  createdAt   DateTime     @default(now()) @map("created_at")
+
+  user        User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([email, createdAt])
+  @@index([status, createdAt])
+  @@map("support_tickets")
 }

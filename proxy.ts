@@ -24,13 +24,12 @@ export async function proxy(req: NextRequest) {
   const sessionCookie = getSessionCookie(req);
   const isLoggedIn = Boolean(sessionCookie);
 
-  const isPublicRoute = publicRoutes.includes(pathname);
+  const isPublicRoute =
+    publicRoutes.includes(pathname) ||
+    pathname.startsWith("/help/");
+
   const isAuthRoute =
-    authRoutes.includes(pathname) ||
-    pathname === "/login" ||
-    pathname === "/register" ||
-    pathname === "/forgot-password" ||
-    pathname === "/reset-password";
+    authRoutes.includes(pathname);
 
   if (isAuthRoute) {
     if (isLoggedIn) {

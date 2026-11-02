@@ -70,7 +70,7 @@ export function getDateBucket(isoDate: string, now = new Date()): DateBucket {
   const startOfToday = new Date(
     now.getFullYear(),
     now.getMonth(),
-    now.getDate(),
+    now.getDate()
   );
   const startOfYesterday = new Date(startOfToday);
   startOfYesterday.setDate(startOfYesterday.getDate() - 1);
@@ -96,7 +96,7 @@ export interface SidebarProps {
   onRequestRenameWorkspace: (workspace: SidebarWorkspaceItem) => void;
   onMoveWorkspace: (
     workspaceId: string,
-    projectId: string | null,
+    projectId: string | null
   ) => Promise<void>;
   onArchiveWorkspace: (workspaceId: string) => Promise<void>;
   onRequestDeleteWorkspace: (workspace: SidebarWorkspaceItem) => void;
@@ -199,10 +199,10 @@ export function Sidebar({
               aria-label={ws.title}
               onClick={onNavigate}
               className={cn(
-                "flex h-9 w-9 mx-auto items-center justify-center rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                "focus-visible:ring-ring mx-auto flex h-9 w-9 items-center justify-center rounded-lg transition-colors focus-visible:ring-2 focus-visible:outline-none",
                 isActive
-                  ? "bg-accent-soft text-accent font-medium border border-border"
-                  : "text-muted hover:bg-surface-2 hover:text-fg",
+                  ? "bg-accent-soft text-accent border-border border font-medium"
+                  : "text-muted hover:bg-surface-2 hover:text-fg"
               )}
             >
               <MessageSquare className="h-4 w-4 shrink-0" strokeWidth={1.5} />
@@ -217,23 +217,23 @@ export function Sidebar({
       <div
         key={ws.id}
         className={cn(
-          "group flex items-center justify-between gap-1 rounded-lg px-2 py-1.5 text-xs sm:text-sm transition-colors",
+          "group flex items-center justify-between gap-1 rounded-lg px-2 py-1.5 text-xs transition-colors sm:text-sm",
           nested && "pl-6",
           isActive
-            ? "bg-accent-soft text-accent font-medium border border-border"
-            : "text-muted hover:bg-surface-2 hover:text-fg",
+            ? "bg-accent-soft text-accent border-border border font-medium"
+            : "text-muted hover:bg-surface-2 hover:text-fg"
         )}
       >
         <Link
           href={`/workspaces/${ws.id}`}
           aria-current={isActive ? "page" : undefined}
           onClick={onNavigate}
-          className="flex min-w-0 flex-1 items-center gap-2 truncate rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="focus-visible:ring-ring flex min-w-0 flex-1 items-center gap-2 truncate rounded-sm focus-visible:ring-2 focus-visible:outline-none"
         >
           <MessageSquare
             className={cn(
               "h-3.5 w-3.5 shrink-0",
-              isActive ? "text-accent" : "text-subtle",
+              isActive ? "text-accent" : "text-subtle"
             )}
             strokeWidth={1.5}
           />
@@ -245,7 +245,7 @@ export function Sidebar({
             <button
               type="button"
               aria-label={`${t("workspaceOptions")}: ${ws.title}`}
-              className="rounded-md p-1 text-subtle opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 hover:bg-surface-3 hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer shrink-0"
+              className="text-subtle hover:bg-surface-3 hover:text-fg focus-visible:ring-ring shrink-0 cursor-pointer rounded-md p-1 opacity-100 focus:opacity-100 focus-visible:ring-2 focus-visible:outline-none sm:opacity-0 sm:group-hover:opacity-100"
             >
               <MoreHorizontal className="h-3.5 w-3.5" strokeWidth={1.5} />
             </button>
@@ -321,22 +321,22 @@ export function Sidebar({
         aria-label="Sidebar navigation"
         data-collapsed={isCollapsedRail ? "true" : "false"}
         className={cn(
-          "flex h-full flex-col border-r border-border bg-surface text-fg select-none transition-[width] duration-200 ease-in-out",
-          isCollapsedRail ? "w-16" : "w-[280px]",
+          "border-border bg-surface text-fg flex h-full flex-col border-r transition-[width] duration-200 ease-in-out select-none",
+          isCollapsedRail ? "w-16" : "w-70"
         )}
       >
         {/* Top Brand + Collapse Rail Toggle */}
         <div
           className={cn(
-            "flex h-14 shrink-0 items-center border-b border-border px-3",
-            isCollapsedRail ? "justify-center" : "justify-between",
+            "border-border flex h-14 shrink-0 items-center border-b px-3",
+            isCollapsedRail ? "justify-center" : "justify-between"
           )}
         >
           {!isCollapsedRail && (
             <Link
               href="/workspaces"
               onClick={onNavigate}
-              className="flex items-center gap-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="focus-visible:ring-ring flex items-center gap-2 rounded-md focus-visible:ring-2 focus-visible:outline-none"
             >
               <Logo size="icon" />
               <AppName />
@@ -366,7 +366,7 @@ export function Sidebar({
               <TooltipContent side="right">
                 <span>
                   {isCollapsedRail ? t("expandSidebar") : t("collapseSidebar")}{" "}
-                  <kbd className="ml-1 rounded bg-surface-3 px-1 py-0.5 font-mono text-[10px]">
+                  <kbd className="bg-surface-3 ml-1 rounded px-1 py-0.5 font-mono text-[10px]">
                     [
                   </kbd>
                 </span>
@@ -376,7 +376,7 @@ export function Sidebar({
         </div>
 
         {/* Primary Actions: New Workspace & Search (Command Palette) */}
-        <div className="flex flex-col gap-1.5 border-b border-border p-2.5">
+        <div className="border-border flex flex-col gap-1.5 border-b p-2.5">
           {isCollapsedRail ? (
             <>
               <Tooltip>
@@ -416,7 +416,7 @@ export function Sidebar({
                 <TooltipContent side="right">
                   <span>
                     {t("search")}{" "}
-                    <kbd className="ml-1 rounded bg-surface-3 px-1 py-0.5 font-mono text-[10px]">
+                    <kbd className="bg-surface-3 ml-1 rounded px-1 py-0.5 font-mono text-[10px]">
                       ⌘K
                     </kbd>
                   </span>
@@ -436,13 +436,13 @@ export function Sidebar({
                 type="button"
                 variant="outline"
                 onClick={onOpenSearch}
-                className="w-full justify-between text-muted hover:text-fg"
+                className="text-muted hover:text-fg w-full justify-between"
               >
                 <span className="flex items-center gap-2">
                   <Search className="h-4 w-4" strokeWidth={1.5} />
                   <span>{t("search")}</span>
                 </span>
-                <kbd className="rounded border border-border bg-surface-2 px-1.5 py-0.5 font-mono text-[10px] text-subtle">
+                <kbd className="border-border bg-surface-2 text-subtle rounded border px-1.5 py-0.5 font-mono text-[10px]">
                   Ctrl K
                 </kbd>
               </Button>
@@ -451,7 +451,7 @@ export function Sidebar({
         </div>
 
         {/* Scrollable Navigation Content */}
-        <div className="flex-1 min-h-0 overflow-y-auto px-2 py-2.5 space-y-4">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-2 py-2.5">
           {/* Projects Tree */}
           <div>
             {isCollapsedRail ? (
@@ -466,7 +466,7 @@ export function Sidebar({
                       onClick={onRequestCreateProject}
                     >
                       <FolderKanban
-                        className="h-4 w-4 text-accent"
+                        className="text-accent h-4 w-4"
                         strokeWidth={1.5}
                       />
                     </Button>
@@ -481,7 +481,7 @@ export function Sidebar({
                     type="button"
                     aria-expanded={projectsSectionOpen}
                     onClick={() => setProjectsSectionOpen((o) => !o)}
-                    className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-subtle hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm cursor-pointer"
+                    className="text-subtle hover:text-fg focus-visible:ring-ring flex cursor-pointer items-center gap-1 rounded-sm text-[11px] font-semibold tracking-wider uppercase focus-visible:ring-2 focus-visible:outline-none"
                   >
                     {projectsSectionOpen ? (
                       <ChevronDown className="h-3 w-3" strokeWidth={1.5} />
@@ -507,13 +507,13 @@ export function Sidebar({
                 {projectsSectionOpen && (
                   <div className="mt-1 space-y-0.5">
                     {projects.length === 0 ? (
-                      <p className="px-2 py-1 text-xs text-subtle">
+                      <p className="text-subtle px-2 py-1 text-xs">
                         {t("noProjects")}
                       </p>
                     ) : (
                       projects.map((project) => {
                         const isExpanded = Boolean(
-                          expandedProjectIds[project.id],
+                          expandedProjectIds[project.id]
                         );
                         const childWorkspaces =
                           projectWorkspacesMap[project.id] ?? [];
@@ -524,29 +524,29 @@ export function Sidebar({
                               type="button"
                               aria-expanded={isExpanded}
                               onClick={() => toggleProjectNode(project.id)}
-                              className="flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-xs sm:text-sm text-muted hover:bg-surface-2 hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
+                              className="text-muted hover:bg-surface-2 hover:text-fg focus-visible:ring-ring flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-xs focus-visible:ring-2 focus-visible:outline-none sm:text-sm"
                             >
                               <span className="flex min-w-0 items-center gap-2 truncate">
                                 {isExpanded ? (
                                   <ChevronDown
-                                    className="h-3.5 w-3.5 shrink-0 text-subtle"
+                                    className="text-subtle h-3.5 w-3.5 shrink-0"
                                     strokeWidth={1.5}
                                   />
                                 ) : (
                                   <ChevronRight
-                                    className="h-3.5 w-3.5 shrink-0 text-subtle"
+                                    className="text-subtle h-3.5 w-3.5 shrink-0"
                                     strokeWidth={1.5}
                                   />
                                 )}
                                 <FolderKanban
-                                  className="h-3.5 w-3.5 shrink-0 text-accent"
+                                  className="text-accent h-3.5 w-3.5 shrink-0"
                                   strokeWidth={1.5}
                                 />
                                 <span className="truncate font-medium">
                                   {project.name}
                                 </span>
                               </span>
-                              <span className="text-[11px] text-subtle">
+                              <span className="text-subtle text-[11px]">
                                 {childWorkspaces.length}
                               </span>
                             </button>
@@ -554,7 +554,7 @@ export function Sidebar({
                             {isExpanded && childWorkspaces.length > 0 && (
                               <div className="space-y-0.5">
                                 {childWorkspaces.map((ws) =>
-                                  renderWorkspaceRow(ws, true),
+                                  renderWorkspaceRow(ws, true)
                                 )}
                               </div>
                             )}
@@ -572,7 +572,7 @@ export function Sidebar({
           <div className="space-y-3">
             {!isCollapsedRail && (
               <div className="px-2">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-subtle">
+                <span className="text-subtle text-[11px] font-semibold tracking-wider uppercase">
                   {t("workspaces")}
                 </span>
               </div>
@@ -588,7 +588,7 @@ export function Sidebar({
                 <div key={bucket} className="space-y-0.5">
                   {!isCollapsedRail && (
                     <div className="px-2 pt-1">
-                      <span className="text-[11px] font-medium text-subtle">
+                      <span className="text-subtle text-[11px] font-medium">
                         {t(bucket)}
                       </span>
                     </div>
@@ -605,7 +605,7 @@ export function Sidebar({
               standaloneByBucket.yesterday.length === 0 &&
               standaloneByBucket.previous7Days.length === 0 &&
               standaloneByBucket.older.length === 0 && (
-                <p className="px-2 py-1 text-xs text-subtle">
+                <p className="text-subtle px-2 py-1 text-xs">
                   {t("noWorkspaces")}
                 </p>
               )}
@@ -615,7 +615,7 @@ export function Sidebar({
           {sharedWorkspaces.length > 0 && (
             <div>
               {isCollapsedRail ? (
-                <div className="flex flex-col items-center gap-1 pt-2 border-t border-border">
+                <div className="border-border flex flex-col items-center gap-1 border-t pt-2">
                   {sharedWorkspaces.map((ws) => renderWorkspaceRow(ws, false))}
                 </div>
               ) : (
@@ -624,21 +624,21 @@ export function Sidebar({
                     type="button"
                     aria-expanded={sharedSectionOpen}
                     onClick={() => setSharedSectionOpen((o) => !o)}
-                    className="flex w-full items-center gap-1 px-2 py-1 text-[11px] font-semibold uppercase tracking-wider text-subtle hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm cursor-pointer"
+                    className="text-subtle hover:text-fg focus-visible:ring-ring flex w-full cursor-pointer items-center gap-1 rounded-sm px-2 py-1 text-[11px] font-semibold tracking-wider uppercase focus-visible:ring-2 focus-visible:outline-none"
                   >
                     {sharedSectionOpen ? (
                       <ChevronDown className="h-3 w-3" strokeWidth={1.5} />
                     ) : (
                       <ChevronRight className="h-3 w-3" strokeWidth={1.5} />
                     )}
-                    <Users className="h-3 w-3 mr-0.5" strokeWidth={1.5} />
+                    <Users className="mr-0.5 h-3 w-3" strokeWidth={1.5} />
                     <span>{t("sharedWithMe")}</span>
                   </button>
 
                   {sharedSectionOpen && (
                     <div className="mt-1 space-y-0.5">
                       {sharedWorkspaces.map((ws) =>
-                        renderWorkspaceRow(ws, false),
+                        renderWorkspaceRow(ws, false)
                       )}
                     </div>
                   )}
@@ -649,7 +649,7 @@ export function Sidebar({
         </div>
 
         {/* Footer: Credits Meter + User Menu */}
-        <div className="shrink-0 border-t border-border p-2.5 space-y-2">
+        <div className="border-border shrink-0 space-y-2 border-t p-2.5">
           {/* Credits Meter */}
           {isCollapsedRail ? (
             <Tooltip>
@@ -660,7 +660,7 @@ export function Sidebar({
                     count: formatNumber(user.creditBalance),
                   })}
                   onClick={onNavigate}
-                  className="flex h-9 w-9 mx-auto items-center justify-center rounded-lg bg-surface-2 text-accent hover:bg-surface-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="bg-surface-2 text-accent hover:bg-surface-3 focus-visible:ring-ring mx-auto flex h-9 w-9 items-center justify-center rounded-lg focus-visible:ring-2 focus-visible:outline-none"
                 >
                   <Coins className="h-4 w-4" strokeWidth={1.5} />
                 </Link>
@@ -679,17 +679,17 @@ export function Sidebar({
               </TooltipContent>
             </Tooltip>
           ) : (
-            <div className="flex items-center justify-between rounded-xl border border-border bg-surface-2 px-3 py-2 text-xs">
-              <div className="flex items-center gap-2 min-w-0">
+            <div className="border-border bg-surface-2 flex items-center justify-between rounded-xl border px-3 py-2 text-xs">
+              <div className="flex min-w-0 items-center gap-2">
                 <Coins
-                  className="h-3.5 w-3.5 shrink-0 text-accent"
+                  className="text-accent h-3.5 w-3.5 shrink-0"
                   strokeWidth={1.5}
                 />
                 <div className="truncate">
-                  <span className="font-semibold text-fg">
+                  <span className="text-fg font-semibold">
                     {t("creditsPlan", { plan: user.planName })}
                   </span>
-                  <span className="mx-1.5 text-subtle">·</span>
+                  <span className="text-subtle mx-1.5">·</span>
                   <span className="text-muted">
                     {t("creditsBalance", {
                       count: formatNumber(user.creditBalance),
@@ -700,7 +700,7 @@ export function Sidebar({
               <Link
                 href="/settings"
                 onClick={onNavigate}
-                className="shrink-0 font-medium text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+                className="text-accent focus-visible:ring-ring shrink-0 rounded-sm font-medium hover:underline focus-visible:ring-2 focus-visible:outline-none"
               >
                 {t("usageLink")}
               </Link>
@@ -714,7 +714,7 @@ export function Sidebar({
                 <button
                   type="button"
                   aria-label={user.name || user.email}
-                  className="flex h-9 w-9 mx-auto items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
+                  className="focus-visible:ring-ring mx-auto flex h-9 w-9 cursor-pointer items-center justify-center rounded-full focus-visible:ring-2 focus-visible:outline-none"
                 >
                   <Avatar className="h-8 w-8">
                     {user.image && (
@@ -726,7 +726,7 @@ export function Sidebar({
               ) : (
                 <button
                   type="button"
-                  className="flex w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
+                  className="hover:bg-surface-2 focus-visible:ring-ring flex w-full cursor-pointer items-center gap-2.5 rounded-xl px-2 py-1.5 text-left focus-visible:ring-2 focus-visible:outline-none"
                 >
                   <Avatar className="h-8 w-8 shrink-0">
                     {user.image && (
@@ -735,10 +735,10 @@ export function Sidebar({
                     <AvatarFallback>{userInitials}</AvatarFallback>
                   </Avatar>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-xs sm:text-sm font-medium text-fg">
+                    <p className="text-fg truncate text-xs font-medium sm:text-sm">
                       {user.name || user.email}
                     </p>
-                    <p className="truncate text-[11px] text-subtle">
+                    <p className="text-subtle truncate text-[11px]">
                       {user.email}
                     </p>
                   </div>
@@ -748,10 +748,10 @@ export function Sidebar({
             <DropdownMenuContent align="end" side="top" className="w-56">
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-0.5">
-                  <p className="text-sm font-medium text-fg truncate">
+                  <p className="text-fg truncate text-sm font-medium">
                     {user.name}
                   </p>
-                  <p className="text-xs text-subtle truncate">{user.email}</p>
+                  <p className="text-subtle truncate text-xs">{user.email}</p>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
@@ -789,7 +789,7 @@ export function Sidebar({
 
               <DropdownMenuItem
                 onSelect={() => {
-                  window.open("https://klecx.com/docs", "_blank", "noopener");
+                  window.open("/help", "_blank", "noopener");
                 }}
               >
                 <HelpCircle className="h-4 w-4" strokeWidth={1.5} />
