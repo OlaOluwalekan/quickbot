@@ -293,8 +293,8 @@ export function ResponseCard({
       (displayedContent.includes("cloudinary") ||
         displayedContent.match(/\.(jpeg|jpg|gif|png|webp)(\?.*)?$/i) !== null));
 
-  // const { content, ...rest } = response;
-  console.log(response.id, "<==>", response.attachments);
+
+
 
   return (
     <div

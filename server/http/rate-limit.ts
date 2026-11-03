@@ -15,7 +15,8 @@ export const policies = {
   "upload":       { n: 30,  window: "10 m" as Duration }, // key: userId
   "share:create": { n: 20,  window: "1 h"  as Duration },
   "invite:send":  { n: 20,  window: "1 h"  as Duration },
-  "support:send": { n: 3,   window: "1 h"  as Duration }, // key: ip or userId
+  "support:send": { n: 3,   window: "1 h"  as Duration }, // key: ip or userId
+  "link:fetch":   { n: 10,  window: "1 m"  as Duration }, // key: userId
 } as const;
 
 export type RateLimitPolicy = keyof typeof policies;

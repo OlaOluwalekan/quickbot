@@ -1,3 +1,4 @@
+import { ingestLinkAttachment } from "./attachment";
 import "server-only";
 import { db } from "@/server/db/client";
 import { Errors } from "@/server/http/errors";
@@ -689,6 +690,7 @@ export async function createAndStreamGeneration(
   }
 
   const contextAttachments: Part[] = [];
+  let existingAttachments: Array<{ id: string; providerId: string }> = [];
   if (attachmentIds && attachmentIds.length > 0) {
     const attachments = await db.attachment.findMany({
       where: { id: { in: attachmentIds } },
@@ -702,6 +704,7 @@ export async function createAndStreamGeneration(
 
     const storage = getStorageProvider();
 
+    existingAttachments = attachments.map((a) => ({ id: a.id, providerId: a.providerId }));
     for (const att of attachments) {
       if (att.workspaceId !== workspaceId) {
         throw Errors.validation([
@@ -740,6 +743,31 @@ export async function createAndStreamGeneration(
           console.error(`Failed to download attachment buffer for ${att.id}:`, err);
         }
       }
+    }
+  }
+
+  // Auto-ingest safe URLs from prompt (Step 5.3: cap 5 links per prompt)
+  const urlMatches = input.prompt.match(/https?:\/\/[^\s<>"'{}|\^`\[\]]+/gi) || [];
+  const promptUrls = urlMatches
+    .map((u) => u.replace(/[.,;!?)]+$/, ""))
+    .slice(0, 5);
+
+  for (const urlStr of promptUrls) {
+    try {
+      const alreadyAttached = existingAttachments.some(
+        (a) => a.providerId === urlStr
+      );
+      if (!alreadyAttached) {
+        const linkAtt = await ingestLinkAttachment(actor, workspaceId, urlStr);
+        attachmentIds = attachmentIds ? [...attachmentIds, linkAtt.id] : [linkAtt.id];
+        existingAttachments.push({ id: linkAtt.id, providerId: urlStr });
+        contextAttachments.push({
+          type: "text",
+          text: `<document name="${linkAtt.originalName}">\n${linkAtt.extractedText || ""}\n</document>`,
+        });
+      }
+    } catch (err: unknown) {
+      console.warn(`[SafeFetch] Could not auto-ingest link "${urlStr}":`, err);
     }
   }
 
