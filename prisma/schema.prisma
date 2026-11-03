@@ -50,6 +50,7 @@ model User {
   creditAccount        CreditAccount?
   preference           UserPreference?
   supportTickets       SupportTicket[]
+  attachments          Attachment[]
 
   @@map("users")
 }
@@ -135,6 +136,7 @@ model Workspace {
   members        WorkspaceMember[]
   responses      Response[]
   generations    Generation[]
+  attachments    Attachment[]
 
   @@index([ownerId, deletedAt, lastActivityAt(sort: Desc)])
   @@index([projectId, deletedAt])
@@ -245,6 +247,7 @@ model Response {
   createdAt       DateTime          @default(now()) @map("created_at")
   workspace       Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   versions        ResponseVersion[]
+  attachments     Attachment[]
 
   @@index([workspaceId, deletedAt, sortAt, id])
   @@map("responses")
@@ -364,4 +367,49 @@ model SupportTicket {
   @@index([email, createdAt])
   @@index([status, createdAt])
   @@map("support_tickets")
+}
+
+enum AttachmentKind {
+  IMAGE
+  DOCUMENT
+  GENERATED_IMAGE
+  GENERATED_DOCUMENT
+  AVATAR
+  AUDIO
+}
+
+enum AttachmentStatus {
+  PENDING
+  READY
+  REJECTED
+  DELETED
+}
+
+model Attachment {
+  id            String           @id @default(uuid(7))
+  ownerId       String           @map("owner_id")
+  workspaceId   String?          @map("workspace_id")
+  responseId    String?          @map("response_id")
+  kind          AttachmentKind
+  status        AttachmentStatus @default(PENDING)
+  providerId    String           @map("provider_id")
+  resourceType  String           @map("resource_type")
+  mime          String
+  bytes         Int
+  width         Int?
+  height        Int?
+  originalName  String           @map("original_name")
+  sha256        String?
+  extractedText String?          @map("extracted_text") @db.Text
+  createdAt     DateTime         @default(now()) @map("created_at")
+  deletedAt     DateTime?        @map("deleted_at")
+
+  user      User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  response  Response?  @relation(fields: [responseId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, createdAt])
+  @@index([ownerId])
+  @@index([status, createdAt])
+  @@map("attachments")
 }

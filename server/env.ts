@@ -22,6 +22,11 @@ export const envSchema = z
     GOOGLE_CLIENT_SECRET: z.string().optional(),
     UPSTASH_REDIS_REST_URL: z.string().url().optional(),
     UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
+    CLOUDINARY_CLOUD_NAME: z.string().optional(),
+    CLOUDINARY_API_KEY: z.string().optional(),
+    CLOUDINARY_API_SECRET: z.string().optional(),
+    CLOUDINARY_UPLOAD_FOLDER: z.string().default("klecx/dev"),
+    NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: z.string().optional(),
     TRUST_PROXY: z
       .enum(["true", "false"])
       .default("false")
@@ -67,6 +72,21 @@ export const envSchema = z
         });
       }
     }
+
+    const hasCloudinaryName = Boolean(data.CLOUDINARY_CLOUD_NAME);
+    const hasCloudinaryKey = Boolean(data.CLOUDINARY_API_KEY);
+    const hasCloudinarySecret = Boolean(data.CLOUDINARY_API_SECRET);
+    if (
+      (hasCloudinaryName || hasCloudinaryKey || hasCloudinarySecret) &&
+      !(hasCloudinaryName && hasCloudinaryKey && hasCloudinarySecret)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["CLOUDINARY_CLOUD_NAME"],
+        message:
+          "CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET must all be set together",
+      });
+    }
   });
 
 export function validateEnv(input: Record<string, unknown> = process.env) {
@@ -93,6 +113,12 @@ export function validateEnv(input: Record<string, unknown> = process.env) {
     ABUSE_EMAIL: input.ABUSE_EMAIL || undefined,
     UPSTASH_REDIS_REST_URL: input.UPSTASH_REDIS_REST_URL || undefined,
     UPSTASH_REDIS_REST_TOKEN: input.UPSTASH_REDIS_REST_TOKEN || undefined,
+    CLOUDINARY_CLOUD_NAME: input.CLOUDINARY_CLOUD_NAME || undefined,
+    CLOUDINARY_API_KEY: input.CLOUDINARY_API_KEY || undefined,
+    CLOUDINARY_API_SECRET: input.CLOUDINARY_API_SECRET || undefined,
+    CLOUDINARY_UPLOAD_FOLDER: input.CLOUDINARY_UPLOAD_FOLDER || "klecx/dev",
+    NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME:
+      input.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || input.CLOUDINARY_CLOUD_NAME || undefined,
     TRUST_PROXY:
       input.TRUST_PROXY === undefined || input.TRUST_PROXY === ""
         ? undefined
