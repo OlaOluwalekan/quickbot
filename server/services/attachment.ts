@@ -1,3 +1,5 @@
+import { safeFetch, SsrfError } from "../files/safe-fetch";
+import { limit } from "../http/rate-limit";
 import "server-only";
 import crypto from "crypto";
 import { fileTypeFromBuffer } from "file-type";
@@ -474,6 +476,11 @@ export async function getAttachmentUrl(
 
   const storage = getStorageProvider();
 
+  // Ingested Links (Direct URL)
+  if (attachment.providerId.startsWith("http://") || attachment.providerId.startsWith("https://")) {
+    return { url: attachment.providerId, expiresIn: null };
+  }
+
   // Public Avatars
   if (attachment.kind === "AVATAR") {
     const url = storage.publicUrl(attachment.providerId, {
@@ -572,4 +579,64 @@ export async function listWorkspaceAttachments(
       createdAt: true,
     },
   });
+}
+
+/**
+ * Step 5.3: Ingest a link using the SSRF-proof safe fetcher.
+ * Rate limited to 10/min (link:fetch).
+ * Stores as an Attachment of kind DOCUMENT with originalName = hostname.
+ */
+export async function ingestLinkAttachment(
+  actor: Actor,
+  workspaceId: string,
+  url: string,
+  options?: { dnsLookup?: (hostname: string) => Promise<{ address: string; family: number }[]>; allowedPorts?: number[]; allowLoopbackForTesting?: boolean }
+) {
+  const access = await requireWorkspace(actor, workspaceId, "workspace.upload");
+
+  // 1. Rate limiting (10 fetches per minute per user)
+  await limit("link:fetch", actor.userId);
+
+  // 2. Check workspace attachment limits
+  const limits = await getWorkspacePlanLimits(access.ws.ownerId);
+
+  const currentCount = await db.attachment.count({
+    where: {
+      workspaceId,
+      deletedAt: null,
+      status: "READY",
+    },
+  });
+
+  if (currentCount >= limits.attachmentsPerWorkspace) {
+    throw Errors.badRequest(
+      `Workspace has reached the limit of ${limits.attachmentsPerWorkspace} attachments for your current plan.`
+    );
+  }
+
+  // 3. Fetch link via SSRF-proof safeFetch
+  const result = await safeFetch(url, {
+    checkRobotsTxt: true,
+    dnsLookup: options?.dnsLookup,
+    allowedPorts: options?.allowedPorts,
+    allowLoopbackForTesting: options?.allowLoopbackForTesting,
+  });
+
+  // 4. Store as Attachment of kind DOCUMENT with originalName = hostname
+  const attachment = await db.attachment.create({
+    data: {
+      ownerId: actor.userId,
+      workspaceId,
+      kind: "DOCUMENT",
+      status: "READY",
+      providerId: result.url,
+      resourceType: "raw",
+      mime: result.mime,
+      bytes: result.buffer.length,
+      originalName: result.originalName || "webpage",
+      extractedText: result.text ?? null,
+    },
+  });
+
+  return attachment;
 }
