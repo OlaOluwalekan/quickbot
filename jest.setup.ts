@@ -1,3 +1,7 @@
+process.env.CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || 'test_cloudinary_cloud';
+process.env.CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY || 'test_cloudinary_key';
+process.env.CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET || 'test_cloudinary_secret';
+
 import '@testing-library/jest-dom'
 import { TextEncoder, TextDecoder } from 'util'
 

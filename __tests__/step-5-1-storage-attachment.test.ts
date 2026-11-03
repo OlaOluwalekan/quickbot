@@ -172,7 +172,11 @@ describe("Step 5.1 — Storage Provider (Cloudinary) and Attachment Model", () =
     });
 
     it("CloudinaryStorageProvider generates signed authenticated upload parameters", async () => {
-      const cloudinary = new CloudinaryStorageProvider();
+      const cloudinary = new CloudinaryStorageProvider({
+        cloudName: "demo_cloud",
+        apiKey: "demo_key",
+        apiSecret: "demo_secret",
+      });
       expect(cloudinary.name).toBe("cloudinary");
 
       const sig = await cloudinary.createUploadSignature({
@@ -183,9 +187,23 @@ describe("Step 5.1 — Storage Provider (Cloudinary) and Attachment Model", () =
 
       expect(sig.publicId).toBe("klecx/workspaces/ws1/asset1");
       expect(sig.type).toBe("authenticated");
-      expect(sig.uploadUrl).toContain("api.cloudinary.com");
+      expect(sig.uploadUrl).toContain("api.cloudinary.com/v1_1/demo_cloud");
       expect(sig.signature).toBeTruthy();
       expect(sig.timestamp).toBeGreaterThan(0);
+    });
+
+    it("CloudinaryStorageProvider throws when credentials are not configured", async () => {
+      const unconfigured = new CloudinaryStorageProvider({
+        cloudName: "",
+        apiKey: "",
+        apiSecret: "",
+      });
+
+      await expect(
+        unconfigured.createUploadSignature({
+          publicId: "klecx/workspaces/ws1/asset1",
+        })
+      ).rejects.toThrow("Cloudinary credentials are not configured");
     });
   });
 

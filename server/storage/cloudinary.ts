@@ -9,26 +9,37 @@ import {
   StorageResourceType,
 } from "./types";
 
+export interface CloudinaryConfig {
+  cloudName?: string;
+  apiKey?: string;
+  apiSecret?: string;
+}
+
 export class CloudinaryStorageProvider implements StorageProvider {
   public readonly name = "cloudinary";
+  private readonly cloudName: string;
+  private readonly apiKey: string;
+  private readonly apiSecret: string;
 
-  constructor() {
-    cloudinary.config({
-      cloud_name: env.CLOUDINARY_CLOUD_NAME,
-      api_key: env.CLOUDINARY_API_KEY,
-      api_secret: env.CLOUDINARY_API_SECRET,
-      secure: true,
-    });
+  constructor(config?: CloudinaryConfig) {
+    this.cloudName = config?.cloudName ?? env.CLOUDINARY_CLOUD_NAME ?? "";
+    this.apiKey = config?.apiKey ?? env.CLOUDINARY_API_KEY ?? "";
+    this.apiSecret = config?.apiSecret ?? env.CLOUDINARY_API_SECRET ?? "";
+
+    if (this.cloudName && this.apiKey && this.apiSecret) {
+      cloudinary.config({
+        cloud_name: this.cloudName,
+        api_key: this.apiKey,
+        api_secret: this.apiSecret,
+        secure: true,
+      });
+    }
   }
 
   async createUploadSignature(
     options: CreateSignatureOptions
   ): Promise<SignedUploadPayload> {
-    if (
-      !env.CLOUDINARY_CLOUD_NAME ||
-      !env.CLOUDINARY_API_KEY ||
-      !env.CLOUDINARY_API_SECRET
-    ) {
+    if (!this.cloudName || !this.apiKey || !this.apiSecret) {
       throw new Error("Cloudinary credentials are not configured");
     }
 
@@ -52,18 +63,18 @@ export class CloudinaryStorageProvider implements StorageProvider {
 
     const signature = cloudinary.utils.api_sign_request(
       paramsToSign,
-      env.CLOUDINARY_API_SECRET
+      this.apiSecret
     );
 
-    const uploadUrl = `https://api.cloudinary.com/v1_1/${env.CLOUDINARY_CLOUD_NAME}/${resourceType}/upload`;
+    const uploadUrl = `https://api.cloudinary.com/v1_1/${this.cloudName}/${resourceType}/upload`;
 
     return {
       publicId: options.publicId,
       folder: options.folder ?? "",
       signature,
       timestamp,
-      apiKey: env.CLOUDINARY_API_KEY,
-      cloudName: env.CLOUDINARY_CLOUD_NAME,
+      apiKey: this.apiKey,
+      cloudName: this.cloudName,
       uploadUrl,
       resourceType,
       type,
