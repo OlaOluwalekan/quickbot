@@ -31,6 +31,15 @@ export interface ResponseItemDto {
   versionCount?: number;
   createdAt: string;
   updatedAt: string;
+  attachments?: Array<{
+    id: string;
+    kind: string;
+    originalName: string;
+    mime: string;
+    bytes: number;
+    width?: number | null;
+    height?: number | null;
+  }>;
 }
 
 export interface PaginatedResponses {

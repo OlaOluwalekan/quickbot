@@ -25,6 +25,15 @@ export interface WorkspaceViewProps {
     prompt: string;
     content?: string;
     createdAt?: string | Date;
+    attachments?: Array<{
+      id: string;
+      kind: string;
+      originalName: string;
+      mime: string;
+      bytes: number;
+      width?: number | null;
+      height?: number | null;
+    }>;
   }>;
   actor: Actor;
 }
@@ -34,6 +43,15 @@ const EMPTY_INITIAL_RESPONSES: Array<{
   prompt: string;
   content?: string;
   createdAt?: string | Date;
+  attachments?: Array<{
+    id: string;
+    kind: string;
+    originalName: string;
+    mime: string;
+    bytes: number;
+    width?: number | null;
+    height?: number | null;
+  }>;
 }> = [];
 
 export function WorkspaceView({
@@ -93,6 +111,15 @@ export function WorkspaceView({
             };
             response?: string;
             latestEdit?: { content?: string };
+            attachments?: Array<{
+              id: string;
+              kind: string;
+              originalName: string;
+              mime: string;
+              bytes: number;
+              width?: number | null;
+              height?: number | null;
+            }>;
           };
 
           const activeVer = raw.activeVersion;
@@ -113,6 +140,7 @@ export function WorkspaceView({
             versionCount: raw.versionCount || 1,
             activeVersionId: r.activeVersionId || activeVer?.id,
             createdAt: r.createdAt,
+            attachments: (r as { attachments?: any[] }).attachments ?? raw.attachments ?? [],
             activeVersion: activeVer
               ? {
                   id: activeVer.id,
@@ -141,6 +169,7 @@ export function WorkspaceView({
       response: r.content || "",
       versionCount: 1,
       createdAt: r.createdAt,
+      attachments: r.attachments ?? [],
       activeVersion: {
         id: "ver-" + r.id,
         number: 1,
@@ -154,7 +183,7 @@ export function WorkspaceView({
 
   // Execute or retry stream generation
   const startStreamTurn = React.useCallback(
-    (promptText: string, idempotencyKey: string, options?: { modelKey?: string; kind?: "TEXT" | "IMAGE"; think?: boolean; language?: string }) => {
+    (promptText: string, idempotencyKey: string, options?: { modelKey?: string; kind?: "TEXT" | "IMAGE"; think?: boolean; language?: string; attachmentIds?: string[] }) => {
       const genStore = useGenerationStore.getState();
       genStore.startStream(workspace.id, { prompt: promptText });
 
@@ -170,6 +199,7 @@ export function WorkspaceView({
           kind: options?.kind || "TEXT",
           think: options?.think,
           language: options?.language,
+          attachmentIds: options?.attachmentIds,
         },
         {
           onStarted: (data) => {
@@ -255,6 +285,7 @@ export function WorkspaceView({
       kind: pending.mode === "image" ? "IMAGE" : "TEXT",
       think: pending.thinkHarder,
       language: pending.language || undefined,
+      attachmentIds: pending.attachmentIds,
     });
   }, [workspace.id, startStreamTurn]);
 
@@ -351,6 +382,9 @@ export function WorkspaceView({
             className="vt-composer shadow-lg"
             onSubmitted={() => {
               refetchResponses();
+              queryClient.invalidateQueries({
+                queryKey: queryKeys.responses.all(actor.userId, workspace.id),
+              });
               router.refresh();
             }}
           />

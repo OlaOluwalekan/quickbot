@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import {
+  AlertCircle,
   Brain,
   ChevronDown,
   Globe,
@@ -12,15 +13,21 @@ import {
   Layers,
   MessageSquare,
   Paperclip,
+  FileText,
+  X,
+  Check,
+  Loader2,
   RotateCcw,
   Send,
   Sparkles,
   Square,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { QueryClientContext } from "@tanstack/react-query";
 import { useUiStore } from "@/lib/stores/ui";
 import { useGenerationStore } from "@/lib/stores/generation";
 import { api } from "@/lib/api/client";
+import { uploadAttachment } from "@/lib/api/attachments";
 import { navigateWithTransition } from "@/lib/navigation/view-transition";
 import { CLIENT_MODELS, type ClientModelOption } from "@/lib/ai/client-models";
 import { AI_LANGUAGES, type AiLanguage } from "@/lib/locale";
@@ -54,6 +61,20 @@ export interface ComposerProps {
   credits?: { plan: string; balance: number };
 }
 
+export interface ComposerAttachment {
+  id: string;
+  attachmentId?: string;
+  file: File;
+  name: string;
+  size: number;
+  mime: string;
+  kind: "IMAGE" | "DOCUMENT";
+  previewUrl?: string;
+  status: "uploading" | "ready" | "error";
+  progress: number;
+  error?: string;
+}
+
 export function Composer({
   initialPrompt = "",
   initialMode,
@@ -69,6 +90,8 @@ export function Composer({
   const t = useTranslations("Chat");
   const tHome = useTranslations("Home");
   const router = useRouter();
+  const queryClient = React.useContext(QueryClientContext);
+  const targetWorkspaceIdRef = React.useRef<string | null>(null);
 
   const draftKey = workspaceId || "__home__";
 
@@ -177,11 +200,118 @@ export function Composer({
     setStoreChatMode(nextMode);
   };
 
+  const [attachments, setAttachments] = React.useState<ComposerAttachment[]>([]);
+  const [isDragging, setIsDragging] = React.useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const MAX_ATTACHMENTS = 3;
+  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+
+  const uploadItem = React.useCallback(async (item: ComposerAttachment) => {
+    try {
+      let targetWsId = workspaceId || targetWorkspaceIdRef.current;
+      if (!targetWsId) {
+        const newWs = await api<WorkspaceDto>("/api/v1/workspaces", {
+          method: "POST",
+          body: { title: "New workspace" },
+        });
+        targetWsId = newWs.id;
+        targetWorkspaceIdRef.current = newWs.id;
+        queryClient?.invalidateQueries({ queryKey: ["workspaces"] });
+      }
+
+      const attId = await uploadAttachment(item.file, targetWsId, (pct) => {
+        setAttachments((prev) =>
+          prev.map((a) => (a.id === item.id ? { ...a, progress: pct } : a))
+        );
+      });
+
+      setAttachments((prev) =>
+        prev.map((a) =>
+          a.id === item.id
+            ? { ...a, status: "ready", progress: 100, attachmentId: attId }
+            : a
+        )
+      );
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Upload failed";
+      setAttachments((prev) =>
+        prev.map((a) =>
+          a.id === item.id ? { ...a, status: "error", error: msg } : a
+        )
+      );
+    }
+  }, [workspaceId, queryClient]);
+
+  const handleFiles = React.useCallback((files: File[]) => {
+    if (files.length === 0) return;
+    setCreationError(null);
+
+    if (attachments.length + files.length > MAX_ATTACHMENTS) {
+      setCreationError(t("attachLimitReached"));
+      return;
+    }
+
+    for (const f of files) {
+      if (f.size > MAX_FILE_SIZE) {
+        setCreationError(t("attachSizeExceeded"));
+        return;
+      }
+    }
+
+    const newItems: ComposerAttachment[] = files.map((f) => {
+      const isImg =
+        f.type.startsWith("image/") || /\.(png|jpe?g|webp|gif)$/i.test(f.name);
+      return {
+        id: "att-" + Math.random().toString(36).substring(2, 9),
+        file: f,
+        name: f.name,
+        size: f.size,
+        mime: f.type || "application/octet-stream",
+        kind: isImg ? "IMAGE" : "DOCUMENT",
+        previewUrl: isImg ? URL.createObjectURL(f) : undefined,
+        status: "uploading",
+        progress: 0,
+      };
+    });
+
+    setAttachments((prev) => [...prev, ...newItems]);
+    for (const item of newItems) {
+      uploadItem(item);
+    }
+  }, [attachments.length, t, uploadItem]);
+
+  const removeAttachment = React.useCallback((id: string) => {
+    setAttachments((prev) => {
+      const item = prev.find((a) => a.id === id);
+      if (item?.previewUrl) {
+        URL.revokeObjectURL(item.previewUrl);
+      }
+      return prev.filter((a) => a.id !== id);
+    });
+  }, []);
+
+  const retryAttachment = React.useCallback((id: string) => {
+    const item = attachments.find((a) => a.id === id);
+    if (!item) return;
+    setAttachments((prev) =>
+      prev.map((a) =>
+        a.id === id ? { ...a, status: "uploading", progress: 0, error: undefined } : a
+      )
+    );
+    uploadItem(item);
+  }, [attachments, uploadItem]);
+
   const isOutOfCredits = Boolean(credits && credits.balance <= 0);
 
   const handleSubmit = async () => {
     const cleanPrompt = prompt.trim();
-    if (!cleanPrompt || isSubmitting || isStreaming || isOutOfCredits) return;
+    const isUploadingAny = attachments.some((a) => a.status === "uploading");
+    if (!cleanPrompt || isSubmitting || isStreaming || isOutOfCredits || isUploadingAny) return;
+    const readyAttachmentIds = attachments
+      .filter((a) => a.status === "ready" && a.attachmentId)
+      .map((a) => a.attachmentId!);
+
 
     setIsSubmitting(true);
     setCreationError(null);
@@ -190,6 +320,7 @@ export function Composer({
     if (workspaceId) {
       clearDraft(draftKey);
       setPrompt("");
+      setAttachments([]);
       if (textareaRef.current) {
         textareaRef.current.value = "";
         textareaRef.current.style.height = size === "large" ? "64px" : "44px";
@@ -211,6 +342,7 @@ export function Composer({
             kind: mode === "image" ? "IMAGE" : "TEXT",
             think: thinkHarder,
             language: selectedLanguage || undefined,
+            attachmentIds: readyAttachmentIds.length > 0 ? readyAttachmentIds : undefined,
           },
           {
             onStarted: (data) => {
@@ -249,28 +381,45 @@ export function Composer({
       const titleCandidate =
         cleanPrompt.slice(0, 60).replace(/["'\n\r]/g, "").trim() || "New workspace";
 
-      // 1. POST /api/v1/workspaces (fast creation)
-      const newWs = await api<WorkspaceDto>("/api/v1/workspaces", {
-        method: "POST",
-        body: { title: titleCandidate },
-      });
+      // 1. Check if workspace was already created by an earlier attachment upload
+      const existingBlankWsId = targetWorkspaceIdRef.current;
+      let targetId: string;
+
+      if (existingBlankWsId) {
+        targetId = existingBlankWsId;
+        // Asynchronously update title to match prompt
+        api(`/api/v1/workspaces/${existingBlankWsId}`, {
+          method: "PATCH",
+          body: { title: titleCandidate },
+        }).catch(() => {});
+      } else {
+        const newWs = await api<WorkspaceDto>("/api/v1/workspaces", {
+          method: "POST",
+          body: { title: titleCandidate },
+        });
+        targetId = newWs.id;
+      }
 
       // 2. Store pendingStart in generation store
       useGenerationStore.getState().setPendingStart({
-        workspaceId: newWs.id,
+        workspaceId: targetId,
         prompt: cleanPrompt,
         modelKey: selectedModel,
         idempotencyKey,
         mode,
         thinkHarder,
         language: selectedLanguage,
+        attachmentIds: readyAttachmentIds.length > 0 ? readyAttachmentIds : undefined,
       });
 
       // Clear draft on successful transition launch
       clearDraft(draftKey);
+      setAttachments([]);
+      targetWorkspaceIdRef.current = null;
+      queryClient?.invalidateQueries({ queryKey: ["workspaces"] });
 
       // 3. Navigate inside a View Transition
-      navigateWithTransition(router, `/workspaces/${newWs.id}`);
+      navigateWithTransition(router, `/workspaces/${targetId}`);
       onSubmitted?.();
     } catch (err: unknown) {
       console.error("[Composer] Failed to create workspace:", err);
@@ -321,6 +470,22 @@ export function Composer({
         e.preventDefault();
         handleSubmit();
       }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        setIsDragging(true);
+      }}
+      onDragLeave={(e) => {
+        e.preventDefault();
+        setIsDragging(false);
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        setIsDragging(false);
+        const files = Array.from(e.dataTransfer.files);
+        if (files.length > 0) {
+          handleFiles(files);
+        }
+      }}
       className={cn(
         "vt-composer relative flex flex-col rounded-2xl sm:rounded-3xl border border-border bg-surface shadow-md transition-all focus-within:border-accent/80 focus-within:ring-2 focus-within:ring-ring/40",
         isLarge ? "p-3 sm:p-4" : "p-2 sm:p-3",
@@ -328,6 +493,15 @@ export function Composer({
         className,
       )}
     >
+      {isDragging && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center rounded-2xl sm:rounded-3xl border-2 border-dashed border-accent bg-surface/90 backdrop-blur-xs">
+          <div className="flex items-center gap-2 text-sm font-medium text-accent">
+            <Paperclip className="h-5 w-5" />
+            <span>{t("dropFilesHere")}</span>
+          </div>
+        </div>
+      )}
+
       {/* Live Region: screen reader announcements */}
       <div role="status" aria-live="polite" className="sr-only">
         {liveAnnouncement}
@@ -367,6 +541,117 @@ export function Composer({
         </div>
       )}
 
+      {/* Attachment Chips */}
+      {attachments.length > 0 && (
+        <div className="mb-2 flex flex-wrap gap-2 px-1" data-testid="composer-attachments">
+          {attachments.map((att) => (
+            <div
+              key={att.id}
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Backspace" || e.key === "Delete") {
+                  e.preventDefault();
+                  removeAttachment(att.id);
+                }
+              }}
+              className={cn(
+                "bg-surface-2 border-border/70 text-fg relative flex items-center gap-2 rounded-xl border px-2.5 py-1.5 text-xs shadow-2xs transition-all",
+                att.status === "error" && "border-danger/50 bg-danger/10 text-danger"
+              )}
+            >
+              {att.previewUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={att.previewUrl}
+                  alt={att.name}
+                  className="size-5 rounded object-cover"
+                />
+              ) : att.kind === "IMAGE" ? (
+                <ImageIcon className="size-4 text-accent" />
+              ) : (
+                <FileText className="size-4 text-muted" />
+              )}
+              <span className="max-w-[120px] truncate font-medium">{att.name}</span>
+              <span className="text-[10px] text-muted">
+                ({Math.max(1, Math.round(att.size / 1024))} KB)
+              </span>
+
+              {att.status === "uploading" && (
+                <div className="flex items-center gap-1 text-[10px] text-accent">
+                  <Loader2 className="size-3 animate-spin" />
+                  <span>{att.progress}%</span>
+                </div>
+              )}
+              {att.status === "ready" && (
+                <Check className="size-3 text-accent" />
+              )}
+              {att.status === "error" && (
+                <button
+                  type="button"
+                  onClick={() => retryAttachment(att.id)}
+                  title={t("attachRetry")}
+                  className="text-danger hover:underline text-[10px] font-medium cursor-pointer"
+                >
+                  {t("attachRetry")}
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => removeAttachment(att.id)}
+                aria-label={t("attachRemove")}
+                title={t("attachRemove")}
+                className="text-muted hover:text-fg rounded p-0.5 transition-colors cursor-pointer"
+              >
+                <X className="size-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Upload Error Banner & Plan Guidance */}
+      {attachments.some((a) => a.status === "error") && (
+        <div className="flex flex-col gap-1.5 rounded-xl border border-danger/30 bg-danger/10 p-3 text-xs text-danger mb-2">
+          <div className="flex items-start gap-2 font-medium">
+            <AlertCircle className="size-4 shrink-0 mt-0.5" />
+            <div className="space-y-0.5">
+              {attachments
+                .filter((a) => a.status === "error" && a.error)
+                .map((a) => (
+                  <p key={a.id}>
+                    <span className="font-semibold">{a.name}:</span> {a.error}
+                  </p>
+                ))}
+            </div>
+          </div>
+          {attachments.some(
+            (a) =>
+              a.error?.toLowerCase().includes("limit") ||
+              a.error?.toLowerCase().includes("plan")
+          ) && (
+            <div className="mt-1 flex flex-wrap items-center gap-3 border-t border-danger/20 pt-2 text-[11px] text-fg-muted">
+              <span>Workspace attachment limit reached for this plan.</span>
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/settings/billing"
+                  className="font-medium text-accent hover:underline cursor-pointer"
+                >
+                  Upgrade plan
+                </Link>
+                <span>•</span>
+                <Link
+                  href="/workspaces"
+                  className="font-medium text-fg hover:underline cursor-pointer"
+                >
+                  Start a new workspace
+                </Link>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Main Textarea */}
       <label htmlFor="composer-textarea" className="sr-only">
         {t("welcomeTitle")}
@@ -387,6 +672,23 @@ export function Composer({
         }
         onChange={(e) => handlePromptChange(e.target.value)}
         onKeyDown={handleKeyDown}
+        onPaste={(e) => {
+          const items = e.clipboardData?.items;
+          if (items) {
+            const files: File[] = [];
+            for (let i = 0; i < items.length; i++) {
+              const it = items[i];
+              if (it?.kind === "file") {
+                const f = it.getAsFile();
+                if (f) files.push(f);
+              }
+            }
+            if (files.length > 0) {
+              e.preventDefault();
+              handleFiles(files);
+            }
+          }
+        }}
         placeholder={placeholder || defaultPlaceholder}
         className={cn(
           "w-full resize-none bg-transparent text-fg placeholder:text-subtle focus:outline-none leading-relaxed",
@@ -430,13 +732,29 @@ export function Composer({
             </button>
           </div>
 
-          {/* Attach Button (Phase 5.2 Disabled) */}
+          {/* Hidden File Input */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            multiple
+            onChange={(e) => {
+              if (e.target.files) {
+                handleFiles(Array.from(e.target.files));
+                e.target.value = "";
+              }
+            }}
+            accept="image/png,image/jpeg,image/webp,image/gif,application/pdf,text/plain,text/markdown,text/csv,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            className="hidden"
+            aria-hidden="true"
+          />
+
+          {/* Attach Button */}
           <button
             type="button"
-            disabled
-            title={t("attachDisabled")}
-            aria-label={t("attachDisabled")}
-            className="flex h-7 w-7 items-center justify-center rounded-lg text-muted opacity-50 cursor-not-allowed hover:bg-surface-2 transition-colors"
+            onClick={() => fileInputRef.current?.click()}
+            title={t("attachFile")}
+            aria-label={t("attachFile")}
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-muted hover:text-fg hover:bg-surface-2 transition-colors cursor-pointer"
           >
             <Paperclip className="h-3.5 w-3.5" strokeWidth={1.5} />
           </button>
@@ -589,7 +907,7 @@ export function Composer({
           ) : (
             <button
               type="submit"
-              disabled={isSubmitting || !prompt.trim() || isOutOfCredits}
+              disabled={isSubmitting || !prompt.trim() || isOutOfCredits || attachments.some((a) => a.status === "uploading")}
               aria-label={t("send")}
               className={cn(
                 "flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-xl sm:rounded-2xl shadow-sm transition-all cursor-pointer",

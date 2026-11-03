@@ -45,6 +45,18 @@ export async function listWorkspaceResponses(
     }),
     orderBy: [{ sortAt: "asc" }, { id: "asc" }],
     include: {
+      attachments: {
+        where: { deletedAt: null },
+        select: {
+          id: true,
+          kind: true,
+          originalName: true,
+          mime: true,
+          bytes: true,
+          width: true,
+          height: true,
+        },
+      },
       versions: {
         orderBy: { number: "asc" },
         include: {
@@ -115,6 +127,7 @@ export async function listWorkspaceResponses(
       createdAt: r.createdAt,
       activeVersion: activeVersionSummary,
       versionCount,
+      attachments: r.attachments ?? [],
     };
   });
 
@@ -247,6 +260,12 @@ export async function regenerateResponse(
 ) {
   const targetResponse = await db.response.findUnique({
     where: { id: responseId, deletedAt: null },
+    include: {
+      attachments: {
+        where: { deletedAt: null },
+        select: { id: true },
+      },
+    },
   });
 
   if (!targetResponse) {
@@ -267,6 +286,7 @@ export async function regenerateResponse(
       regenerateResponseId: responseId,
       think: input.think,
       language: input.language,
+      attachmentIds: targetResponse.attachments.map((a) => a.id),
     },
     options
   );

@@ -180,7 +180,13 @@
     "outOfCreditsReason": "You are out of credits. Upgrade your plan to continue.",
     "upgradeCta": "Upgrade Plan",
     "createWorkspaceFailed": "Failed to create workspace. Click Retry to try again.",
-    "retry": "Retry"
+    "retry": "Retry",
+    "attachFile": "Attach files",
+    "attachRemove": "Remove attachment",
+    "attachRetry": "Retry",
+    "attachLimitReached": "Maximum 3 attachments allowed for your plan",
+    "attachSizeExceeded": "File size exceeds 5 MB limit",
+    "dropFilesHere": "Drop files to attach"
   },
   "Settings": {
     "title": "Workspace Settings",
