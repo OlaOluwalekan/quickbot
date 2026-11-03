@@ -14,6 +14,7 @@ import {
   Volume2,
   Share2,
   FileDown,
+  FileText,
   MoreHorizontal,
   Sparkles,
   Download,
@@ -47,6 +48,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ThinkingPanel } from "./thinking-panel";
+import { PromptAttachmentPreview } from "./prompt-attachment-preview";
 import { EditResponse } from "./edit-response";
 import { Markdown } from "@/components/markdown";
 import {
@@ -82,6 +84,15 @@ export interface ResponseItemData {
     name?: string;
     avatarUrl?: string;
   };
+  attachments?: Array<{
+    id: string;
+    kind: string;
+    originalName: string;
+    mime: string;
+    bytes: number;
+    width?: number | null;
+    height?: number | null;
+  }>;
 }
 
 export interface ResponseCardProps {
@@ -124,7 +135,9 @@ export function ResponseCard({
   const createEditMutation = useCreateResponseEdit(userId, workspaceId);
 
   // Local state for optimistic version switching
-  const [selectedVersionId, setSelectedVersionId] = React.useState<string | null>(null);
+  const [selectedVersionId, setSelectedVersionId] = React.useState<
+    string | null
+  >(null);
 
   // Sync selectedVersionId when response.activeVersionId changes
   React.useEffect(() => {
@@ -140,9 +153,13 @@ export function ResponseCard({
     }
     if (
       versionsData &&
-      Array.isArray((versionsData as unknown as { versions?: ResponseVersionDto[] }).versions)
+      Array.isArray(
+        (versionsData as unknown as { versions?: ResponseVersionDto[] })
+          .versions
+      )
     ) {
-      return (versionsData as unknown as { versions: ResponseVersionDto[] }).versions;
+      return (versionsData as unknown as { versions: ResponseVersionDto[] })
+        .versions;
     }
     return [];
   }, [versionsData]);
@@ -154,10 +171,7 @@ export function ResponseCard({
   const activeVerFromList = versions.find((v) => v.id === currentActiveId);
   const activeVer = activeVerFromList || response.activeVersion;
 
-  const versionCount = Math.max(
-    response.versionCount || 1,
-    versions.length
-  );
+  const versionCount = Math.max(response.versionCount || 1, versions.length);
 
   const activeNumber =
     activeVerFromList?.number ||
@@ -201,9 +215,7 @@ export function ResponseCard({
   // Version navigation
   const handleSwitchVersion = (direction: "prev" | "next") => {
     if (versions.length <= 1) return;
-    const currentIdx = versions.findIndex(
-      (v) => v.id === currentActiveId
-    );
+    const currentIdx = versions.findIndex((v) => v.id === currentActiveId);
     if (currentIdx === -1) return;
 
     let targetIdx = currentIdx;
@@ -281,6 +293,9 @@ export function ResponseCard({
       (displayedContent.includes("cloudinary") ||
         displayedContent.match(/\.(jpeg|jpg|gif|png|webp)(\?.*)?$/i) !== null));
 
+  // const { content, ...rest } = response;
+  console.log(response.id, "<==>", response.attachments);
+
   return (
     <div
       id={`response-${response.id}`}
@@ -295,6 +310,16 @@ export function ResponseCard({
             isFirstPrompt && "vt-first-prompt"
           )}
         >
+          {response.attachments && response.attachments.length > 0 && (
+            <div
+              className="mb-2.5 flex flex-wrap gap-2"
+              data-testid="prompt-attachments"
+            >
+              {response.attachments.map((att) => (
+                <PromptAttachmentPreview key={att.id} attachment={att} />
+              ))}
+            </div>
+          )}
           <div
             className={cn(
               "leading-relaxed whitespace-pre-wrap select-text",

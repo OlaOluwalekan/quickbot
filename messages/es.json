@@ -180,7 +180,13 @@
     "outOfCreditsReason": "Te has quedado sin créditos. Mejora tu plan para continuar.",
     "upgradeCta": "Mejorar plan",
     "createWorkspaceFailed": "Error al crear el espacio de trabajo. Haz clic en Reintentar.",
-    "retry": "Reintentar"
+    "retry": "Reintentar",
+    "attachFile": "Adjuntar archivos",
+    "attachRemove": "Eliminar archivo adjunto",
+    "attachRetry": "Reintentar",
+    "attachLimitReached": "Máximo 3 archivos adjuntos permitidos para tu plan",
+    "attachSizeExceeded": "El tamaño del archivo supera el límite de 5 MB",
+    "dropFilesHere": "Suelta archivos para adjuntar"
   },
   "Settings": {
     "title": "Configuración del Espacio",

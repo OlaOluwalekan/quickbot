@@ -45,6 +45,7 @@ const SingleWorkspacePage = async ({
         prompt: r.prompt,
         content: r.activeVersion?.content || "",
         createdAt: r.createdAt,
+        attachments: r.attachments ?? [],
       }))}
       actor={actor}
     />

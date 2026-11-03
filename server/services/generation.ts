@@ -27,6 +27,8 @@ import {
   createGenerationSchema,
   CreateGenerationInput,
 } from "@/lib/schemas/generation";
+import { getStorageProvider } from "@/server/storage";
+import type { Part } from "@/server/ai/types";
 import { normalizeGeminiError } from "@/server/ai/errors";
 import { resolveEffectiveAiLanguage } from "@/lib/locale";
 
@@ -674,6 +676,73 @@ export async function createAndStreamGeneration(
 
   const kind = input.kind === "IMAGE" ? "IMAGE" : "TEXT";
 
+  // Validate attachments if provided (or if regenerating turn, include its original attachments)
+  let attachmentIds = input.attachmentIds;
+  if ((!attachmentIds || attachmentIds.length === 0) && input.regenerateResponseId) {
+    const existingAtts = await db.attachment.findMany({
+      where: { responseId: input.regenerateResponseId, deletedAt: null },
+      select: { id: true },
+    });
+    if (existingAtts.length > 0) {
+      attachmentIds = existingAtts.map((a) => a.id);
+    }
+  }
+
+  const contextAttachments: Part[] = [];
+  if (attachmentIds && attachmentIds.length > 0) {
+    const attachments = await db.attachment.findMany({
+      where: { id: { in: attachmentIds } },
+    });
+
+    if (attachments.length !== attachmentIds.length) {
+      throw Errors.validation([
+        { field: "attachmentIds", message: "One or more attachments not found" },
+      ]);
+    }
+
+    const storage = getStorageProvider();
+
+    for (const att of attachments) {
+      if (att.workspaceId !== workspaceId) {
+        throw Errors.validation([
+          { field: "attachmentIds", message: `Attachment ${att.id} does not belong to this workspace` },
+        ]);
+      }
+      if (att.status !== "READY") {
+        throw Errors.validation([
+          { field: "attachmentIds", message: `Attachment ${att.id} is not ready` },
+        ]);
+      }
+      if (att.responseId && att.responseId !== input.regenerateResponseId) {
+        throw Errors.validation([
+          { field: "attachmentIds", message: `Attachment ${att.id} is already attached to another response` },
+        ]);
+      }
+
+      if (att.kind === "DOCUMENT") {
+        const docText = att.extractedText || "";
+        contextAttachments.push({
+          type: "text",
+          text: `<document name="${att.originalName}">\n${docText}\n</document>`,
+        });
+      } else if (att.kind === "IMAGE" || att.kind === "GENERATED_IMAGE") {
+        try {
+          const buffer = await storage.downloadBuffer(att.providerId, {
+            resourceType: "image",
+          });
+          const base64 = buffer.toString("base64");
+          contextAttachments.push({
+            type: "image",
+            url: `data:${att.mime};base64,${base64}`,
+            mime: att.mime,
+          });
+        } catch (err) {
+          console.error(`Failed to download attachment buffer for ${att.id}:`, err);
+        }
+      }
+    }
+  }
+
   // Build context for text generation
   let systemPrompt = "";
   let messages: GenerateRequest["messages"] = [];
@@ -697,6 +766,7 @@ export async function createAndStreamGeneration(
       upToResponseId: input.regenerateResponseId,
       excludeUpToResponseId: !!input.regenerateResponseId,
       newPrompt: input.prompt,
+      attachments: contextAttachments,
       modelKey,
       language: targetLanguage,
     });
@@ -705,10 +775,13 @@ export async function createAndStreamGeneration(
     messages = ctx.messages;
     truncated = ctx.truncated;
 
+    estimatedInputTokens = estimateTokens(systemPrompt);
     for (const msg of messages) {
       for (const part of msg.parts) {
         if (part.type === "text") {
           estimatedInputTokens += estimateTokens(part.text);
+        } else {
+          estimatedInputTokens += 258;
         }
       }
     }
@@ -813,6 +886,13 @@ export async function createAndStreamGeneration(
           where: { id: newVersion.id },
           data: { generationId: newGen.id },
         });
+
+        if (attachmentIds && attachmentIds.length > 0) {
+          await tx.attachment.updateMany({
+            where: { id: { in: attachmentIds } },
+            data: { responseId: targetResponse.id },
+          });
+        }
 
         return { response: targetResponse, version: newVersion, generation: newGen };
       });

@@ -180,7 +180,13 @@
     "outOfCreditsReason": "Vous n'avez plus de crédits. Mettez à niveau votre forfait pour continuer.",
     "upgradeCta": "Mettre à niveau",
     "createWorkspaceFailed": "Échec de création de l'espace de travail. Cliquez sur Réessayer.",
-    "retry": "Réessayer"
+    "retry": "Réessayer",
+    "attachFile": "Joindre des fichiers",
+    "attachRemove": "Supprimer la pièce jointe",
+    "attachRetry": "Réessayer",
+    "attachLimitReached": "Maximum 3 pièces jointes autorisées pour votre forfait",
+    "attachSizeExceeded": "La taille du fichier dépasse la limite de 5 Mo",
+    "dropFilesHere": "Déposez les fichiers à joindre"
   },
   "Settings": {
     "title": "Paramètres de l'espace",

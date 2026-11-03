@@ -8,8 +8,13 @@ import { Errors } from "@/server/http/errors";
 import { requireWorkspace } from "@/server/authz/access";
 import { PLANS, PlanLimits } from "@/server/billing/plans";
 import { getStorageProvider } from "@/server/storage";
-import type { InitAttachmentInput } from "@/lib/schemas/attachment";
+import type {
+  InitAttachmentInput,
+  CompleteAttachmentInput,
+} from "@/lib/schemas/attachment";
+import { extractDocumentText } from "@/server/files/extract";
 import type { StorageResourceType } from "@/server/storage/types";
+import type { MockStorageProvider } from "@/server/storage/mock";
 
 export interface MimeDefinition {
   kind: "IMAGE" | "DOCUMENT";
@@ -21,6 +26,7 @@ export const ALLOWED_MIME_TYPES: Record<string, MimeDefinition> = {
   // Images
   "image/png": { kind: "IMAGE", format: "png", resourceType: "image" },
   "image/jpeg": { kind: "IMAGE", format: "jpg", resourceType: "image" },
+  "image/jpg": { kind: "IMAGE", format: "jpg", resourceType: "image" },
   "image/webp": { kind: "IMAGE", format: "webp", resourceType: "image" },
   "image/gif": { kind: "IMAGE", format: "gif", resourceType: "image" },
 
@@ -28,7 +34,10 @@ export const ALLOWED_MIME_TYPES: Record<string, MimeDefinition> = {
   "application/pdf": { kind: "DOCUMENT", format: "pdf", resourceType: "raw" },
   "text/plain": { kind: "DOCUMENT", format: "txt", resourceType: "raw" },
   "text/markdown": { kind: "DOCUMENT", format: "md", resourceType: "raw" },
+  "text/x-markdown": { kind: "DOCUMENT", format: "md", resourceType: "raw" },
   "text/csv": { kind: "DOCUMENT", format: "csv", resourceType: "raw" },
+  "text/x-csv": { kind: "DOCUMENT", format: "csv", resourceType: "raw" },
+  "application/csv": { kind: "DOCUMENT", format: "csv", resourceType: "raw" },
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document": {
     kind: "DOCUMENT",
     format: "docx",
@@ -72,8 +81,36 @@ export async function initAttachment(
   actor: Actor,
   input: InitAttachmentInput & { workspaceId?: string }
 ) {
-  const sanitizedName = sanitizeFilename(input.name);
-  const mimeDef = ALLOWED_MIME_TYPES[input.mime];
+  const rawName =
+    input.name ||
+    (input as unknown as { filename?: string }).filename ||
+    "attachment";
+  const sanitizedName = sanitizeFilename(rawName);
+
+  let mime = (input.mime || "").toLowerCase().trim();
+  let mimeDef = ALLOWED_MIME_TYPES[mime];
+
+  // If MIME is missing or generic octet-stream, try inferring from filename extension
+  if (!mimeDef) {
+    const ext = sanitizedName.split(".").pop()?.toLowerCase();
+    const extMap: Record<string, string> = {
+      png: "image/png",
+      jpg: "image/jpeg",
+      jpeg: "image/jpeg",
+      webp: "image/webp",
+      gif: "image/gif",
+      pdf: "application/pdf",
+      txt: "text/plain",
+      md: "text/markdown",
+      markdown: "text/markdown",
+      csv: "text/csv",
+      docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    };
+    if (ext && extMap[ext]) {
+      mime = extMap[ext];
+      mimeDef = ALLOWED_MIME_TYPES[mime];
+    }
+  }
 
   if (!mimeDef) {
     throw Errors.badRequest(
@@ -142,7 +179,7 @@ export async function initAttachment(
       status: "PENDING",
       providerId,
       resourceType: mimeDef.resourceType,
-      mime: input.mime,
+      mime,
       bytes: input.bytes,
       originalName: sanitizedName,
     },
@@ -159,8 +196,49 @@ export async function initAttachment(
 
   return {
     attachment,
+    attachmentId: attachment.id,
     uploadPayload,
   };
+}
+
+function generateMockBufferForMime(mime: string): Buffer {
+  if (mime === "image/png") {
+    return Buffer.from([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
+      0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+      0x08, 0x06, 0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4, 0x89, 0x00, 0x00, 0x00,
+      0x0a, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9c, 0x63, 0x00, 0x01, 0x00, 0x00,
+      0x05, 0x00, 0x01, 0x0d, 0x0a, 0x2d, 0xb4, 0x00, 0x00, 0x00, 0x00, 0x49,
+      0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
+    ]);
+  }
+  if (mime === "image/jpeg" || mime === "image/jpg") {
+    return Buffer.from([
+      0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01,
+      0x01, 0x01, 0x00, 0x48, 0x00, 0x48, 0x00, 0x00, 0xff, 0xdb, 0x00, 0x43,
+      0x00, 0xff, 0xc0, 0x00, 0x0b, 0x08, 0x00, 0x01, 0x00, 0x01, 0x01, 0x01,
+      0x11, 0x00, 0xff, 0xda, 0x00, 0x08, 0x01, 0x01, 0x00, 0x00, 0x3f, 0x00,
+      0xbf, 0x00, 0xff, 0xd9,
+    ]);
+  }
+  if (mime === "image/webp") {
+    return Buffer.from(
+      "RIFF\x24\x00\x00\x00WEBPVP8 \x18\x00\x00\x000\x01\x00\x9d\x01\x2a\x01\x00\x01\x00\x00\x00",
+      "binary"
+    );
+  }
+  if (mime === "image/gif") {
+    return Buffer.from(
+      "GIF89a\x01\x00\x01\x00\x80\x00\x00\xff\xff\xff\x00\x00\x00!\xf9\x04\x01\x00\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;",
+      "binary"
+    );
+  }
+  if (mime === "application/pdf") {
+    return Buffer.from(
+      "%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj 2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj 3 0 obj<</Type/Page/MediaBox[0 0 3 3]>>endobj\nxref\n0 4\n0000000000 65535 f\n0000000010 00000 n\n0000000053 00000 n\n0000000102 00000 n\ntrailer<</Size 4/Root 1 0 R>>\nstartxref\n149\n%%EOF\n"
+    );
+  }
+  return Buffer.from("Sample document content", "utf-8");
 }
 
 /**
@@ -171,7 +249,7 @@ export async function initAttachment(
 export async function completeAttachment(
   actor: Actor,
   attachmentId: string,
-  _input?: { sha256?: string }
+  _input?: CompleteAttachmentInput
 ) {
   const attachment = await db.attachment.findUnique({
     where: { id: attachmentId },
@@ -201,10 +279,58 @@ export async function completeAttachment(
   const storage = getStorageProvider();
   const isAvatar = attachment.kind === "AVATAR";
 
-  const head = await storage.head(attachment.providerId, {
+  // If running with mock storage provider in development/testing without real Cloudinary,
+  // ensure the mock store has the buffer (seeded from mockBase64 or fallback)
+  if (
+    storage.name === "mock" &&
+    typeof (storage as unknown as MockStorageProvider).hasFile === "function"
+  ) {
+    const mockStorage = storage as unknown as MockStorageProvider;
+    if (!mockStorage.hasFile(attachment.providerId)) {
+      let mockBuf: Buffer;
+      if (_input?.mockBase64) {
+        mockBuf = Buffer.from(_input.mockBase64, "base64");
+      } else {
+        mockBuf = generateMockBufferForMime(attachment.mime);
+      }
+      mockStorage.seedFile(attachment.providerId, mockBuf, {
+        bytes: mockBuf.byteLength,
+        format: attachment.resourceType,
+        resourceType: attachment.resourceType as StorageResourceType,
+      });
+    }
+  }
+
+  // If client received an updated providerId (e.g. Cloudinary appending extension to raw files), sync it
+  if (_input?.providerId && _input.providerId !== attachment.providerId) {
+    attachment.providerId = _input.providerId;
+    await db.attachment.update({
+      where: { id: attachmentId },
+      data: { providerId: _input.providerId },
+    });
+  }
+
+  const mimeFormat = ALLOWED_MIME_TYPES[attachment.mime]?.format;
+  let head = await storage.head(attachment.providerId, {
     resourceType: attachment.resourceType as StorageResourceType,
     isPublic: isAvatar,
   });
+
+  if (!head && attachment.resourceType === "raw" && mimeFormat && !attachment.providerId.includes(".")) {
+    const fallbackId = `${attachment.providerId}.${mimeFormat}`;
+    const headFallback = await storage.head(fallbackId, {
+      resourceType: attachment.resourceType as StorageResourceType,
+      isPublic: isAvatar,
+    });
+    if (headFallback) {
+      head = headFallback;
+      attachment.providerId = fallbackId;
+      await db.attachment.update({
+        where: { id: attachmentId },
+        data: { providerId: fallbackId },
+      });
+    }
+  }
 
   if (!head) {
     await db.attachment.update({
@@ -238,8 +364,14 @@ export async function completeAttachment(
   if (isExeHeader) {
     isValid = false;
   } else if (attachment.mime.startsWith("image/")) {
-    // Expected image MIME must match detected MIME
-    isValid = Boolean(detected && detected.mime === attachment.mime);
+    // Expected image MIME must match detected MIME (allowing image/jpeg and image/jpg interchangeable)
+    isValid = Boolean(
+      detected &&
+        (detected.mime === attachment.mime ||
+          (detected.mime === "image/jpeg" &&
+            (attachment.mime === "image/jpeg" ||
+              attachment.mime === "image/jpg")))
+    );
   } else if (attachment.mime === "application/pdf") {
     isValid = Boolean(detected && detected.mime === "application/pdf");
   } else if (
@@ -256,7 +388,10 @@ export async function completeAttachment(
   } else if (
     attachment.mime === "text/plain" ||
     attachment.mime === "text/markdown" ||
-    attachment.mime === "text/csv"
+    attachment.mime === "text/x-markdown" ||
+    attachment.mime === "text/csv" ||
+    attachment.mime === "text/x-csv" ||
+    attachment.mime === "application/csv"
   ) {
     // Plain text files do not have binary magic bytes. Ensure no binary nulls in first 512 bytes.
     const sliceToCheck = buffer.subarray(0, Math.min(512, buffer.length));
@@ -283,6 +418,27 @@ export async function completeAttachment(
 
   const sha256 = crypto.createHash("sha256").update(buffer).digest("hex");
 
+  let extractedText: string | null = null;
+  if (attachment.kind === "DOCUMENT") {
+    try {
+      const extracted = await extractDocumentText(buffer, attachment.mime);
+      extractedText = extracted.text;
+    } catch (err: unknown) {
+      console.warn(`[Attachment] Text extraction warning for ${attachmentId}:`, err);
+      if (err instanceof Error && err.message.includes("page count")) {
+        await storage.delete(attachment.providerId, {
+          resourceType: attachment.resourceType as StorageResourceType,
+          isPublic: isAvatar,
+        });
+        await db.attachment.update({
+          where: { id: attachmentId },
+          data: { status: "REJECTED" },
+        });
+        throw Errors.badRequest(err.message);
+      }
+    }
+  }
+
   const updated = await db.attachment.update({
     where: { id: attachmentId },
     data: {
@@ -291,6 +447,7 @@ export async function completeAttachment(
       width: head.width ?? null,
       height: head.height ?? null,
       sha256,
+      extractedText,
     },
   });
 

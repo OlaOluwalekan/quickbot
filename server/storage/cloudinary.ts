@@ -53,8 +53,12 @@ export class CloudinaryStorageProvider implements StorageProvider {
       type,
     };
 
-    if (options.folder) {
-      paramsToSign.folder = options.folder;
+    // If public_id already includes a folder path (slashes), omit folder from signature and payload
+    // so Cloudinary does not duplicate the folder name (e.g. folder/folder/id).
+    const publicIdHasFolder = options.publicId.includes("/");
+    const effectiveFolder = publicIdHasFolder ? "" : (options.folder ?? "");
+    if (effectiveFolder) {
+      paramsToSign.folder = effectiveFolder;
     }
 
     if (options.tags && options.tags.length > 0) {
@@ -70,7 +74,7 @@ export class CloudinaryStorageProvider implements StorageProvider {
 
     return {
       publicId: options.publicId,
-      folder: options.folder ?? "",
+      folder: effectiveFolder,
       signature,
       timestamp,
       apiKey: this.apiKey,
@@ -85,7 +89,7 @@ export class CloudinaryStorageProvider implements StorageProvider {
 
   async head(
     publicId: string,
-    options?: { resourceType?: StorageResourceType; isPublic?: boolean }
+    options?: { resourceType?: StorageResourceType; isPublic?: boolean; format?: string }
   ): Promise<StorageAssetMeta | null> {
     const resourceType = options?.resourceType ?? "image";
     const type = options?.isPublic ? "upload" : "authenticated";
@@ -104,10 +108,29 @@ export class CloudinaryStorageProvider implements StorageProvider {
         resourceType: String(res.resource_type ?? resourceType),
       };
     } catch (err: unknown) {
-      const status = (err as { error?: { http_code?: number }; http_code?: number })
-        ?.http_code ??
+      const status =
+        (err as { error?: { http_code?: number }; http_code?: number })
+          ?.http_code ??
         (err as { error?: { http_code?: number } })?.error?.http_code;
-      if (status === 404) return null;
+      if (status === 404) {
+        // Fallback: If raw file without extension in publicId, try with extension
+        if (resourceType === "raw" && !publicId.includes(".") && options?.format) {
+          try {
+            const resWithExt = await cloudinary.api.resource(`${publicId}.${options.format}`, {
+              resource_type: resourceType,
+              type,
+            });
+            return {
+              bytes: Number(resWithExt.bytes ?? 0),
+              format: String(resWithExt.format ?? options.format),
+              width: resWithExt.width ? Number(resWithExt.width) : undefined,
+              height: resWithExt.height ? Number(resWithExt.height) : undefined,
+              resourceType: String(resWithExt.resource_type ?? resourceType),
+            };
+          } catch {}
+        }
+        return null;
+      }
       throw err;
     }
   }
