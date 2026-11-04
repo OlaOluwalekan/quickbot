@@ -48,7 +48,7 @@ export async function listWorkspaceResponses(
       attachments: {
         where: {
           deletedAt: null,
-          kind: { in: ["IMAGE", "DOCUMENT"] },
+          kind: { in: ["IMAGE", "DOCUMENT", "GENERATED_DOCUMENT"] },
         },
         select: {
           id: true,
@@ -134,7 +134,8 @@ export async function listWorkspaceResponses(
       createdAt: r.createdAt,
       activeVersion: activeVersionSummary,
       versionCount,
-      attachments: r.attachments ?? [],
+      attachments: (r.attachments ?? []).filter((a) => a.kind !== "GENERATED_DOCUMENT"),
+      generatedDocuments: (r.attachments ?? []).filter((a) => a.kind === "GENERATED_DOCUMENT"),
     };
   });
 
@@ -275,7 +276,7 @@ export async function regenerateResponse(
       attachments: {
         where: {
           deletedAt: null,
-          kind: { in: ["IMAGE", "DOCUMENT"] },
+          kind: { in: ["IMAGE", "DOCUMENT", "GENERATED_DOCUMENT"] },
         },
         select: { id: true },
       },

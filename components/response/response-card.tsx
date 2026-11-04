@@ -98,6 +98,13 @@ export interface ResponseItemData {
     width?: number | null;
     height?: number | null;
   }>;
+  generatedDocuments?: Array<{
+    id: string;
+    kind: string;
+    originalName: string;
+    mime: string;
+    bytes: number;
+  }>;
 }
 
 export interface ResponseCardProps {
@@ -687,6 +694,34 @@ export function ResponseCard({
                   label={t("sources")}
                 />
               )}
+
+              {response.generatedDocuments &&
+                response.generatedDocuments.length > 0 && (
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {response.generatedDocuments.map((doc) => (
+                      <a
+                        key={doc.id}
+                        href={`/api/v1/attachments/${doc.id}/download`}
+                        download={doc.originalName}
+                        className="border-border bg-surface-2 hover:bg-surface text-fg inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium transition-colors"
+                      >
+                        <FileDown className="text-accent h-4 w-4 shrink-0" />
+                        <span className="max-w-[220px] truncate">
+                          {doc.originalName}
+                        </span>
+                        <span className="text-accent ml-1 underline">
+                          Download
+                        </span>
+                      </a>
+                    ))}
+                  </div>
+                )}
+              {false && (
+                <SourcesAccordion
+                  citations={activeCitations}
+                  label={t("sources")}
+                />
+              )}
             </div>
           )}
 
@@ -804,7 +839,50 @@ export function ResponseCard({
                     </TooltipContent>
                   </Tooltip>
 
-                  {/* Export (Step 5.6 placeholder) */}
+                  {/* Export (Step 5.6: Markdown, PDF, DOCX) */}
+                  {!isImageResponse && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="text-fg-muted hover:text-fg h-8 px-2.5 text-xs"
+                        >
+                          <FileDown className="mr-1 h-3.5 w-3.5" />
+                          <span>{t("export")}</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className="w-44">
+                        <DropdownMenuItem asChild className="cursor-pointer">
+                          <a
+                            href={`/api/v1/responses/${response.id}/export?format=md&view=${viewMode}`}
+                            download
+                          >
+                            <span>Markdown (.md)</span>
+                          </a>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild className="cursor-pointer">
+                          <a
+                            href={`/api/v1/responses/${response.id}/export?format=pdf&view=${viewMode}`}
+                            download
+                          >
+                            <span>PDF (.pdf)</span>
+                          </a>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild className="cursor-pointer">
+                          <a
+                            href={`/api/v1/responses/${response.id}/export?format=docx&view=${viewMode}`}
+                            download
+                          >
+                            <span>Word (.docx)</span>
+                          </a>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                  {false && (
+                  <>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
@@ -820,6 +898,12 @@ export function ResponseCard({
                     </TooltipTrigger>
                     <TooltipContent side="top">
                       <p className="text-xs">{t("exportSoon")}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  </>
+                  )}
+                  <Tooltip>
+                    <TooltipContent side="top">
                     </TooltipContent>
                   </Tooltip>
                 </div>
