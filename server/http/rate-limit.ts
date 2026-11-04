@@ -17,6 +17,7 @@ export const policies = {
   "invite:send":  { n: 20,  window: "1 h"  as Duration },
   "support:send": { n: 3,   window: "1 h"  as Duration }, // key: ip or userId
   "link:fetch":   { n: 10,  window: "1 m"  as Duration }, // key: userId
+  "annotation:create": { n: 60, window: "1 m"  as Duration }, // key: userId
 } as const;
 
 export type RateLimitPolicy = keyof typeof policies;
