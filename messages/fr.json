@@ -186,7 +186,9 @@
     "attachRetry": "Réessayer",
     "attachLimitReached": "Maximum 3 pièces jointes autorisées pour votre forfait",
     "attachSizeExceeded": "La taille du fichier dépasse la limite de 5 Mo",
-    "dropFilesHere": "Déposez les fichiers à joindre"
+    "dropFilesHere": "Déposez les fichiers à joindre",
+    "searchWeb": "Rechercher sur le Web",
+    "searchWebDesc": "Ancrer les r?ponses avec Google Search (+3 cr?dits)"
   },
   "Settings": {
     "title": "Paramètres de l'espace",
@@ -478,7 +480,9 @@
     "modelPro": "Deep Reasoning",
     "readAloudSoon": "Read aloud will be available in Phase 9",
     "shareSoon": "Sharing will be available in Phase 7",
-    "exportSoon": "Exporting will be available in Phase 5"
+    "exportSoon": "Exporting will be available in Phase 5",
+    "sources": "Sources",
+    "downloadImage": "Télécharger l'image"
   },
   "Marketing": {
     "nav": {

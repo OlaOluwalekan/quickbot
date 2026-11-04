@@ -6,10 +6,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useUiStore } from "@/lib/stores/ui";
 import {
   useGenerationStore,
-  DEFAULT_WORKSPACE_STREAM,
-  type WorkspaceGenerationStream,
 } from "@/lib/stores/generation";
-import { streamGeneration, streamRegeneration } from "@/lib/api/sse";
+import { streamGeneration, streamRegeneration, type CitationDto } from "@/lib/api/sse";
 import { useResponses } from "@/lib/api/hooks/responses";
 import { queryKeys } from "@/lib/api/hooks/query-keys";
 import { Composer } from "@/components/workspace/composer";
@@ -26,6 +24,7 @@ export interface WorkspaceViewProps {
     kind?: "TEXT" | "IMAGE";
     content?: string;
     createdAt?: string | Date;
+    citations?: CitationDto[];
     attachments?: Array<{
       id: string;
       kind: string;
@@ -45,6 +44,7 @@ const EMPTY_INITIAL_RESPONSES: Array<{
   kind?: "TEXT" | "IMAGE";
   content?: string;
   createdAt?: string | Date;
+  citations?: CitationDto[];
   attachments?: Array<{
     id: string;
     kind: string;
@@ -110,9 +110,11 @@ export function WorkspaceView({
               edited?: boolean;
               hasEdits?: boolean;
               latestEditContent?: string | null;
+              citations?: CitationDto[];
             };
             response?: string;
             latestEdit?: { content?: string };
+            citations?: CitationDto[];
             attachments?: Array<{
               id: string;
               kind: string;
@@ -131,6 +133,7 @@ export function WorkspaceView({
             activeVer?.content ||
             raw.response ||
             "";
+          const verCitations = activeVer?.citations ?? raw.citations ?? [];
 
           return {
             id: r.id,
@@ -142,6 +145,7 @@ export function WorkspaceView({
             versionCount: raw.versionCount || 1,
             activeVersionId: r.activeVersionId || activeVer?.id,
             createdAt: r.createdAt,
+            citations: verCitations,
             attachments: (r as { attachments?: any[] }).attachments ?? raw.attachments ?? [],
             activeVersion: activeVer
               ? {
@@ -155,6 +159,7 @@ export function WorkspaceView({
                   edited: Boolean(activeVer.edited || activeVer.hasEdits || latestEdit),
                   hasEdits: Boolean(activeVer.hasEdits || latestEdit),
                   latestEditContent: latestEdit,
+                  citations: verCitations,
                 }
               : null,
           };
@@ -171,12 +176,14 @@ export function WorkspaceView({
       response: r.content || "",
       versionCount: 1,
       createdAt: r.createdAt,
+      citations: r.citations ?? [],
       attachments: r.attachments ?? [],
       activeVersion: {
         id: "ver-" + r.id,
         number: 1,
         content: r.content || "",
         originalContent: r.content || "",
+        citations: r.citations ?? [],
       },
     }));
   }, [responsesData, localResponses, workspace.id]);
@@ -185,7 +192,7 @@ export function WorkspaceView({
 
   // Execute or retry stream generation
   const startStreamTurn = React.useCallback(
-    (promptText: string, idempotencyKey: string, options?: { modelKey?: string; kind?: "TEXT" | "IMAGE"; think?: boolean; language?: string; attachmentIds?: string[] }) => {
+    (promptText: string, idempotencyKey: string, options?: { modelKey?: string; kind?: "TEXT" | "IMAGE"; think?: boolean; grounding?: boolean; language?: string; attachmentIds?: string[] }) => {
       const genStore = useGenerationStore.getState();
       const effectiveKind = options?.kind || "TEXT";
       genStore.startStream(workspace.id, { prompt: promptText, kind: effectiveKind });
@@ -201,6 +208,7 @@ export function WorkspaceView({
           modelKey: options?.modelKey || (effectiveKind === "IMAGE" ? "image-standard" : "text-economy"),
           kind: effectiveKind,
           think: options?.think,
+          grounding: options?.grounding,
           language: options?.language,
           attachmentIds: options?.attachmentIds,
         },
@@ -217,8 +225,11 @@ export function WorkspaceView({
           onDelta: (data) => {
             useGenerationStore.getState().appendDelta(workspace.id, data.text);
           },
+          onCitation: (data) => {
+            useGenerationStore.getState().appendCitation(workspace.id, data);
+          },
           onCompleted: (data) => {
-            useGenerationStore.getState().completeStream(workspace.id, data.content);
+            useGenerationStore.getState().completeStream(workspace.id, data.content, data.citations);
             setLocalResponses((prev) => [
               ...prev,
               {
@@ -226,6 +237,7 @@ export function WorkspaceView({
                 prompt: promptText,
                 kind: effectiveKind,
                 content: data.content,
+                citations: data.citations ?? [],
                 createdAt: new Date(),
               },
             ]);
@@ -288,6 +300,7 @@ export function WorkspaceView({
       modelKey: pending.modelKey,
       kind: pending.mode === "image" ? "IMAGE" : "TEXT",
       think: pending.thinkHarder,
+      grounding: pending.grounding,
       language: pending.language || undefined,
       attachmentIds: pending.attachmentIds,
     });
@@ -313,9 +326,16 @@ export function WorkspaceView({
           ? crypto.randomUUID()
           : "regen-" + Date.now().toString(36) + Math.random().toString(36).substring(2, 8);
 
+      const hasExistingGrounding = Boolean(
+        targetResponse.citations?.some((c) => c.source === "GROUNDING")
+      );
+
       streamRegeneration(
         responseId,
-        { idempotencyKey: idemKey },
+        {
+          idempotencyKey: idemKey,
+          grounding: hasExistingGrounding ? true : undefined,
+        },
         {
           onStarted: (data) => {
             useGenerationStore.getState().setGenerationId(workspace.id, data.generationId);
@@ -329,8 +349,11 @@ export function WorkspaceView({
           onDelta: (data) => {
             useGenerationStore.getState().appendDelta(workspace.id, data.text);
           },
+          onCitation: (data) => {
+            useGenerationStore.getState().appendCitation(workspace.id, data);
+          },
           onCompleted: (data) => {
-            useGenerationStore.getState().completeStream(workspace.id, data.content);
+            useGenerationStore.getState().completeStream(workspace.id, data.content, data.citations);
             useGenerationStore.getState().setController(workspace.id, null);
 
             queryClient.invalidateQueries({

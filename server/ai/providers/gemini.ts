@@ -163,15 +163,41 @@ export class GeminiProvider implements AiProvider {
           }
         }
 
-        // 2. Check grounding metadata for citations
-        const groundingChunks =
-          candidate?.groundingMetadata?.groundingChunks || [];
-        for (const gc of groundingChunks) {
-          if (gc.web?.uri) {
+        // 2. Check grounding metadata (groundingChunks + groundingSupports) for citations
+        const groundingMetadata = candidate?.groundingMetadata;
+        const groundingChunks: Array<{ web?: { uri?: string; title?: string } }> =
+          groundingMetadata?.groundingChunks || [];
+        const groundingSupports: Array<{
+          segment?: { startIndex?: number; endIndex?: number; text?: string };
+          groundingChunkIndices?: number[];
+        }> = groundingMetadata?.groundingSupports || [];
+
+        for (let chunkIdx = 0; chunkIdx < groundingChunks.length; chunkIdx++) {
+          const gc = groundingChunks[chunkIdx];
+          if (gc?.web?.uri) {
+            // Collect any segments and snippet text that reference this chunk index
+            const matchingSupports = groundingSupports.filter(
+              (sup) =>
+                Array.isArray(sup.groundingChunkIndices) &&
+                sup.groundingChunkIndices.includes(chunkIdx)
+            );
+            const segments = matchingSupports
+              .map((sup) => sup.segment)
+              .filter(
+                (seg): seg is { startIndex?: number; endIndex?: number; text?: string } =>
+                  Boolean(seg)
+              );
+            const snippet = segments
+              .map((seg) => seg.text?.trim())
+              .filter(Boolean)
+              .join(" … ") || undefined;
+
             yield {
               type: "citation",
               url: gc.web.uri,
               title: gc.web.title,
+              ...(snippet ? { snippet } : {}),
+              ...(segments.length > 0 ? { segments } : {}),
             };
           }
         }
@@ -228,6 +254,51 @@ export class GeminiProvider implements AiProvider {
 
   async generateImage(req: ImageRequest): Promise<ImageResult> {
     try {
+      const isImagenModel = /^imagen/i.test(req.modelKey);
+
+      if (
+        !isImagenModel &&
+        typeof this.client.models?.generateContent === "function"
+      ) {
+        const response = await this.client.models.generateContent({
+          model: req.modelKey,
+          contents: req.prompt,
+          config: {
+            responseModalities: ["IMAGE"],
+            safetySettings: GEMINI_SAFETY_SETTINGS as any,
+          },
+        });
+
+        const parts = response.candidates?.[0]?.content?.parts || [];
+        const imgPart = parts.find((p: any) => p?.inlineData?.data);
+        const base64Bytes = imgPart?.inlineData?.data;
+        const rawMime = imgPart?.inlineData?.mimeType || "image/png";
+        const mime: "image/png" | "image/jpeg" | "image/webp" =
+          rawMime === "image/jpeg" || rawMime === "image/jpg"
+            ? "image/jpeg"
+            : rawMime === "image/webp"
+              ? "image/webp"
+              : "image/png";
+
+        if (!base64Bytes) {
+          const finishReason = response.candidates?.[0]?.finishReason;
+          if (
+            finishReason &&
+            String(finishReason).toUpperCase().includes("SAFETY")
+          ) {
+            throw new Error("SAFETY: Image generation blocked by safety filter");
+          }
+          throw new Error("No image bytes returned by the model");
+        }
+
+        const bytes = Buffer.from(base64Bytes, "base64");
+        return {
+          bytes,
+          mime,
+          usage: { images: req.numberOfImages ?? 1 },
+        };
+      }
+
       const response = await this.client.models.generateImages({
         model: req.modelKey,
         prompt: req.prompt,

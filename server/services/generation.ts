@@ -24,10 +24,14 @@ import {
 } from "@/server/ai/registry";
 import {
   streamAi,
+  getProvider,
   AiProvider,
   GenerateRequest,
   enforceImagePromptModeration,
   ModerationProvider,
+  validateCitationUrl,
+  applyGroundingInlineMarkers,
+  CitationItem,
 } from "@/server/ai";
 import {
   PLANS,
@@ -62,6 +66,7 @@ interface ActiveGeneration {
   bufferedEvents: string[];
   currentContent: string;
   currentThought: string;
+  citations: CitationItem[];
   tokensEmitted: boolean;
   isComplete: boolean;
 }
@@ -130,6 +135,13 @@ async function resolveEffectiveUserPlan(
     }
   } catch {
     // Fallback if ledger query fails in unit test mocks
+  }
+
+  // TEMPORARY (until Step 8.1 Subscription Billing is implemented):
+  // Unlock PRO plan features (image generation, web search grounding, standard/advanced models)
+  // in non-test environments so all capabilities can be tested without an active subscription.
+  if (process.env.NODE_ENV !== "test") {
+    return "PRO";
   }
 
   return "FREE";
@@ -207,6 +219,8 @@ async function executeDetachedGeneration(params: {
   inputMessages: GenerateRequest["messages"];
   systemPrompt: string;
   think?: boolean;
+  grounding?: boolean;
+  initialCitations?: CitationItem[];
   providerInstance?: AiProvider;
   isFirstTurn: boolean;
   abortController: AbortController;
@@ -226,6 +240,8 @@ async function executeDetachedGeneration(params: {
     inputMessages,
     systemPrompt,
     think,
+    grounding,
+    initialCitations = [],
     providerInstance,
     isFirstTurn,
     abortController,
@@ -240,6 +256,26 @@ async function executeDetachedGeneration(params: {
 
   // Emit status: preparing (includes context_truncated flag if truncated)
   broadcastEvent(active, "status", { stage: "preparing", truncated });
+
+  // Seed any user-supplied attachment/link citations first
+  for (const initCit of initialCitations) {
+    const existing = active.citations.find((c) => c.url === initCit.url);
+    if (!existing) {
+      const nextIndex = active.citations.length + 1;
+      const item: CitationItem = {
+        ...initCit,
+        index: nextIndex,
+      };
+      active.citations.push(item);
+      broadcastEvent(active, "citation", {
+        index: item.index,
+        url: item.url,
+        title: item.title,
+        snippet: item.snippet,
+        source: item.source,
+      });
+    }
+  }
 
   let checkpointInterval: NodeJS.Timeout | null = null;
   let lastSavedLength = 0;
@@ -266,11 +302,12 @@ async function executeDetachedGeneration(params: {
   try {
     if (kind === "IMAGE") {
       broadcastEvent(active, "status", { stage: "writing" });
-      if (!activeProvider?.generateImage) {
+      const imgProvider = activeProvider || getProvider(modelKey);
+      if (!imgProvider?.generateImage) {
         throw new Error("Provider not configured for image generation");
       }
 
-      const imgResult = await activeProvider.generateImage({
+      const imgResult = await imgProvider.generateImage({
         modelKey: getModel(modelKey).providerModelId,
         prompt,
       });
@@ -398,6 +435,7 @@ async function executeDetachedGeneration(params: {
         messages: inputMessages,
         system: systemPrompt,
         thinking: thinkingConfig,
+        grounding: Boolean(grounding),
       },
       {
         userPlan,
@@ -431,6 +469,49 @@ async function executeDetachedGeneration(params: {
         active.currentContent += event.text;
         active.tokensEmitted = true;
         broadcastEvent(active, "delta", { text: event.text });
+      } else if (event.type === "citation") {
+        // Step 5.5: Only record provider citations when grounding is enabled.
+        // Validate URL (http/https only) and never parse URLs from model text.
+        if (grounding) {
+          const check = validateCitationUrl(event.url);
+          if (check.valid && check.normalizedUrl) {
+            const existing = active.citations.find(
+              (c) => c.url === check.normalizedUrl
+            );
+            if (existing) {
+              if (!existing.title && event.title) {
+                existing.title = event.title;
+              }
+              if (!existing.snippet && event.snippet) {
+                existing.snippet = event.snippet;
+              }
+              if (event.segments && event.segments.length > 0) {
+                existing.segments = [
+                  ...(existing.segments || []),
+                  ...event.segments,
+                ];
+              }
+            } else {
+              const nextIndex = active.citations.length + 1;
+              const newCit: CitationItem = {
+                index: nextIndex,
+                url: check.normalizedUrl,
+                title: event.title || check.hostname || null,
+                snippet: event.snippet || null,
+                source: "GROUNDING",
+                segments: event.segments,
+              };
+              active.citations.push(newCit);
+              broadcastEvent(active, "citation", {
+                index: newCit.index,
+                url: newCit.url,
+                title: newCit.title,
+                snippet: newCit.snippet,
+                source: newCit.source,
+              });
+            }
+          }
+        }
       } else if (event.type === "usage") {
         usage = {
           inputTokens: event.inputTokens,
@@ -446,21 +527,30 @@ async function executeDetachedGeneration(params: {
     // Stage: saving
     broadcastEvent(active, "status", { stage: "saving" });
 
+    // Position inline [n] markers if grounding segments provided exact offsets
+    if (grounding && active.citations.some((c) => c.segments && c.segments.length > 0)) {
+      active.currentContent = applyGroundingInlineMarkers(
+        active.currentContent,
+        active.citations
+      );
+    }
+
     // If usage was not provided by provider, estimate from content length
     if (usage.outputTokens === 0 && active.currentContent.length > 0) {
       usage.outputTokens = estimateTokens(active.currentContent);
     }
 
-    // Settle credits
+    // Settle credits (including +3 surcharge when grounded)
     const chargedCredits = creditsFor(modelKey, {
       inputTokens: usage.inputTokens,
       outputTokens: usage.outputTokens,
+      grounding: Boolean(grounding),
     });
 
     await settle(billedAccountId, generationId, chargedCredits, settleKey);
 
-    // Save final state
-    await db.$transaction(async (tx) => {
+    // Save final state (ResponseVersion + Citations + Response + Workspace + Generation)
+    const savedCitations = await db.$transaction(async (tx) => {
       await tx.responseVersion.update({
         where: { id: versionId },
         data: {
@@ -469,6 +559,20 @@ async function executeDetachedGeneration(params: {
           thoughtSummary: active.currentThought || null,
         },
       });
+
+      if (active.citations.length > 0 && "citation" in tx && tx.citation) {
+        await tx.citation.createMany({
+          data: active.citations.map((c) => ({
+            versionId,
+            index: c.index,
+            url: c.url,
+            title: c.title ?? null,
+            snippet: c.snippet ?? null,
+            source: c.source,
+          })),
+        });
+      }
+
       await tx.response.update({
         where: { id: responseId },
         data: { activeVersionId: versionId },
@@ -486,6 +590,14 @@ async function executeDetachedGeneration(params: {
           finishedAt: new Date(),
         },
       });
+
+      if ("citation" in tx && tx.citation) {
+        return tx.citation.findMany({
+          where: { versionId },
+          orderBy: { index: "asc" },
+        });
+      }
+      return [];
     });
 
     // Stage: done
@@ -499,6 +611,7 @@ async function executeDetachedGeneration(params: {
       responseId,
       versionId,
       content: active.currentContent,
+      citations: savedCitations,
     });
 
     if (isFirstTurn) {
@@ -518,7 +631,10 @@ async function executeDetachedGeneration(params: {
         const estimatedOutput = estimateTokens(active.currentContent);
         const chargedCredits =
           active.currentContent.length > 0
-            ? creditsFor(modelKey, { outputTokens: estimatedOutput })
+            ? creditsFor(modelKey, {
+                outputTokens: estimatedOutput,
+                grounding: Boolean(grounding),
+              })
             : 0;
 
         if (chargedCredits > 0) {
@@ -555,8 +671,15 @@ async function executeDetachedGeneration(params: {
     }
 
     // Provider or unexpected error
+    if (process.env.NODE_ENV !== "test") {
+      console.error("[Generation] Error during generation:", err);
+    }
     const normalized = normalizeGeminiError(err);
     const errorCode = normalized.category || "generation_error";
+    const errorMessage =
+      err instanceof Error && err.message
+        ? err.message
+        : normalized.message || "Failed to generate response";
 
     if (!active.tokensEmitted || active.currentContent.length === 0) {
       // Nothing produced -> 100% full refund
@@ -583,6 +706,7 @@ async function executeDetachedGeneration(params: {
       // Partial output produced and provider billed us -> settle partial
       const chargedCredits = creditsFor(modelKey, {
         outputTokens: estimateTokens(active.currentContent),
+        grounding: Boolean(grounding),
       });
 
       await settle(billedAccountId, generationId, chargedCredits, settleKey).catch(() => {});
@@ -612,7 +736,7 @@ async function executeDetachedGeneration(params: {
     }
 
     broadcastEvent(active, "status", { stage: "failed" });
-    broadcastEvent(active, "error", { code: errorCode });
+    broadcastEvent(active, "error", { code: errorCode, message: errorMessage });
   } finally {
     if (checkpointInterval) {
       clearInterval(checkpointInterval);
@@ -632,7 +756,7 @@ async function executeDetachedGeneration(params: {
 }
 
 /**
- * Creates and streams a generation according to Step 2.4, Step 2.5, and Step 5.4 specifications.
+ * Creates and streams a generation according to Step 2.4, Step 2.5, Step 5.4, and Step 5.5 specifications.
  */
 export async function createAndStreamGeneration(
   actor: Actor,
@@ -676,6 +800,9 @@ export async function createAndStreamGeneration(
       const version = existingGen.versionId
         ? await db.responseVersion.findUnique({
             where: { id: existingGen.versionId },
+            include: {
+              citations: { orderBy: { index: "asc" } },
+            },
           })
         : null;
 
@@ -700,6 +827,21 @@ export async function createAndStreamGeneration(
               encoder.encode(formatSSEEvent("delta", { text: version.content }))
             );
           }
+          if (version?.citations && version.citations.length > 0) {
+            for (const cit of version.citations) {
+              controller.enqueue(
+                encoder.encode(
+                  formatSSEEvent("citation", {
+                    index: cit.index,
+                    url: cit.url,
+                    title: cit.title,
+                    snippet: cit.snippet,
+                    source: cit.source,
+                  })
+                )
+              );
+            }
+          }
           controller.enqueue(
             encoder.encode(formatSSEEvent("status", { stage: "done" }))
           );
@@ -709,6 +851,7 @@ export async function createAndStreamGeneration(
                 responseId: existingGen.responseId,
                 versionId: existingGen.versionId,
                 content: version?.content ?? "",
+                citations: version?.citations ?? [],
               })
             )
           );
@@ -817,6 +960,13 @@ export async function createAndStreamGeneration(
     modelKey = (input.modelKey ?? "text-economy") as ModelKey;
   }
 
+  const groundingEnabled = Boolean(input.grounding && kind === "TEXT");
+  if (groundingEnabled && !PLANS[userPlan].limits.grounding) {
+    throw Errors.forbidden(
+      "Web search grounding is not available on the Free plan. Please upgrade to Lite, Standard, or Pro."
+    );
+  }
+
   const model = getModel(modelKey);
   try {
     assertModelAccess(modelKey, userPlan);
@@ -847,7 +997,9 @@ export async function createAndStreamGeneration(
   }
 
   const contextAttachments: Part[] = [];
+  const initialAttachmentCitations: CitationItem[] = [];
   let existingAttachments: Array<{ id: string; providerId: string }> = [];
+
   if (attachmentIds && attachmentIds.length > 0 && kind === "TEXT") {
     const attachments = await db.attachment.findMany({
       where: { id: { in: attachmentIds } },
@@ -885,6 +1037,18 @@ export async function createAndStreamGeneration(
           type: "text",
           text: `<document name="${att.originalName}">\n${docText}\n</document>`,
         });
+
+        // Step 5.5: If attachment is a user-supplied link (providerId is valid http/https URL), record as ATTACHMENT citation
+        const urlCheck = validateCitationUrl(att.providerId);
+        if (urlCheck.valid && urlCheck.normalizedUrl) {
+          initialAttachmentCitations.push({
+            index: initialAttachmentCitations.length + 1,
+            url: urlCheck.normalizedUrl,
+            title: att.originalName || urlCheck.hostname || null,
+            snippet: docText ? docText.slice(0, 240).trim() : null,
+            source: "ATTACHMENT",
+          });
+        }
       } else if (att.kind === "IMAGE" || att.kind === "GENERATED_IMAGE") {
         try {
           const buffer = await storage.downloadBuffer(att.providerId, {
@@ -923,6 +1087,19 @@ export async function createAndStreamGeneration(
             type: "text",
             text: `<document name="${linkAtt.originalName}">\n${linkAtt.extractedText || ""}\n</document>`,
           });
+
+          const urlCheck = validateCitationUrl(linkAtt.providerId);
+          if (urlCheck.valid && urlCheck.normalizedUrl) {
+            initialAttachmentCitations.push({
+              index: initialAttachmentCitations.length + 1,
+              url: urlCheck.normalizedUrl,
+              title: linkAtt.originalName || urlCheck.hostname || null,
+              snippet: linkAtt.extractedText
+                ? linkAtt.extractedText.slice(0, 240).trim()
+                : null,
+              source: "ATTACHMENT",
+            });
+          }
         }
       } catch (err: unknown) {
         console.warn(`[SafeFetch] Could not auto-ingest link "${urlStr}":`, err);
@@ -948,6 +1125,7 @@ export async function createAndStreamGeneration(
         uiLocale: userPref?.uiLocale,
       });
     }
+
     const ctx = await buildContext({
       workspaceId,
       upToResponseId: input.regenerateResponseId,
@@ -980,6 +1158,7 @@ export async function createAndStreamGeneration(
       : creditsFor(modelKey, {
           inputTokens: estimatedInputTokens,
           outputTokens: 4096,
+          grounding: groundingEnabled,
         });
 
   // Daily cap check for image generation (Step 5.4)
@@ -1124,6 +1303,7 @@ export async function createAndStreamGeneration(
     bufferedEvents: [],
     currentContent: "",
     currentThought: "",
+    citations: [],
     tokensEmitted: false,
     isComplete: false,
   };
@@ -1156,6 +1336,8 @@ export async function createAndStreamGeneration(
     inputMessages: messages,
     systemPrompt,
     think: input.think,
+    grounding: groundingEnabled,
+    initialCitations: initialAttachmentCitations,
     providerInstance: options.providerInstance || customProviderForTesting || undefined,
     isFirstTurn,
     abortController,
@@ -1282,6 +1464,7 @@ export async function getGenerationStatus(actor: Actor, generationId: string) {
       versionId: active.versionId,
       content: active.currentContent,
       thoughtSummary: active.currentThought || null,
+      citations: active.citations,
       errorCode: gen.errorCode,
     };
   }
@@ -1289,6 +1472,9 @@ export async function getGenerationStatus(actor: Actor, generationId: string) {
   const version = gen.versionId
     ? await db.responseVersion.findUnique({
         where: { id: gen.versionId },
+        include: {
+          citations: { orderBy: { index: "asc" } },
+        },
       })
     : null;
 
@@ -1300,6 +1486,7 @@ export async function getGenerationStatus(actor: Actor, generationId: string) {
     versionId: gen.versionId,
     content: version?.content ?? "",
     thoughtSummary: version?.thoughtSummary ?? null,
+    citations: version?.citations ?? [],
     errorCode: gen.errorCode,
   };
 }

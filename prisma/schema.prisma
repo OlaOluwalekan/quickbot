@@ -268,6 +268,7 @@ model ResponseVersion {
   createdAt       DateTime       @default(now()) @map("created_at")
   response        Response       @relation(fields: [responseId], references: [id], onDelete: Cascade)
   edits           ResponseEdit[]
+  citations       Citation[]
 
   @@unique([responseId, number])
   @@index([responseId, createdAt])
@@ -412,4 +413,27 @@ model Attachment {
   @@index([ownerId])
   @@index([status, createdAt])
   @@map("attachments")
+}
+
+enum CitationSource {
+  GROUNDING
+  ATTACHMENT
+  MODEL_PROVIDED
+}
+
+model Citation {
+  id        String          @id @default(uuid(7))
+  versionId String          @map("version_id")
+  index     Int
+  url       String
+  title     String?
+  snippet   String?         @db.Text
+  source    CitationSource  @default(GROUNDING)
+  createdAt DateTime        @default(now()) @map("created_at")
+
+  version   ResponseVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+
+  @@unique([versionId, index])
+  @@index([versionId])
+  @@map("citations")
 }

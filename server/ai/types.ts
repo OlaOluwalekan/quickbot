@@ -28,7 +28,14 @@ export type StreamEvent =
   | { type: "thought_delta"; text: string }
   | { type: "text_delta"; text: string }
   | { type: "tool_call"; name: string; args: unknown }
-  | { type: "citation"; url: string; title?: string; snippet?: string }
+  | {
+      type: "citation";
+      url: string;
+      title?: string;
+      snippet?: string;
+      source?: "GROUNDING" | "ATTACHMENT" | "MODEL_PROVIDED";
+      segments?: Array<{ startIndex?: number; endIndex?: number; text?: string }>;
+    }
   | {
       type: "usage";
       inputTokens: number;

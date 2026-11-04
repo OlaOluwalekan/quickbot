@@ -67,6 +67,9 @@ export async function listWorkspaceResponses(
             orderBy: { revision: "desc" },
             take: 1,
           },
+          citations: {
+            orderBy: { index: "asc" },
+          },
           _count: {
             select: { edits: true },
           },
@@ -106,6 +109,7 @@ export async function listWorkspaceResponses(
         edited: (activeVer._count?.edits ?? 0) > 0,
         hasEdits: (activeVer._count?.edits ?? 0) > 0,
         editCount: activeVer._count?.edits ?? 0,
+        citations: activeVer.citations ?? [],
         latestEdit: latestEdit
           ? {
               id: latestEdit.id,
@@ -138,7 +142,7 @@ export async function listWorkspaceResponses(
 }
 
 /**
- * Lists all versions of a response (metadata + content + edit summary).
+ * Lists all versions of a response (metadata + content + edit summary + citations).
  * Supports ?view=original|edited.
  */
 export async function listResponseVersions(
@@ -166,6 +170,9 @@ export async function listResponseVersions(
       edits: {
         orderBy: { revision: "desc" },
         take: 1,
+      },
+      citations: {
+        orderBy: { index: "asc" },
       },
       _count: {
         select: { edits: true },
@@ -198,6 +205,7 @@ export async function listResponseVersions(
       edited: (v._count?.edits ?? 0) > 0,
       hasEdits: (v._count?.edits ?? 0) > 0,
       editCount: v._count?.edits ?? 0,
+      citations: v.citations ?? [],
       latestEdit: latestEdit
         ? {
             id: latestEdit.id,
@@ -271,6 +279,16 @@ export async function regenerateResponse(
         },
         select: { id: true },
       },
+      versions: {
+        orderBy: { number: "desc" },
+        take: 1,
+        include: {
+          citations: {
+            where: { source: "GROUNDING" },
+            take: 1,
+          },
+        },
+      },
     },
   });
 
@@ -283,6 +301,10 @@ export async function regenerateResponse(
 
   const isImageTurn = targetResponse.kind === "IMAGE";
   const defaultModelKey = isImageTurn ? "image-standard" : "text-economy";
+  const priorHadGrounding = Boolean(
+    targetResponse.versions?.[0]?.citations &&
+      targetResponse.versions[0].citations.length > 0
+  );
 
   // Calls generation service with regenerateResponseId
   return createAndStreamGeneration(
@@ -295,6 +317,7 @@ export async function regenerateResponse(
       kind: isImageTurn ? "IMAGE" : "TEXT",
       regenerateResponseId: responseId,
       think: input.think,
+      grounding: input.grounding ?? priorHadGrounding,
       language: input.language,
       attachmentIds: isImageTurn
         ? undefined
