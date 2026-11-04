@@ -239,8 +239,18 @@ export function ResponseList({
                       defaultOpen={true}
                     />
 
-                    {/* Stream Output Text with Soft Caret */}
-                    {stream.text ? (
+                    {/* Stream Output Text with Soft Caret or Image Generation Skeleton */}
+                    {stream.kind === "IMAGE" && isStreaming ? (
+                      <div
+                        data-testid="image-generation-skeleton"
+                        className="bg-surface-2 border-border flex aspect-square w-full max-w-md animate-pulse flex-col items-center justify-center gap-2 rounded-2xl border"
+                      >
+                        <Sparkles className="text-accent h-6 w-6 animate-spin" />
+                        <span className="text-fg-muted text-xs">
+                          {stream.progressLabel || t("thinking")}
+                        </span>
+                      </div>
+                    ) : stream.text ? (
                       <div className="overflow-x-auto leading-relaxed wrap-break-word whitespace-pre-wrap select-text">
                         {stream.text}
                         {isStreaming && (

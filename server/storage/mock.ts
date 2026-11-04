@@ -5,6 +5,8 @@ import {
   StorageAssetMeta,
   StorageProvider,
   StorageResourceType,
+  UploadBufferOptions,
+  UploadBufferResult,
 } from "./types";
 
 interface StoredMockAsset {
@@ -66,6 +68,50 @@ export class MockStorageProvider implements StorageProvider {
       type: isPublic ? "upload" : "authenticated",
       maxBytes: options.maxBytes,
       allowedFormats: options.allowedFormats,
+    };
+  }
+
+  async uploadBuffer(
+    buffer: Buffer,
+    options: UploadBufferOptions
+  ): Promise<UploadBufferResult> {
+    const resourceType = options.resourceType ?? "image";
+    const format =
+      options.format ?? (options.mime?.split("/")[1] || "png");
+    const isPublic = Boolean(options.isPublic);
+    const fullPublicId =
+      options.folder && !options.publicId.includes("/")
+        ? `${options.folder}/${options.publicId}`
+        : options.publicId;
+
+    const meta: StorageAssetMeta = {
+      bytes: buffer.byteLength,
+      format,
+      width: resourceType === "image" ? 1024 : undefined,
+      height: resourceType === "image" ? 1024 : undefined,
+      resourceType,
+    };
+
+    this.storage.set(fullPublicId, {
+      buffer,
+      meta,
+      isPublic,
+    });
+    if (fullPublicId !== options.publicId) {
+      this.storage.set(options.publicId, {
+        buffer,
+        meta,
+        isPublic,
+      });
+    }
+
+    return {
+      publicId: fullPublicId,
+      bytes: meta.bytes,
+      format: meta.format,
+      width: meta.width,
+      height: meta.height,
+      resourceType: meta.resourceType,
     };
   }
 

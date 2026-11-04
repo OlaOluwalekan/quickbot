@@ -1,6 +1,8 @@
 import { ingestLinkAttachment } from "./attachment";
 import "server-only";
+import crypto from "node:crypto";
 import { db } from "@/server/db/client";
+import { env } from "@/server/env";
 import { Errors } from "@/server/http/errors";
 import type { Actor } from "@/server/auth/session";
 import { requireWorkspace } from "@/server/authz/access";
@@ -10,18 +12,29 @@ import {
   release,
   createAccountWithFreeGrant,
   getAccountByUserId,
+  getDailyUsage,
 } from "@/server/services/credits";
 import {
   getModel,
+  isModelKey,
   assertModelAccess,
   creditsFor,
   ModelKey,
+  PlanTier,
 } from "@/server/ai/registry";
 import {
   streamAi,
   AiProvider,
   GenerateRequest,
+  enforceImagePromptModeration,
+  ModerationProvider,
 } from "@/server/ai";
+import {
+  PLANS,
+  PlanKey,
+  getUserPlanOverride,
+  getDailyCapForPlan,
+} from "@/server/billing/plans";
 import { buildContext, estimateTokens } from "@/server/ai/context-builder";
 import { PROMPT_VERSION } from "@/server/ai/prompts/system";
 import {
@@ -79,6 +92,47 @@ function broadcastEvent(active: ActiveGeneration, eventName: string, data: unkno
       // subscriber error ignored
     }
   }
+}
+
+/**
+ * Resolves the effective plan tier for a workspace owner's credit account.
+ */
+async function resolveEffectiveUserPlan(
+  userId: string,
+  account: { id: string; planBalance: number; topupBalance: number },
+  explicitPlan?: PlanTier
+): Promise<PlanKey> {
+  if (explicitPlan && explicitPlan in PLANS) {
+    return explicitPlan as PlanKey;
+  }
+
+  const override = getUserPlanOverride(userId);
+  if (override) {
+    return override;
+  }
+
+  if (account.planBalance > 1800) return "PRO";
+  if (account.planBalance > 800) return "STANDARD";
+  if (account.planBalance > 100) return "LITE";
+
+  try {
+    const latestGrant = await db.creditLedger.findFirst({
+      where: { accountId: account.id, type: "GRANT", planDelta: { gt: 0 } },
+      orderBy: { createdAt: "desc" },
+      select: { planDelta: true, reason: true },
+    });
+
+    if (latestGrant) {
+      const reason = (latestGrant.reason || "").toUpperCase();
+      if (reason.includes("PRO") || latestGrant.planDelta >= 3500) return "PRO";
+      if (reason.includes("STANDARD") || latestGrant.planDelta >= 1800) return "STANDARD";
+      if (reason.includes("LITE") || latestGrant.planDelta >= 800) return "LITE";
+    }
+  } catch {
+    // Fallback if ledger query fails in unit test mocks
+  }
+
+  return "FREE";
 }
 
 /**
@@ -142,7 +196,9 @@ async function executeDetachedGeneration(params: {
   workspaceId: string;
   responseId: string;
   versionId: string;
+  actorId: string;
   billedAccountId: string;
+  userPlan: PlanKey;
   modelKey: ModelKey;
   prompt: string;
   kind: "TEXT" | "IMAGE";
@@ -160,7 +216,9 @@ async function executeDetachedGeneration(params: {
     workspaceId,
     responseId,
     versionId,
+    actorId,
     billedAccountId,
+    userPlan,
     modelKey,
     prompt,
     kind,
@@ -221,21 +279,61 @@ async function executeDetachedGeneration(params: {
         throw new Error("Cancelled");
       }
 
-      const base64Data = imgResult.bytes.toString("base64");
-      active.currentContent = `![Generated Image](data:${imgResult.mime};base64,${base64Data})`;
-      active.tokensEmitted = true;
-
       broadcastEvent(active, "status", { stage: "saving" });
+
+      // Step 5.4: Upload generated image bytes to Cloudinary (kind: GENERATED_IMAGE, private),
+      // create the Attachment, link to ResponseVersion, and store ONLY the attachment ID.
+      const storage = getStorageProvider();
+      const folder = env.CLOUDINARY_UPLOAD_FOLDER || "klecx/dev";
+      const ext =
+        imgResult.mime === "image/jpeg"
+          ? "jpg"
+          : imgResult.mime === "image/webp"
+            ? "webp"
+            : "png";
+      const publicId = `${folder}/${workspaceId}/gen_${crypto.randomUUID()}`;
+
+      const uploaded = await storage.uploadBuffer(imgResult.bytes, {
+        publicId,
+        folder,
+        resourceType: "image",
+        format: ext,
+        mime: imgResult.mime,
+        isPublic: false,
+      });
+
+      const sha256 = crypto
+        .createHash("sha256")
+        .update(imgResult.bytes)
+        .digest("hex");
 
       const chargedCredits = creditsFor(modelKey, { images: 1 });
       await settle(billedAccountId, generationId, chargedCredits, settleKey);
 
-      await db.$transaction(async (tx) => {
+      const createdAttachment = await db.$transaction(async (tx) => {
+        const attachment = await tx.attachment.create({
+          data: {
+            ownerId: actorId,
+            workspaceId,
+            responseId,
+            kind: "GENERATED_IMAGE",
+            status: "READY",
+            providerId: uploaded.publicId,
+            resourceType: "image",
+            mime: imgResult.mime,
+            bytes: imgResult.bytes.byteLength,
+            width: uploaded.width ?? 1024,
+            height: uploaded.height ?? 1024,
+            originalName: `generated-${versionId}.${ext}`,
+            sha256,
+          },
+        });
+
         await tx.responseVersion.update({
           where: { id: versionId },
           data: {
             status: "COMPLETE",
-            content: active.currentContent,
+            content: attachment.id,
           },
         });
         await tx.response.update({
@@ -254,10 +352,18 @@ async function executeDetachedGeneration(params: {
             finishedAt: new Date(),
           },
         });
+
+        return attachment;
       });
 
+      active.currentContent = createdAttachment.id;
+      active.tokensEmitted = true;
+
       broadcastEvent(active, "status", { stage: "done" });
-      broadcastEvent(active, "delta", { text: active.currentContent });
+      broadcastEvent(active, "delta", {
+        text: createdAttachment.id,
+        attachmentId: createdAttachment.id,
+      });
       broadcastEvent(active, "usage", {
         inputTokens: 0,
         outputTokens: 0,
@@ -266,7 +372,8 @@ async function executeDetachedGeneration(params: {
       broadcastEvent(active, "completed", {
         responseId,
         versionId,
-        content: active.currentContent,
+        content: createdAttachment.id,
+        attachmentId: createdAttachment.id,
       });
 
       if (isFirstTurn) {
@@ -293,7 +400,7 @@ async function executeDetachedGeneration(params: {
         thinking: thinkingConfig,
       },
       {
-        userPlan: "FREE",
+        userPlan,
         providerInstance: activeProvider,
       }
     );
@@ -525,13 +632,17 @@ async function executeDetachedGeneration(params: {
 }
 
 /**
- * Creates and streams a generation according to Step 2.4 and Step 2.5 specifications.
+ * Creates and streams a generation according to Step 2.4, Step 2.5, and Step 5.4 specifications.
  */
 export async function createAndStreamGeneration(
   actor: Actor,
   workspaceId: string,
   rawInput: CreateGenerationInput,
-  options: { providerInstance?: AiProvider } = {}
+  options: {
+    providerInstance?: AiProvider;
+    userPlan?: PlanTier;
+    moderationProvider?: ModerationProvider;
+  } = {}
 ): Promise<{ stream: ReadableStream<Uint8Array>; generationId: string }> {
   // Validate / parse defaults
   const input = createGenerationSchema.parse(rawInput);
@@ -670,18 +781,64 @@ export async function createAndStreamGeneration(
     }
   }
 
-  // 4. Validate Model & Calculate Token Reservation
-  const modelKey = (input.modelKey ?? "text-economy") as ModelKey;
-  const model = getModel(modelKey);
-  assertModelAccess(modelKey, "FREE");
-
+  // 4. Determine Kind, Validate Moderation, Plan Access & Model
   const kind = input.kind === "IMAGE" ? "IMAGE" : "TEXT";
 
-  // Validate attachments if provided (or if regenerating turn, include its original attachments)
+  // Step 5.4: For IMAGE prompts, run abuse & moderation checks BEFORE reserving credits
+  if (kind === "IMAGE") {
+    await enforceImagePromptModeration(actor.userId, input.prompt, {
+      hasAttachments: Boolean(input.attachmentIds && input.attachmentIds.length > 0),
+      provider: options.moderationProvider,
+    });
+  }
+
+  const userPlan = await resolveEffectiveUserPlan(
+    wsOwnerId,
+    ownerAccount,
+    options.userPlan
+  );
+
+  let modelKey: ModelKey;
+  if (kind === "IMAGE") {
+    modelKey =
+      input.modelKey &&
+      isModelKey(input.modelKey) &&
+      getModel(input.modelKey).kind === "IMAGE"
+        ? input.modelKey
+        : "image-standard";
+
+    // Plan gate: Free = disabled (§4.4)
+    if (!PLANS[userPlan].limits.images) {
+      throw Errors.forbidden(
+        "Image generation is not available on the Free plan. Please upgrade to Lite, Standard, or Pro."
+      );
+    }
+  } else {
+    modelKey = (input.modelKey ?? "text-economy") as ModelKey;
+  }
+
+  const model = getModel(modelKey);
+  try {
+    assertModelAccess(modelKey, userPlan);
+  } catch (err: unknown) {
+    throw Errors.forbidden(
+      err instanceof Error ? err.message : `Model '${modelKey}' is not available on your current plan.`
+    );
+  }
+
+  // Validate attachments if provided (or if regenerating TEXT turn, include its original prompt attachments)
   let attachmentIds = input.attachmentIds;
-  if ((!attachmentIds || attachmentIds.length === 0) && input.regenerateResponseId) {
+  if (
+    (!attachmentIds || attachmentIds.length === 0) &&
+    input.regenerateResponseId &&
+    kind === "TEXT"
+  ) {
     const existingAtts = await db.attachment.findMany({
-      where: { responseId: input.regenerateResponseId, deletedAt: null },
+      where: {
+        responseId: input.regenerateResponseId,
+        deletedAt: null,
+        kind: { in: ["IMAGE", "DOCUMENT"] },
+      },
       select: { id: true },
     });
     if (existingAtts.length > 0) {
@@ -691,7 +848,7 @@ export async function createAndStreamGeneration(
 
   const contextAttachments: Part[] = [];
   let existingAttachments: Array<{ id: string; providerId: string }> = [];
-  if (attachmentIds && attachmentIds.length > 0) {
+  if (attachmentIds && attachmentIds.length > 0 && kind === "TEXT") {
     const attachments = await db.attachment.findMany({
       where: { id: { in: attachmentIds } },
     });
@@ -746,28 +903,30 @@ export async function createAndStreamGeneration(
     }
   }
 
-  // Auto-ingest safe URLs from prompt (Step 5.3: cap 5 links per prompt)
-  const urlMatches = input.prompt.match(/https?:\/\/[^\s<>"'{}|\^`\[\]]+/gi) || [];
-  const promptUrls = urlMatches
-    .map((u) => u.replace(/[.,;!?)]+$/, ""))
-    .slice(0, 5);
+  // Auto-ingest safe URLs from prompt for TEXT turns (Step 5.3: cap 5 links per prompt)
+  if (kind === "TEXT") {
+    const urlMatches = input.prompt.match(/https?:\/\/[^\s<>"'{}|\^`\[\]]+/gi) || [];
+    const promptUrls = urlMatches
+      .map((u) => u.replace(/[.,;!?)]+$/, ""))
+      .slice(0, 5);
 
-  for (const urlStr of promptUrls) {
-    try {
-      const alreadyAttached = existingAttachments.some(
-        (a) => a.providerId === urlStr
-      );
-      if (!alreadyAttached) {
-        const linkAtt = await ingestLinkAttachment(actor, workspaceId, urlStr);
-        attachmentIds = attachmentIds ? [...attachmentIds, linkAtt.id] : [linkAtt.id];
-        existingAttachments.push({ id: linkAtt.id, providerId: urlStr });
-        contextAttachments.push({
-          type: "text",
-          text: `<document name="${linkAtt.originalName}">\n${linkAtt.extractedText || ""}\n</document>`,
-        });
+    for (const urlStr of promptUrls) {
+      try {
+        const alreadyAttached = existingAttachments.some(
+          (a) => a.providerId === urlStr
+        );
+        if (!alreadyAttached) {
+          const linkAtt = await ingestLinkAttachment(actor, workspaceId, urlStr);
+          attachmentIds = attachmentIds ? [...attachmentIds, linkAtt.id] : [linkAtt.id];
+          existingAttachments.push({ id: linkAtt.id, providerId: urlStr });
+          contextAttachments.push({
+            type: "text",
+            text: `<document name="${linkAtt.originalName}">\n${linkAtt.extractedText || ""}\n</document>`,
+          });
+        }
+      } catch (err: unknown) {
+        console.warn(`[SafeFetch] Could not auto-ingest link "${urlStr}":`, err);
       }
-    } catch (err: unknown) {
-      console.warn(`[SafeFetch] Could not auto-ingest link "${urlStr}":`, err);
     }
   }
 
@@ -822,6 +981,17 @@ export async function createAndStreamGeneration(
           inputTokens: estimatedInputTokens,
           outputTokens: 4096,
         });
+
+  // Daily cap check for image generation (Step 5.4)
+  if (kind === "IMAGE") {
+    const dailyCap = getDailyCapForPlan(userPlan);
+    const spentToday = await getDailyUsage(billedAccountId);
+    if (spentToday + reserveAmount > dailyCap) {
+      throw Errors.paymentRequired(
+        `Daily credit cap of ${dailyCap} credits reached for your ${PLANS[userPlan].name} plan.`
+      );
+    }
+  }
 
   // Pre-generate UUID for generation record to link with reservation
   const generationId = crypto.randomUUID();
@@ -915,7 +1085,7 @@ export async function createAndStreamGeneration(
           data: { generationId: newGen.id },
         });
 
-        if (attachmentIds && attachmentIds.length > 0) {
+        if (attachmentIds && attachmentIds.length > 0 && kind === "TEXT") {
           await tx.attachment.updateMany({
             where: { id: { in: attachmentIds } },
             data: { responseId: targetResponse.id },
@@ -975,7 +1145,9 @@ export async function createAndStreamGeneration(
     workspaceId,
     responseId: response.id,
     versionId: version.id,
+    actorId: actor.userId,
     billedAccountId,
+    userPlan,
     modelKey,
     prompt: input.prompt,
     kind,

@@ -23,6 +23,7 @@ export interface WorkspaceViewProps {
   initialResponses?: Array<{
     id: string;
     prompt: string;
+    kind?: "TEXT" | "IMAGE";
     content?: string;
     createdAt?: string | Date;
     attachments?: Array<{
@@ -41,6 +42,7 @@ export interface WorkspaceViewProps {
 const EMPTY_INITIAL_RESPONSES: Array<{
   id: string;
   prompt: string;
+  kind?: "TEXT" | "IMAGE";
   content?: string;
   createdAt?: string | Date;
   attachments?: Array<{
@@ -164,7 +166,7 @@ export function WorkspaceView({
       id: r.id,
       workspaceId: workspace.id,
       prompt: r.prompt,
-      kind: "TEXT" as const,
+      kind: r.kind || ("TEXT" as const),
       content: r.content || "",
       response: r.content || "",
       versionCount: 1,
@@ -185,7 +187,8 @@ export function WorkspaceView({
   const startStreamTurn = React.useCallback(
     (promptText: string, idempotencyKey: string, options?: { modelKey?: string; kind?: "TEXT" | "IMAGE"; think?: boolean; language?: string; attachmentIds?: string[] }) => {
       const genStore = useGenerationStore.getState();
-      genStore.startStream(workspace.id, { prompt: promptText });
+      const effectiveKind = options?.kind || "TEXT";
+      genStore.startStream(workspace.id, { prompt: promptText, kind: effectiveKind });
 
       const abortController = new AbortController();
       genStore.setController(workspace.id, abortController);
@@ -195,8 +198,8 @@ export function WorkspaceView({
         {
           idempotencyKey,
           prompt: promptText,
-          modelKey: options?.modelKey || "text-economy",
-          kind: options?.kind || "TEXT",
+          modelKey: options?.modelKey || (effectiveKind === "IMAGE" ? "image-standard" : "text-economy"),
+          kind: effectiveKind,
           think: options?.think,
           language: options?.language,
           attachmentIds: options?.attachmentIds,
@@ -221,6 +224,7 @@ export function WorkspaceView({
               {
                 id: data.responseId || "res-" + Date.now(),
                 prompt: promptText,
+                kind: effectiveKind,
                 content: data.content,
                 createdAt: new Date(),
               },
@@ -296,7 +300,10 @@ export function WorkspaceView({
       if (!targetResponse) return;
 
       const genStore = useGenerationStore.getState();
-      genStore.startStream(workspace.id, { prompt: targetResponse.prompt });
+      genStore.startStream(workspace.id, {
+        prompt: targetResponse.prompt,
+        kind: (targetResponse.kind as "TEXT" | "IMAGE") || "TEXT",
+      });
 
       const abortController = new AbortController();
       genStore.setController(workspace.id, abortController);

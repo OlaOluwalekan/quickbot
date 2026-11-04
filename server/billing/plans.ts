@@ -196,3 +196,29 @@ export const BILLING_FAQ: FAQItem[] = [
       "Yes. Your prompts, responses, notes, and workspace files are private by default. All data is encrypted in transit and at rest. We do not sell your personal data or use your private conversations to train public models.",
   },
 ];
+
+const userPlanOverrides = new Map<string, PlanKey>();
+
+export function setUserPlanOverride(userId: string, plan: PlanKey | null): void {
+  if (plan === null) {
+    userPlanOverrides.delete(userId);
+  } else {
+    userPlanOverrides.set(userId, plan);
+  }
+}
+
+export function getUserPlanOverride(userId: string): PlanKey | undefined {
+  return userPlanOverrides.get(userId);
+}
+
+export function clearUserPlanOverrides(): void {
+  userPlanOverrides.clear();
+}
+
+export function getDailyCapForPlan(plan: PlanKey): number {
+  const def = PLANS[plan] ?? PLANS.FREE;
+  if (def.dailyCapCredits !== undefined) {
+    return def.dailyCapCredits;
+  }
+  return Math.ceil(def.credits * (def.dailyCapPct ?? 0.25));
+}

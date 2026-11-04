@@ -9,6 +9,7 @@ export type StreamStatus =
 
 export interface WorkspaceGenerationStream {
   status: StreamStatus;
+  kind?: "TEXT" | "IMAGE";
   text: string;
   thought: string;
   progressLabel: string | null;
@@ -19,6 +20,7 @@ export interface WorkspaceGenerationStream {
 
 export const DEFAULT_WORKSPACE_STREAM: WorkspaceGenerationStream = {
   status: "idle",
+  kind: "TEXT",
   text: "",
   thought: "",
   progressLabel: null,
@@ -49,7 +51,11 @@ export interface GenerationStoreState {
   consumePendingStart: (workspaceId: string) => PendingWorkspaceStart | null;
   startStream: (
     workspaceId: string,
-    init?: { prompt?: string; generationId?: string | null }
+    init?: {
+      prompt?: string;
+      generationId?: string | null;
+      kind?: "TEXT" | "IMAGE";
+    }
   ) => void;
   appendDelta: (workspaceId: string, delta: string) => void;
   appendThought: (workspaceId: string, delta: string) => void;
@@ -97,6 +103,7 @@ export const useGenerationStore = create<GenerationStoreState>((set, get) => ({
         [workspaceId]: {
           ...DEFAULT_WORKSPACE_STREAM,
           status: "streaming",
+          kind: init?.kind ?? "TEXT",
           prompt: init?.prompt ?? "",
           generationId: init?.generationId ?? null,
         },
