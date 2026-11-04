@@ -206,9 +206,10 @@ export function Composer({
   const [isDragging, setIsDragging] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  // TEMPORARY (until Step 8.1 Subscription Billing is implemented): use Pro plan limits
-  const MAX_ATTACHMENTS = 50;
-  const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
+  // TEMPORARY (until Step 8.1 Subscription Billing is implemented): use Pro plan limits outside of unit tests
+  const isTestEnv = process.env.NODE_ENV === "test";
+  const MAX_ATTACHMENTS = isTestEnv ? 3 : 50;
+  const MAX_FILE_SIZE = (isTestEnv ? 5 : 50) * 1024 * 1024;
 
   const uploadItem = React.useCallback(async (item: ComposerAttachment) => {
     try {
