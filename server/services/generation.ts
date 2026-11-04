@@ -1,4 +1,5 @@
 import { ingestLinkAttachment } from "./attachment";
+import { CREATE_DOCUMENT_TOOL, executeCreateDocumentToolCall } from "@/server/documents";
 import "server-only";
 import crypto from "node:crypto";
 import { db } from "@/server/db/client";
@@ -435,7 +436,10 @@ async function executeDetachedGeneration(params: {
         messages: inputMessages,
         system: systemPrompt,
         thinking: thinkingConfig,
+        tools: !grounding && modelDef.caps.tools ? [CREATE_DOCUMENT_TOOL] : undefined,
+
         grounding: Boolean(grounding),
+
       },
       {
         userPlan,
@@ -469,6 +473,28 @@ async function executeDetachedGeneration(params: {
         active.currentContent += event.text;
         active.tokensEmitted = true;
         broadcastEvent(active, "delta", { text: event.text });
+      } else if (event.type === "tool_call" && event.name === "create_document") {
+        if (stage !== "writing") {
+          stage = "writing";
+          broadcastEvent(active, "status", { stage: "writing" });
+        }
+        const docResult = await executeCreateDocumentToolCall({
+          actorId,
+          workspaceId,
+          responseId,
+          modelKey,
+          args: event.args,
+        });
+        active.currentContent += docResult.cardMarkdown;
+        active.tokensEmitted = true;
+        broadcastEvent(active, "delta", {
+          text: docResult.cardMarkdown,
+          generatedDocument: {
+            id: docResult.attachment.id,
+            name: docResult.filename,
+            downloadUrl: docResult.downloadUrl,
+          },
+        });
       } else if (event.type === "citation") {
         // Step 5.5: Only record provider citations when grounding is enabled.
         // Validate URL (http/https only) and never parse URLs from model text.
@@ -634,6 +660,7 @@ async function executeDetachedGeneration(params: {
             ? creditsFor(modelKey, {
                 outputTokens: estimatedOutput,
                 grounding: Boolean(grounding),
+
               })
             : 0;
 
@@ -707,6 +734,7 @@ async function executeDetachedGeneration(params: {
       const chargedCredits = creditsFor(modelKey, {
         outputTokens: estimateTokens(active.currentContent),
         grounding: Boolean(grounding),
+
       });
 
       await settle(billedAccountId, generationId, chargedCredits, settleKey).catch(() => {});
