@@ -27,6 +27,7 @@ import {
   sanitizeDocumentTitle,
   setDailyExportCapForTesting,
 } from "@/server/documents";
+import { MockStorageProvider, setStorageProvider } from "@/server/storage";
 import { GET as exportResponseRoute } from "@/app/api/v1/responses/[id]/export/route";
 import { GET as exportWorkspaceRoute } from "@/app/api/v1/workspaces/[id]/export/route";
 import { GET as downloadAttachmentRoute } from "@/app/api/v1/attachments/[id]/download/route";
@@ -67,6 +68,7 @@ describe("Step 5.6 — Document generation and export (Markdown, PDF, DOCX)", ()
   let outsiderId: string;
   let workspaceId: string;
   let responseId: string;
+  let mockStorage: MockStorageProvider;
 
   const richMarkdown = [
     "# Plan Trimestral / الخطة الفصلية",
@@ -240,6 +242,8 @@ describe("Step 5.6 — Document generation and export (Markdown, PDF, DOCX)", ()
 
   beforeEach(() => {
     resetExportRateLimitsForTesting();
+    mockStorage = new MockStorageProvider();
+    setStorageProvider(mockStorage);
     setUserPlanOverride(ownerId, "PRO");
     setUserPlanOverride(adminId, "PRO");
     setUserPlanOverride(editorId, "PRO");
@@ -247,8 +251,13 @@ describe("Step 5.6 — Document generation and export (Markdown, PDF, DOCX)", ()
     mockActorId = ownerId;
   });
 
+  afterEach(() => {
+    setStorageProvider(null);
+  });
+
   afterAll(async () => {
     setCustomProvider(null);
+    setStorageProvider(null);
     clearUserPlanOverrides();
     resetExportRateLimitsForTesting();
     await db.workspace.deleteMany({ where: { id: workspaceId } });
