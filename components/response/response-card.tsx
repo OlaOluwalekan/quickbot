@@ -49,6 +49,7 @@ import {
 } from "@/components/ui/dialog";
 import { ThinkingPanel } from "./thinking-panel";
 import { PromptAttachmentPreview } from "./prompt-attachment-preview";
+import { SourcesAccordion } from "./citations";
 import { EditResponse } from "./edit-response";
 import { Markdown } from "@/components/markdown";
 import {
@@ -57,6 +58,7 @@ import {
   useCreateResponseEdit,
   type ResponseVersionDto,
 } from "@/lib/api/hooks/responses";
+import type { CitationDto } from "@/lib/api/sse";
 
 export interface ResponseItemData {
   id: string;
@@ -68,6 +70,7 @@ export interface ResponseItemData {
   versionCount?: number;
   activeVersionId?: string | null;
   createdAt?: string | Date;
+  citations?: CitationDto[];
   activeVersion?: {
     id: string;
     number: number;
@@ -80,6 +83,7 @@ export interface ResponseItemData {
     hasEdits?: boolean;
     latestEdit?: { content?: string } | null;
     latestEditContent?: string | null;
+    citations?: CitationDto[];
   } | null;
   author?: {
     name?: string;
@@ -180,6 +184,16 @@ export function ResponseCard({
 
   const activeVerFromList = versions.find((v) => v.id === currentActiveId);
   const activeVer = activeVerFromList || response.activeVersion;
+
+  const activeCitations: CitationDto[] = React.useMemo(() => {
+    if (activeVerFromList?.citations) {
+      return activeVerFromList.citations;
+    }
+    if (response.activeVersion?.citations && (!selectedVersionId || selectedVersionId === response.activeVersion.id)) {
+      return response.activeVersion.citations;
+    }
+    return response.citations ?? [];
+  }, [activeVerFromList, response.activeVersion, response.citations, selectedVersionId]);
 
   const versionCount = Math.max(response.versionCount || 1, versions.length);
 
@@ -579,7 +593,7 @@ export function ResponseCard({
                           rel="noopener noreferrer"
                         >
                           <Download className="mr-1 h-3.5 w-3.5" />
-                          {t("downloadImage" as any) || "Download"}
+                          {t("downloadImage")}
                         </a>
                       </Button>
                     </div>
@@ -605,7 +619,7 @@ export function ResponseCard({
                             rel="noopener noreferrer"
                           >
                             <Download className="mr-1 h-3.5 w-3.5" />
-                            {t("downloadImage" as any) || "Download"}
+                            {t("downloadImage")}
                           </a>
                         </Button>
                       </DialogHeader>
@@ -618,7 +632,7 @@ export function ResponseCard({
                     </DialogContent>
                   </Dialog>
                 </>
-              ) : (
+              ) : imageAttachmentId ? (
                 <div
                   data-testid="image-generation-skeleton"
                   className="border-border bg-surface-2 relative flex aspect-square max-w-lg animate-pulse flex-col items-center justify-center gap-3 overflow-hidden rounded-xl border p-6 text-center"
@@ -628,11 +642,51 @@ export function ResponseCard({
                     Loading image...
                   </span>
                 </div>
+              ) : (
+                <div
+                  data-testid="image-generation-failed"
+                  className="border-danger/30 bg-danger/5 relative flex max-w-lg flex-col items-center justify-center gap-3 rounded-xl border p-6 text-center"
+                >
+                  <ImageIcon className="text-danger/70 h-8 w-8" />
+                  <span className="text-danger text-xs font-medium">
+                    Image generation failed.
+                  </span>
+                  {onRegenerate && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onRegenerate(response.id)}
+                      disabled={isRegenerating}
+                      className="border-danger/40 text-danger hover:bg-danger/10 h-8 text-xs"
+                    >
+                      <RotateCcw
+                        className={cn(
+                          "mr-1.5 h-3.5 w-3.5",
+                          isRegenerating && "animate-spin"
+                        )}
+                      />
+                      <span>{t("tryAgain")}</span>
+                    </Button>
+                  )}
+                </div>
               )}
             </div>
           ) : (
-            <div className="leading-relaxed select-text">
-              <Markdown content={displayedContent} />
+            <div className="space-y-3">
+              <div className="leading-relaxed select-text">
+                <Markdown
+                  content={displayedContent}
+                  citations={activeCitations}
+                />
+              </div>
+
+              {activeCitations.length > 0 && (
+                <SourcesAccordion
+                  citations={activeCitations}
+                  label={t("sources")}
+                />
+              )}
             </div>
           )}
 
@@ -707,7 +761,7 @@ export function ResponseCard({
                         rel="noopener noreferrer"
                       >
                         <Download className="mr-1 h-3.5 w-3.5" />
-                        <span>{t("downloadImage" as any) || "Download"}</span>
+                        <span>{t("downloadImage")}</span>
                       </a>
                     </Button>
                   )}

@@ -8,6 +8,7 @@ import {
   type InfiniteData,
 } from "@tanstack/react-query";
 import { api } from "@/lib/api/client";
+import type { CitationDto } from "@/lib/api/sse";
 import { queryKeys, userQueryKey } from "./query-keys";
 import type {
   CreateResponseEditInput,
@@ -74,6 +75,7 @@ export interface ResponseVersionDto {
   edited?: boolean;
   hasEdits?: boolean;
   editCount?: number;
+  citations?: CitationDto[];
   latestEdit?: {
     id: string;
     revision: number;

@@ -9,6 +9,7 @@ export * from "./registry";
 export * from "./errors";
 export * from "./providers/gemini";
 export * from "./moderation";
+export * from "./citations";
 
 const geminiProvider = new GeminiProvider();
 

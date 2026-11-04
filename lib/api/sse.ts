@@ -1,6 +1,15 @@
 import { createParser } from "eventsource-parser";
 import { CreateGenerationInput } from "@/lib/schemas/generation";
 
+export interface CitationDto {
+  id?: string;
+  index: number;
+  url: string;
+  title?: string | null;
+  snippet?: string | null;
+  source?: "GROUNDING" | "ATTACHMENT" | "MODEL_PROVIDED" | string;
+}
+
 export type GenerationSSEHandlers = {
   onStarted?: (data: {
     generationId: string;
@@ -10,6 +19,7 @@ export type GenerationSSEHandlers = {
   onStatus?: (data: { stage: string; truncated?: boolean }) => void;
   onThought?: (data: { text: string }) => void;
   onDelta?: (data: { text: string }) => void;
+  onCitation?: (data: CitationDto) => void;
   onUsage?: (data: {
     inputTokens: number;
     outputTokens: number;
@@ -19,6 +29,7 @@ export type GenerationSSEHandlers = {
     responseId: string;
     versionId: string;
     content: string;
+    citations?: CitationDto[];
   }) => void;
   onError?: (data: { code: string; message?: string }) => void;
 };
@@ -93,6 +104,9 @@ export async function streamGeneration(
               case "delta":
                 handlers.onDelta?.(data);
                 break;
+              case "citation":
+                handlers.onCitation?.(data);
+                break;
               case "usage":
                 handlers.onUsage?.(data);
                 break;
@@ -139,6 +153,7 @@ export async function streamGeneration(
                 responseId: gen.responseId,
                 versionId: gen.versionId,
                 content: gen.content,
+                citations: gen.citations,
               });
               return;
             }
@@ -168,6 +183,7 @@ export async function streamRegeneration(
     idempotencyKey: string;
     modelKey?: string;
     think?: boolean;
+    grounding?: boolean;
     language?: string;
   },
   handlers: GenerationSSEHandlers = {},
@@ -204,33 +220,36 @@ export async function streamRegeneration(
       try {
         const payload = JSON.parse(event.data);
         switch (event.event) {
-            case "started":
-              handlers.onStarted?.(payload);
-              break;
-            case "status":
-              handlers.onStatus?.(payload);
-              break;
-            case "thought":
-              handlers.onThought?.(payload);
-              break;
-            case "delta":
-              handlers.onDelta?.(payload);
-              break;
-            case "usage":
-              handlers.onUsage?.(payload);
-              break;
-            case "completed":
-              handlers.onCompleted?.(payload);
-              break;
-            case "error":
-              handlers.onError?.(payload);
-              break;
-          }
-        } catch {
-          // Ignored
+          case "started":
+            handlers.onStarted?.(payload);
+            break;
+          case "status":
+            handlers.onStatus?.(payload);
+            break;
+          case "thought":
+            handlers.onThought?.(payload);
+            break;
+          case "delta":
+            handlers.onDelta?.(payload);
+            break;
+          case "citation":
+            handlers.onCitation?.(payload);
+            break;
+          case "usage":
+            handlers.onUsage?.(payload);
+            break;
+          case "completed":
+            handlers.onCompleted?.(payload);
+            break;
+          case "error":
+            handlers.onError?.(payload);
+            break;
         }
-      },
-    });
+      } catch {
+        // Ignored
+      }
+    },
+  });
 
   while (true) {
     const { done, value } = await reader.read();

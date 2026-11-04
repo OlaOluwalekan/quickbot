@@ -186,7 +186,9 @@
     "attachRetry": "Reintentar",
     "attachLimitReached": "Máximo 3 archivos adjuntos permitidos para tu plan",
     "attachSizeExceeded": "El tamaño del archivo supera el límite de 5 MB",
-    "dropFilesHere": "Suelta archivos para adjuntar"
+    "dropFilesHere": "Suelta archivos para adjuntar",
+    "searchWeb": "Buscar en la web",
+    "searchWebDesc": "Fundamentar respuestas con Google Search (+3 cr?ditos)"
   },
   "Settings": {
     "title": "Configuración del Espacio",
@@ -478,7 +480,9 @@
     "modelPro": "Deep Reasoning",
     "readAloudSoon": "Read aloud will be available in Phase 9",
     "shareSoon": "Sharing will be available in Phase 7",
-    "exportSoon": "Exporting will be available in Phase 5"
+    "exportSoon": "Exporting will be available in Phase 5",
+    "sources": "Fuentes",
+    "downloadImage": "Descargar imagen"
   },
   "Marketing": {
     "nav": {

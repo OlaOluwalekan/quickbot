@@ -43,8 +43,10 @@ const SingleWorkspacePage = async ({
       initialResponses={responsesPage.items.map((r) => ({
         id: r.id,
         prompt: r.prompt,
+        kind: (r.kind as "TEXT" | "IMAGE") || "TEXT",
         content: r.activeVersion?.content || "",
         createdAt: r.createdAt,
+        citations: r.activeVersion?.citations ?? [],
         attachments: r.attachments ?? [],
       }))}
       actor={actor}

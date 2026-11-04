@@ -10,12 +10,13 @@ import {
   Sparkles,
   WifiOff,
   CreditCard,
-  AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ResponseCard, type ResponseItemData } from "./response-card";
 import { ThinkingPanel } from "./thinking-panel";
+import { SourcesAccordion } from "./citations";
+import { Markdown } from "@/components/markdown";
 import {
   useGenerationStore,
   DEFAULT_WORKSPACE_STREAM,
@@ -251,8 +252,12 @@ export function ResponseList({
                         </span>
                       </div>
                     ) : stream.text ? (
-                      <div className="overflow-x-auto leading-relaxed wrap-break-word whitespace-pre-wrap select-text">
-                        {stream.text}
+                      <div className="overflow-x-auto leading-relaxed wrap-break-word select-text">
+                        <Markdown
+                          content={stream.text}
+                          isStreaming={isStreaming}
+                          citations={stream.citations}
+                        />
                         {isStreaming && (
                           <span
                             aria-hidden="true"
@@ -269,6 +274,13 @@ export function ResponseList({
                         <span>{t("thinking")}</span>
                       </div>
                     ) : null}
+
+                    {stream.citations && stream.citations.length > 0 && (
+                      <SourcesAccordion
+                        citations={stream.citations}
+                        label={t("sources")}
+                      />
+                    )}
                   </div>
                 </div>
               )}

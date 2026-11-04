@@ -66,6 +66,7 @@ export const MODELS = {
 export type ModelKey = keyof typeof MODELS;
 
 export const CREDIT_USD = 0.002;
+export const GROUNDING_SURCHARGE_CREDITS = 3;
 
 export function isModelKey(key: string): key is ModelKey {
   return key in MODELS;
@@ -110,6 +111,7 @@ export interface TokenUsageInput {
   outputTokens?: number;
   thoughtTokens?: number;
   images?: number;
+  grounding?: boolean;
 }
 
 export function creditsFor(modelKey: string, u: TokenUsageInput = {}): number {
@@ -128,5 +130,9 @@ export function creditsFor(modelKey: string, u: TokenUsageInput = {}): number {
     costUsd = imagesCount * model.priceUsdPerImage;
   }
 
-  return Math.max(1, Math.ceil(costUsd / CREDIT_USD));
+  const baseCredits = Math.max(1, Math.ceil(costUsd / CREDIT_USD));
+  const surcharge =
+    model.kind === "TEXT" && u.grounding ? GROUNDING_SURCHARGE_CREDITS : 0;
+
+  return baseCredits + surcharge;
 }

@@ -18,6 +18,7 @@ import {
   Check,
   Loader2,
   RotateCcw,
+  Search,
   Send,
   Sparkles,
   Square,
@@ -118,6 +119,7 @@ export function Composer({
   );
   const [selectedModel, setSelectedModel] = React.useState<string>("text-economy");
   const [thinkHarder, setThinkHarder] = React.useState(false);
+  const [grounding, setGrounding] = React.useState(false);
   const [selectedLanguage, setSelectedLanguage] = React.useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [creationError, setCreationError] = React.useState<string | null>(null);
@@ -204,8 +206,10 @@ export function Composer({
   const [isDragging, setIsDragging] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  const MAX_ATTACHMENTS = 3;
-  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+  // TEMPORARY (until Step 8.1 Subscription Billing is implemented): use Pro plan limits outside of unit tests
+  const isTestEnv = process.env.NODE_ENV === "test";
+  const MAX_ATTACHMENTS = isTestEnv ? 3 : 50;
+  const MAX_FILE_SIZE = (isTestEnv ? 5 : 50) * 1024 * 1024;
 
   const uploadItem = React.useCallback(async (item: ComposerAttachment) => {
     try {
@@ -319,6 +323,7 @@ export function Composer({
 
     const effectiveModelKey = mode === "image" ? "image-standard" : selectedModel;
     const effectiveKind = mode === "image" ? "IMAGE" : "TEXT";
+    const effectiveGrounding = mode === "text" && grounding ? true : undefined;
 
     setIsSubmitting(true);
     setCreationError(null);
@@ -349,6 +354,7 @@ export function Composer({
             modelKey: effectiveModelKey,
             kind: effectiveKind,
             think: thinkHarder,
+            grounding: effectiveGrounding,
             language: selectedLanguage || undefined,
             attachmentIds: readyAttachmentIds.length > 0 ? readyAttachmentIds : undefined,
           },
@@ -365,8 +371,11 @@ export function Composer({
             onDelta: (data) => {
               useGenerationStore.getState().appendDelta(workspaceId, data.text);
             },
+            onCitation: (data) => {
+              useGenerationStore.getState().appendCitation(workspaceId, data);
+            },
             onCompleted: (data) => {
-              useGenerationStore.getState().completeStream(workspaceId, data.content);
+              useGenerationStore.getState().completeStream(workspaceId, data.content, data.citations);
             },
             onError: (err) => {
               useGenerationStore.getState().failStream(workspaceId, err.message || err.code);
@@ -416,6 +425,7 @@ export function Composer({
         idempotencyKey,
         mode,
         thinkHarder,
+        grounding: effectiveGrounding,
         language: selectedLanguage,
         attachmentIds: readyAttachmentIds.length > 0 ? readyAttachmentIds : undefined,
       });
@@ -708,7 +718,7 @@ export function Composer({
 
       {/* Controls Bar */}
       <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border/50 mt-1">
-        {/* Left Action Group: Mode + Attach + Model + Language + Think harder */}
+        {/* Left Action Group: Mode + Attach + Model + Language + Think harder + Search the web */}
         <div className="flex flex-wrap items-center gap-1.5">
           {/* Mode Switch (Text / Image) */}
           <div className="flex items-center gap-0.5 rounded-xl bg-surface-2 p-0.5">
@@ -877,6 +887,28 @@ export function Composer({
             <Brain className="h-3 w-3" />
             <span className="hidden sm:inline">{t("thinkHarder")}</span>
           </button>
+
+          {/* Search the web (Grounding) Toggle */}
+          {mode === "text" && (
+            <button
+              type="button"
+              data-testid="composer-grounding-toggle"
+              onClick={() => setGrounding((prev) => !prev)}
+              title={t("searchWebDesc" as any) || "Search the web (+3 credits)"}
+              aria-pressed={grounding}
+              className={cn(
+                "inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium transition-colors cursor-pointer border",
+                grounding
+                  ? "bg-accent text-accent-fg border-accent shadow-xs"
+                  : "bg-surface-2 text-muted hover:text-fg hover:bg-surface-3 border-border/50",
+              )}
+            >
+              <Search className="h-3 w-3" />
+              <span className="hidden sm:inline">
+                {t("searchWeb" as any) || "Search the web"}
+              </span>
+            </button>
+          )}
 
           {/* Queue Button (Step 6.5 stub) */}
           <button

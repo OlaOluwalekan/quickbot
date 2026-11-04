@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { CitationDto } from "@/lib/api/sse";
 
 export type StreamStatus =
   | "idle"
@@ -12,6 +13,7 @@ export interface WorkspaceGenerationStream {
   kind?: "TEXT" | "IMAGE";
   text: string;
   thought: string;
+  citations: CitationDto[];
   progressLabel: string | null;
   generationId: string | null;
   prompt: string;
@@ -23,6 +25,7 @@ export const DEFAULT_WORKSPACE_STREAM: WorkspaceGenerationStream = {
   kind: "TEXT",
   text: "",
   thought: "",
+  citations: [],
   progressLabel: null,
   generationId: null,
   prompt: "",
@@ -39,6 +42,7 @@ export interface PendingWorkspaceStart {
   idempotencyKey?: string;
   mode?: "text" | "image";
   thinkHarder?: boolean;
+  grounding?: boolean;
   language?: string | null;
 }
 
@@ -59,9 +63,14 @@ export interface GenerationStoreState {
   ) => void;
   appendDelta: (workspaceId: string, delta: string) => void;
   appendThought: (workspaceId: string, delta: string) => void;
+  appendCitation: (workspaceId: string, citation: CitationDto) => void;
   setProgress: (workspaceId: string, label: string | null) => void;
   setGenerationId: (workspaceId: string, generationId: string) => void;
-  completeStream: (workspaceId: string, finalText?: string) => void;
+  completeStream: (
+    workspaceId: string,
+    finalText?: string,
+    citations?: CitationDto[]
+  ) => void;
   failStream: (workspaceId: string, error: string) => void;
   cancelStream: (workspaceId: string) => void;
   resetStream: (workspaceId: string) => void;
@@ -106,6 +115,7 @@ export const useGenerationStore = create<GenerationStoreState>((set, get) => ({
           kind: init?.kind ?? "TEXT",
           prompt: init?.prompt ?? "",
           generationId: init?.generationId ?? null,
+          citations: [],
         },
       },
     })),
@@ -139,6 +149,24 @@ export const useGenerationStore = create<GenerationStoreState>((set, get) => ({
       };
     }),
 
+  appendCitation: (workspaceId, citation) =>
+    set((state) => {
+      const current = state.streams[workspaceId] ?? DEFAULT_WORKSPACE_STREAM;
+      const exists = current.citations.some(
+        (c) => c.index === citation.index || c.url === citation.url
+      );
+      if (exists) return state;
+      return {
+        streams: {
+          ...state.streams,
+          [workspaceId]: {
+            ...current,
+            citations: [...current.citations, citation],
+          },
+        },
+      };
+    }),
+
   setProgress: (workspaceId, label) =>
     set((state) => {
       const current = state.streams[workspaceId] ?? DEFAULT_WORKSPACE_STREAM;
@@ -167,7 +195,7 @@ export const useGenerationStore = create<GenerationStoreState>((set, get) => ({
       };
     }),
 
-  completeStream: (workspaceId, finalText) =>
+  completeStream: (workspaceId, finalText, citations) =>
     set((state) => {
       const current = state.streams[workspaceId] ?? DEFAULT_WORKSPACE_STREAM;
       return {
@@ -177,6 +205,7 @@ export const useGenerationStore = create<GenerationStoreState>((set, get) => ({
             ...current,
             status: "completed",
             text: finalText !== undefined ? finalText : current.text,
+            citations: citations !== undefined ? citations : current.citations,
             progressLabel: null,
           },
         },

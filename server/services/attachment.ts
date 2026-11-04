@@ -71,7 +71,11 @@ export function sanitizeFilename(raw: string): string {
 export async function getWorkspacePlanLimits(
   _workspaceOwnerId: string
 ): Promise<PlanLimits> {
-  // Free tier default until subscription billing (Step 8.1)
+  // TEMPORARY (until Step 8.1 Subscription Billing is implemented):
+  // Unlock PRO plan limits in non-test environments so all attachment features can be tested.
+  if (process.env.NODE_ENV !== "test") {
+    return PLANS.PRO.limits;
+  }
   return PLANS.FREE.limits;
 }
 

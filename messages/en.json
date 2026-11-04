@@ -186,7 +186,9 @@
     "attachRetry": "Retry",
     "attachLimitReached": "Maximum 3 attachments allowed for your plan",
     "attachSizeExceeded": "File size exceeds 5 MB limit",
-    "dropFilesHere": "Drop files to attach"
+    "dropFilesHere": "Drop files to attach",
+    "searchWeb": "Search the web",
+    "searchWebDesc": "Ground answers with Google Search (+3 credits)"
   },
   "Settings": {
     "title": "Workspace Settings",
@@ -478,7 +480,9 @@
     "modelPro": "Deep Reasoning",
     "readAloudSoon": "Read aloud will be available in Phase 9",
     "shareSoon": "Sharing will be available in Phase 7",
-    "exportSoon": "Exporting will be available in Phase 5"
+    "exportSoon": "Exporting will be available in Phase 5",
+    "sources": "Sources",
+    "downloadImage": "Download image"
   },
   "Marketing": {
     "nav": {
