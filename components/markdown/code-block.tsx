@@ -134,7 +134,7 @@ export function CodeBlock({ children, className, ...props }: CodeBlockProps) {
   return (
     <div className="my-4 rounded-xl border border-border bg-surface-2 overflow-hidden shadow-2xs group/code text-left">
       {/* Code Header Bar */}
-      <div className="flex items-center justify-between px-3.5 py-1.5 border-b border-border/70 bg-surface text-xs font-mono text-fg-muted select-none">
+      <div data-annot-ignore="true" className="flex items-center justify-between px-3.5 py-1.5 border-b border-border/70 bg-surface text-xs font-mono text-fg-muted select-none">
         <span className="font-semibold text-fg/80 capitalize">{language}</span>
 
         <div className="flex items-center gap-1.5">

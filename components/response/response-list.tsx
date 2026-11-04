@@ -17,6 +17,7 @@ import { ResponseCard, type ResponseItemData } from "./response-card";
 import { ThinkingPanel } from "./thinking-panel";
 import { SourcesAccordion } from "./citations";
 import { Markdown } from "@/components/markdown";
+import { SelectionToolbar } from "@/components/annotations";
 import {
   useGenerationStore,
   DEFAULT_WORKSPACE_STREAM,
@@ -347,6 +348,9 @@ export function ResponseList({
           <div ref={bottomSentinelRef} className="h-2 w-full" />
         </div>
       </div>
+
+      {/* Step 6.3 Annotation Selection Toolbar */}
+      <SelectionToolbar />
 
       {/* Floating "Jump to latest" Pill */}
       {showJumpToLatest && (
