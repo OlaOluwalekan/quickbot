@@ -51,6 +51,8 @@ model User {
   preference           UserPreference?
   supportTickets       SupportTicket[]
   attachments          Attachment[]
+  annotations          Annotation[]        @relation("AnnotationCreator")
+  annotationMessages   AnnotationMessage[] @relation("AnnotationMessageAuthor")
 
   @@map("users")
 }
@@ -137,6 +139,7 @@ model Workspace {
   responses      Response[]
   generations    Generation[]
   attachments    Attachment[]
+  annotations    Annotation[]
 
   @@index([ownerId, deletedAt, lastActivityAt(sort: Desc)])
   @@index([projectId, deletedAt])
@@ -248,6 +251,7 @@ model Response {
   workspace       Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   versions        ResponseVersion[]
   attachments     Attachment[]
+  annotations     Annotation[]
 
   @@index([workspaceId, deletedAt, sortAt, id])
   @@map("responses")
@@ -269,6 +273,7 @@ model ResponseVersion {
   response        Response       @relation(fields: [responseId], references: [id], onDelete: Cascade)
   edits           ResponseEdit[]
   citations       Citation[]
+  annotations     Annotation[]
 
   @@unique([responseId, number])
   @@index([responseId, createdAt])
@@ -436,4 +441,83 @@ model Citation {
   @@unique([versionId, index])
   @@index([versionId])
   @@map("citations")
+}
+
+enum AnnotationKind {
+  COMMENT
+  REPLY
+  QUESTION
+}
+
+enum QuestionState {
+  NONE
+  QUEUED
+  ANSWERING
+  ANSWERED
+  CANCELLED
+  FAILED
+}
+
+enum Visibility {
+  PRIVATE
+  WORKSPACE
+}
+
+enum ContentSource {
+  ORIGINAL
+  EDIT
+}
+
+enum MsgRole {
+  USER
+  ASSISTANT
+}
+
+model Annotation {
+  id            String          @id @default(uuid(7))
+  workspaceId   String          @map("workspace_id")
+  responseId    String          @map("response_id")
+  versionId     String          @map("version_id")
+  contentSource ContentSource   @default(ORIGINAL) @map("content_source")
+  editRevision  Int?            @map("edit_revision")
+  createdById   String          @map("created_by_id")
+  kind          AnnotationKind
+  questionState QuestionState   @default(NONE) @map("question_state")
+  visibility    Visibility      @default(PRIVATE)
+  resolvedAt    DateTime?       @map("resolved_at")
+  deletedAt     DateTime?       @map("deleted_at")
+  anchorExact   String          @map("anchor_exact") @db.Text
+  anchorPrefix  String          @map("anchor_prefix")
+  anchorSuffix  String          @map("anchor_suffix")
+  anchorStart   Int?            @map("anchor_start")
+  anchorEnd     Int?            @map("anchor_end")
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+
+  workspace     Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  response      Response        @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  version       ResponseVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  createdBy     User            @relation("AnnotationCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  messages      AnnotationMessage[]
+
+  @@index([versionId, deletedAt])
+  @@index([workspaceId, createdById, questionState])
+  @@index([responseId])
+  @@map("annotations")
+}
+
+model AnnotationMessage {
+  id           String      @id @default(uuid(7))
+  annotationId String      @map("annotation_id")
+  role         MsgRole
+  content      String      @db.Text
+  authorId     String?     @map("author_id")
+  generationId String?     @unique @map("generation_id")
+  createdAt    DateTime    @default(now()) @map("created_at")
+
+  annotation   Annotation  @relation(fields: [annotationId], references: [id], onDelete: Cascade)
+  author       User?       @relation("AnnotationMessageAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([annotationId, createdAt])
+  @@map("annotation_messages")
 }

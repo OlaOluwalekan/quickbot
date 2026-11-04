@@ -183,6 +183,17 @@
   view-transition-name: first-prompt;
 }
 
+/* Step 6.1 CSS Custom Highlight API rules */
+::highlight(annot-comment) {
+  background-color: var(--mark-comment);
+}
+::highlight(annot-question) {
+  background-color: var(--mark-question);
+}
+::highlight(annot-reply) {
+  background-color: var(--mark-reply);
+}
+
   @media (prefers-reduced-motion: reduce) {
     ::view-transition-group(*),
     ::view-transition-old(*),
