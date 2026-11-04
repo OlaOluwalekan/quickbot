@@ -61,6 +61,7 @@ export function ThinkingPanel({
 
   return (
     <div
+      data-annot-ignore="true"
       className={cn(
         "rounded-xl border border-border bg-surface-2/60 text-xs text-fg-muted overflow-hidden transition-all duration-200",
         className

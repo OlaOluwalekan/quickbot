@@ -681,7 +681,18 @@ export function ResponseCard({
             </div>
           ) : (
             <div className="space-y-3">
-              <div className="leading-relaxed select-text">
+              <div
+                className="leading-relaxed select-text"
+                data-annot-root="true"
+                data-response-id={response.id}
+                data-version-id={activeVer?.id || response.activeVersionId || undefined}
+                data-content-source={viewMode === "original" ? "ORIGINAL" : (hasEdits ? "EDIT" : "ORIGINAL")}
+                data-edit-revision={
+                  viewMode === "edited" && (activeVer?.latestEdit as { revision?: number } | null)?.revision !== undefined
+                    ? String((activeVer?.latestEdit as { revision?: number } | null)?.revision)
+                    : undefined
+                }
+              >
                 <Markdown
                   content={displayedContent}
                   citations={activeCitations}

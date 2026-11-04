@@ -56,6 +56,12 @@ export interface UiState extends PersistedUiSlice {
   searchResultIsOpen: boolean;
   chatMode: "text" | "image";
   optimisticResponses: ResponseProps[];
+  rightPanelFocus: {
+    annotationId?: string;
+    responseId?: string;
+    versionId?: string;
+    tab?: "comments" | "replies" | "questions";
+  } | null;
 
   // Transient actions
   toggleMobileNavOpen: (open: boolean) => void;
@@ -78,6 +84,14 @@ export interface UiState extends PersistedUiSlice {
   setChatMode: (mode: "text" | "image") => void;
   addOptimisticResponse: (response: ResponseProps) => void;
   clearOptimisticResponses: () => void;
+  setRightPanelFocus: (
+    focus: {
+      annotationId?: string;
+      responseId?: string;
+      versionId?: string;
+      tab?: "comments" | "replies" | "questions";
+    } | null
+  ) => void;
   resetTransientUi: () => void;
 }
 
@@ -99,6 +113,12 @@ const initialTransientState = {
   searchResultIsOpen: false,
   chatMode: "text" as const,
   optimisticResponses: [] as ResponseProps[],
+  rightPanelFocus: null as {
+    annotationId?: string;
+    responseId?: string;
+    versionId?: string;
+    tab?: "comments" | "replies" | "questions";
+  } | null,
 };
 
 export function partializeUiState(state: UiState): PersistedUiSlice {
@@ -186,6 +206,7 @@ export const useUiStore = create<UiState>()(
           };
         }),
       clearOptimisticResponses: () => set({ optimisticResponses: [] }),
+      setRightPanelFocus: (rightPanelFocus) => set({ rightPanelFocus }),
       resetTransientUi: () => set({ ...initialTransientState }),
     }),
     {
