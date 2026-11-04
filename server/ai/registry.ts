@@ -112,7 +112,7 @@ export interface TokenUsageInput {
   images?: number;
 }
 
-export function creditsFor(modelKey: string, u: TokenUsageInput): number {
+export function creditsFor(modelKey: string, u: TokenUsageInput = {}): number {
   const model = getModel(modelKey);
 
   let costUsd = 0;

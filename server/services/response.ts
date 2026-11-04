@@ -9,7 +9,7 @@ import type {
   RegenerateResponseInput,
   CreateResponseEditInput,
 } from "@/lib/schemas/response";
-import type { AiProvider } from "@/server/ai";
+import type { AiProvider, PlanTier } from "@/server/ai";
 
 export interface WorkspaceResponsesQuery {
   cursor?: string;
@@ -46,7 +46,10 @@ export async function listWorkspaceResponses(
     orderBy: [{ sortAt: "asc" }, { id: "asc" }],
     include: {
       attachments: {
-        where: { deletedAt: null },
+        where: {
+          deletedAt: null,
+          kind: { in: ["IMAGE", "DOCUMENT"] },
+        },
         select: {
           id: true,
           kind: true,
@@ -256,13 +259,16 @@ export async function regenerateResponse(
   actor: Actor,
   responseId: string,
   input: RegenerateResponseInput,
-  options: { providerInstance?: AiProvider } = {}
+  options: { providerInstance?: AiProvider; userPlan?: PlanTier } = {}
 ) {
   const targetResponse = await db.response.findUnique({
     where: { id: responseId, deletedAt: null },
     include: {
       attachments: {
-        where: { deletedAt: null },
+        where: {
+          deletedAt: null,
+          kind: { in: ["IMAGE", "DOCUMENT"] },
+        },
         select: { id: true },
       },
     },
@@ -275,6 +281,9 @@ export async function regenerateResponse(
   // Authorization check upfront
   await requireWorkspace(actor, targetResponse.workspaceId, "workspace.regenerate");
 
+  const isImageTurn = targetResponse.kind === "IMAGE";
+  const defaultModelKey = isImageTurn ? "image-standard" : "text-economy";
+
   // Calls generation service with regenerateResponseId
   return createAndStreamGeneration(
     actor,
@@ -282,11 +291,14 @@ export async function regenerateResponse(
     {
       idempotencyKey: input.idempotencyKey,
       prompt: targetResponse.prompt,
-      modelKey: input.modelKey ?? "text-economy",
+      modelKey: input.modelKey ?? defaultModelKey,
+      kind: isImageTurn ? "IMAGE" : "TEXT",
       regenerateResponseId: responseId,
       think: input.think,
       language: input.language,
-      attachmentIds: targetResponse.attachments.map((a) => a.id),
+      attachmentIds: isImageTurn
+        ? undefined
+        : targetResponse.attachments.map((a) => a.id),
     },
     options
   );

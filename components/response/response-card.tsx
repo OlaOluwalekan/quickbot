@@ -14,7 +14,6 @@ import {
   Volume2,
   Share2,
   FileDown,
-  FileText,
   MoreHorizontal,
   Sparkles,
   Download,
@@ -23,6 +22,7 @@ import {
   Link as LinkIcon,
   Eye,
   History,
+  Image as ImageIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -71,6 +71,7 @@ export interface ResponseItemData {
   activeVersion?: {
     id: string;
     number: number;
+    status?: string;
     content: string;
     originalContent?: string;
     thoughtSummary?: string | null;
@@ -107,6 +108,14 @@ export interface ResponseCardProps {
   className?: string;
 }
 
+function isDirectUrl(val: string): boolean {
+  return (
+    val.startsWith("http://") ||
+    val.startsWith("https://") ||
+    val.startsWith("data:image/")
+  );
+}
+
 export function ResponseCard({
   response,
   workspaceId,
@@ -126,11 +135,12 @@ export function ResponseCard({
   );
   const [copied, setCopied] = React.useState(false);
   const [lightboxOpen, setLightboxOpen] = React.useState(false);
-  const [mobileSheetOpen, setMobileSheetOpen] = React.useState(false);
+  const [signedUrlsByAttachmentId, setSignedUrlsByAttachmentId] = React.useState<
+    Record<string, string>
+  >({});
 
   // Queries & Mutations
-  const { data: versionsData, isLoading: isLoadingVersions } =
-    useResponseVersions(userId, response.id);
+  const { data: versionsData } = useResponseVersions(userId, response.id);
   const switchVersionMutation = useSwitchActiveVersion(userId, workspaceId);
   const createEditMutation = useCreateResponseEdit(userId, workspaceId);
 
@@ -190,27 +200,74 @@ export function ResponseCard({
 
   const hasEdits = Boolean(
     activeVer?.edited ||
-    activeVer?.hasEdits ||
-    (activeVer?.latestEditContent &&
-      activeVer.latestEditContent !== originalText)
+      activeVer?.hasEdits ||
+      (activeVer?.latestEditContent &&
+        activeVer.latestEditContent !== originalText)
   );
 
   const editedText =
     activeVer?.latestEditContent || activeVer?.content || originalText;
-  const displayedContent =
-    hasEdits && viewMode === "original" ? originalText : editedText;
+  const displayedContent = (
+    hasEdits && viewMode === "original" ? originalText : editedText
+  ).trim();
 
   // Prompt truncation helper (> 6 lines or > 300 chars)
   const isPromptLong =
     response.prompt.length > 300 || response.prompt.split("\n").length > 6;
 
   // Model key formatting
-  const modelKey = activeVer?.modelKey || "text-economy";
+  const modelKey =
+    activeVer?.modelKey ||
+    (response.kind === "IMAGE" ? "image-standard" : "text-economy");
   const modelName = modelKey.includes("pro")
     ? t("modelPro")
     : modelKey.includes("economy")
       ? t("modelEconomy")
       : t("modelStandard");
+
+  const isImageResponse =
+    response.kind === "IMAGE" ||
+    (displayedContent.startsWith("http") &&
+      (displayedContent.includes("cloudinary") ||
+        displayedContent.match(/\.(jpeg|jpg|gif|png|webp)(\?.*)?$/i) !== null));
+
+  // Resolve signed URL when displayedContent is an attachment ID (Step 5.4)
+  const imageAttachmentId =
+    isImageResponse && displayedContent && !isDirectUrl(displayedContent)
+      ? displayedContent
+      : null;
+
+  React.useEffect(() => {
+    if (!imageAttachmentId || signedUrlsByAttachmentId[imageAttachmentId]) {
+      return;
+    }
+
+    let cancelled = false;
+    fetch(`/api/v1/attachments/${encodeURIComponent(imageAttachmentId)}/url`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        const signedUrl = data?.url ?? data?.data?.url;
+        if (!cancelled && signedUrl) {
+          setSignedUrlsByAttachmentId((prev) => ({
+            ...prev,
+            [imageAttachmentId]: signedUrl,
+          }));
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [imageAttachmentId, signedUrlsByAttachmentId]);
+
+  const resolvedImageUrl = isImageResponse
+    ? isDirectUrl(displayedContent)
+      ? displayedContent
+      : imageAttachmentId
+        ? signedUrlsByAttachmentId[imageAttachmentId] ?? null
+        : null
+    : null;
 
   // Version navigation
   const handleSwitchVersion = (direction: "prev" | "next") => {
@@ -257,7 +314,7 @@ export function ResponseCard({
   // Copy action
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(displayedContent);
+      await navigator.clipboard.writeText(resolvedImageUrl || displayedContent);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -286,15 +343,6 @@ export function ResponseCard({
     setViewMode("edited");
     setIsEditing(false);
   };
-
-  const isImageResponse =
-    response.kind === "IMAGE" ||
-    (displayedContent.startsWith("http") &&
-      (displayedContent.includes("cloudinary") ||
-        displayedContent.match(/\.(jpeg|jpg|gif|png|webp)(\?.*)?$/i) !== null));
-
-
-
 
   return (
     <div
@@ -431,7 +479,7 @@ export function ResponseCard({
               )}
 
               {/* "Edited" Badge and Toggle */}
-              {hasEdits && (
+              {hasEdits && !isImageResponse && (
                 <div className="flex items-center gap-1">
                   <Badge
                     variant="outline"
@@ -488,7 +536,7 @@ export function ResponseCard({
           )}
 
           {/* Card Body: Text Content, Image, or Inline Editor */}
-          {isEditing ? (
+          {isEditing && !isImageResponse ? (
             <EditResponse
               initialContent={displayedContent}
               onSave={handleSaveEdit}
@@ -497,54 +545,90 @@ export function ResponseCard({
             />
           ) : isImageResponse ? (
             <div className="space-y-3">
-              <div className="group/img border-border bg-surface-2 relative aspect-square max-w-lg overflow-hidden rounded-xl border">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={displayedContent}
-                  alt={response.prompt}
-                  className="h-full w-full object-cover transition-transform duration-300 group-hover/img:scale-[1.02]"
-                />
-                <div className="bg-overlay absolute inset-0 flex items-center justify-center gap-2 opacity-0 transition-opacity group-hover/img:opacity-100">
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => setLightboxOpen(true)}
-                    className="h-8 text-xs"
-                  >
-                    <Maximize2 className="mr-1 h-3.5 w-3.5" />
-                    Preview
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    asChild
-                    className="h-8 text-xs"
-                  >
-                    <a
-                      href={displayedContent}
-                      download={`klecx-${response.id}.png`}
-                    >
-                      <Download className="mr-1 h-3.5 w-3.5" />
-                      {t("downloadImage" as any) || "Download"}
-                    </a>
-                  </Button>
-                </div>
-              </div>
+              {resolvedImageUrl ? (
+                <>
+                  <div className="group/img border-border bg-surface-2 relative aspect-square max-w-lg overflow-hidden rounded-xl border">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={resolvedImageUrl}
+                      alt={response.prompt}
+                      onClick={() => setLightboxOpen(true)}
+                      className="h-full w-full cursor-pointer object-cover transition-transform duration-300 group-hover/img:scale-[1.02]"
+                    />
+                    <div className="bg-overlay absolute inset-0 flex items-center justify-center gap-2 opacity-0 transition-opacity group-hover/img:opacity-100">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => setLightboxOpen(true)}
+                        className="h-8 text-xs"
+                      >
+                        <Maximize2 className="mr-1 h-3.5 w-3.5" />
+                        Preview
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        asChild
+                        className="h-8 text-xs"
+                      >
+                        <a
+                          href={resolvedImageUrl}
+                          download={`klecx-${response.id}-v${activeNumber}.png`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <Download className="mr-1 h-3.5 w-3.5" />
+                          {t("downloadImage" as any) || "Download"}
+                        </a>
+                      </Button>
+                    </div>
+                  </div>
 
-              {/* Lightbox Dialog */}
-              <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
-                <DialogContent className="bg-bg/95 max-w-4xl p-2 backdrop-blur-md">
-                  <DialogHeader className="sr-only">
-                    <DialogTitle>{response.prompt}</DialogTitle>
-                  </DialogHeader>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={displayedContent}
-                    alt={response.prompt}
-                    className="h-auto max-h-[85vh] w-full rounded-lg object-contain"
-                  />
-                </DialogContent>
-              </Dialog>
+                  {/* Lightbox Dialog */}
+                  <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
+                    <DialogContent className="bg-bg/95 max-w-4xl p-3 backdrop-blur-md">
+                      <DialogHeader className="flex flex-row items-center justify-between pr-6">
+                        <DialogTitle className="text-fg truncate text-sm font-medium">
+                          {response.prompt}
+                        </DialogTitle>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          asChild
+                          className="h-7 shrink-0 text-xs"
+                        >
+                          <a
+                            href={resolvedImageUrl}
+                            download={`klecx-${response.id}-v${activeNumber}.png`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <Download className="mr-1 h-3.5 w-3.5" />
+                            {t("downloadImage" as any) || "Download"}
+                          </a>
+                        </Button>
+                      </DialogHeader>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={resolvedImageUrl}
+                        alt={response.prompt}
+                        className="h-auto max-h-[82vh] w-full rounded-lg object-contain"
+                      />
+                    </DialogContent>
+                  </Dialog>
+                </>
+              ) : (
+                <div
+                  data-testid="image-generation-skeleton"
+                  className="border-border bg-surface-2 relative flex aspect-square max-w-lg animate-pulse flex-col items-center justify-center gap-3 overflow-hidden rounded-xl border p-6 text-center"
+                >
+                  <ImageIcon className="text-fg-muted/60 h-10 w-10" />
+                  <span className="text-fg-muted text-xs font-medium">
+                    Loading image...
+                  </span>
+                </div>
+              )}
             </div>
           ) : (
             <div className="leading-relaxed select-text">
@@ -594,17 +678,39 @@ export function ResponseCard({
                     </Button>
                   )}
 
-                  {/* Edit */}
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setIsEditing(true)}
-                    className="text-fg-muted hover:text-fg h-8 px-2.5 text-xs"
-                  >
-                    <Edit2 className="mr-1 h-3.5 w-3.5" />
-                    <span>{t("edit")}</span>
-                  </Button>
+                  {/* Edit (Text responses only) */}
+                  {!isImageResponse && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setIsEditing(true)}
+                      className="text-fg-muted hover:text-fg h-8 px-2.5 text-xs"
+                    >
+                      <Edit2 className="mr-1 h-3.5 w-3.5" />
+                      <span>{t("edit")}</span>
+                    </Button>
+                  )}
+
+                  {/* Download (Image responses direct footer action) */}
+                  {isImageResponse && resolvedImageUrl && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      asChild
+                      className="text-fg-muted hover:text-fg h-8 px-2.5 text-xs"
+                    >
+                      <a
+                        href={resolvedImageUrl}
+                        download={`klecx-${response.id}-v${activeNumber}.png`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <Download className="mr-1 h-3.5 w-3.5" />
+                        <span>{t("downloadImage" as any) || "Download"}</span>
+                      </a>
+                    </Button>
+                  )}
 
                   {/* Read Aloud (Step 9.4 placeholder with tooltip) */}
                   <Tooltip>

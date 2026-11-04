@@ -312,6 +312,13 @@ export function Composer({
       .filter((a) => a.status === "ready" && a.attachmentId)
       .map((a) => a.attachmentId!);
 
+    if (mode === "image" && (attachments.length > 0 || readyAttachmentIds.length > 0)) {
+      setCreationError("Image generation cannot be combined with file or image attachments.");
+      return;
+    }
+
+    const effectiveModelKey = mode === "image" ? "image-standard" : selectedModel;
+    const effectiveKind = mode === "image" ? "IMAGE" : "TEXT";
 
     setIsSubmitting(true);
     setCreationError(null);
@@ -330,6 +337,7 @@ export function Composer({
         const idempotencyKey = safeRandomUUID();
         useGenerationStore.getState().startStream(workspaceId, {
           prompt: cleanPrompt,
+          kind: effectiveKind,
         });
 
         const { streamGeneration } = await import("@/lib/api/sse");
@@ -338,8 +346,8 @@ export function Composer({
           {
             idempotencyKey,
             prompt: cleanPrompt,
-            modelKey: selectedModel,
-            kind: mode === "image" ? "IMAGE" : "TEXT",
+            modelKey: effectiveModelKey,
+            kind: effectiveKind,
             think: thinkHarder,
             language: selectedLanguage || undefined,
             attachmentIds: readyAttachmentIds.length > 0 ? readyAttachmentIds : undefined,
@@ -404,7 +412,7 @@ export function Composer({
       useGenerationStore.getState().setPendingStart({
         workspaceId: targetId,
         prompt: cleanPrompt,
-        modelKey: selectedModel,
+        modelKey: effectiveModelKey,
         idempotencyKey,
         mode,
         thinkHarder,

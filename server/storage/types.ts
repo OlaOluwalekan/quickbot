@@ -40,9 +40,32 @@ export interface CreateSignatureOptions {
   isPublic?: boolean;
 }
 
+export interface UploadBufferOptions {
+  publicId: string;
+  folder?: string;
+  resourceType?: StorageResourceType;
+  format?: string;
+  mime?: string;
+  isPublic?: boolean;
+  tags?: string[];
+}
+
+export interface UploadBufferResult {
+  publicId: string;
+  bytes: number;
+  format: string;
+  width?: number;
+  height?: number;
+  resourceType: string;
+}
+
 export interface StorageProvider {
   name: string;
   createUploadSignature(options: CreateSignatureOptions): Promise<SignedUploadPayload>;
+  uploadBuffer(
+    buffer: Buffer,
+    options: UploadBufferOptions
+  ): Promise<UploadBufferResult>;
   head(
     publicId: string,
     options?: { resourceType?: StorageResourceType; isPublic?: boolean }

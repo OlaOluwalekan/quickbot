@@ -7,6 +7,8 @@ import {
   StorageAssetMeta,
   StorageProvider,
   StorageResourceType,
+  UploadBufferOptions,
+  UploadBufferResult,
 } from "./types";
 
 export interface CloudinaryConfig {
@@ -85,6 +87,55 @@ export class CloudinaryStorageProvider implements StorageProvider {
       maxBytes: options.maxBytes,
       allowedFormats: options.allowedFormats,
     };
+  }
+
+  async uploadBuffer(
+    buffer: Buffer,
+    options: UploadBufferOptions
+  ): Promise<UploadBufferResult> {
+    if (!this.cloudName || !this.apiKey || !this.apiSecret) {
+      throw new Error("Cloudinary credentials are not configured");
+    }
+
+    const resourceType = options.resourceType ?? "image";
+    const type = options.isPublic ? "upload" : "authenticated";
+    const publicIdHasFolder = options.publicId.includes("/");
+    const effectiveFolder = publicIdHasFolder ? undefined : options.folder;
+
+    return new Promise<UploadBufferResult>((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          public_id: options.publicId,
+          folder: effectiveFolder,
+          resource_type: resourceType,
+          type,
+          format: options.format,
+          tags: options.tags,
+        },
+        (error, result) => {
+          if (error || !result) {
+            return reject(
+              error || new Error("Cloudinary upload_stream returned no result")
+            );
+          }
+          resolve({
+            publicId: String(result.public_id ?? options.publicId),
+            bytes: Number(result.bytes ?? buffer.byteLength),
+            format: String(
+              result.format ??
+                options.format ??
+                options.mime?.split("/")[1] ??
+                "png"
+            ),
+            width: result.width ? Number(result.width) : undefined,
+            height: result.height ? Number(result.height) : undefined,
+            resourceType: String(result.resource_type ?? resourceType),
+          });
+        }
+      );
+
+      uploadStream.end(buffer);
+    });
   }
 
   async head(

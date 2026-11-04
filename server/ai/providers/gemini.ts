@@ -10,6 +10,25 @@ import {
 } from "../types";
 import { normalizeGeminiError } from "../errors";
 
+export const GEMINI_SAFETY_SETTINGS = [
+  {
+    category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+    threshold: "BLOCK_LOW_AND_ABOVE",
+  },
+  {
+    category: "HARM_CATEGORY_HATE_SPEECH",
+    threshold: "BLOCK_MEDIUM_AND_ABOVE",
+  },
+  {
+    category: "HARM_CATEGORY_HARASSMENT",
+    threshold: "BLOCK_MEDIUM_AND_ABOVE",
+  },
+  {
+    category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+    threshold: "BLOCK_MEDIUM_AND_ABOVE",
+  },
+] as const;
+
 let globalClient: GoogleGenAI | null = null;
 
 export function getGeminiClient(): GoogleGenAI {
@@ -59,6 +78,7 @@ export class GeminiProvider implements AiProvider {
     const config: Record<string, unknown> = {
       maxOutputTokens: req.maxOutputTokens,
       temperature: req.temperature,
+      safetySettings: GEMINI_SAFETY_SETTINGS,
     };
 
     if (req.thinking?.summaries !== false) {
@@ -215,6 +235,8 @@ export class GeminiProvider implements AiProvider {
           numberOfImages: req.numberOfImages ?? 1,
           aspectRatio: req.aspectRatio ?? "1:1",
           outputMimeType: "image/png",
+          safetyFilterLevel: "BLOCK_LOW_AND_ABOVE" as any,
+          personGeneration: "ALLOW_ADULT" as any,
         },
       });
 

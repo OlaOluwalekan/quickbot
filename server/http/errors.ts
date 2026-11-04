@@ -20,6 +20,10 @@ export const Errors = {
   conflict: (m: string) => new ApiError(409, "conflict", m),
   validation: (details: unknown) =>
     new ApiError(422, "validation_error", "Invalid input", details),
+  contentBlocked: (
+    m = "Prompt blocked by content safety policy",
+    details?: unknown
+  ) => new ApiError(422, "content_blocked", m, details),
   rateLimited: (retryAfter: number) =>
     new ApiError(429, "rate_limited", "Too many requests", { retryAfter }),
 };
