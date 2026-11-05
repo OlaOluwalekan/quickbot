@@ -202,14 +202,14 @@ describe("Step 6.4 — Right panel and reply flow", () => {
       where: { workspaceId, anchorExact: "coordinator failure" },
       include: { messages: { orderBy: { createdAt: "asc" } } },
     });
-    expect(annot).not.null;
+    expect(annot).not.toBeNull();
     expect(annot?.kind).toBe("REPLY");
     expect(annot?.messages).toHaveLength(2);
-    expect(annot?.messages[0].role).toBe("USER");
-    expect(annot?.messages[0].content).toBe("Why can it block on coordinator failure?");
-    expect(annot?.messages[1].role).toBe("ASSISTANT");
-    expect(annot?.messages[1].content).toContain("Two-phase commit coordinates");
-    expect(annot?.messages[1].generationId).not.null;
+    expect(annot!.messages[0]!.role).toBe("USER");
+    expect(annot!.messages[0]!.content).toBe("Why can it block on coordinator failure?");
+    expect(annot!.messages[1]!.role).toBe("ASSISTANT");
+    expect(annot!.messages[1]!.content).toContain("Two-phase commit coordinates");
+    expect(annot!.messages[1]!.generationId).not.toBeNull();
   });
 
   it("2. Collaborator with generate permission triggers reply billed to workspace owner", async () => {
@@ -243,7 +243,7 @@ describe("Step 6.4 — Right panel and reply flow", () => {
     const generation = await db.generation.findFirst({
       where: { idempotencyKey },
     });
-    expect(generation).not.null;
+    expect(generation).not.toBeNull();
     expect(generation?.actorId).toBe(editorId); // Collaborator is the actor
 
     const ownerCreditAccount = await db.creditAccount.findUnique({
@@ -278,7 +278,7 @@ describe("Step 6.4 — Right panel and reply flow", () => {
     const existing = await db.annotation.findFirst({
       where: { workspaceId, kind: "REPLY" },
     });
-    expect(existing).not.null;
+    expect(existing).not.toBeNull();
 
     const initialMessageCount = await db.annotationMessage.count({
       where: { annotationId: existing!.id },
@@ -309,9 +309,9 @@ describe("Step 6.4 — Right panel and reply flow", () => {
       orderBy: { createdAt: "asc" },
     });
     expect(finalMessages.length).toBe(initialMessageCount + 2);
-    expect(finalMessages[finalMessages.length - 2].role).toBe("USER");
-    expect(finalMessages[finalMessages.length - 2].content).toBe("How can 3PC mitigate this?");
-    expect(finalMessages[finalMessages.length - 1].role).toBe("ASSISTANT");
+    expect(finalMessages[finalMessages.length - 2]!.role).toBe("USER");
+    expect(finalMessages[finalMessages.length - 2]!.content).toBe("How can 3PC mitigate this?");
+    expect(finalMessages[finalMessages.length - 1]!.role).toBe("ASSISTANT");
 
     // Timeline still unchanged
     const totalResponses = await db.response.count({ where: { workspaceId } });

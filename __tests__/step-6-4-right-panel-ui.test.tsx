@@ -34,7 +34,8 @@ describe("Step 6.4 — RightPanel UI Component", () => {
         };
       };
 
-    global.fetch = jest.fn(async (url: string) => {
+    global.fetch = jest.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
       if (url.includes("/annotations")) {
         return {
           ok: true,
