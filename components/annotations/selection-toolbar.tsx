@@ -311,6 +311,13 @@ export function SelectionToolbar({
       toast.success("Comment added");
       setAnnouncement("Comment added successfully");
       onCommentCreated?.(res);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("annotation-changed", {
+            detail: { responseId: metadata.responseId, versionId: metadata.versionId },
+          })
+        );
+      }
 
       setIsVisible(false);
       setMode("idle");
@@ -325,6 +332,14 @@ export function SelectionToolbar({
   // Action 2: Trigger AI reply
   const handleSendReply = () => {
     if (!replyText.trim() || !activeAnchor || !metadata) return;
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("annotation-changed", {
+          detail: { responseId: metadata.responseId, versionId: metadata.versionId },
+        })
+      );
+    }
 
     onReplyTriggered?.({
       anchor: activeAnchor,
@@ -373,6 +388,13 @@ export function SelectionToolbar({
       toast.success(`Added to your queue (${nextCount})`);
       setAnnouncement(`Question added to queue (${nextCount})`);
       onQuestionCreated?.(res);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("annotation-changed", {
+            detail: { responseId: metadata.responseId, versionId: metadata.versionId },
+          })
+        );
+      }
 
       if (keepOpen) {
         setQuestionText("");

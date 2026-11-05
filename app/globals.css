@@ -193,6 +193,9 @@
 ::highlight(annot-reply) {
   background-color: var(--mark-reply);
 }
+::highlight(annot-hover) {
+  text-decoration: underline 2px solid var(--accent);
+}
 
   @media (prefers-reduced-motion: reduce) {
     ::view-transition-group(*),
