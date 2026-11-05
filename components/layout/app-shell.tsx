@@ -42,6 +42,7 @@ import {
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
 import { CommandPalette } from "./command-palette";
+import { RightPanel } from "@/components/annotations";
 import type {
   AppShellUser,
   SidebarProjectItem,
@@ -151,6 +152,17 @@ export function AppShell({
       ) {
         e.preventDefault();
         handleToggleCollapsed();
+      }
+
+      if (
+        e.key === "]" &&
+        !e.metaKey &&
+        !e.ctrlKey &&
+        !e.altKey &&
+        !isEditableElement(e.target)
+      ) {
+        e.preventDefault();
+        useUiStore.getState().toggleRightPanelOpen();
       }
     };
 
@@ -399,31 +411,8 @@ export function AppShell({
         </main>
       </div>
 
-      {/* Right Panel Column (Annotations & Notes — wired in Step 6.4) */}
-      {rightPanelOpen && (
-        <aside
-          aria-label={t("rightPanelTitle")}
-          className="border-border bg-surface text-fg hidden h-full w-80 shrink-0 flex-col border-l lg:flex"
-        >
-          <div className="border-border flex h-14 items-center justify-between border-b px-4">
-            <h2 className="text-fg text-sm font-semibold">
-              {t("rightPanelTitle")}
-            </h2>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              aria-label={tCommon("close")}
-              onClick={() => setRightPanelOpen(false)}
-            >
-              <X className="h-4 w-4" strokeWidth={1.5} />
-            </Button>
-          </div>
-          <div className="text-subtle flex flex-1 items-center justify-center p-6 text-center text-xs">
-            {t("rightPanelEmpty")}
-          </div>
-        </aside>
-      )}
+      {/* Right Panel Column (Step 6.4) */}
+      <RightPanel workspaceId={activeWorkspace?.id} />
 
       {/* Command Palette (Ctrl/⌘ + K) */}
       <CommandPalette

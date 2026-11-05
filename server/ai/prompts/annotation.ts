@@ -1,13 +1,33 @@
 export const ANNOTATION_PROMPT_VERSION = "2026-10-1";
 
 export interface AnnotationReplyContext {
-  highlightedText: string;
-  userComment: string;
+  highlightedText?: string;
+  exact?: string;
+  userComment?: string;
+  prompt?: string;
+  versionText?: string;
+  originalPrompt?: string;
   sourceType?: "ORIGINAL" | `EDIT:${number}`;
 }
 
 export function buildAnnotationReplyPrompt(ctx: AnnotationReplyContext): string {
-  return `The user has highlighted the following text from the workspace:\n"${ctx.highlightedText}"\n\nUser question/comment:\n${ctx.userComment}`;
+  const exact = ctx.exact || ctx.highlightedText || "";
+  const userPrompt = ctx.prompt || ctx.userComment || "";
+
+  if (ctx.versionText && ctx.originalPrompt) {
+    return `The user highlighted this passage from your earlier answer: «${exact}».
+
+Here is the full answer for context:
+${ctx.versionText}
+
+Original request:
+${ctx.originalPrompt}
+
+Answer the user's follow-up about the passage; be concise; don't repeat the whole answer:
+${userPrompt}`;
+  }
+
+  return `The user has highlighted the following text from the workspace:\n"${exact}"\n\nUser question/comment:\n${userPrompt}`;
 }
 
 export function buildBatchQuestionsPrompt(questions: string[]): string {

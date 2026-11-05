@@ -1,4 +1,5 @@
 import "server-only";
+import crypto from "node:crypto";
 import { db } from "@/server/db/client";
 import { Errors } from "@/server/http/errors";
 import { requireWorkspace } from "@/server/authz/access";
@@ -6,7 +7,36 @@ import type { Actor } from "@/server/auth/session";
 import type {
   CreateAnnotationInput,
   UpdateAnnotationInput,
+  ReplyAnnotationInput,
 } from "@/lib/schemas/annotation";
+import {
+  getAccountByUserId,
+  createAccountWithFreeGrant,
+  reserve,
+  settle,
+  release,
+} from "@/server/services/credits";
+import {
+  getModel,
+  creditsFor,
+  ModelKey,
+} from "@/server/ai/registry";
+import { getProvider, streamAi, type AiProvider } from "@/server/ai";
+import {
+  buildAnnotationReplyPrompt,
+  ANNOTATION_PROMPT_VERSION,
+} from "@/server/ai/prompts/annotation";
+import { estimateTokens } from "@/server/ai/context-builder";
+
+let customAnnotationProviderForTesting: AiProvider | null = null;
+
+export function setAnnotationCustomProviderForTesting(provider: AiProvider | null) {
+  customAnnotationProviderForTesting = provider;
+}
+
+function formatSSEEvent(event: string, data: unknown): string {
+  return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+}
 
 /**
  * Lists annotations for a response visible to the calling actor:
@@ -55,6 +85,48 @@ export async function listAnnotationsForResponse(
       },
     },
     orderBy: { createdAt: "asc" },
+  });
+}
+
+/**
+ * Lists all annotations across an entire workspace visible to the calling actor.
+ */
+export async function listWorkspaceAnnotations(
+  actor: Actor,
+  workspaceId: string
+) {
+  await requireWorkspace(actor, workspaceId, "workspace.read");
+
+  return db.annotation.findMany({
+    where: {
+      workspaceId,
+      deletedAt: null,
+      OR: [
+        { visibility: "WORKSPACE" },
+        { createdById: actor.userId },
+      ],
+    },
+    include: {
+      messages: {
+        orderBy: { createdAt: "asc" },
+        include: {
+          author: {
+            select: { id: true, name: true, email: true, image: true },
+          },
+        },
+      },
+      createdBy: {
+        select: { id: true, name: true, email: true, image: true },
+      },
+      version: {
+        select: {
+          id: true,
+          number: true,
+          responseId: true,
+        },
+      },
+    },
+    orderBy: { createdAt: "desc" },
   });
 }
 
@@ -310,4 +382,384 @@ export async function deleteAnnotation(actor: Actor, annotationId: string) {
   });
 
   return { success: true };
+}
+
+/**
+ * Adds a follow-up user message to an annotation thread.
+ */
+export async function createAnnotationMessage(
+  actor: Actor,
+  annotationId: string,
+  content: string
+) {
+  const annot = await db.annotation.findUnique({
+    where: { id: annotationId, deletedAt: null },
+  });
+
+  if (!annot) {
+    throw Errors.notFound("Annotation");
+  }
+
+  await requireWorkspace(actor, annot.workspaceId, "workspace.annotate");
+
+  if (annot.visibility === "PRIVATE" && annot.createdById !== actor.userId) {
+    throw Errors.notFound("Annotation");
+  }
+
+  return db.annotationMessage.create({
+    data: {
+      annotationId: annot.id,
+      role: "USER",
+      content,
+      authorId: actor.userId,
+    },
+    include: {
+      author: {
+        select: { id: true, name: true, email: true, image: true },
+      },
+    },
+  });
+}
+
+/**
+ * Streams an AI reply for an annotation thread (Step 6.4):
+ * - Creates annotation (kind REPLY) if called for a new passage selection.
+ * - Adds user prompt as USER AnnotationMessage.
+ * - Streams assistant completion via SSE without modifying main response timeline.
+ * - Saves completed assistant message as ASSISTANT AnnotationMessage with generationId.
+ * - Bills credits to workspace owner with calling actor recorded.
+ */
+export async function createAndStreamAnnotationReply(
+  actor: Actor,
+  annotationIdOrNew: string,
+  input: ReplyAnnotationInput,
+  options: { providerInstance?: AiProvider } = {}
+): Promise<{
+  stream: ReadableStream<Uint8Array>;
+  generationId: string;
+  annotationId: string;
+}> {
+  const effectivePrompt = (input.prompt || input.content || "").trim();
+  if (!effectivePrompt) {
+    throw Errors.badRequest("Prompt cannot be empty");
+  }
+  const idempotencyKey = input.idempotencyKey || crypto.randomUUID();
+
+  let targetAnnotation: any;
+  let targetVersion: any;
+  let workspaceId: string;
+
+  if (annotationIdOrNew === "new") {
+    if (!input.anchor || !input.versionId) {
+      throw Errors.badRequest(
+        "Anchor and versionId are required to start a new reply thread"
+      );
+    }
+
+    targetVersion = await db.responseVersion.findUnique({
+      where: { id: input.versionId },
+      include: {
+        response: {
+          select: { id: true, workspaceId: true, prompt: true, deletedAt: true },
+        },
+      },
+    });
+
+    if (!targetVersion || targetVersion.response.deletedAt !== null) {
+      throw Errors.notFound("ResponseVersion");
+    }
+
+    workspaceId = targetVersion.response.workspaceId;
+
+    // Enforce workspace.generate permission upfront
+    const access = await requireWorkspace(actor, workspaceId, "workspace.generate");
+
+    // Re-check substring
+    let targetContent = targetVersion.content;
+    if (input.contentSource === "EDIT") {
+      if (input.editRevision) {
+        const edit = await db.responseEdit.findUnique({
+          where: {
+            versionId_revision: {
+              versionId: targetVersion.id,
+              revision: input.editRevision,
+            },
+          },
+        });
+        if (edit) targetContent = edit.content;
+      } else {
+        const latestEdit = await db.responseEdit.findFirst({
+          where: { versionId: targetVersion.id },
+          orderBy: { revision: "desc" },
+        });
+        if (latestEdit) targetContent = latestEdit.content;
+      }
+    }
+
+    if (!targetContent.includes(input.anchor.exact)) {
+      throw Errors.badRequest(
+        "Selected text is not a substring of the response content"
+      );
+    }
+
+    // Create Annotation (kind REPLY) + initial USER message
+    targetAnnotation = await db.annotation.create({
+      data: {
+        workspaceId,
+        responseId: targetVersion.response.id,
+        versionId: targetVersion.id,
+        contentSource: input.contentSource ?? "ORIGINAL",
+        editRevision: input.editRevision ?? null,
+        createdById: actor.userId,
+        kind: "REPLY",
+        questionState: "NONE",
+        visibility: "PRIVATE",
+        anchorExact: input.anchor.exact,
+        anchorPrefix: input.anchor.prefix ?? "",
+        anchorSuffix: input.anchor.suffix ?? "",
+        anchorStart: input.anchor.start ?? null,
+        anchorEnd: input.anchor.end ?? null,
+        messages: {
+          create: [
+            {
+              role: "USER",
+              content: effectivePrompt,
+              authorId: actor.userId,
+            },
+          ],
+        },
+      },
+      include: {
+        messages: { orderBy: { createdAt: "asc" } },
+      },
+    });
+  } else {
+    // Existing annotation thread
+    targetAnnotation = await db.annotation.findUnique({
+      where: { id: annotationIdOrNew, deletedAt: null },
+      include: {
+        messages: { orderBy: { createdAt: "asc" } },
+        version: {
+          include: {
+            response: {
+              select: { id: true, workspaceId: true, prompt: true, deletedAt: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!targetAnnotation || targetAnnotation.version.response.deletedAt !== null) {
+      throw Errors.notFound("Annotation");
+    }
+
+    workspaceId = targetAnnotation.workspaceId;
+    targetVersion = targetAnnotation.version;
+
+    // Enforce workspace.generate
+    await requireWorkspace(actor, workspaceId, "workspace.generate");
+
+    if (
+      targetAnnotation.visibility === "PRIVATE" &&
+      targetAnnotation.createdById !== actor.userId
+    ) {
+      throw Errors.notFound("Annotation");
+    }
+
+    // Add user message to thread
+    await db.annotationMessage.create({
+      data: {
+        annotationId: targetAnnotation.id,
+        role: "USER",
+        content: effectivePrompt,
+        authorId: actor.userId,
+      },
+    });
+  }
+
+  // Resolve billing account = workspace owner's credit account
+  const wsAccess = await requireWorkspace(actor, workspaceId, "workspace.generate");
+  const wsOwnerId = wsAccess.ws.ownerId;
+  let ownerAccount = await getAccountByUserId(wsOwnerId);
+  if (!ownerAccount) {
+    ownerAccount = await createAccountWithFreeGrant(wsOwnerId);
+  }
+  const billedAccountId = ownerAccount.id;
+
+  // Idempotency & Generation creation
+  const modelKey = (input.modelKey || "text-economy") as ModelKey;
+  const model = getModel(modelKey);
+  const generationId = crypto.randomUUID();
+
+  const estimatedInputTokens = estimateTokens(effectivePrompt) + 500;
+  const reserveAmount = creditsFor(modelKey, {
+    inputTokens: estimatedInputTokens,
+    outputTokens: 800,
+  });
+  const reservationKey = `res_annot_${idempotencyKey}`;
+
+  // Reserve credits (owner billed)
+  await reserve(billedAccountId, reserveAmount, reservationKey, {
+    generationId,
+    actorId: actor.userId,
+    estimated: true,
+  });
+
+  await db.generation.create({
+    data: {
+      id: generationId,
+      workspaceId,
+      actorId: actor.userId,
+      billedAccountId,
+      kind: "ANNOTATION_REPLY",
+      status: "RUNNING",
+      modelKey,
+      providerModelId: model.providerModelId,
+      promptVersion: ANNOTATION_PROMPT_VERSION,
+      idempotencyKey: idempotencyKey,
+      reservedCredits: reserveAmount,
+      startedAt: new Date(),
+    },
+  });
+
+  // Construct prompt
+  const fullPrompt = buildAnnotationReplyPrompt({
+    exact: targetAnnotation.anchorExact,
+    versionText: targetVersion.content,
+    originalPrompt: targetVersion.response.prompt,
+    prompt: effectivePrompt,
+  });
+
+  const encoder = new TextEncoder();
+  const activeProvider =
+    options.providerInstance ||
+    customAnnotationProviderForTesting ||
+    undefined;
+
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      let fullAssistantText = "";
+
+      try {
+        controller.enqueue(
+          encoder.encode(
+            formatSSEEvent("started", {
+              generationId,
+              annotationId: targetAnnotation.id,
+            })
+          )
+        );
+        controller.enqueue(
+          encoder.encode(formatSSEEvent("status", { stage: "queued" }))
+        );
+        controller.enqueue(
+          encoder.encode(
+            formatSSEEvent("status", { stage: "preparing", truncated: false })
+          )
+        );
+        controller.enqueue(
+          encoder.encode(formatSSEEvent("status", { stage: "writing" }))
+        );
+
+        const aiStream = streamAi(
+          {
+            modelKey,
+            messages: [
+              {
+                role: "user",
+                parts: [{ type: "text", text: fullPrompt }],
+              },
+            ],
+            thinking: { summaries: false },
+          },
+          {
+            providerInstance: activeProvider,
+          }
+        );
+
+        for await (const chunk of aiStream) {
+          if (chunk.type === "text_delta" && chunk.text) {
+            fullAssistantText += chunk.text;
+            controller.enqueue(
+              encoder.encode(formatSSEEvent("delta", { text: chunk.text }))
+            );
+          }
+        }
+
+        // Save completed assistant message to thread
+        await db.annotationMessage.create({
+          data: {
+            annotationId: targetAnnotation.id,
+            role: "ASSISTANT",
+            content: fullAssistantText,
+            generationId,
+          },
+        });
+
+        // Settle credits
+        const outputTokens = estimateTokens(fullAssistantText);
+        const chargedCredits = creditsFor(modelKey, {
+          inputTokens: estimatedInputTokens,
+          outputTokens,
+        });
+        await settle(billedAccountId, generationId, chargedCredits, reservationKey);
+
+        await db.generation.update({
+          where: { id: generationId },
+          data: {
+            status: "COMPLETED",
+            finishedAt: new Date(),
+            chargedCredits,
+          },
+        });
+
+        controller.enqueue(
+          encoder.encode(formatSSEEvent("status", { stage: "complete" }))
+        );
+        controller.enqueue(
+          encoder.encode(
+            formatSSEEvent("done", {
+              generationId,
+              annotationId: targetAnnotation.id,
+            })
+          )
+        );
+        controller.close();
+      } catch (err: unknown) {
+        try {
+          await release(billedAccountId, generationId, reservationKey);
+          await db.generation.update({
+            where: { id: generationId },
+            data: {
+              status: "FAILED",
+              finishedAt: new Date(),
+              errorCode: "reply_stream_failed",
+            },
+          });
+        } catch {
+          // Ignore secondary cleanup error
+        }
+
+        controller.enqueue(
+          encoder.encode(formatSSEEvent("status", { stage: "failed" }))
+        );
+        controller.enqueue(
+          encoder.encode(
+            formatSSEEvent("error", {
+              code: "reply_error",
+              message:
+                err instanceof Error ? err.message : "Annotation reply failed",
+            })
+          )
+        );
+        controller.close();
+      }
+    },
+  });
+
+  return {
+    stream,
+    generationId,
+    annotationId: targetAnnotation.id,
+  };
 }

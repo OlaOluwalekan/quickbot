@@ -21,6 +21,7 @@ export function parseSidebarCookie(raw?: string | null): boolean {
 export interface PersistedUiSlice {
   sidebarCollapsed: boolean;
   rightPanelOpen: boolean;
+  rightPanelWidth: number;
   composerEnterToSend: boolean;
   onboardingDismissed: boolean;
   drafts: Record<string, string>;
@@ -31,6 +32,7 @@ export interface UiState extends PersistedUiSlice {
   setSidebarCollapsed: (collapsed: boolean) => void;
   toggleSidebarCollapsed: () => void;
   setRightPanelOpen: (open: boolean) => void;
+  setRightPanelWidth: (width: number) => void;
   toggleRightPanelOpen: () => void;
   setComposerEnterToSend: (enterToSend: boolean) => void;
   setOnboardingDismissed: (dismissed: boolean) => void;
@@ -125,6 +127,7 @@ export function partializeUiState(state: UiState): PersistedUiSlice {
   return {
     sidebarCollapsed: state.sidebarCollapsed,
     rightPanelOpen: state.rightPanelOpen,
+    rightPanelWidth: state.rightPanelWidth,
     composerEnterToSend: state.composerEnterToSend,
     onboardingDismissed: state.onboardingDismissed,
     drafts: state.drafts,
@@ -136,6 +139,7 @@ export const useUiStore = create<UiState>()(
     (set) => ({
       sidebarCollapsed: false,
       rightPanelOpen: false,
+      rightPanelWidth: 360,
       composerEnterToSend: true,
       onboardingDismissed: false,
       drafts: {},
@@ -153,6 +157,7 @@ export const useUiStore = create<UiState>()(
           return { sidebarCollapsed: next };
         }),
       setRightPanelOpen: (rightPanelOpen) => set({ rightPanelOpen }),
+      setRightPanelWidth: (rightPanelWidth) => set({ rightPanelWidth }),
       toggleRightPanelOpen: () =>
         set((state) => ({ rightPanelOpen: !state.rightPanelOpen })),
       setComposerEnterToSend: (composerEnterToSend) =>
