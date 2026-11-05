@@ -52,6 +52,7 @@ import { PromptAttachmentPreview } from "./prompt-attachment-preview";
 import { SourcesAccordion } from "./citations";
 import { EditResponse } from "./edit-response";
 import { Markdown } from "@/components/markdown";
+import { AnnotationLayer } from "@/components/annotations";
 import {
   useResponseVersions,
   useSwitchActiveVersion,
@@ -693,10 +694,16 @@ export function ResponseCard({
                     : undefined
                 }
               >
-                <Markdown
+                <AnnotationLayer
+                  responseId={response.id}
+                  versionId={activeVer?.id || response.activeVersionId || undefined}
                   content={displayedContent}
-                  citations={activeCitations}
-                />
+                >
+                  <Markdown
+                    content={displayedContent}
+                    citations={activeCitations}
+                  />
+                </AnnotationLayer>
               </div>
 
               {activeCitations.length > 0 && (

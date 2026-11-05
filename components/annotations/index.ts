@@ -5,3 +5,7 @@ export {
   type AnnotationItem,
   type AnnotationMessageItem,
 } from "./right-panel";
+export {
+  AnnotationLayer,
+  type AnnotationLayerProps,
+} from "./annotation-layer";
