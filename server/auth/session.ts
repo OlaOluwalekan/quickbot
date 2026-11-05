@@ -35,10 +35,14 @@ export async function getActor(req?: Request): Promise<Actor | null> {
     email: session.user.email,
     name: session.user.name,
     image: session.user.image ?? null,
-    username: u.username ?? null,
-    displayUsername: u.displayUsername ?? null,
-    usernameClaimedAt: u.usernameClaimedAt ? new Date(u.usernameClaimedAt) : null,
-    usernameChangeCount: u.usernameChangeCount ?? 0,
+    ...(u.username !== undefined && { username: u.username }),
+    ...(u.displayUsername !== undefined && { displayUsername: u.displayUsername }),
+    ...(u.usernameClaimedAt !== undefined && {
+      usernameClaimedAt: u.usernameClaimedAt ? new Date(u.usernameClaimedAt) : null,
+    }),
+    ...(u.usernameChangeCount !== undefined && {
+      usernameChangeCount: u.usernameChangeCount,
+    }),
   };
 }
 
