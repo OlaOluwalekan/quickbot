@@ -276,7 +276,8 @@ describe("Step 6.4 — Right panel and reply flow", () => {
 
     // First find the existing reply annotation
     const existing = await db.annotation.findFirst({
-      where: { workspaceId, kind: "REPLY" },
+      where: { workspaceId, kind: "REPLY", createdById: ownerId },
+      orderBy: { createdAt: "asc" },
     });
     expect(existing).not.toBeNull();
 

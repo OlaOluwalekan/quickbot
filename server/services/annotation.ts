@@ -132,6 +132,50 @@ export async function listWorkspaceAnnotations(
 }
 
 /**
+ * Lists question annotations for a workspace created by the calling actor,
+ * optionally filtered by `questionState` (e.g. QUEUED).
+ * Caller needs `workspace.read` permission.
+ */
+export async function listWorkspaceQuestions(
+  actor: Actor,
+  workspaceId: string,
+  options?: { state?: "NONE" | "QUEUED" | "ANSWERING" | "ANSWERED" | "CANCELLED" | "FAILED" }
+) {
+  await requireWorkspace(actor, workspaceId, "workspace.read");
+
+  return db.annotation.findMany({
+    where: {
+      workspaceId,
+      createdById: actor.userId,
+      kind: "QUESTION",
+      deletedAt: null,
+      ...(options?.state ? { questionState: options.state } : {}),
+    },
+    include: {
+      messages: {
+        orderBy: { createdAt: "asc" },
+        include: {
+          author: {
+            select: { id: true, name: true, email: true, image: true },
+          },
+        },
+      },
+      createdBy: {
+        select: { id: true, name: true, email: true, image: true },
+      },
+      version: {
+        select: {
+          id: true,
+          number: true,
+          responseId: true,
+        },
+      },
+    },
+    orderBy: { createdAt: "asc" },
+  });
+}
+
+/**
  * Creates a new annotation and its initial USER message on a response version.
  * Requires `workspace.annotate` permission.
  * Validates that `anchor.exact` is a true substring of the version text.
@@ -320,6 +364,7 @@ export async function updateAnnotation(
   const updateData: {
     resolvedAt?: Date | null;
     visibility?: "PRIVATE" | "WORKSPACE";
+    questionState?: "NONE" | "QUEUED" | "ANSWERING" | "ANSWERED" | "CANCELLED" | "FAILED";
   } = {};
 
   if (input.resolved !== undefined) {
@@ -328,6 +373,9 @@ export async function updateAnnotation(
 
   if (input.visibility !== undefined) {
     updateData.visibility = input.visibility;
+  }
+  if (input.questionState !== undefined) {
+    updateData.questionState = input.questionState;
   }
 
   return db.annotation.update({

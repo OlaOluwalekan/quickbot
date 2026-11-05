@@ -17,6 +17,8 @@ import {
   ExternalLink,
   ChevronDown,
   ChevronUp,
+  RotateCcw,
+  Play,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -97,6 +99,7 @@ export function RightPanel({
   const [isLoading, setIsLoading] = React.useState(false);
   const [replyInput, setReplyInput] = React.useState<Record<string, string>>({});
   const [replyLoading, setReplyLoading] = React.useState<Record<string, boolean>>({});
+  const [isBatchRunning, setIsBatchRunning] = React.useState(false);
   const [expandedQuotes, setExpandedQuotes] = React.useState<Record<string, boolean>>({});
   const [isMobile, setIsMobile] = React.useState(false);
 
@@ -379,6 +382,47 @@ export function RightPanel({
     );
   };
 
+
+  const handleRetryQuestion = async (annotationId: string) => {
+    try {
+      await fetch(`/api/v1/annotations/${annotationId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ questionState: "QUEUED" }),
+      });
+      fetchAnnotations();
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleRunBatchFromPanel = async () => {
+    if (!workspaceId || isBatchRunning) return;
+    const queuedItems = questions.filter((q) => q.questionState === "QUEUED");
+    if (queuedItems.length === 0) return;
+
+    setIsBatchRunning(true);
+    try {
+      const res = await fetch(`/api/v1/workspaces/${workspaceId}/questions/run`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ annotationIds: queuedItems.map((q) => q.id) }),
+      });
+      if (res.body) {
+        const reader = res.body.getReader();
+        while (true) {
+          const { done } = await reader.read();
+          if (done) break;
+        }
+      }
+      fetchAnnotations();
+    } catch {
+      // ignore
+    } finally {
+      setIsBatchRunning(false);
+    }
+  };
+
   // Item Card
   const renderItemCard = (item: AnnotationItem) => {
     const isQuoteExpanded = expandedQuotes[item.id] || false;
@@ -551,6 +595,23 @@ export function RightPanel({
           </div>
         )}
 
+        
+        {/* Failed Question Retry Action */}
+        {item.kind === "QUESTION" && item.questionState === "FAILED" && (
+          <div className="border-border/60 mt-3 flex items-center justify-between border-t pt-2">
+            <span className="text-danger text-[11px]">Failed to generate answer</span>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-6 text-[11px] gap-1 text-accent border-accent/40 hover:bg-accent/10"
+              onClick={() => handleRetryQuestion(item.id)}
+            >
+              <RotateCcw className="h-3 w-3" />
+              <span>Retry</span>
+            </Button>
+          </div>
+        )}
+
         {/* Inline Follow-up prompt for Reply threads */}
         {item.kind === "REPLY" && (
           <div className="border-border/60 mt-3 flex items-center gap-1.5 border-t pt-2">
@@ -696,7 +757,31 @@ export function RightPanel({
               : replies.map(renderItemCard)}
           </TabsContent>
 
+
           <TabsContent value="questions" className="m-0 space-y-3 outline-none">
+            {questions.filter((q) => q.questionState === "QUEUED").length > 0 && (
+              <div className="flex items-center justify-between p-2.5 rounded-lg bg-accent/10 border border-accent/30 text-xs">
+                <span className="font-medium text-accent">
+                  {questions.filter((q) => q.questionState === "QUEUED").length} queued question(s)
+                </span>
+                <Button
+                  size="sm"
+                  disabled={isBatchRunning}
+                  onClick={handleRunBatchFromPanel}
+                  className="h-6 text-xs bg-accent text-accent-fg hover:bg-accent/90"
+                >
+                  {isBatchRunning ? (
+                    <>
+                      <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                      <span>Answering...</span>
+                    </>
+                  ) : (
+                    <span>Ask all ({questions.filter((q) => q.questionState === "QUEUED").length})</span>
+                  )}
+                </Button>
+              </div>
+            )}
+
             {questions.length === 0
               ? renderEmptyState("questions")
               : questions.map(renderItemCard)}

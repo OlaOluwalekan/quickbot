@@ -68,4 +68,10 @@ export const queryKeys = {
   home: {
     get: (userId: string) => userQueryKey(userId, "home"),
   },
+  questions: {
+    queued: (userId: string, workspaceId: string) =>
+      userQueryKey(userId, "workspaces", workspaceId, "questions", "QUEUED"),
+    all: (userId: string, workspaceId: string) =>
+      userQueryKey(userId, "workspaces", workspaceId, "questions"),
+  },
 } as const;
