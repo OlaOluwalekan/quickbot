@@ -32,6 +32,9 @@ export const updateAnnotationSchema = z.object({
   text: z.string().min(1).max(2000).optional(),
   resolved: z.boolean().optional(),
   visibility: z.enum(["PRIVATE", "WORKSPACE"]).optional(),
+  questionState: z
+    .enum(["NONE", "QUEUED", "ANSWERING", "ANSWERED", "CANCELLED", "FAILED"])
+    .optional(),
 });
 
 export type UpdateAnnotationInput = z.infer<typeof updateAnnotationSchema>;
@@ -65,3 +68,19 @@ export const createAnnotationMessageSchema = z.object({
 export type CreateAnnotationMessageInput = z.infer<
   typeof createAnnotationMessageSchema
 >;
+
+export const listQuestionsQuerySchema = z.object({
+  state: z
+    .enum(["NONE", "QUEUED", "ANSWERING", "ANSWERED", "CANCELLED", "FAILED"])
+    .optional(),
+});
+
+export type ListQuestionsQuery = z.infer<typeof listQuestionsQuerySchema>;
+
+export const runQuestionBatchSchema = z.object({
+  annotationIds: z.array(z.string()).max(10).optional(),
+  idempotencyKey: z.string().min(1).max(255).optional(),
+  modelKey: z.string().optional(),
+});
+
+export type RunQuestionBatchInput = z.infer<typeof runQuestionBatchSchema>;

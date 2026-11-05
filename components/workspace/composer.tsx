@@ -33,6 +33,7 @@ import { navigateWithTransition } from "@/lib/navigation/view-transition";
 import { CLIENT_MODELS, type ClientModelOption } from "@/lib/ai/client-models";
 import { AI_LANGUAGES, type AiLanguage } from "@/lib/locale";
 import type { WorkspaceDto } from "@/lib/api/hooks/workspaces";
+import { QuestionQueuePopover } from "@/components/workspace/question-queue-popover";
 import {
   Popover,
   PopoverContent,
@@ -910,18 +911,8 @@ export function Composer({
             </button>
           )}
 
-          {/* Queue Button (Step 6.5 stub) */}
-          <button
-            type="button"
-            disabled
-            title={t("queueDisabled")}
-            className="flex h-7 w-7 items-center justify-center rounded-lg text-muted opacity-50 cursor-not-allowed hover:bg-surface-2 transition-colors relative"
-          >
-            <Layers className="h-3.5 w-3.5" strokeWidth={1.5} />
-            <span className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full bg-surface-3 text-[9px] font-bold flex items-center justify-center text-muted">
-              0
-            </span>
-          </button>
+          {/* Question Queue Popover (Step 6.5) */}
+          <QuestionQueuePopover workspaceId={workspaceId} />
         </div>
 
         {/* Right Action Group: Counter + Submit/Stop */}
