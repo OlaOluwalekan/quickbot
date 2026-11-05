@@ -22,6 +22,7 @@ import {
   ModelKey,
 } from "@/server/ai/registry";
 import { getProvider, streamAi, type AiProvider } from "@/server/ai";
+import { getCustomProvider } from "@/server/services/generation";
 import {
   buildAnnotationReplyPrompt,
   ANNOTATION_PROMPT_VERSION,
@@ -597,6 +598,8 @@ export async function createAndStreamAnnotationReply(
     outputTokens: 800,
   });
   const reservationKey = `res_annot_${idempotencyKey}`;
+  const settleKey = `stl_annot_${generationId}`;
+  const releaseKey = `rel_annot_${generationId}`;
 
   // Reserve credits (owner billed)
   await reserve(billedAccountId, reserveAmount, reservationKey, {
@@ -634,6 +637,7 @@ export async function createAndStreamAnnotationReply(
   const activeProvider =
     options.providerInstance ||
     customAnnotationProviderForTesting ||
+    getCustomProvider() ||
     undefined;
 
   const stream = new ReadableStream<Uint8Array>({
@@ -702,7 +706,7 @@ export async function createAndStreamAnnotationReply(
           inputTokens: estimatedInputTokens,
           outputTokens,
         });
-        await settle(billedAccountId, generationId, chargedCredits, reservationKey);
+        await settle(billedAccountId, generationId, chargedCredits, settleKey);
 
         await db.generation.update({
           where: { id: generationId },
@@ -726,8 +730,9 @@ export async function createAndStreamAnnotationReply(
         );
         controller.close();
       } catch (err: unknown) {
+        console.error("[Annotation Reply Stream Error]:", err);
         try {
-          await release(billedAccountId, generationId, reservationKey);
+          await release(billedAccountId, generationId, releaseKey);
           await db.generation.update({
             where: { id: generationId },
             data: {

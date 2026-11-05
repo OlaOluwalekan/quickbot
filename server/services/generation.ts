@@ -80,6 +80,10 @@ export function setCustomProvider(provider: AiProvider | null) {
   customProviderForTesting = provider;
 }
 
+export function getCustomProvider(): AiProvider | null {
+  return customProviderForTesting;
+}
+
 export function clearActiveGenerationsForTesting() {
   activeGenerations.clear();
 }

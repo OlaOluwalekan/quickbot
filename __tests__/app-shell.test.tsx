@@ -21,6 +21,7 @@ jest.mock("next/navigation", () => ({
     refresh: mockRefresh,
   }),
   usePathname: () => mockPathname,
+  useParams: () => ({ id: "ws-today" }),
 }));
 
 jest.mock("better-auth/react", () => ({
