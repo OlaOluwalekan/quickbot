@@ -53,6 +53,7 @@ model User {
   attachments          Attachment[]
   annotations          Annotation[]        @relation("AnnotationCreator")
   annotationMessages   AnnotationMessage[] @relation("AnnotationMessageAuthor")
+  promotions           Promotion[]         @relation("PromotionCreator")
 
   @@map("users")
 }
@@ -252,6 +253,8 @@ model Response {
   versions        ResponseVersion[]
   attachments     Attachment[]
   annotations     Annotation[]
+  quote           String?           @db.Text
+  sourceAnnotationId String?        @map("source_annotation_id")
 
   @@index([workspaceId, deletedAt, sortAt, id])
   @@map("responses")
@@ -268,6 +271,7 @@ model ResponseVersion {
   providerModelId String         @map("provider_model_id")
   promptVersion   String         @map("prompt_version")
   generationId    String?        @unique @map("generation_id")
+  sourceMessageId String?        @map("source_message_id")
   createdById     String         @map("created_by_id")
   createdAt       DateTime       @default(now()) @map("created_at")
   response        Response       @relation(fields: [responseId], references: [id], onDelete: Cascade)
@@ -277,6 +281,7 @@ model ResponseVersion {
 
   @@unique([responseId, number])
   @@index([responseId, createdAt])
+  @@index([sourceMessageId])
   @@map("response_versions")
 }
 
@@ -499,6 +504,7 @@ model Annotation {
   version       ResponseVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
   createdBy     User            @relation("AnnotationCreator", fields: [createdById], references: [id], onDelete: Cascade)
   messages      AnnotationMessage[]
+  promotions    Promotion[]
 
   @@index([versionId, deletedAt])
   @@index([workspaceId, createdById, questionState])
@@ -517,7 +523,34 @@ model AnnotationMessage {
 
   annotation   Annotation  @relation(fields: [annotationId], references: [id], onDelete: Cascade)
   author       User?       @relation("AnnotationMessageAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  promotions   Promotion[]
 
   @@index([annotationId, createdAt])
   @@map("annotation_messages")
+}
+
+enum PromotionTarget {
+  TIMELINE
+  NEW_WORKSPACE
+}
+
+model Promotion {
+  id                     String            @id @default(uuid(7))
+  annotationId           String            @map("annotation_id")
+  messageId              String            @map("message_id")
+  target                 PromotionTarget
+  destinationResponseId  String?           @map("destination_response_id")
+  destinationWorkspaceId String?           @map("destination_workspace_id")
+  createdById            String            @map("created_by_id")
+  createdAt              DateTime          @default(now()) @map("created_at")
+
+  annotation             Annotation        @relation(fields: [annotationId], references: [id], onDelete: Cascade)
+  message                AnnotationMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  createdBy              User              @relation("PromotionCreator", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, target])
+  @@index([annotationId])
+  @@index([destinationResponseId])
+  @@index([destinationWorkspaceId])
+  @@map("promotions")
 }

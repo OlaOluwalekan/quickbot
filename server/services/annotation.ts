@@ -8,6 +8,7 @@ import type {
   CreateAnnotationInput,
   UpdateAnnotationInput,
   ReplyAnnotationInput,
+  PromoteAnnotationInput,
 } from "@/lib/schemas/annotation";
 import {
   getAccountByUserId,
@@ -815,4 +816,217 @@ export async function createAndStreamAnnotationReply(
     generationId,
     annotationId: targetAnnotation.id,
   };
+}
+
+/**
+ * Promotes an AI-answered side-thread message into:
+ * - TIMELINE: Adds to workspace history as a promoted Response at original sortAt date.
+ *             Requires workspace.generate permission (no credits charged).
+ * - NEW_WORKSPACE: Creates a new workspace owned by caller with only this promoted Response.
+ *                  Requires workspace.read permission on source workspace.
+ * Idempotent by [messageId, target].
+ */
+export async function promoteAnnotation(
+  actor: Actor,
+  annotationId: string,
+  input: PromoteAnnotationInput
+) {
+  const annotation = await db.annotation.findFirst({
+    where: { id: annotationId, deletedAt: null },
+    include: {
+      messages: { orderBy: { createdAt: "asc" } },
+    },
+  });
+
+  if (!annotation) {
+    throw Errors.notFound("Annotation");
+  }
+
+  // Permission check
+  if (input.target === "TIMELINE") {
+    await requireWorkspace(actor, annotation.workspaceId, "workspace.generate");
+  } else {
+    await requireWorkspace(actor, annotation.workspaceId, "workspace.read");
+  }
+
+  const message = annotation.messages.find((m) => m.id === input.messageId);
+  if (!message) {
+    throw Errors.notFound("Message");
+  }
+
+  if (message.role !== "ASSISTANT") {
+    throw Errors.badRequest("Only AI-answered messages can be promoted");
+  }
+
+  // Find user's question / reply prompt
+  const precedingUserMsg = annotation.messages
+    .filter((m) => m.role === "USER" && m.createdAt <= message.createdAt)
+    .pop();
+  const promptText =
+    precedingUserMsg?.content ||
+    annotation.messages.find((m) => m.role === "USER")?.content ||
+    annotation.anchorExact;
+
+  // Fast-path idempotency check
+  const existing = await db.promotion.findUnique({
+    where: {
+      messageId_target: {
+        messageId: input.messageId,
+        target: input.target,
+      },
+    },
+  });
+
+  if (existing) {
+    return {
+      ...existing,
+      alreadyPromoted: true,
+    };
+  }
+
+  try {
+    return await db.$transaction(async (tx) => {
+      // Check again inside transaction to prevent race conditions
+      const existingInTx = await tx.promotion.findUnique({
+        where: {
+          messageId_target: {
+            messageId: input.messageId,
+            target: input.target,
+          },
+        },
+      });
+
+      if (existingInTx) {
+        return {
+          ...existingInTx,
+          alreadyPromoted: true,
+        };
+      }
+
+      if (input.target === "TIMELINE") {
+        const response = await tx.response.create({
+          data: {
+            workspaceId: annotation.workspaceId,
+            createdById: annotation.createdById, // annotation author
+            origin: "PROMOTED",
+            prompt: promptText,
+            quote: annotation.anchorExact,
+            sourceAnnotationId: annotation.id,
+            sortAt: message.createdAt, // lands in timeline by original creation date
+            kind: "TEXT",
+          },
+        });
+
+        const version = await tx.responseVersion.create({
+          data: {
+            responseId: response.id,
+            number: 1,
+            status: "COMPLETE",
+            content: message.content,
+            modelKey: "promoted",
+            providerModelId: "promoted",
+            promptVersion: "v1",
+            sourceMessageId: message.id,
+            createdById: actor.userId,
+          },
+        });
+
+        await tx.response.update({
+          where: { id: response.id },
+          data: { activeVersionId: version.id },
+        });
+
+        const promotion = await tx.promotion.create({
+          data: {
+            annotationId: annotation.id,
+            messageId: message.id,
+            target: "TIMELINE",
+            destinationResponseId: response.id,
+            destinationWorkspaceId: annotation.workspaceId,
+            createdById: actor.userId,
+          },
+        });
+
+        return {
+          ...promotion,
+          alreadyPromoted: false,
+        };
+      } else {
+        // NEW_WORKSPACE: owned by caller, title = first 60 chars of question
+        const title = promptText.trim().slice(0, 60) || "New Workspace";
+        const workspace = await tx.workspace.create({
+          data: {
+            ownerId: actor.userId,
+            title,
+          },
+        });
+
+        const response = await tx.response.create({
+          data: {
+            workspaceId: workspace.id,
+            createdById: actor.userId,
+            origin: "PROMOTED",
+            prompt: promptText,
+            quote: annotation.anchorExact,
+            sourceAnnotationId: annotation.id,
+            sortAt: message.createdAt,
+            kind: "TEXT",
+          },
+        });
+
+        const version = await tx.responseVersion.create({
+          data: {
+            responseId: response.id,
+            number: 1,
+            status: "COMPLETE",
+            content: message.content,
+            modelKey: "promoted",
+            providerModelId: "promoted",
+            promptVersion: "v1",
+            sourceMessageId: message.id,
+            createdById: actor.userId,
+          },
+        });
+
+        await tx.response.update({
+          where: { id: response.id },
+          data: { activeVersionId: version.id },
+        });
+
+        const promotion = await tx.promotion.create({
+          data: {
+            annotationId: annotation.id,
+            messageId: message.id,
+            target: "NEW_WORKSPACE",
+            destinationResponseId: response.id,
+            destinationWorkspaceId: workspace.id,
+            createdById: actor.userId,
+          },
+        });
+
+        return {
+          ...promotion,
+          alreadyPromoted: false,
+        };
+      }
+    });
+  } catch (err: unknown) {
+    if ((err as { code?: string })?.code === "P2002") {
+      const existing = await db.promotion.findUnique({
+        where: {
+          messageId_target: {
+            messageId: input.messageId,
+            target: input.target,
+          },
+        },
+      });
+      if (existing) {
+        return {
+          ...existing,
+          alreadyPromoted: true,
+        };
+      }
+    }
+    throw err;
+  }
 }

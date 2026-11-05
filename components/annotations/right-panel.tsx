@@ -20,6 +20,7 @@ import {
   RotateCcw,
   Play,
 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -101,6 +102,80 @@ export function RightPanel({
   const [replyLoading, setReplyLoading] = React.useState<Record<string, boolean>>({});
   const [isBatchRunning, setIsBatchRunning] = React.useState(false);
   const [expandedQuotes, setExpandedQuotes] = React.useState<Record<string, boolean>>({});
+  const [promotions, setPromotions] = React.useState<
+    Record<string, { destinationResponseId?: string | null; destinationWorkspaceId?: string | null }>
+  >({});
+  const [isPromoting, setIsPromoting] = React.useState<Record<string, boolean>>({});
+
+  const handlePromote = async (
+    item: AnnotationItem,
+    target: "TIMELINE" | "NEW_WORKSPACE"
+  ) => {
+    const assistantMsg = [...item.messages].reverse().find((m) => m.role === "ASSISTANT");
+    if (!assistantMsg) return;
+
+    const key = `${assistantMsg.id}_${target}`;
+    setIsPromoting((prev) => ({ ...prev, [key]: true }));
+
+    try {
+      const res = await fetch(`/api/v1/annotations/${item.id}/promote`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messageId: assistantMsg.id,
+          target,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.message || "Failed to promote item");
+      }
+
+      const json = await res.json();
+      const data = json?.data || json;
+
+      setPromotions((prev) => ({
+        ...prev,
+        [key]: {
+          destinationResponseId: data.destinationResponseId,
+          destinationWorkspaceId: data.destinationWorkspaceId,
+        },
+      }));
+
+      if (target === "TIMELINE") {
+        toast.success("Added to workspace history");
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent("annotation-promoted", {
+              detail: {
+                annotationId: item.id,
+                responseId: data.destinationResponseId,
+                target: "TIMELINE",
+              },
+            })
+          );
+        }
+      } else {
+        toast.success("Created new workspace from answer");
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent("annotation-promoted", {
+              detail: {
+                annotationId: item.id,
+                workspaceId: data.destinationWorkspaceId,
+                target: "NEW_WORKSPACE",
+              },
+            })
+          );
+        }
+      }
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to promote");
+    } finally {
+      setIsPromoting((prev) => ({ ...prev, [key]: false }));
+    }
+  };
   const [isMobile, setIsMobile] = React.useState(false);
 
   // Resize handling
@@ -430,6 +505,7 @@ export function RightPanel({
     const authorInitials = authorName.slice(0, 2).toUpperCase();
 
     const hasAssistantAnswer = item.messages.some((m) => m.role === "ASSISTANT");
+    const lastAssistantMsg = [...item.messages].reverse().find((m) => m.role === "ASSISTANT");
 
     return (
       <div
@@ -567,33 +643,79 @@ export function RightPanel({
           })}
         </div>
 
-        {/* Action Buttons for Answered Items (Step 6.7 stubs) */}
-        {hasAssistantAnswer && (
-          <div className="border-border/60 mt-3 flex flex-wrap items-center gap-1.5 border-t pt-2.5">
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 text-[11px] px-2"
-              onClick={() => {
-                // Wired in 6.7
-              }}
-            >
-              <History className="mr-1 h-3 w-3" />
-              Add to workspace history
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 text-[11px] px-2"
-              onClick={() => {
-                // Wired in 6.7
-              }}
-            >
-              <ExternalLink className="mr-1 h-3 w-3" />
-              New workspace from this
-            </Button>
-          </div>
-        )}
+        {/* Action Buttons for Answered Items (Step 6.7) */}
+        {hasAssistantAnswer && lastAssistantMsg && (() => {
+          const timelinePromo = promotions[`${lastAssistantMsg.id}_TIMELINE`];
+          const workspacePromo = promotions[`${lastAssistantMsg.id}_NEW_WORKSPACE`];
+
+          return (
+            <div className="border-border/60 mt-3 flex flex-wrap items-center gap-1.5 border-t pt-2.5">
+              {timelinePromo ? (
+                <a
+                  href={`#response-${timelinePromo.destinationResponseId || ""}`}
+                  data-testid="chip-view-timeline"
+                  onClick={(e) => {
+                    const destId = timelinePromo.destinationResponseId;
+                    if (destId) {
+                      const el = document.getElementById(`response-${destId}`);
+                      if (el) {
+                        e.preventDefault();
+                        el.scrollIntoView({ behavior: "smooth", block: "center" });
+                      }
+                    }
+                  }}
+                  className="bg-accent-soft text-accent hover:bg-accent/20 border-accent/30 inline-flex h-7 items-center gap-1 rounded-md border px-2 text-[11px] font-medium transition-colors cursor-pointer"
+                >
+                  <Check className="h-3 w-3" />
+                  <span>Added · View in timeline</span>
+                </a>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  data-testid="btn-promote-timeline"
+                  disabled={isPromoting[`${lastAssistantMsg.id}_TIMELINE`]}
+                  className="h-7 text-[11px] px-2 text-fg hover:text-accent hover:bg-surface-2 gap-1"
+                  onClick={() => handlePromote(item, "TIMELINE")}
+                >
+                  {isPromoting[`${lastAssistantMsg.id}_TIMELINE`] ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <History className="h-3 w-3" />
+                  )}
+                  <span>Add to workspace history</span>
+                </Button>
+              )}
+
+              {workspacePromo ? (
+                <a
+                  href={`/workspace/${workspacePromo.destinationWorkspaceId || ""}`}
+                  data-testid="chip-open-workspace"
+                  className="bg-surface-2 text-fg hover:text-accent border-border inline-flex h-7 items-center gap-1 rounded-md border px-2 text-[11px] font-medium transition-colors cursor-pointer"
+                >
+                  <ExternalLink className="h-3 w-3 text-accent" />
+                  <span>Open workspace</span>
+                </a>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  data-testid="btn-promote-workspace"
+                  disabled={isPromoting[`${lastAssistantMsg.id}_NEW_WORKSPACE`]}
+                  className="h-7 text-[11px] px-2 text-fg hover:text-accent hover:bg-surface-2 gap-1"
+                  onClick={() => handlePromote(item, "NEW_WORKSPACE")}
+                >
+                  {isPromoting[`${lastAssistantMsg.id}_NEW_WORKSPACE`] ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <ExternalLink className="h-3 w-3" />
+                  )}
+                  <span>New workspace from this</span>
+                </Button>
+              )}
+            </div>
+          );
+        })()}
 
         
         {/* Failed Question Retry Action */}

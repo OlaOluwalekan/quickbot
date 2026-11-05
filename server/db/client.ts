@@ -3,7 +3,7 @@ import { PrismaClient } from "./generated/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { env } from "@/server/env";
 
-const CURRENT_SCHEMA_VER = "20261104160000_add_annotations";
+const CURRENT_SCHEMA_VER = "20261105160000_add_promotions";
 
 const make = () =>
   new PrismaClient({
@@ -17,7 +17,7 @@ const g = globalThis as unknown as {
 
 if (
   g.__db &&
-  (g.__dbSchemaVer !== CURRENT_SCHEMA_VER || !("annotation" in g.__db))
+  (g.__dbSchemaVer !== CURRENT_SCHEMA_VER || !("promotion" in g.__db))
 ) {
   g.__db.$disconnect().catch(() => {});
   g.__db = undefined;
