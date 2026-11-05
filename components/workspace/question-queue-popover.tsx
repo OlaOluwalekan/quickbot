@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Layers, Loader2, Play, Trash2, Edit2, Check, X } from "lucide-react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, QueryClientContext } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api/client";
@@ -36,7 +36,7 @@ export interface QuestionQueuePopoverProps {
   className?: string;
 }
 
-export function QuestionQueuePopover({
+function QuestionQueuePopoverInner({
   workspaceId,
   className,
 }: QuestionQueuePopoverProps) {
@@ -395,4 +395,27 @@ export function QuestionQueuePopover({
       </PopoverContent>
     </Popover>
   );
+}
+
+export function QuestionQueuePopover(props: QuestionQueuePopoverProps) {
+  const queryClient = React.useContext(QueryClientContext);
+  if (!queryClient) {
+    return (
+      <button
+        type="button"
+        disabled
+        data-testid="composer-queue-button"
+        aria-label="Questions queue"
+        className={cn(
+          "relative flex h-7 items-center justify-center rounded-lg px-2 text-xs font-medium bg-surface-2 border-border/50 text-muted opacity-60 cursor-default border",
+          props.className
+        )}
+      >
+        <Layers className="h-3.5 w-3.5 mr-1" strokeWidth={1.5} />
+        <span>Questions</span>
+      </button>
+    );
+  }
+
+  return <QuestionQueuePopoverInner {...props} />;
 }
