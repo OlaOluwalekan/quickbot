@@ -43,6 +43,8 @@ import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
 import { CommandPalette } from "./command-palette";
 import { RightPanel } from "@/components/annotations";
+import { ClaimUsernameDialog } from "@/components/user/claim-username-dialog";
+import { ClaimUsernameBanner } from "@/components/user/claim-username-banner";
 import type {
   AppShellUser,
   SidebarProjectItem,
@@ -173,6 +175,23 @@ export function AppShell({
   // Dialog states: Rename Workspace, Create Project, Delete Workspace
   const [renamingWorkspace, setRenamingWorkspace] =
     React.useState<SidebarWorkspaceItem | null>(null);
+  const [claimUsernameOpen, setClaimUsernameOpen] = React.useState(false);
+  const [claimedUsername, setClaimedUsername] = React.useState<string | null>(
+    user.usernameClaimedAt ? user.username ?? null : null
+  );
+
+  React.useEffect(() => {
+    if (!user.usernameClaimedAt && !claimedUsername) {
+      const prompted = typeof window !== "undefined" ? sessionStorage.getItem("klecx_username_prompted") : null;
+      if (!prompted) {
+        if (typeof window !== "undefined") {
+          sessionStorage.setItem("klecx_username_prompted", "true");
+        }
+        setClaimUsernameOpen(true);
+      }
+    }
+  }, [user.usernameClaimedAt, claimedUsername]);
+
   const [deletingWorkspace, setDeletingWorkspace] =
     React.useState<SidebarWorkspaceItem | null>(null);
   const [createProjectOpen, setCreateProjectOpen] = React.useState(false);
@@ -406,6 +425,11 @@ export function AppShell({
           onRequestDeleteWorkspace={(ws) => setDeletingWorkspace(ws)}
         />
 
+        <ClaimUsernameBanner
+          claimed={Boolean(user.usernameClaimedAt || claimedUsername)}
+          onClaimClick={() => setClaimUsernameOpen(true)}
+        />
+
         <main className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
           {children}
         </main>
@@ -520,6 +544,18 @@ export function AppShell({
           </Form>
         </DialogContent>
       </Dialog>
+
+      {/* Claim Username Dialog (Step 7.1) */}
+      <ClaimUsernameDialog
+        open={claimUsernameOpen}
+        onOpenChange={setClaimUsernameOpen}
+        currentUsername={user.username}
+        onSuccess={(newUsername) => {
+          setClaimedUsername(newUsername);
+          toast.success(`Username claimed: @${newUsername}`);
+          router.refresh();
+        }}
+      />
 
       {/* Delete Workspace ConfirmDialog */}
       <ConfirmDialog

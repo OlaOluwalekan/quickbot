@@ -17,7 +17,7 @@ export const Errors = {
     new ApiError(402, "insufficient_credits", m),
   forbidden: (m = "You don't have permission") => new ApiError(403, "forbidden", m),
   notFound: (what = "Resource") => new ApiError(404, "not_found", `${what} not found`),
-  conflict: (m: string) => new ApiError(409, "conflict", m),
+  conflict: (m: string, code = "conflict") => new ApiError(409, code, m),
   validation: (details: unknown) =>
     new ApiError(422, "validation_error", "Invalid input", details),
   contentBlocked: (

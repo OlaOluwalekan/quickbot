@@ -5,6 +5,8 @@ export interface AppShellUser {
   image: string | null;
   planName: string;
   creditBalance: number;
+  username?: string | null;
+  usernameClaimedAt?: string | null;
 }
 
 export interface SidebarProjectItem {

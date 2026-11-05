@@ -2,12 +2,14 @@ import "server-only";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { nextCookies } from "better-auth/next-js";
-import { bearer } from "better-auth/plugins";
+import { bearer, username } from "better-auth/plugins";
+import { createAuthMiddleware, APIError } from "better-auth/api";
 import { db } from "@/server/db/client";
 import { env } from "@/server/env";
 import { sendEmail } from "@/server/email/send";
 import { authSecondaryStorage } from "@/server/http/rate-limit";
 import { createAccountWithFreeGrant } from "@/server/services/credits";
+import { generateUniqueDefaultUsername } from "@/server/services/username";
 
 export const auth = betterAuth({
   baseURL: env.APP_URL,
@@ -16,11 +18,41 @@ export const auth = betterAuth({
   databaseHooks: {
     user: {
       create: {
+        before: async (user) => {
+          let u = (user as { username?: string }).username;
+          if (!u) {
+            u = await generateUniqueDefaultUsername();
+          }
+          return {
+            data: {
+              ...user,
+              username: u,
+              displayUsername:
+                (user as { displayUsername?: string }).displayUsername || u,
+            },
+          };
+        },
         after: async (user) => {
           await createAccountWithFreeGrant(user.id);
         },
       },
     },
+  },
+  hooks: {
+    before: createAuthMiddleware(async (ctx) => {
+      if (ctx.path === "/update-user") {
+        if (
+          ctx.body &&
+          typeof ctx.body === "object" &&
+          ("username" in ctx.body || "displayUsername" in ctx.body)
+        ) {
+          throw new APIError("BAD_REQUEST", {
+            message:
+              "Username cannot be updated via this endpoint. Use /api/v1/me/username.",
+          });
+        }
+      }
+    }),
   },
   secondaryStorage: authSecondaryStorage,
   rateLimit: {
@@ -78,6 +110,17 @@ export const auth = betterAuth({
         defaultValue: "USER",
         input: false,
       },
+      usernameClaimedAt: {
+        type: "date",
+        required: false,
+        input: false,
+      },
+      usernameChangeCount: {
+        type: "number",
+        required: false,
+        defaultValue: 0,
+        input: false,
+      },
     },
   },
   emailAndPassword: {
@@ -129,5 +172,14 @@ export const auth = betterAuth({
   verification: {
     storeInDatabase: true,
   },
-  plugins: [bearer(), nextCookies()], // username() is added in Step 7.1
+  plugins: [
+    bearer(),
+    nextCookies(),
+    username({
+      minUsernameLength: 3,
+      maxUsernameLength: 30,
+      usernameValidator: (u) =>
+        /^[a-z][a-z0-9_]{2,29}$/.test(u) && !u.includes("__"),
+    }),
+  ],
 });

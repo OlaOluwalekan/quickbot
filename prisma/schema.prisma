@@ -54,6 +54,12 @@ model User {
   annotations          Annotation[]        @relation("AnnotationCreator")
   annotationMessages   AnnotationMessage[] @relation("AnnotationMessageAuthor")
   promotions           Promotion[]         @relation("PromotionCreator")
+  username             String?             @unique
+  displayUsername      String?             @map("display_username")
+  usernameChangeCount  Int                 @default(0) @map("username_change_count")
+  usernameChangedAt    DateTime?           @map("username_changed_at")
+  usernameClaimedAt    DateTime?           @map("username_claimed_at")
+  auditLogs            AuditLog[]
 
   @@map("users")
 }
@@ -553,4 +559,19 @@ model Promotion {
   @@index([destinationResponseId])
   @@index([destinationWorkspaceId])
   @@map("promotions")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid(7))
+  userId    String   @map("user_id")
+  action    String
+  targetId  String?  @map("target_id")
+  metadata  Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([action, createdAt])
+  @@map("audit_logs")
 }
