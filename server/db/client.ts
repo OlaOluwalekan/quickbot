@@ -3,7 +3,7 @@ import { PrismaClient } from "./generated/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { env } from "@/server/env";
 
-const CURRENT_SCHEMA_VER = "20261105160000_add_promotions";
+const CURRENT_SCHEMA_VER = "20261105170000_add_usernames_and_audit_logs";
 
 const make = () =>
   new PrismaClient({
@@ -17,7 +17,7 @@ const g = globalThis as unknown as {
 
 if (
   g.__db &&
-  (g.__dbSchemaVer !== CURRENT_SCHEMA_VER || !("promotion" in g.__db))
+  (g.__dbSchemaVer !== CURRENT_SCHEMA_VER || !("auditLog" in g.__db))
 ) {
   g.__db.$disconnect().catch(() => {});
   g.__db = undefined;

@@ -47,6 +47,10 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     planName: "Free",
     creditBalance:
       (creditAccount?.planBalance ?? 0) + (creditAccount?.topupBalance ?? 0),
+    username: actor.username ?? null,
+    usernameClaimedAt: actor.usernameClaimedAt
+      ? actor.usernameClaimedAt.toISOString()
+      : null,
   };
 
   const initialProjects: SidebarProjectItem[] = projectsPage.items.map((p) => ({

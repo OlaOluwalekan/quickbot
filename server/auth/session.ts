@@ -10,6 +10,10 @@ export type Actor = {
   email: string;
   name?: string;
   image?: string | null;
+  username?: string | null;
+  displayUsername?: string | null;
+  usernameClaimedAt?: Date | null;
+  usernameChangeCount?: number;
 };
 
 export async function getActor(req?: Request): Promise<Actor | null> {
@@ -17,13 +21,28 @@ export async function getActor(req?: Request): Promise<Actor | null> {
     headers: req ? req.headers : await headers(),
   });
   if (!session) return null;
+  const u = session.user as {
+    role?: string;
+    username?: string | null;
+    displayUsername?: string | null;
+    usernameClaimedAt?: Date | string | null;
+    usernameChangeCount?: number;
+  };
   return {
     userId: session.user.id,
-    role: ((session.user as { role?: string }).role ?? "USER") as Actor["role"],
+    role: ((u.role ?? "USER") as Actor["role"]),
     sessionId: session.session.id,
     email: session.user.email,
     name: session.user.name,
     image: session.user.image ?? null,
+    ...(u.username !== undefined && { username: u.username }),
+    ...(u.displayUsername !== undefined && { displayUsername: u.displayUsername }),
+    ...(u.usernameClaimedAt !== undefined && {
+      usernameClaimedAt: u.usernameClaimedAt ? new Date(u.usernameClaimedAt) : null,
+    }),
+    ...(u.usernameChangeCount !== undefined && {
+      usernameChangeCount: u.usernameChangeCount,
+    }),
   };
 }
 
