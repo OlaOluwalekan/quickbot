@@ -53,6 +53,7 @@ import { SourcesAccordion } from "./citations";
 import { EditResponse } from "./edit-response";
 import { Markdown } from "@/components/markdown";
 import { AnnotationLayer } from "@/components/annotations";
+import { useUiStore } from "@/lib/stores/ui";
 import {
   useResponseVersions,
   useSwitchActiveVersion,
@@ -66,6 +67,10 @@ export interface ResponseItemData {
   workspaceId: string;
   prompt: string;
   kind?: "TEXT" | "IMAGE" | string;
+  origin?: "DIRECT" | "PROMOTED" | string;
+  quote?: string | null;
+  sourceAnnotationId?: string | null;
+  sortAt?: string | Date;
   response?: string;
   content?: string;
   versionCount?: number;
@@ -380,6 +385,33 @@ export function ResponseCard({
             isFirstPrompt && "vt-first-prompt"
           )}
         >
+          {response.quote && (
+            <div
+              className="mb-2.5 rounded-lg border-l-2 border-accent bg-surface-3/80 p-2.5 text-xs text-fg-muted"
+              data-testid="promoted-quote"
+            >
+              <p className="line-clamp-3 italic">“{response.quote}”</p>
+              <div className="mt-1 flex items-center gap-1.5 text-[11px] text-fg-subtle">
+                <span>From a question on passage</span>
+                {response.sourceAnnotationId && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      useUiStore.getState().setRightPanelFocus({
+                        annotationId: response.sourceAnnotationId || undefined,
+                        responseId: response.id,
+                        tab: "questions",
+                      });
+                      useUiStore.getState().setRightPanelOpen(true);
+                    }}
+                    className="text-accent hover:underline font-medium cursor-pointer"
+                  >
+                    View annotation
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
           {response.attachments && response.attachments.length > 0 && (
             <div
               className="mb-2.5 flex flex-wrap gap-2"
@@ -450,6 +482,23 @@ export function ResponseCard({
               >
                 {modelName}
               </Badge>
+
+              {response.origin === "PROMOTED" && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge
+                      variant="outline"
+                      className="bg-accent-soft text-accent border-accent/30 text-xs font-medium cursor-help"
+                      data-testid="promoted-badge"
+                    >
+                      Promoted
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Added {response.createdAt ? new Date(response.createdAt).toLocaleDateString() : ""}
+                  </TooltipContent>
+                </Tooltip>
+              )}
 
               {/* Version Switcher (‹ 2/3 ›) */}
               {versionCount > 1 && (
