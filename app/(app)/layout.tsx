@@ -5,6 +5,7 @@ import { requireActor } from "@/server/auth/session";
 import { getAccountByUserId } from "@/server/services/credits";
 import { listProjects } from "@/server/services/project";
 import { listWorkspaces } from "@/server/services/workspace";
+import { getUserAvatar } from "@/server/services/avatar";
 import { parseSidebarCookie, SIDEBAR_COOKIE_NAME } from "@/lib/stores/ui";
 import { AppShell } from "@/components/layout/app-shell";
 import type {
@@ -27,7 +28,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     cookieStore.get(SIDEBAR_COOKIE_NAME)?.value,
   );
 
-  const [creditAccount, projectsPage, workspacesPage] = await Promise.all([
+  const [creditAccount, projectsPage, workspacesPage, avatarData] = await Promise.all([
     getAccountByUserId(actor.userId).catch(() => null),
     listProjects(actor, { limit: 50 }).catch(() => ({
       items: [],
@@ -37,13 +38,14 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       items: [],
       nextCursor: null,
     })),
+    getUserAvatar(actor.userId).catch(() => null),
   ]);
 
   const user: AppShellUser = {
     id: actor.userId,
     name: actor.name ?? "",
     email: actor.email,
-    image: actor.image ?? null,
+    image: avatarData?.avatarUrl ?? actor.image ?? null,
     planName: "Free",
     creditBalance:
       (creditAccount?.planBalance ?? 0) + (creditAccount?.topupBalance ?? 0),

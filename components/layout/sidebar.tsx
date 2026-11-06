@@ -55,6 +55,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/user/user-avatar";
 import Logo from "@/components/logo/Logo";
 import AppName from "@/components/logo/AppName";
 import type {
@@ -721,24 +722,27 @@ export function Sidebar({
                   aria-label={user.name || user.email}
                   className="focus-visible:ring-ring mx-auto flex h-9 w-9 cursor-pointer items-center justify-center rounded-full focus-visible:ring-2 focus-visible:outline-none"
                 >
-                  <Avatar className="h-8 w-8">
-                    {user.image && (
-                      <AvatarImage src={user.image} alt={user.name} />
-                    )}
-                    <AvatarFallback>{userInitials}</AvatarFallback>
-                  </Avatar>
+                  <UserAvatar
+                    avatarUrl={user.image}
+                    name={user.name}
+                    email={user.email}
+                    userId={user.id}
+                    size="sm"
+                  />
                 </button>
               ) : (
                 <button
                   type="button"
                   className="hover:bg-surface-2 focus-visible:ring-ring flex w-full cursor-pointer items-center gap-2.5 rounded-xl px-2 py-1.5 text-left focus-visible:ring-2 focus-visible:outline-none"
                 >
-                  <Avatar className="h-8 w-8 shrink-0">
-                    {user.image && (
-                      <AvatarImage src={user.image} alt={user.name} />
-                    )}
-                    <AvatarFallback>{userInitials}</AvatarFallback>
-                  </Avatar>
+                  <UserAvatar
+                    avatarUrl={user.image}
+                    name={user.name}
+                    email={user.email}
+                    userId={user.id}
+                    size="sm"
+                    className="shrink-0"
+                  />
                   <div className="min-w-0 flex-1">
                     <p className="text-fg truncate text-xs font-medium sm:text-sm">
                       {user.name || user.email}

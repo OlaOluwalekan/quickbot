@@ -8,6 +8,7 @@ import NameAndEmail from "@/components/settings/NameAndEmail";
 import SettingsCard from "@/components/settings/SettingsCard";
 import TokensDisplay from "@/components/settings/TokensDisplay";
 import UserProfileImage from "@/components/settings/UserProfileImage";
+import { getUserAvatar } from "@/server/services/avatar";
 import { Button } from "@/components/ui/button";
 import { SessionProps } from "@/types/user";
 import { getTranslations } from "next-intl/server";
@@ -24,6 +25,7 @@ export const metadata: Metadata = {
 const SettingsPage = async () => {
   const actor = await getActor();
   const t = await getTranslations("Settings");
+  const avatarData = actor ? await getUserAvatar(actor.userId).catch(() => null) : null;
 
   const sessionUser: SessionProps | undefined = actor
     ? {
@@ -69,7 +71,11 @@ const SettingsPage = async () => {
             {/* Profile Column */}
             <div className="lg:col-span-5 flex flex-col justify-between gap-6 lg:border-r lg:border-border lg:pr-6">
               <div className="flex flex-col sm:flex-row lg:flex-col items-center sm:items-start gap-4">
-                <UserProfileImage user={sessionUser as SessionProps} />
+                <UserProfileImage
+                  user={sessionUser as SessionProps}
+                  avatarUrl={avatarData?.avatarUrl}
+                  isCustomAvatar={avatarData?.isCustom}
+                />
                 <NameAndEmail user={sessionUser as SessionProps} />
               </div>
 

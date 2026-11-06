@@ -3,7 +3,7 @@ import { PrismaClient } from "./generated/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { env } from "@/server/env";
 
-const CURRENT_SCHEMA_VER = "20261105170000_add_usernames_and_audit_logs";
+const CURRENT_SCHEMA_VER = "20261105180000_add_user_avatar_attachment";
 
 const make = () =>
   new PrismaClient({

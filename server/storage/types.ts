@@ -89,8 +89,10 @@ export interface StorageProvider {
       width?: number;
       height?: number;
       crop?: string;
+      gravity?: string;
       format?: string;
       quality?: string;
+      flags?: string;
     }
   ): string;
   downloadBuffer(
