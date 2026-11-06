@@ -16,9 +16,13 @@ export type Actor = {
   usernameChangeCount?: number;
 };
 
-export async function getActor(req?: Request): Promise<Actor | null> {
+export async function getActor(
+  req?: Request,
+  options?: { disableCookieCache?: boolean }
+): Promise<Actor | null> {
   const session = await auth.api.getSession({
     headers: req ? req.headers : await headers(),
+    query: options?.disableCookieCache ? { disableCookieCache: true } : undefined,
   });
   if (!session) return null;
   const u = session.user as {
@@ -48,6 +52,6 @@ export async function getActor(req?: Request): Promise<Actor | null> {
 
 export async function requireActor(): Promise<Actor> {
   const a = await getActor();
-  if (!a) redirect("/login");
+  if (!a) redirect("/auth/login?reason=expired");
   return a;
 }

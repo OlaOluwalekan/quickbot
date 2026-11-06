@@ -16,6 +16,25 @@ function attachSecurityHeaders(res: NextResponse, pathname: string) {
   return res;
 }
 
+export function clearAuthCookies(res: NextResponse) {
+  const cookieNames = [
+    "better-auth.session_token",
+    "__Secure-better-auth.session_token",
+    "better-auth.session_data",
+    "__Secure-better-auth.session_data",
+    "better-auth.dont_remember",
+    "__Secure-better-auth.dont_remember",
+  ];
+  for (const name of cookieNames) {
+    res.cookies.delete(name);
+    res.cookies.set(name, "", {
+      maxAge: 0,
+      path: "/",
+      expires: new Date(0),
+    });
+  }
+}
+
 export async function proxy(req: NextRequest) {
   const { nextUrl } = req;
   const { pathname } = nextUrl;
@@ -59,10 +78,33 @@ export async function proxy(req: NextRequest) {
     pathname.startsWith("/help/") ||
     pathname === "/maintenance";
 
-  const isAuthRoute =
-    authRoutes.includes(pathname);
+  const isAuthRoute = authRoutes.includes(pathname);
+
+  const hasExpiredReason =
+    nextUrl.searchParams.get("reason") === "expired" ||
+    nextUrl.searchParams.get("reason") === "revoked" ||
+    nextUrl.searchParams.has("expired") ||
+    nextUrl.searchParams.has("revoked");
+
+  // Canonical alias: forward /login to /auth/login
+  if (pathname === "/login") {
+    const url = new URL("/auth/login", nextUrl);
+    url.search = nextUrl.search;
+    const res = NextResponse.redirect(url);
+    if (hasExpiredReason) {
+      clearAuthCookies(res);
+    }
+    return attachSecurityHeaders(res, pathname);
+  }
 
   if (isAuthRoute) {
+    // If arriving with an expired or revoked reason, clear stale session cookies and show login
+    if (hasExpiredReason) {
+      const res = NextResponse.next();
+      clearAuthCookies(res);
+      return attachSecurityHeaders(res, pathname);
+    }
+
     if (isLoggedIn) {
       return attachSecurityHeaders(
         NextResponse.redirect(new URL(DEFAULT_LOGIN_REDIRECT, nextUrl)),

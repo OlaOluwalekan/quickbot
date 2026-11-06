@@ -10,6 +10,7 @@ export const policies = {
   "auth:signup":  { n: 5,   window: "1 h"  as Duration }, // key: ip
   "auth:reset":   { n: 3,   window: "1 h"  as Duration }, // key: email
   "auth:verify":  { n: 3,   window: "1 h"  as Duration }, // key: email
+  "auth:reauth":  { n: 5,   window: "15 m" as Duration }, // key: userId (password re-entry for sensitive actions)
   "api:default":  { n: 120, window: "1 m"  as Duration }, // key: userId
   "gen:start":    { n: 20,  window: "1 m"  as Duration }, // key: userId (plan caps are in Step 8.1)
   "upload":       { n: 30,  window: "10 m" as Duration }, // key: userId

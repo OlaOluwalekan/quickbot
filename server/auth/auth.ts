@@ -10,6 +10,7 @@ import { sendEmail } from "@/server/email/send";
 import { authSecondaryStorage } from "@/server/http/rate-limit";
 import { createAccountWithFreeGrant } from "@/server/services/credits";
 import { generateUniqueDefaultUsername } from "@/server/services/username";
+import { parseDeviceMetadata, checkAndAlertNewSignIn } from "@/server/services/device";
 
 export const auth = betterAuth({
   baseURL: env.APP_URL,
@@ -34,6 +35,40 @@ export const auth = betterAuth({
         },
         after: async (user) => {
           await createAccountWithFreeGrant(user.id);
+        },
+      },
+    },
+    session: {
+      create: {
+        before: async (session, ctx) => {
+          const country =
+            ctx?.headers?.get?.("x-vercel-ip-country") ||
+            ctx?.headers?.get?.("cf-ipcountry") ||
+            ctx?.headers?.get?.("x-country") ||
+            ctx?.headers?.get?.("x-geo-country") ||
+            null;
+          const clientHeader = ctx?.headers?.get?.("x-client") || null;
+          const customDevice = ctx?.headers?.get?.("x-device-name") || null;
+          const meta = parseDeviceMetadata(
+            session.userAgent,
+            customDevice,
+            clientHeader
+          );
+
+          return {
+            data: {
+              ...session,
+              country:
+                country ||
+                (session as { country?: string }).country ||
+                null,
+              deviceLabel: meta.deviceLabel,
+              client: meta.client,
+            },
+          };
+        },
+        after: async (session) => {
+          await checkAndAlertNewSignIn(session);
         },
       },
     },
@@ -165,8 +200,25 @@ export const auth = betterAuth({
     updateAge: 60 * 60 * 24,
     storeSessionInDatabase: true,
     cookieCache: {
-      enabled: true,
-      maxAge: 5 * 60,
+      enabled: false,
+    },
+    additionalFields: {
+      country: {
+        type: "string",
+        required: false,
+        input: false,
+      },
+      deviceLabel: {
+        type: "string",
+        required: false,
+        input: false,
+      },
+      client: {
+        type: "string",
+        required: false,
+        defaultValue: "web",
+        input: false,
+      },
     },
   },
   verification: {

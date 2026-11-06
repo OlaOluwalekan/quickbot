@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getActor } from "@/server/auth/session";
+import { requireActor } from "@/server/auth/session";
 import { getWorkspace } from "@/server/services/workspace";
 import { listWorkspaceResponses } from "@/server/services/response";
 import { WorkspaceView } from "@/components/workspace/workspace-view";
@@ -12,11 +12,7 @@ const SingleWorkspacePage = async ({
 }: {
   params: Promise<{ id: string }>;
 }) => {
-  const actor = await getActor();
-  if (!actor) {
-    notFound();
-  }
-
+  const actor = await requireActor();
   const workspaceId = (await params).id;
 
   let workspace;

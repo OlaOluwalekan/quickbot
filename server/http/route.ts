@@ -14,12 +14,32 @@ export type Ctx<B, Q, P> = {
   requestId: string;
 };
 
+export function clearResponseAuthCookies(res: NextResponse) {
+  const cookieNames = [
+    "better-auth.session_token",
+    "__Secure-better-auth.session_token",
+    "better-auth.session_data",
+    "__Secure-better-auth.session_data",
+    "better-auth.dont_remember",
+    "__Secure-better-auth.dont_remember",
+  ];
+  for (const name of cookieNames) {
+    res.cookies.delete(name);
+    res.cookies.set(name, "", {
+      maxAge: 0,
+      path: "/",
+      expires: new Date(0),
+    });
+  }
+}
+
 export function route<
   B extends ZodTypeAny = z.ZodUndefined,
   Q extends ZodTypeAny = z.ZodUndefined,
   P = Record<string, string>,
 >(opts: {
   auth?: "required" | "optional"; // default "required"
+  disableCookieCache?: boolean;
   body?: B;
   query?: Q;
   rateLimit?: {
@@ -34,7 +54,7 @@ export function route<
   ): Promise<Response> => {
     const requestId = req.headers.get("x-request-id") ?? crypto.randomUUID();
     try {
-      const actor = await getActor(req); // session cookie OR Bearer token
+      const actor = await getActor(req, { disableCookieCache: opts.disableCookieCache }); // session cookie OR Bearer token
       if ((opts.auth ?? "required") === "required" && !actor) {
         throw Errors.unauthorized();
       }
@@ -124,7 +144,7 @@ export function route<
         );
       }
 
-      return NextResponse.json(
+      const res = NextResponse.json(
         {
           error: {
             code: err.code,
@@ -135,6 +155,12 @@ export function route<
         },
         { status: err.status, headers }
       );
+
+      if (err.status === 401) {
+        clearResponseAuthCookies(res);
+      }
+
+      return res;
     }
   };
 }

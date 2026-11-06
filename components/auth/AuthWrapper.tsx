@@ -3,10 +3,12 @@ import Link from "next/link";
 import Logo from "../logo/Logo";
 import AppName from "../logo/AppName";
 import LocaleSwitcher from "@/components/layout/locale-switcher";
+import { CleanStaleAuthCookies } from "./CleanStaleAuthCookies";
 
 const AuthWrapper = ({ children }: { children: ReactNode }) => {
   return (
     <div className="min-h-screen w-full flex flex-col justify-between bg-bg relative overflow-hidden px-4 py-6">
+      <CleanStaleAuthCookies />
       {/* Ambient Radial Accents */}
       <div
         aria-hidden="true"
