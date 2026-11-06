@@ -3,11 +3,11 @@ import { db } from "@/server/db/client";
 import { auth } from "@/server/auth/auth";
 import { verifyPassword } from "better-auth/crypto";
 import { Errors } from "@/server/http/errors";
+import { limit } from "@/server/http/rate-limit";
 import type { Actor } from "@/server/auth/session";
 import {
   parseDeviceMetadata,
   maskIp,
-  checkAndAlertNewSignIn,
 } from "./device";
 
 export * from "./device";
@@ -118,13 +118,31 @@ export async function verifySensitiveActionAuth(
     );
   }
 
+  // Throttle password guesses per user (429 once exceeded).
+  await limit("auth:reauth", actor.userId);
+
   const isValid = await verifyPassword({
     hash: credentialAccount.password,
     password,
   });
 
   if (!isValid) {
-    throw Errors.unauthorized("Incorrect password");
+    // 403, not 401: a 401 makes route() clear the caller's auth cookies,
+    // which would sign the user out for mistyping their password.
+    throw Errors.forbidden("Incorrect password", "INVALID_PASSWORD");
+  }
+}
+
+/**
+ * Deletes sessions through Better Auth's internal adapter so they are removed
+ * from secondary storage (Redis / in-memory) as well as the database. A
+ * DB-only delete would leave the cached copy valid until it expires.
+ */
+async function deleteSessionsByToken(tokens: string[]): Promise<void> {
+  if (tokens.length === 0) return;
+  const { internalAdapter } = await auth.$context;
+  for (const token of tokens) {
+    await internalAdapter.deleteSession(token);
   }
 }
 
@@ -136,8 +154,7 @@ export async function verifySensitiveActionAuth(
  */
 export async function revokeUserSession(
   actor: Actor,
-  sessionId: string,
-  reqHeaders?: Headers
+  sessionId: string
 ): Promise<{ success: boolean; revokedId: string }> {
   if (sessionId === actor.sessionId) {
     throw Errors.badRequest(
@@ -147,25 +164,14 @@ export async function revokeUserSession(
 
   const targetSession = await db.session.findUnique({
     where: { id: sessionId },
+    select: { userId: true, token: true },
   });
 
   if (!targetSession || targetSession.userId !== actor.userId) {
     throw Errors.notFound("Session not found");
   }
 
-  // Revoke via Better Auth API if headers available, or directly delete from DB
-  if (reqHeaders) {
-    try {
-      await auth.api.revokeSession({
-        headers: reqHeaders,
-        body: { token: targetSession.token },
-      });
-    } catch {
-      await db.session.delete({ where: { id: sessionId } });
-    }
-  } else {
-    await db.session.delete({ where: { id: sessionId } });
-  }
+  await deleteSessionsByToken([targetSession.token]);
 
   return { success: true, revokedId: sessionId };
 }
@@ -176,32 +182,18 @@ export async function revokeUserSession(
  */
 export async function revokeOtherUserSessions(
   actor: Actor,
-  password?: string,
-  reqHeaders?: Headers
+  password?: string
 ): Promise<{ success: boolean; revokedCount: number }> {
   await verifySensitiveActionAuth(actor, password);
 
-  if (reqHeaders) {
-    try {
-      await auth.api.revokeOtherSessions({ headers: reqHeaders });
-    } catch {
-      await db.session.deleteMany({
-        where: {
-          userId: actor.userId,
-          id: { not: actor.sessionId },
-        },
-      });
-    }
-  } else {
-    await db.session.deleteMany({
-      where: {
-        userId: actor.userId,
-        id: { not: actor.sessionId },
-      },
-    });
-  }
+  const others = await db.session.findMany({
+    where: { userId: actor.userId, id: { not: actor.sessionId } },
+    select: { token: true },
+  });
 
-  return { success: true, revokedCount: 1 };
+  await deleteSessionsByToken(others.map((s) => s.token));
+
+  return { success: true, revokedCount: others.length };
 }
 
 /**
@@ -210,24 +202,16 @@ export async function revokeOtherUserSessions(
  */
 export async function revokeAllUserSessions(
   actor: Actor,
-  password?: string,
-  reqHeaders?: Headers
-): Promise<{ success: boolean }> {
+  password?: string
+): Promise<{ success: boolean; revokedCount: number }> {
   await verifySensitiveActionAuth(actor, password);
 
-  if (reqHeaders) {
-    try {
-      await auth.api.revokeSessions({ headers: reqHeaders });
-    } catch {
-      await db.session.deleteMany({
-        where: { userId: actor.userId },
-      });
-    }
-  } else {
-    await db.session.deleteMany({
-      where: { userId: actor.userId },
-    });
-  }
+  const sessions = await db.session.findMany({
+    where: { userId: actor.userId },
+    select: { token: true },
+  });
 
-  return { success: true };
+  await deleteSessionsByToken(sessions.map((s) => s.token));
+
+  return { success: true, revokedCount: sessions.length };
 }

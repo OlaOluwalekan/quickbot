@@ -10,11 +10,7 @@ export const DELETE = route({
     if (!params?.id) {
       throw Errors.badRequest("Session ID is required");
     }
-    const result = await revokeUserSession(
-      c.actor,
-      params.id,
-      c.req.headers
-    );
+    const result = await revokeUserSession(c.actor, params.id);
     return result;
   },
 });

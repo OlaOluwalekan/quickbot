@@ -107,17 +107,21 @@ export function SessionsList() {
         body: JSON.stringify(pw ? { password: pw } : {}),
       });
 
-      if (res.status === 403) {
+      if (!res.ok) {
+        // Read the body once; a second res.json() would throw.
         const errJson = await res.json().catch(() => ({}));
-        if (errJson?.error?.code === "FRESH_LOGIN_REQUIRED") {
+        const code = errJson?.error?.code;
+        if (code === "FRESH_LOGIN_REQUIRED") {
           setPendingScope("others");
           setReAuthDialogOpen(true);
           return;
         }
-      }
-
-      if (!res.ok) {
-        const errJson = await res.json().catch(() => ({}));
+        if (code === "INVALID_PASSWORD") {
+          throw new Error("Incorrect password. Please try again.");
+        }
+        if (res.status === 429) {
+          throw new Error("Too many attempts. Please wait a few minutes and try again.");
+        }
         throw new Error(errJson?.error?.message || "Failed to revoke other sessions");
       }
 

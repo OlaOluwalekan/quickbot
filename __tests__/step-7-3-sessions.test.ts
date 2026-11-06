@@ -18,6 +18,7 @@ import {
 import { GET as getSessionsRoute, DELETE as deleteSessionsRoute } from "@/app/api/v1/me/sessions/route";
 import { DELETE as deleteSingleSessionRoute } from "@/app/api/v1/me/sessions/[id]/route";
 import { sendEmail } from "@/server/email/send";
+import { authSecondaryStorage, resetInMemoryRateLimits } from "@/server/http/rate-limit";
 
 jest.mock("../server/email/send", () => ({
   sendEmail: jest.fn(async () => ({ success: true, id: "msg_123" })),
@@ -116,6 +117,7 @@ describe("Step 7.3 — Device sessions and revocation", () => {
 
   beforeEach(async () => {
     (sendEmail as unknown as jest.Mock).mockClear();
+    resetInMemoryRateLimits();
 
     // Reset sessions
     await db.session.deleteMany({
@@ -329,6 +331,26 @@ describe("Step 7.3 — Device sessions and revocation", () => {
       expect(dbSession).toBeNull();
     });
 
+    test("removes the revoked session from secondary storage, not just the database", async () => {
+      const token = `tok_a2_${testSuffix}`;
+      await authSecondaryStorage.set(
+        token,
+        JSON.stringify({ session: { userId: userAId, token }, user: { id: userAId } })
+      );
+      expect(await authSecondaryStorage.get(token)).not.toBeNull();
+
+      const req = new NextRequest(`http://localhost:3000/api/v1/me/sessions/${sessionA2Id}`, {
+        method: "DELETE",
+      });
+      const res = await deleteSingleSessionRoute(req, {
+        params: Promise.resolve({ id: sessionA2Id }),
+      });
+      expect(res.status).toBe(200);
+
+      expect(await authSecondaryStorage.get(token)).toBeNull();
+      expect(await db.session.findUnique({ where: { id: sessionA2Id } })).toBeNull();
+    });
+
     test("prevents revoking the current session via single-revoke endpoint (400)", async () => {
       const req = new NextRequest(`http://localhost:3000/api/v1/me/sessions/${sessionA1Id}`, {
         method: "DELETE",
@@ -366,6 +388,8 @@ describe("Step 7.3 — Device sessions and revocation", () => {
       });
       const res = await deleteSessionsRoute(req);
       expect(res.status).toBe(200);
+      const json = await res.json();
+      expect(json.data.revokedCount).toBe(1);
 
       const sessionsA = await db.session.findMany({
         where: { userId: userAId },
@@ -413,7 +437,7 @@ describe("Step 7.3 — Device sessions and revocation", () => {
       expect(sessionsA[0]?.id).toBe(sessionA1Id);
     });
 
-    test("rejects revoke-others with 401 when invalid password re-entry is provided", async () => {
+    test("rejects a wrong re-entry password with 403 INVALID_PASSWORD and keeps the caller signed in", async () => {
       // Age current session to 20 minutes ago
       await db.session.update({
         where: { id: sessionA1Id },
@@ -426,7 +450,37 @@ describe("Step 7.3 — Device sessions and revocation", () => {
         body: JSON.stringify({ password: "WrongPassword!" }),
       });
       const res = await deleteSessionsRoute(req);
-      expect(res.status).toBe(401);
+      expect(res.status).toBe(403);
+      const json = await res.json();
+      expect(json.error.code).toBe("INVALID_PASSWORD");
+
+      // A mistyped password must not clear the caller's auth cookies
+      expect(res.headers.get("set-cookie") ?? "").not.toContain("session_token");
+
+      // Nothing was revoked
+      const sessionsA = await db.session.findMany({ where: { userId: userAId } });
+      expect(sessionsA.length).toBe(2);
+    });
+
+    test("rate-limits password re-entry attempts (429 after 5 tries)", async () => {
+      await db.session.update({
+        where: { id: sessionA1Id },
+        data: { createdAt: new Date(Date.now() - 20 * 60 * 1000) },
+      });
+
+      const attempt = () =>
+        deleteSessionsRoute(
+          new NextRequest("http://localhost:3000/api/v1/me/sessions?scope=others", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ password: "WrongPassword!" }),
+          })
+        );
+
+      for (let i = 0; i < 5; i++) {
+        expect((await attempt()).status).toBe(403);
+      }
+      expect((await attempt()).status).toBe(429);
     });
   });
 
@@ -437,6 +491,8 @@ describe("Step 7.3 — Device sessions and revocation", () => {
       });
       const res = await deleteSessionsRoute(req);
       expect(res.status).toBe(200);
+      const json = await res.json();
+      expect(json.data.revokedCount).toBe(2);
 
       const sessionsA = await db.session.findMany({
         where: { userId: userAId },

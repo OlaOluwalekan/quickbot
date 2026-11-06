@@ -32,29 +32,17 @@ export const DELETE = route({
     const sessionId = c.query?.id;
 
     if (scope === "others") {
-      const result = await revokeOtherUserSessions(
-        c.actor,
-        c.body?.password,
-        c.req.headers
-      );
+      const result = await revokeOtherUserSessions(c.actor, c.body?.password);
       return result;
     }
 
     if (scope === "all") {
-      const result = await revokeAllUserSessions(
-        c.actor,
-        c.body?.password,
-        c.req.headers
-      );
+      const result = await revokeAllUserSessions(c.actor, c.body?.password);
       return result;
     }
 
     if (sessionId) {
-      const result = await revokeUserSession(
-        c.actor,
-        sessionId,
-        c.req.headers
-      );
+      const result = await revokeUserSession(c.actor, sessionId);
       return result;
     }
 
