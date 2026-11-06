@@ -238,8 +238,10 @@ export class CloudinaryStorageProvider implements StorageProvider {
       width?: number;
       height?: number;
       crop?: string;
+      gravity?: string;
       format?: string;
       quality?: string;
+      flags?: string;
     }
   ): string {
     const resourceType = options?.resourceType ?? "image";
@@ -251,8 +253,10 @@ export class CloudinaryStorageProvider implements StorageProvider {
       width: options?.width,
       height: options?.height,
       crop: options?.crop ?? "fill",
+      gravity: options?.gravity,
       fetch_format: options?.format ?? "auto",
       quality: options?.quality ?? "auto",
+      flags: options?.flags,
     });
   }
 
@@ -264,7 +268,14 @@ export class CloudinaryStorageProvider implements StorageProvider {
     let downloadUrl: string;
 
     if (options?.isPublic) {
-      downloadUrl = this.publicUrl(publicId, { resourceType });
+      // Fetch the untouched original bytes. Do NOT use publicUrl() here: its
+      // default f_auto/q_auto/c_fill transformation makes Cloudinary transcode
+      // the asset (e.g. WebP -> JPEG/PNG), which breaks magic-byte verification.
+      downloadUrl = cloudinary.url(publicId, {
+        secure: true,
+        resource_type: resourceType,
+        type: "upload",
+      });
     } else {
       downloadUrl = await this.privateUrl(publicId, {
         resourceType,

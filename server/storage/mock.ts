@@ -153,16 +153,19 @@ export class MockStorageProvider implements StorageProvider {
       width?: number;
       height?: number;
       crop?: string;
+      gravity?: string;
       format?: string;
       quality?: string;
+      flags?: string;
     }
   ): string {
+    const c = options?.crop ? `c_${options.crop},` : "";
+    const g = options?.gravity ? `g_${options.gravity},` : "";
     const w = options?.width ? `w_${options.width},` : "";
     const h = options?.height ? `h_${options.height},` : "";
-    const c = options?.crop ? `c_${options.crop},` : "";
-    const q = options?.quality ? `q_${options.quality},` : "q_auto,";
-    const f = options?.format ? `f_${options.format}` : "f_auto";
-    const transform = `${w}${h}${c}${q}${f}`;
+    const f = options?.format ? `f_${options.format},` : "f_auto,";
+    const q = options?.quality ? `q_${options.quality}` : "q_auto";
+    const transform = `${c}${g}${w}${h}${f}${q}`.replace(/,+$/, "");
     return `https://mock.storage.local/public/${transform}/${publicId}`;
   }
 

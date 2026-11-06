@@ -50,7 +50,7 @@ model User {
   creditAccount        CreditAccount?
   preference           UserPreference?
   supportTickets       SupportTicket[]
-  attachments          Attachment[]
+  attachments          Attachment[]        @relation("UserAttachments")
   annotations          Annotation[]        @relation("AnnotationCreator")
   annotationMessages   AnnotationMessage[] @relation("AnnotationMessageAuthor")
   promotions           Promotion[]         @relation("PromotionCreator")
@@ -60,6 +60,8 @@ model User {
   usernameChangedAt    DateTime?           @map("username_changed_at")
   usernameClaimedAt    DateTime?           @map("username_claimed_at")
   auditLogs            AuditLog[]
+  avatarAttachmentId   String?             @unique @map("avatar_attachment_id")
+  avatarAttachment     Attachment?         @relation("UserAvatarAttachment", fields: [avatarAttachmentId], references: [id], onDelete: SetNull)
 
   @@map("users")
 }
@@ -421,7 +423,8 @@ model Attachment {
   createdAt     DateTime         @default(now()) @map("created_at")
   deletedAt     DateTime?        @map("deleted_at")
 
-  user      User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  user       User       @relation("UserAttachments", fields: [ownerId], references: [id], onDelete: Cascade)
+  avatarUser User?      @relation("UserAvatarAttachment")
   workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   response  Response?  @relation(fields: [responseId], references: [id], onDelete: SetNull)
 

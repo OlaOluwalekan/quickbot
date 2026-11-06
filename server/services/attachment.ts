@@ -127,8 +127,11 @@ export async function initAttachment(
   const isAvatar = input.kind === "AVATAR";
 
   if (isAvatar) {
-    if (mimeDef.kind !== "IMAGE") {
-      throw Errors.badRequest("Avatars must be an image (PNG, JPEG, WebP)");
+    if (mimeDef.kind !== "IMAGE" || (mime !== "image/png" && mime !== "image/jpeg" && mime !== "image/webp")) {
+      throw Errors.badRequest("Avatars must be PNG, JPEG, or WebP");
+    }
+    if (input.bytes > 2 * 1024 * 1024) {
+      throw Errors.badRequest("Avatar image must be 2 MB or less");
     }
   } else if (!input.workspaceId) {
     throw Errors.badRequest("workspaceId is required for attachments");
