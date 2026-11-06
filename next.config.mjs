@@ -23,6 +23,11 @@ const nextConfig = {
   async redirects() {
     return [
       {
+        source: "/login",
+        destination: "/auth/login",
+        permanent: false,
+      },
+      {
         source: "/chat/:id",
         destination: "/workspaces/:id",
         permanent: true,

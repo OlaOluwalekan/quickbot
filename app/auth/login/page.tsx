@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import AuthCard from "@/components/auth/AuthCard";
 import AuthWrapper from "@/components/auth/AuthWrapper";
 import LoginForm from "@/components/auth/LoginForm";
@@ -14,7 +15,9 @@ const LoginPage = () => {
         backText={t("noAccount")}
         backLink="register"
       >
-        <LoginForm />
+        <Suspense fallback={<div className="h-40" />}>
+          <LoginForm />
+        </Suspense>
       </AuthCard>
     </AuthWrapper>
   );

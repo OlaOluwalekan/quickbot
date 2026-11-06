@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AlertTriangle, CheckCircle2, Lock, Mail } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { authClient } from "@/lib/auth-client";
@@ -24,6 +24,8 @@ import { cn } from "@/lib/utils";
 const LoginForm = (): React.JSX.Element => {
   const t = useTranslations("Auth");
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const reason = searchParams?.get("reason");
   const [isPending, startTransition] = useTransition();
   const [isResending, startResendTransition] = useTransition();
   const [needsVerification, setNeedsVerification] = useState(false);
@@ -34,6 +36,16 @@ const LoginForm = (): React.JSX.Element => {
     message: "",
     success: false,
   });
+
+  useEffect(() => {
+    if (reason === "expired" || reason === "revoked") {
+      setResponse({
+        message:
+          "Your session has ended or was signed out from another device. Please sign in again.",
+        success: false,
+      });
+    }
+  }, [reason]);
 
   const form = useForm<LoginInput>({
     resolver: zodResolver(LoginSchema),

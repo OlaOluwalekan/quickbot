@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getActor } from "@/server/auth/session";
+import { requireActor } from "@/server/auth/session";
 import Logout from "@/components/auth/Logout";
 import LocaleSwitcher from "@/components/layout/locale-switcher";
 import AppName from "@/components/logo/AppName";
@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { SessionProps } from "@/types/user";
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
+import { Laptop, ChevronRight } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Settings",
@@ -23,19 +24,17 @@ export const metadata: Metadata = {
 };
 
 const SettingsPage = async () => {
-  const actor = await getActor();
+  const actor = await requireActor();
   const t = await getTranslations("Settings");
-  const avatarData = actor ? await getUserAvatar(actor.userId).catch(() => null) : null;
+  const avatarData = await getUserAvatar(actor.userId).catch(() => null);
 
-  const sessionUser: SessionProps | undefined = actor
-    ? {
-        id: actor.userId,
-        name: actor.name ?? "",
-        email: actor.email,
-        image: actor.image ?? "",
-        token: 0,
-      }
-    : undefined;
+  const sessionUser: SessionProps = {
+    id: actor.userId,
+    name: actor.name ?? "",
+    email: actor.email,
+    image: actor.image ?? "",
+    token: 0,
+  };
 
   return (
     <div className="min-h-screen w-full bg-bg text-fg flex flex-col">
@@ -72,11 +71,11 @@ const SettingsPage = async () => {
             <div className="lg:col-span-5 flex flex-col justify-between gap-6 lg:border-r lg:border-border lg:pr-6">
               <div className="flex flex-col sm:flex-row lg:flex-col items-center sm:items-start gap-4">
                 <UserProfileImage
-                  user={sessionUser as SessionProps}
+                  user={sessionUser}
                   avatarUrl={avatarData?.avatarUrl}
                   isCustomAvatar={avatarData?.isCustom}
                 />
-                <NameAndEmail user={sessionUser as SessionProps} />
+                <NameAndEmail user={sessionUser} />
               </div>
 
               <div className="pt-4 border-t border-border flex flex-col gap-3">
@@ -87,7 +86,19 @@ const SettingsPage = async () => {
                   <LocaleSwitcher />
                 </div>
 
-                <div className="pt-2">
+                <div className="pt-1">
+                  <Button asChild variant="outline" className="w-full justify-between text-xs font-medium border-border hover:bg-surface-2">
+                    <Link href="/settings/sessions">
+                      <span className="flex items-center gap-2">
+                        <Laptop className="w-3.5 h-3.5 text-muted" />
+                        Sessions & Devices
+                      </span>
+                      <ChevronRight className="w-3.5 h-3.5 text-muted" />
+                    </Link>
+                  </Button>
+                </div>
+
+                <div className="pt-1">
                   <Logout styleClass="w-full justify-center px-4 py-2.5 rounded-xl bg-danger/10 border border-danger/25 text-danger hover:bg-danger hover:text-accent-fg transition-colors cursor-pointer" />
                 </div>
               </div>
@@ -95,7 +106,7 @@ const SettingsPage = async () => {
 
             {/* Token Usage Column */}
             <div className="lg:col-span-7">
-              <TokensDisplay user={sessionUser as SessionProps} />
+              <TokensDisplay user={sessionUser} />
             </div>
           </div>
         </SettingsCard>
