@@ -51,12 +51,22 @@ export function SessionsList() {
   const [pendingScope, setPendingScope] = React.useState<"others" | "all" | null>(null);
   const [isSubmittingPassword, setIsSubmittingPassword] = React.useState(false);
 
+  // Reference time for "last active" labels. Kept in state so render stays pure,
+  // and refreshed whenever sessions load and once a minute after that.
+  const [now, setNow] = React.useState(() => Date.now());
+
+  React.useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(timer);
+  }, []);
+
   const fetchSessions = React.useCallback(async () => {
     try {
       const res = await fetch("/api/v1/me/sessions");
       if (!res.ok) throw new Error("Failed to load sessions");
       const json = await res.json();
       setSessions(json.data || []);
+      setNow(Date.now());
     } catch {
       toast.error("Could not load active sessions");
     } finally {
@@ -140,7 +150,7 @@ export function SessionsList() {
     if (isCurrent) return "Active now";
     try {
       const d = new Date(dateStr);
-      const diffSecs = Math.floor((Date.now() - d.getTime()) / 1000);
+      const diffSecs = Math.max(0, Math.floor((now - d.getTime()) / 1000));
       if (diffSecs < 60) return "Just now";
       if (diffSecs < 3600) return `${Math.floor(diffSecs / 60)}m ago`;
       if (diffSecs < 86400) return `${Math.floor(diffSecs / 3600)}h ago`;

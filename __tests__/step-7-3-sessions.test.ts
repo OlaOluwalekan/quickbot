@@ -40,7 +40,7 @@ jest.mock("../server/auth/session", () => {
     }),
     requireActor: jest.fn(async () => {
       if (!mockActor) {
-        const { redirect } = require("next/navigation");
+        const { redirect } = jest.requireActual("next/navigation");
         redirect("/auth/login?reason=expired");
       }
       return mockActor;
