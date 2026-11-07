@@ -3,7 +3,7 @@ import { PrismaClient } from "./generated/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { env } from "@/server/env";
 
-const CURRENT_SCHEMA_VER = "20261106130000_add_invitations_and_activity_log";
+const CURRENT_SCHEMA_VER = "20261107100000_add_monthly_credit_cap";
 
 const make = () =>
   new PrismaClient({

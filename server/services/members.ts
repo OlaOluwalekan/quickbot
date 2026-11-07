@@ -6,6 +6,7 @@ import { requireWorkspace, requireProject, resolveWorkspaceRole } from "@/server
 import { can } from "@/server/authz/permissions";
 import { logActivity } from "./activity";
 import { getUserAvatar } from "./avatar";
+import { getMemberMonthlySpend, resolveBilledAccount } from "./billing-owner";
 import type { WorkspaceRole, ProjectRole } from "../db/generated/client";
 
 export type MemberSummary = {
@@ -20,6 +21,8 @@ export type MemberSummary = {
   invitedById: string | null;
   createdAt: Date;
   inherited?: boolean;
+  monthlyCreditCap?: number | null;
+  monthlyCreditsUsed?: number;
 };
 
 export async function listWorkspaceMembers(actor: Actor, workspaceId: string) {
@@ -114,6 +117,7 @@ export async function listWorkspaceMembers(actor: Actor, workspaceId: string) {
         invitedById: pm.invitedById,
         createdAt: pm.createdAt,
         inherited: true,
+        monthlyCreditCap: pm.monthlyCreditCap,
       });
     }
   }
@@ -138,17 +142,27 @@ export async function listWorkspaceMembers(actor: Actor, workspaceId: string) {
       invitedById: wm.invitedById,
       createdAt: wm.createdAt,
       inherited: false,
+      monthlyCreditCap: wm.monthlyCreditCap,
     });
   }
 
-  // Populate avatars for members
+  // Populate avatars & monthly spend for members
+  const { billedAccountId } = await resolveBilledAccount({
+    id: workspace.id,
+    ownerId: workspace.ownerId,
+    projectId: workspace.projectId,
+  });
   const memberList = Array.from(membersMap.values());
   await Promise.all(
     memberList.map(async (m) => {
-      const av = await getUserAvatar(m.userId).catch(() => null);
+      const [av, spent] = await Promise.all([
+        getUserAvatar(m.userId).catch(() => null),
+        getMemberMonthlySpend(m.userId, billedAccountId).catch(() => 0),
+      ]);
       if (av?.avatarUrl) {
         m.avatarUrl = av.avatarUrl;
       }
+      m.monthlyCreditsUsed = spent;
     })
   );
 
@@ -230,14 +244,23 @@ export async function listProjectMembers(actor: Actor, projectId: string) {
       invitedById: m.invitedById,
       createdAt: m.createdAt,
       inherited: false,
+      monthlyCreditCap: m.monthlyCreditCap,
     }));
 
+  const ownerAcct = await db.creditAccount.findUnique({
+    where: { userId: proj.ownerId },
+    select: { id: true },
+  });
   await Promise.all(
     memberList.map(async (m) => {
-      const av = await getUserAvatar(m.userId).catch(() => null);
+      const [av, spent] = await Promise.all([
+        getUserAvatar(m.userId).catch(() => null),
+        ownerAcct ? getMemberMonthlySpend(m.userId, ownerAcct.id).catch(() => 0) : Promise.resolve(0),
+      ]);
       if (av?.avatarUrl) {
         m.avatarUrl = av.avatarUrl;
       }
+      m.monthlyCreditsUsed = spent;
     })
   );
 
@@ -680,4 +703,103 @@ export async function countWorkspaceMembers(workspaceId: string): Promise<number
   }
   people.delete(ws.ownerId);
   return people.size + 1;
+}
+
+
+export async function updateWorkspaceMemberCap(
+  actor: Actor,
+  workspaceId: string,
+  targetUserId: string,
+  monthlyCreditCap: number | null
+) {
+  const { ws } = await requireWorkspace(actor, workspaceId, "workspace.manage_members");
+  if (actor.userId !== ws.ownerId) {
+    throw Errors.forbidden("Only the workspace owner can modify collaborator spend caps");
+  }
+  if (targetUserId === ws.ownerId) {
+    throw Errors.badRequest("Cannot set a collaborator cap on the workspace owner");
+  }
+  if (monthlyCreditCap !== null && (!Number.isInteger(monthlyCreditCap) || monthlyCreditCap < 0)) {
+    throw Errors.badRequest("monthlyCreditCap must be a non-negative integer or null");
+  }
+
+  const existingMember = await db.workspaceMember.findUnique({
+    where: { workspaceId_userId: { workspaceId, userId: targetUserId } },
+  });
+  const projectMember = ws.projectId
+    ? await db.projectMember.findUnique({
+        where: { projectId_userId: { projectId: ws.projectId, userId: targetUserId } },
+      })
+    : null;
+
+  const isExplicitMember = Boolean(existingMember && existingMember.role !== "NONE");
+  if (!isExplicitMember && !projectMember) {
+    throw Errors.notFound("Member");
+  }
+
+  const effectiveRole = isExplicitMember ? existingMember!.role : (projectMember!.role as WorkspaceRole);
+
+  const updated = await db.workspaceMember.upsert({
+    where: { workspaceId_userId: { workspaceId, userId: targetUserId } },
+    update: { monthlyCreditCap },
+    create: {
+      workspaceId,
+      userId: targetUserId,
+      role: effectiveRole,
+      monthlyCreditCap,
+      invitedById: actor.userId,
+    },
+  });
+
+  await logActivity(db, {
+    workspaceId,
+    actorId: actor.userId,
+    action: "member.cap_changed",
+    targetType: "user",
+    targetId: targetUserId,
+    meta: { monthlyCreditCap },
+  });
+
+  return { success: true, member: updated };
+}
+
+export async function updateProjectMemberCap(
+  actor: Actor,
+  projectId: string,
+  targetUserId: string,
+  monthlyCreditCap: number | null
+) {
+  const { project } = await requireProject(actor, projectId, "workspace.manage_members");
+  if (actor.userId !== project.ownerId) {
+    throw Errors.forbidden("Only the project owner can modify collaborator spend caps");
+  }
+  if (targetUserId === project.ownerId) {
+    throw Errors.badRequest("Cannot set a collaborator cap on the project owner");
+  }
+  if (monthlyCreditCap !== null && (!Number.isInteger(monthlyCreditCap) || monthlyCreditCap < 0)) {
+    throw Errors.badRequest("monthlyCreditCap must be a non-negative integer or null");
+  }
+
+  const existingMember = await db.projectMember.findUnique({
+    where: { projectId_userId: { projectId, userId: targetUserId } },
+  });
+  if (!existingMember) {
+    throw Errors.notFound("Member");
+  }
+
+  const updated = await db.projectMember.update({
+    where: { id: existingMember.id },
+    data: { monthlyCreditCap },
+  });
+
+  await logActivity(db, {
+    projectId,
+    actorId: actor.userId,
+    action: "member.cap_changed",
+    targetType: "user",
+    targetId: targetUserId,
+    meta: { monthlyCreditCap },
+  });
+
+  return { success: true, member: updated };
 }

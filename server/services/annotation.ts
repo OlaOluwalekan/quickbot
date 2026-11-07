@@ -4,6 +4,7 @@ import { db } from "@/server/db/client";
 import { Errors } from "@/server/http/errors";
 import { requireWorkspace } from "@/server/authz/access";
 import { logActivity } from "./activity";
+import { resolveBilledAccount, reserveForWorkspaceGeneration } from "./billing-owner";
 import type { Actor } from "@/server/auth/session";
 import type {
   CreateAnnotationInput,
@@ -641,12 +642,7 @@ export async function createAndStreamAnnotationReply(
 
   // Resolve billing account = workspace owner's credit account
   const wsAccess = await requireWorkspace(actor, workspaceId, "workspace.generate");
-  const wsOwnerId = wsAccess.ws.ownerId;
-  let ownerAccount = await getAccountByUserId(wsOwnerId);
-  if (!ownerAccount) {
-    ownerAccount = await createAccountWithFreeGrant(wsOwnerId);
-  }
-  const billedAccountId = ownerAccount.id;
+  const { billedAccountId } = await resolveBilledAccount(wsAccess.ws);
 
   // Idempotency & Generation creation
   const modelKey = (input.modelKey || "text-economy") as ModelKey;
@@ -662,10 +658,13 @@ export async function createAndStreamAnnotationReply(
   const settleKey = `stl_annot_${generationId}`;
   const releaseKey = `rel_annot_${generationId}`;
 
-  // Reserve credits (owner billed)
-  await reserve(billedAccountId, reserveAmount, reservationKey, {
-    generationId,
+  // Reserve credits (owner billed, collaborator cap enforced)
+  await reserveForWorkspaceGeneration({
+    workspace: wsAccess.ws,
     actorId: actor.userId,
+    amount: reserveAmount,
+    reservationKey,
+    generationId,
     estimated: true,
   });
 

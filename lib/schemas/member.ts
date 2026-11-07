@@ -20,9 +20,14 @@ export const createInvitationSchema = z.object({
   role: z.string().min(1),
 });
 
-export const updateMemberRoleSchema = z.object({
-  role: z.string().min(1),
-});
+export const updateMemberRoleSchema = z
+  .object({
+    role: z.string().min(1).optional(),
+    monthlyCreditCap: z.number().int().min(0).max(1_000_000).nullable().optional(),
+  })
+  .refine((d) => d.role !== undefined || d.monthlyCreditCap !== undefined, {
+    message: "Provide role or monthlyCreditCap",
+  });
 
 export const transferOwnershipSchema = z.object({
   newOwnerId: z.string().min(1),

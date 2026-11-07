@@ -8,6 +8,7 @@ import { Errors } from "@/server/http/errors";
 import type { Actor } from "@/server/auth/session";
 import { requireWorkspace } from "@/server/authz/access";
 import { logActivity } from "./activity";
+import { resolveBilledAccount, reserveForWorkspaceGeneration } from "./billing-owner";
 import {
   reserve,
   settle,
@@ -809,11 +810,7 @@ export async function createAndStreamGeneration(
   const wsOwnerId = access.ws.ownerId;
 
   // 2. Resolve billing account = workspace owner's credit account
-  let ownerAccount = await getAccountByUserId(wsOwnerId);
-  if (!ownerAccount) {
-    ownerAccount = await createAccountWithFreeGrant(wsOwnerId);
-  }
-  const billedAccountId = ownerAccount.id;
+  const { account: ownerAccount, billedAccountId } = await resolveBilledAccount(access.ws);
 
   // 3. Idempotency check
   const existingGen = await db.generation.findUnique({
@@ -1208,11 +1205,14 @@ export async function createAndStreamGeneration(
   // Pre-generate UUID for generation record to link with reservation
   const generationId = crypto.randomUUID();
 
-  // 5. Reserve credits (402 if insufficient)
+  // 5. Reserve credits on owner's account & enforce collaborator cap (402 if insufficient or cap exceeded)
   const reservationKey = `res_gen_${input.idempotencyKey}`;
-  await reserve(billedAccountId, reserveAmount, reservationKey, {
-    generationId,
+  await reserveForWorkspaceGeneration({
+    workspace: access.ws,
     actorId: actor.userId,
+    amount: reserveAmount,
+    reservationKey,
+    generationId,
     estimated: true,
   });
 
