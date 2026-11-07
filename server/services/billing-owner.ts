@@ -15,6 +15,7 @@ import {
 import { sendEmail } from "@/server/email/send";
 import { env } from "@/server/env";
 import { logActivity } from "@/server/services/activity";
+import { notify } from "@/server/services/notify";
 import type { Prisma } from "@/server/db/generated/client";
 
 type DbClient = Prisma.TransactionClient | typeof db;
@@ -363,6 +364,24 @@ export async function checkAndNotifyOwnerAllowanceThresholds(opts: {
         monthlyAllowance,
       },
     });
+
+    await notify(
+      ownerId,
+      threshold === 100 ? "CREDITS_EXHAUSTED" : "CREDITS_LOW",
+      {
+        threshold,
+        period: periodKey,
+        remainingCredits: Math.max(0, remaining),
+        spentThisPeriod,
+        monthlyAllowance,
+        upgradeUrl: `${env.APP_URL}/pricing`,
+        href: "/settings",
+      },
+      {
+        dedupeKey: `${threshold === 100 ? "credits_exhausted" : "credits_low"}:${periodKey}`,
+        email: false,
+      }
+    ).catch(() => {});
 
     const ownerUser = await db.user.findUnique({
       where: { id: ownerId },

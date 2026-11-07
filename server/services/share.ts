@@ -6,6 +6,7 @@ import type { Actor } from "@/server/auth/session";
 import { requireWorkspace } from "@/server/authz/access";
 import { Errors } from "@/server/http/errors";
 import { logActivity } from "@/server/services/activity";
+import { notify } from "@/server/services/notify";
 import { sendEmail } from "@/server/email/send";
 import { getStorageProvider } from "@/server/storage";
 import { ALLOWED_MIME_TYPES } from "@/server/services/attachment";
@@ -119,6 +120,20 @@ export async function createShareLink(
       showAuthor: shareLink.showAuthor,
     },
   });
+
+  await notify(
+    ws.ownerId,
+    "SHARE_CREATED",
+    {
+      workspaceId: ws.id,
+      shareId: shareLink.id,
+      scope: shareLink.scope,
+      responseId: shareLink.responseId,
+      shareUrl: url,
+      href: `/workspaces/${ws.id}`,
+    },
+    { dedupeKey: `share_created:${shareLink.id}`, email: false }
+  ).catch(() => {});
 
   // Notify workspace owner via share-created email (non-blocking on failure)
   try {

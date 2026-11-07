@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { SessionProps } from "@/types/user";
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
-import { Laptop, ChevronRight } from "lucide-react";
+import { Laptop, Bell, ChevronRight } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Settings",

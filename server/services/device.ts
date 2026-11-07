@@ -2,6 +2,7 @@ import "server-only";
 import { UAParser } from "ua-parser-js";
 import { db } from "@/server/db/client";
 import { sendEmail } from "@/server/email/send";
+import { notify } from "@/server/services/notify";
 
 /**
  * Mask IP address to coarse subnet:
@@ -121,6 +122,20 @@ export async function checkAndAlertNewSignIn(newSession: {
         where: { id: newSession.userId },
         select: { email: true },
       });
+
+      await notify(
+        newSession.userId,
+        "NEW_SIGN_IN",
+        {
+          sessionId: newSession.id,
+          time: new Date().toUTCString(),
+          device: newSession.deviceLabel || newParsed.deviceLabel,
+          ipAddress: maskIp(newSession.ipAddress) || undefined,
+          location: newSession.country || undefined,
+          href: "/settings/sessions",
+        },
+        { dedupeKey: `new_sign_in:${newSession.id}`, email: false }
+      ).catch(() => {});
 
       if (user?.email) {
         await sendEmail("new-sign-in", user.email, {

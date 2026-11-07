@@ -10,6 +10,7 @@ import {
   resolveProjectRole,
 } from "@/server/authz/access";
 import { logActivity } from "./activity";
+import { notify } from "./notify";
 import { sendEmail, maskEmail } from "@/server/email/send";
 import { env } from "@/server/env";
 import { PLANS, getUserPlanOverride, type PlanKey } from "@/server/billing/plans";
@@ -261,6 +262,23 @@ export async function createInvitation(
   ).catch((err) => {
     console.error("[Invitation] Failed to send email:", err);
   });
+
+  if (targetUserId) {
+    await notify(
+      targetUserId,
+      "INVITE_RECEIVED",
+      {
+        workspaceId: workspaceId ?? null,
+        projectId: projectId ?? null,
+        resourceName,
+        inviterName: actor.name || "A collaborator",
+        role,
+        inviteUrl,
+        href: `/invite/${rawToken}`,
+      },
+      { email: false }
+    ).catch(() => {});
+  }
 
   // 7. Log activity
   await logActivity(db, {

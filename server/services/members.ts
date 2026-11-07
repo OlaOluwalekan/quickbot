@@ -5,6 +5,7 @@ import { Errors } from "@/server/http/errors";
 import { requireWorkspace, requireProject, resolveWorkspaceRole } from "@/server/authz/access";
 import { can } from "@/server/authz/permissions";
 import { logActivity } from "./activity";
+import { notify } from "./notify";
 import { getUserAvatar } from "./avatar";
 import { getMonthlySpendByActor } from "./billing-owner";
 import type { WorkspaceRole, ProjectRole } from "../db/generated/client";

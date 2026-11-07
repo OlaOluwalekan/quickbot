@@ -66,6 +66,7 @@ model User {
   receivedInvitations  Invitation[]        @relation("ReceivedInvitations")
   activityLogs         ActivityLog[]       @relation("ActorActivityLogs")
   createdShareLinks    ShareLink[]         @relation("CreatedShareLinks")
+  notifications        Notification[]
 
   @@map("users")
 }
@@ -371,11 +372,12 @@ model Generation {
 }
 
 model UserPreference {
-  userId     String   @id @map("user_id")
-  uiLocale   String?  @map("ui_locale")
-  aiLanguage String?  @map("ai_language")
-  updatedAt  DateTime @updatedAt @map("updated_at")
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId            String   @id @map("user_id")
+  uiLocale          String?  @map("ui_locale")
+  aiLanguage        String?  @map("ai_language")
+  notificationPrefs Json?    @map("notification_prefs")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_preferences")
 }
@@ -674,4 +676,36 @@ model ShareLink {
 
   @@index([workspaceId])
   @@map("share_links")
+}
+
+enum NotifStatus {
+  UNREAD
+  READ
+  DISMISSED
+}
+
+enum EmailStatus {
+  NONE
+  PENDING
+  SENT
+  FAILED
+}
+
+model Notification {
+  id          String      @id @default(uuid(7))
+  userId      String      @map("user_id")
+  type        String
+  payload     Json
+  dedupeKey   String?     @map("dedupe_key")
+  status      NotifStatus @default(UNREAD)
+  emailStatus EmailStatus @default(NONE) @map("email_status")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  readAt      DateTime?   @map("read_at")
+  dismissedAt DateTime?   @map("dismissed_at")
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, dedupeKey])
+  @@index([userId, status, createdAt(sort: Desc)])
+  @@map("notifications")
 }
