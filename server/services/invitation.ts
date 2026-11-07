@@ -10,7 +10,7 @@ import {
   resolveProjectRole,
 } from "@/server/authz/access";
 import { logActivity } from "./activity";
-import { notify } from "./notify";
+import { notify, markNotificationReadByDedupeKey } from "./notify";
 import { sendEmail, maskEmail } from "@/server/email/send";
 import { env } from "@/server/env";
 import { PLANS, getUserPlanOverride, type PlanKey } from "@/server/billing/plans";
@@ -37,6 +37,71 @@ const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const INVALID_INVITE_MESSAGE = "This invitation is invalid or has expired";
 
 type InviteTarget = { workspaceId: string } | { projectId: string };
+
+function inviteReceivedDedupeKey(
+  workspaceId: string | null | undefined,
+  projectId: string | null | undefined
+) {
+  return workspaceId
+    ? `invite_received:workspace:${workspaceId}`
+    : `invite_received:project:${projectId}`;
+}
+
+/**
+ * Delivers an invitation to its recipient.
+ * - Registered users go through `notify()`, so both the in-app item and the
+ *   email follow their INVITE_RECEIVED preferences. The in-app link points at
+ *   the invitation id (`/invite/id/:id`); the raw token is only ever sent by
+ *   email and never stored in the notification payload.
+ * - People without an account have no preferences, so they always get the email.
+ */
+async function deliverInvitation(opts: {
+  invitationId: string;
+  targetUserId: string | null;
+  targetEmail: string;
+  workspaceId: string | null;
+  projectId: string | null;
+  resourceName: string;
+  inviterName: string;
+  role: string;
+  inviteUrl: string;
+}) {
+  const emailData = {
+    inviterName: opts.inviterName,
+    teamOrProjectName: opts.resourceName,
+    inviteUrl: opts.inviteUrl,
+    role: opts.role,
+  };
+
+  if (!opts.targetUserId) {
+    await sendEmail("invitation", opts.targetEmail, emailData).catch((err) => {
+      console.error("[Invitation] Failed to send email:", err);
+    });
+    return;
+  }
+
+  await notify(
+    opts.targetUserId,
+    "INVITE_RECEIVED",
+    {
+      invitationId: opts.invitationId,
+      workspaceId: opts.workspaceId,
+      projectId: opts.projectId,
+      resourceName: opts.resourceName,
+      inviterName: opts.inviterName,
+      role: opts.role,
+      href: `/invite/id/${opts.invitationId}`,
+    },
+    {
+      // One live item per resource: a re-invite or resend replaces the old one
+      dedupeKey: inviteReceivedDedupeKey(opts.workspaceId, opts.projectId),
+      replaceExisting: true,
+      emailData: { template: "invitation", data: emailData },
+    }
+  ).catch((err) => {
+    console.error("[Invitation] Failed to notify invitee:", err);
+  });
+}
 
 /**
  * Serializes invitation writes per resource for the rest of the transaction so
@@ -220,7 +285,7 @@ export async function createInvitation(
   const tokenHash = hashInviteToken(rawToken);
   const expiresAt = new Date(Date.now() + INVITE_TTL_MS);
 
-  await db.$transaction(async (tx) => {
+  const invitation = await db.$transaction(async (tx) => {
     await lockInviteTarget(tx, target);
 
     // 3. Invalidate any existing PENDING invitation for this email on this resource
@@ -233,7 +298,7 @@ export async function createInvitation(
     // 4. Check plan member limit (§4.4) on the owner's plan
     await assertMemberCapacity(tx, target, ownerId);
 
-    await tx.invitation.create({
+    return tx.invitation.create({
       data: {
         workspaceId: workspaceId ?? null,
         projectId: projectId ?? null,
@@ -248,37 +313,18 @@ export async function createInvitation(
     });
   });
 
-  // 6. Send transactional invitation email
-  const inviteUrl = `${env.APP_URL}/invite/${rawToken}`;
-  await sendEmail(
-    "invitation",
+  // 6. Deliver the invitation (email and/or in-app)
+  await deliverInvitation({
+    invitationId: invitation.id,
+    targetUserId,
     targetEmail,
-    {
-      inviterName: actor.name || "A collaborator",
-      teamOrProjectName: resourceName,
-      inviteUrl,
-      role,
-    }
-  ).catch((err) => {
-    console.error("[Invitation] Failed to send email:", err);
+    workspaceId: workspaceId ?? null,
+    projectId: projectId ?? null,
+    resourceName,
+    inviterName: actor.name || "A collaborator",
+    role,
+    inviteUrl: `${env.APP_URL}/invite/${rawToken}`,
   });
-
-  if (targetUserId) {
-    await notify(
-      targetUserId,
-      "INVITE_RECEIVED",
-      {
-        workspaceId: workspaceId ?? null,
-        projectId: projectId ?? null,
-        resourceName,
-        inviterName: actor.name || "A collaborator",
-        role,
-        inviteUrl,
-        href: `/invite/${rawToken}`,
-      },
-      { email: false }
-    ).catch(() => {});
-  }
 
   // 7. Log activity
   await logActivity(db, {
@@ -455,18 +501,23 @@ export async function resendInvitation(
     }
   });
 
-  const inviteUrl = `${env.APP_URL}/invite/${rawToken}`;
-  await sendEmail(
-    "invitation",
-    invitation.email,
-    {
-      inviterName: actor.name || "A collaborator",
-      teamOrProjectName: resourceName,
-      inviteUrl,
-      role: invitation.role,
-    }
-  ).catch((err) => {
-    console.error("[Invitation] Failed to resend email:", err);
+  const registeredInvitee = invitation.invitedUserId
+    ? { id: invitation.invitedUserId }
+    : await db.user.findUnique({
+        where: { email: invitation.email },
+        select: { id: true },
+      });
+
+  await deliverInvitation({
+    invitationId: invitation.id,
+    targetUserId: registeredInvitee?.id ?? null,
+    targetEmail: invitation.email,
+    workspaceId: invitation.workspaceId,
+    projectId: invitation.projectId,
+    resourceName,
+    inviterName: actor.name || "A collaborator",
+    role: invitation.role,
+    inviteUrl: `${env.APP_URL}/invite/${rawToken}`,
   });
 
   await logActivity(db, {
@@ -524,6 +575,69 @@ export async function getInvitationInfoByToken(
   };
 }
 
+/**
+ * Loads a pending invitation by id for the signed-in invitee only (used by the
+ * in-app notification link, which carries no token). Anyone else, and any
+ * unusable invitation, gets `null` so ids reveal nothing.
+ */
+async function findOwnPendingInvitationById(actor: Actor, invitationId: string) {
+  if (!invitationId || typeof invitationId !== "string") return null;
+  const invite = await db.invitation.findUnique({
+    where: { id: invitationId },
+    include: {
+      workspace: { select: { id: true, title: true } },
+      project: { select: { id: true, name: true } },
+      invitedBy: { select: { name: true, email: true } },
+    },
+  });
+  if (!invite || invite.status !== "PENDING" || invite.expiresAt <= new Date()) {
+    return null;
+  }
+  const isRecipient =
+    invite.invitedUserId === actor.userId ||
+    actor.email.trim().toLowerCase() === invite.email.trim().toLowerCase();
+  return isRecipient ? invite : null;
+}
+
+export async function getInvitationInfoById(actor: Actor | null, invitationId: string) {
+  if (!actor) {
+    return {
+      valid: false,
+      requiresSignIn: true,
+      error: "Sign in to view this invitation",
+    };
+  }
+
+  const invite = await findOwnPendingInvitationById(actor, invitationId);
+  if (!invite) {
+    return { valid: false, error: INVALID_INVITE_MESSAGE };
+  }
+
+  return {
+    valid: true,
+    id: invite.id,
+    email: maskEmail(invite.email),
+    signedInEmailMatches:
+      actor.email.trim().toLowerCase() === invite.email.trim().toLowerCase(),
+    role: invite.role,
+    expiresAt: invite.expiresAt,
+    workspace: invite.workspace ? { id: invite.workspace.id, title: invite.workspace.title } : null,
+    project: invite.project ? { id: invite.project.id, name: invite.project.name } : null,
+    inviter: {
+      name: invite.invitedBy.name,
+      email: maskEmail(invite.invitedBy.email),
+    },
+  };
+}
+
+export async function acceptInvitationById(actor: Actor, invitationId: string) {
+  const invite = await findOwnPendingInvitationById(actor, invitationId);
+  if (!invite) {
+    throw Errors.badRequest(INVALID_INVITE_MESSAGE);
+  }
+  return acceptLoadedInvitation(actor, invite);
+}
+
 export async function acceptInvitation(actor: Actor, token: string) {
   if (!token || typeof token !== "string") {
     throw Errors.badRequest("Invalid invitation token");
@@ -537,6 +651,15 @@ export async function acceptInvitation(actor: Actor, token: string) {
   if (!invite || invite.status !== "PENDING" || invite.expiresAt <= new Date()) {
     throw Errors.badRequest(INVALID_INVITE_MESSAGE);
   }
+
+  return acceptLoadedInvitation(actor, invite);
+}
+
+type LoadedInvitation = NonNullable<
+  Awaited<ReturnType<typeof db.invitation.findUnique>>
+>;
+
+async function acceptLoadedInvitation(actor: Actor, invite: LoadedInvitation) {
 
   // Must be signed in with the same, verified email
   const acceptingUser = await db.user.findUnique({
@@ -558,7 +681,7 @@ export async function acceptInvitation(actor: Actor, token: string) {
   }
 
   // Race-safe atomic update & membership assignment in a transaction
-  return await db.$transaction(async (tx) => {
+  const result = await db.$transaction(async (tx) => {
     const updated = await tx.invitation.updateMany({
       where: { id: invite.id, status: "PENDING" },
       data: {
@@ -634,4 +757,47 @@ export async function acceptInvitation(actor: Actor, token: string) {
       projectId: invite.projectId,
     };
   });
+
+  // Best-effort follow-ups: clear the invitee's own "invitation received"
+  // item and tell the inviter. Never fail an accepted invitation on these.
+  try {
+    await markNotificationReadByDedupeKey(
+      actor.userId,
+      inviteReceivedDedupeKey(invite.workspaceId, invite.projectId)
+    );
+
+    if (invite.invitedById !== actor.userId) {
+      const [accepter, resource] = await Promise.all([
+        db.user.findUnique({
+          where: { id: actor.userId },
+          select: { name: true },
+        }),
+        invite.workspaceId
+          ? db.workspace
+              .findUnique({ where: { id: invite.workspaceId }, select: { title: true } })
+              .then((w) => w?.title)
+          : db.project
+              .findUnique({ where: { id: invite.projectId! }, select: { name: true } })
+              .then((p) => p?.name),
+      ]);
+      await notify(
+        invite.invitedById,
+        "INVITE_ACCEPTED",
+        {
+          invitationId: invite.id,
+          workspaceId: invite.workspaceId,
+          projectId: invite.projectId,
+          resourceName: resource || null,
+          acceptedByName: accepter?.name || null,
+          role: invite.role,
+          href: invite.workspaceId ? `/workspaces/${invite.workspaceId}` : "/workspaces",
+        },
+        { dedupeKey: `invite_accepted:${invite.id}` }
+      );
+    }
+  } catch (err) {
+    console.error("[Invitation] Failed to send acceptance notifications:", err);
+  }
+
+  return result;
 }

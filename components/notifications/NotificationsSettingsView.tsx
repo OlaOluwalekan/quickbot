@@ -27,6 +27,9 @@ interface NotificationTypeMeta {
   description: string;
 }
 
+// PAYMENT_FAILED, SUBSCRIPTION_CHANGED and EXPORT_READY are reserved types with
+// no sender yet (no billing webhook; exports are synchronous downloads), so they
+// are not offered here until something emits them.
 const NOTIFICATION_TYPE_METADATA: NotificationTypeMeta[] = [
   {
     type: "INVITE_RECEIVED",
@@ -64,24 +67,9 @@ const NOTIFICATION_TYPE_METADATA: NotificationTypeMeta[] = [
     description: "When your monthly credit allowance reaches 0.",
   },
   {
-    type: "PAYMENT_FAILED",
-    label: "Payment failed",
-    description: "When a subscription renewal or billing charge fails.",
-  },
-  {
-    type: "SUBSCRIPTION_CHANGED",
-    label: "Subscription changed",
-    description: "When your subscription plan is upgraded, downgraded, or canceled.",
-  },
-  {
     type: "NEW_SIGN_IN",
     label: "New device sign-in",
     description: "When your account is accessed from a new browser, OS, or country.",
-  },
-  {
-    type: "EXPORT_READY",
-    label: "Export ready",
-    description: "When an exported document or data archive finishes generating.",
   },
   {
     type: "QUESTIONS_ANSWERED",
@@ -151,13 +139,12 @@ export function NotificationsSettingsView() {
     channel: "inApp" | "email",
     nextVal: boolean
   ) => {
-    const prevPrefs = prefs;
-    const currentEntry = prefs[type] ?? { inApp: true, email: false };
-    const updatedEntry = { ...currentEntry, [channel]: nextVal };
-
     setPrefs((prev) => ({
       ...prev,
-      [type]: updatedEntry,
+      [type]: {
+        ...(prev[type] ?? { inApp: true, email: false }),
+        [channel]: nextVal,
+      },
     }));
 
     try {
@@ -171,7 +158,15 @@ export function NotificationsSettingsView() {
       if (!res.ok) throw new Error("Failed");
       toast.success("Preference saved");
     } catch {
-      setPrefs(prevPrefs);
+      // Roll back only this channel, so a failure can't undo other toggles
+      // that succeeded in the meantime
+      setPrefs((prev) => ({
+        ...prev,
+        [type]: {
+          ...(prev[type] ?? { inApp: true, email: false }),
+          [channel]: !nextVal,
+        },
+      }));
       toast.error("Failed to update notification preference");
     }
   };

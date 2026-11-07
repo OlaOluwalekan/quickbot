@@ -1,7 +1,6 @@
 import "server-only";
 import { UAParser } from "ua-parser-js";
 import { db } from "@/server/db/client";
-import { sendEmail } from "@/server/email/send";
 import { notify } from "@/server/services/notify";
 
 /**
@@ -118,11 +117,7 @@ export async function checkAndAlertNewSignIn(newSession: {
     });
 
     if (!matchesExisting) {
-      const user = await db.user.findUnique({
-        where: { id: newSession.userId },
-        select: { email: true },
-      });
-
+      // In-app and email delivery both follow the user's NEW_SIGN_IN preferences
       await notify(
         newSession.userId,
         "NEW_SIGN_IN",
@@ -134,17 +129,8 @@ export async function checkAndAlertNewSignIn(newSession: {
           location: newSession.country || undefined,
           href: "/settings/sessions",
         },
-        { dedupeKey: `new_sign_in:${newSession.id}`, email: false }
-      ).catch(() => {});
-
-      if (user?.email) {
-        await sendEmail("new-sign-in", user.email, {
-          time: new Date().toUTCString(),
-          device: newSession.deviceLabel || newParsed.deviceLabel,
-          ipAddress: maskIp(newSession.ipAddress) || undefined,
-          location: newSession.country || undefined,
-        });
-      }
+        { dedupeKey: `new_sign_in:${newSession.id}` }
+      );
     }
   } catch (err) {
     // Non-blocking: log but don't fail session creation

@@ -99,6 +99,18 @@ const SettingsPage = async () => {
                 </div>
 
                 <div className="pt-1">
+                  <Button asChild variant="outline" className="w-full justify-between text-xs font-medium border-border hover:bg-surface-2">
+                    <Link href="/settings/notifications">
+                      <span className="flex items-center gap-2">
+                        <Bell className="w-3.5 h-3.5 text-muted" />
+                        Notifications
+                      </span>
+                      <ChevronRight className="w-3.5 h-3.5 text-muted" />
+                    </Link>
+                  </Button>
+                </div>
+
+                <div className="pt-1">
                   <Logout styleClass="w-full justify-center px-4 py-2.5 rounded-xl bg-danger/10 border border-danger/25 text-danger hover:bg-danger hover:text-accent-fg transition-colors cursor-pointer" />
                 </div>
               </div>

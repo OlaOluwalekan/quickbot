@@ -12,7 +12,6 @@ import {
   getUserPlanOverride,
   type PlanKey,
 } from "@/server/billing/plans";
-import { sendEmail } from "@/server/email/send";
 import { env } from "@/server/env";
 import { logActivity } from "@/server/services/activity";
 import { notify } from "@/server/services/notify";
@@ -379,26 +378,10 @@ export async function checkAndNotifyOwnerAllowanceThresholds(opts: {
       },
       {
         dedupeKey: `${threshold === 100 ? "credits_exhausted" : "credits_low"}:${periodKey}`,
-        email: false,
       }
-    ).catch(() => {});
-
-    const ownerUser = await db.user.findUnique({
-      where: { id: ownerId },
-      select: { email: true },
+    ).catch((err) => {
+      console.error(`[Billing] Failed to send ${threshold}% alert:`, err);
     });
-    const isTestEnv = process.env.NODE_ENV === "test";
-    const isMockedSendEmail = Boolean(
-      (sendEmail as unknown as { _isMockFunction?: boolean })?._isMockFunction
-    );
-    if (ownerUser?.email && (!isTestEnv || isMockedSendEmail)) {
-      await sendEmail("credits-low", ownerUser.email, {
-        remainingCredits: Math.max(0, remaining),
-        upgradeUrl: `${env.APP_URL}/pricing`,
-      }).catch((err) => {
-        console.error(`[Billing] Failed to send ${threshold}% alert email:`, err);
-      });
-    }
 
     return true;
   };

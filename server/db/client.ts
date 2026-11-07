@@ -5,7 +5,7 @@ import { env } from "@/server/env";
 
 // Bump to the latest migration name so dev hot-reload drops a client generated
 // against an older schema.
-const CURRENT_SCHEMA_VER = "20261107132500_add_notification_prefs";
+const CURRENT_SCHEMA_VER = "20261107120000_add_notifications";
 
 const make = () =>
   new PrismaClient({
@@ -17,30 +17,20 @@ const g = globalThis as unknown as {
   __dbSchemaVer?: string;
 };
 
-function getClient(): PrismaClient {
-  if (
-    g.__db &&
-    (g.__dbSchemaVer !== CURRENT_SCHEMA_VER ||
-      !("auditLog" in g.__db) ||
-      !("shareLink" in g.__db) ||
-      !("notification" in g.__db))
-  ) {
-    g.__db.$disconnect().catch(() => {});
-    g.__db = undefined;
-  }
-
-  if (!g.__db) {
-    g.__db = make();
-    g.__dbSchemaVer = CURRENT_SCHEMA_VER;
-  }
-
-  return g.__db;
+// Runs once per module evaluation (i.e. on each dev hot reload), never per query.
+if (
+  g.__db &&
+  (g.__dbSchemaVer !== CURRENT_SCHEMA_VER ||
+    !("auditLog" in g.__db) ||
+    !("shareLink" in g.__db) ||
+    !("notification" in g.__db))
+) {
+  g.__db.$disconnect().catch(() => {});
+  g.__db = undefined;
 }
 
-export const db: PrismaClient = new Proxy({} as PrismaClient, {
-  get(_target, prop) {
-    const client = getClient();
-    const value = Reflect.get(client, prop, client);
-    return typeof value === "function" ? value.bind(client) : value;
-  },
-});
+export const db = g.__db ?? make();
+if (env.NODE_ENV !== "production") {
+  g.__db = db;
+  g.__dbSchemaVer = CURRENT_SCHEMA_VER;
+}

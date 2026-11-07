@@ -79,64 +79,66 @@ export function resolveNotificationPreferences(
 export async function getUserNotificationPreferences(
   userId: string
 ): Promise<NotificationPreferencesMap> {
-  try {
-    const pref = await db.userPreference.findUnique({
-      where: { userId },
-      select: { notificationPrefs: true },
-    });
-    return resolveNotificationPreferences(pref?.notificationPrefs);
-  } catch {
-    const rows = await db.$queryRaw<Array<{ notification_prefs: unknown }>>`
-      SELECT "notification_prefs" FROM "user_preferences" WHERE "user_id" = ${userId} LIMIT 1
-    `;
-    return resolveNotificationPreferences(rows[0]?.notification_prefs);
-  }
+  const pref = await db.userPreference.findUnique({
+    where: { userId },
+    select: { notificationPrefs: true },
+  });
+  return resolveNotificationPreferences(pref?.notificationPrefs);
 }
 
+/**
+ * Merge a partial per-type patch into the stored preferences.
+ * The read-merge-write runs under a row lock so concurrent PATCHes for
+ * different types (e.g. two quick toggles) cannot overwrite each other.
+ */
 export async function updateUserNotificationPreferences(
   userId: string,
   updates: Partial<Record<NotificationType, Partial<NotificationChannelConfig>>>
 ): Promise<NotificationPreferencesMap> {
-  const current = await getUserNotificationPreferences(userId);
-  for (const type of NOTIFICATION_TYPES) {
-    const patch = updates[type];
-    if (patch) {
-      if (typeof patch.inApp === "boolean") {
-        current[type].inApp = patch.inApp;
-      }
-      if (typeof patch.email === "boolean") {
-        current[type].email = patch.email;
+  return db.$transaction(async (tx) => {
+    // Ensure the row exists so there is something to lock
+    await tx.userPreference.createMany({
+      data: [{ userId }],
+      skipDuplicates: true,
+    });
+
+    const rows = await tx.$queryRaw<Array<{ notification_prefs: unknown }>>`
+      SELECT "notification_prefs" FROM "user_preferences"
+      WHERE "user_id" = ${userId}
+      FOR UPDATE
+    `;
+    const current = resolveNotificationPreferences(rows[0]?.notification_prefs);
+
+    for (const type of NOTIFICATION_TYPES) {
+      const patch = updates[type];
+      if (patch) {
+        if (typeof patch.inApp === "boolean") {
+          current[type].inApp = patch.inApp;
+        }
+        if (typeof patch.email === "boolean") {
+          current[type].email = patch.email;
+        }
       }
     }
-  }
 
-  try {
-    await db.userPreference.upsert({
+    await tx.userPreference.update({
       where: { userId },
-      update: {
-        notificationPrefs: current as unknown as Prisma.InputJsonValue,
-      },
-      create: {
-        userId,
+      data: {
         notificationPrefs: current as unknown as Prisma.InputJsonValue,
       },
     });
-  } catch {
-    const jsonPayload = JSON.stringify(current);
-    await db.$executeRaw`
-      INSERT INTO "user_preferences" ("user_id", "ui_locale", "ai_language", "notification_prefs", "updated_at")
-      VALUES (${userId}, 'en', 'auto', ${jsonPayload}::jsonb, CURRENT_TIMESTAMP)
-      ON CONFLICT ("user_id") DO UPDATE
-      SET "notification_prefs" = ${jsonPayload}::jsonb,
-          "updated_at" = CURRENT_TIMESTAMP
-    `;
-  }
 
-  return current;
+    return current;
+  });
 }
 
 export interface NotifyOptions {
   dedupeKey?: string | null;
+  /**
+   * When a row with the same `dedupeKey` already exists, replace it instead of
+   * suppressing the new one (e.g. a re-sent invitation supersedes the old one).
+   */
+  replaceExisting?: boolean;
   email?: boolean;
   emailData?: {
     template: EmailTemplateName;
@@ -215,17 +217,6 @@ async function deliverEmailWithRetry(
   data: EmailTemplateMap[EmailTemplateName],
   locale?: string
 ): Promise<boolean> {
-  const isTestEnv = process.env.NODE_ENV === "test";
-  const isMockedSendEmail = Boolean(
-    (sendEmail as unknown as { _isMockFunction?: boolean })?._isMockFunction
-  );
-
-  // In unit tests where sendEmail is not mocked, skip real Resend HTTP requests
-  // while still marking delivery as SENT so tests run fast and offline.
-  if (isTestEnv && !isMockedSendEmail) {
-    return true;
-  }
-
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
       const res = await sendEmail(template, to, data as never, { locale });
@@ -292,6 +283,10 @@ export async function notify(
   const dedupeKey = options.dedupeKey ?? null;
   const initialStatus: NotifStatus = inAppEnabled ? "UNREAD" : "DISMISSED";
   const initialEmailStatus: EmailStatus = emailEnabled ? "PENDING" : "NONE";
+
+  if (dedupeKey && options.replaceExisting) {
+    await db.notification.deleteMany({ where: { userId, dedupeKey } });
+  }
 
   let created;
   try {
@@ -400,7 +395,8 @@ export async function markNotificationRead(userId: string, notificationId: strin
     throw Errors.notFound("Notification");
   }
 
-  if (existing.status === "READ") {
+  // READ is a no-op; DISMISSED is final and must not resurface in the list
+  if (existing.status !== "UNREAD") {
     return existing;
   }
 
@@ -451,5 +447,19 @@ export async function dismissNotification(userId: string, notificationId: string
       status: "DISMISSED",
       dismissedAt: new Date(),
     },
+  });
+}
+
+/**
+ * Mark the caller's notification with this dedupe key as READ, if any
+ * (e.g. clear the "invitation received" item once the invite is accepted).
+ */
+export async function markNotificationReadByDedupeKey(
+  userId: string,
+  dedupeKey: string
+) {
+  await db.notification.updateMany({
+    where: { userId, dedupeKey, status: "UNREAD" },
+    data: { status: "READ", readAt: new Date() },
   });
 }

@@ -172,7 +172,6 @@ describe("Step 7.7 — Notifications (database, API, bell, email)", () => {
       success: true,
       id: "mock-email-1",
     });
-    (sendEmailSpy as unknown as { _isMockFunction: boolean })._isMockFunction = true;
 
     // 1. Default preferences for SHARE_CREATED: inApp=true, email=true
     const defaultPrefs = await getUserNotificationPreferences(userA.id);

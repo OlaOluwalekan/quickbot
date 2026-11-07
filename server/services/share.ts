@@ -7,7 +7,6 @@ import { requireWorkspace } from "@/server/authz/access";
 import { Errors } from "@/server/http/errors";
 import { logActivity } from "@/server/services/activity";
 import { notify } from "@/server/services/notify";
-import { sendEmail } from "@/server/email/send";
 import { getStorageProvider } from "@/server/storage";
 import { ALLOWED_MIME_TYPES } from "@/server/services/attachment";
 import type { StorageResourceType } from "@/server/storage/types";
@@ -121,48 +120,34 @@ export async function createShareLink(
     },
   });
 
-  await notify(
-    ws.ownerId,
-    "SHARE_CREATED",
-    {
-      workspaceId: ws.id,
-      shareId: shareLink.id,
-      scope: shareLink.scope,
-      responseId: shareLink.responseId,
-      shareUrl: url,
-      href: `/workspaces/${ws.id}`,
-    },
-    { dedupeKey: `share_created:${shareLink.id}`, email: false }
-  ).catch(() => {});
-
-  // Notify workspace owner via share-created email (non-blocking on failure)
+  // Notify the workspace owner (in-app + email per their SHARE_CREATED
+  // preferences). Never fail share creation on a notification error.
   try {
-    const [owner, fullWs] = await Promise.all([
-      db.user.findUnique({
-        where: { id: ws.ownerId },
-        select: {
-          email: true,
-          preference: { select: { uiLocale: true } },
-        },
-      }),
-      db.workspace.findUnique({
-        where: { id: ws.id },
-        select: { title: true },
-      }),
-    ]);
-    if (owner?.email) {
-      await sendEmail(
-        "share-created",
-        owner.email,
-        {
-          title: fullWs?.title || "Untitled Workspace",
-          shareUrl: url,
-        },
-        { locale: owner.preference?.uiLocale ?? undefined }
-      );
-    }
+    const fullWs = await db.workspace.findUnique({
+      where: { id: ws.id },
+      select: { title: true },
+    });
+    const title = fullWs?.title || "Untitled Workspace";
+    await notify(
+      ws.ownerId,
+      "SHARE_CREATED",
+      {
+        workspaceId: ws.id,
+        shareId: shareLink.id,
+        scope: shareLink.scope,
+        responseId: shareLink.responseId,
+        title,
+        href: `/workspaces/${ws.id}`,
+      },
+      {
+        dedupeKey: `share_created:${shareLink.id}`,
+        // The live share URL carries the raw token: only send it by email,
+        // never persist it in the notification payload.
+        emailData: { template: "share-created", data: { title, shareUrl: url } },
+      }
+    );
   } catch (err) {
-    console.warn("[share] Failed to send share-created notification email:", err);
+    console.warn("[share] Failed to send share-created notification:", err);
   }
 
   return {

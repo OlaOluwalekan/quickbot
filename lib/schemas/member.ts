@@ -36,9 +36,11 @@ export const transferOwnershipSchema = z.object({
   confirmation: z.string().min(1),
 });
 
-export const acceptInvitationSchema = z.object({
-  token: z.string().min(1),
-});
+/** Accept by emailed token, or by invitation id (signed-in invitee only). */
+export const acceptInvitationSchema = z.union([
+  z.object({ token: z.string().min(1) }).strict(),
+  z.object({ invitationId: z.string().min(1) }).strict(),
+]);
 
 export type CreateInvitationInput = z.infer<typeof createInvitationSchema>;
 export type UpdateMemberRoleInput = z.infer<typeof updateMemberRoleSchema>;
