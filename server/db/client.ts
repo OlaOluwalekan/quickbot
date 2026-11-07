@@ -3,7 +3,7 @@ import { PrismaClient } from "./generated/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { env } from "@/server/env";
 
-const CURRENT_SCHEMA_VER = "20261107100000_add_monthly_credit_cap";
+const CURRENT_SCHEMA_VER = "20261107110000_add_share_links_v2";
 
 const make = () =>
   new PrismaClient({
@@ -15,16 +15,37 @@ const g = globalThis as unknown as {
   __dbSchemaVer?: string;
 };
 
-if (
-  g.__db &&
-  (g.__dbSchemaVer !== CURRENT_SCHEMA_VER || !("auditLog" in g.__db))
-) {
-  g.__db.$disconnect().catch(() => {});
-  g.__db = undefined;
+function getClient(): PrismaClient {
+  if (
+    g.__db &&
+    (g.__dbSchemaVer !== CURRENT_SCHEMA_VER ||
+      !("auditLog" in g.__db) ||
+      !("shareLink" in g.__db))
+  ) {
+    g.__db.$disconnect().catch(() => {});
+    g.__db = undefined;
+  }
+
+  if (!g.__db) {
+    g.__db = make();
+    if (env.NODE_ENV !== "production") {
+      g.__dbSchemaVer = CURRENT_SCHEMA_VER;
+    }
+  }
+
+  return g.__db;
 }
 
-export const db = g.__db ?? make();
-if (env.NODE_ENV !== "production") {
-  g.__db = db;
-  g.__dbSchemaVer = CURRENT_SCHEMA_VER;
-}
+const initialClient = getClient();
+
+export const db: PrismaClient = new Proxy(initialClient, {
+  get(_target, prop, _receiver) {
+    const active = getClient();
+    const val = Reflect.get(active, prop, active);
+    return typeof val === "function" ? val.bind(active) : val;
+  },
+  has(_target, prop) {
+    const active = getClient();
+    return prop in active;
+  },
+});

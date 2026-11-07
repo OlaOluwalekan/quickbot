@@ -53,6 +53,7 @@ import { SourcesAccordion } from "./citations";
 import { EditResponse } from "./edit-response";
 import { Markdown } from "@/components/markdown";
 import { AnnotationLayer } from "@/components/annotations";
+import { ShareAndPeopleDialog } from "@/components/workspace/ShareAndPeopleDialog";
 import { useUiStore } from "@/lib/stores/ui";
 import {
   useResponseVersions,
@@ -152,6 +153,7 @@ export function ResponseCard({
   );
   const [copied, setCopied] = React.useState(false);
   const [lightboxOpen, setLightboxOpen] = React.useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = React.useState(false);
   const [signedUrlsByAttachmentId, setSignedUrlsByAttachmentId] = React.useState<
     Record<string, string>
   >({});
@@ -896,24 +898,17 @@ export function ResponseCard({
                     </TooltipContent>
                   </Tooltip>
 
-                  {/* Share (Step 7.6 placeholder) */}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        disabled
-                        className="text-fg-muted/50 hidden h-8 cursor-not-allowed px-2 text-xs md:inline-flex"
-                      >
-                        <Share2 className="mr-1 h-3.5 w-3.5" />
-                        <span>{t("share")}</span>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top">
-                      <p className="text-xs">{t("shareSoon")}</p>
-                    </TooltipContent>
-                  </Tooltip>
+                  {/* Share (Step 7.6) */}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShareDialogOpen(true)}
+                    className="text-fg-muted hover:text-fg hidden h-8 px-2.5 text-xs md:inline-flex"
+                  >
+                    <Share2 className="mr-1 h-3.5 w-3.5" />
+                    <span>{t("share")}</span>
+                  </Button>
 
                   {/* Export (Step 5.6: Markdown, PDF, DOCX) */}
                   {!isImageResponse && (
@@ -1027,6 +1022,19 @@ export function ResponseCard({
           )}
         </div>
       </div>
+      {shareDialogOpen && (
+        <ShareAndPeopleDialog
+          open={shareDialogOpen}
+          onOpenChange={setShareDialogOpen}
+          workspaceId={workspaceId}
+          workspaceTitle={useUiStore.getState().currentPageTitle || "Workspace"}
+          currentUserId={userId}
+          initialTab="public"
+          initialScope="RESPONSE"
+          initialResponseId={response.id}
+          initialResponsePrompt={response.prompt}
+        />
+      )}
     </div>
   );
 }

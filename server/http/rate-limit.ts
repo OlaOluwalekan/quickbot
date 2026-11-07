@@ -15,6 +15,7 @@ export const policies = {
   "gen:start":    { n: 20,  window: "1 m"  as Duration }, // key: userId (plan caps are in Step 8.1)
   "upload":       { n: 30,  window: "10 m" as Duration }, // key: userId
   "share:create": { n: 20,  window: "1 h"  as Duration },
+  "share:view":   { n: 60,  window: "1 m"  as Duration }, // key: ip
   "invite:send":  { n: 20,  window: "1 h"  as Duration },
   "support:send": { n: 3,   window: "1 h"  as Duration }, // key: ip or userId
   "link:fetch":   { n: 10,  window: "1 m"  as Duration }, // key: userId

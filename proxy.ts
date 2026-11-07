@@ -3,11 +3,17 @@ import { getSessionCookie } from "better-auth/cookies";
 import { authRoutes, DEFAULT_LOGIN_REDIRECT, publicRoutes } from "./utils/routes";
 
 function attachSecurityHeaders(res: NextResponse, pathname: string) {
+  if (pathname.startsWith("/s/") || pathname.startsWith("/api/v1/s/")) {
+    res.headers.set("Cache-Control", "private, no-store");
+    res.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
+    res.headers.set("Referrer-Policy", "no-referrer");
+    return res;
+  }
+
   const isPrivateRoute =
     pathname.startsWith("/workspaces") ||
     pathname.startsWith("/projects") ||
     pathname.startsWith("/settings") ||
-    pathname.startsWith("/s/") ||
     pathname.startsWith("/api/");
 
   if (isPrivateRoute) {
