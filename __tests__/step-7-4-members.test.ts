@@ -18,12 +18,14 @@ import {
 import {
   listWorkspaceMembers,
   updateWorkspaceMemberRole,
+  updateProjectMemberRole,
   removeWorkspaceMember,
   removeProjectMember,
+  countWorkspaceMembers,
   transferWorkspaceOwnership,
   transferProjectOwnership,
 } from "@/server/services/members";
-import { listWorkspaceActivity } from "@/server/services/activity";
+import { listWorkspaceActivity, logActivity } from "@/server/services/activity";
 import { resolveWorkspaceRole } from "@/server/authz/access";
 import { POST as acceptRoute } from "@/app/api/v1/invitations/accept/route";
 
@@ -407,6 +409,210 @@ describe("Step 7.4 — Members and invitations", () => {
         newOwnerId: ids.owner,
         confirmation: "TRANSFER",
       });
+    });
+  });
+
+  // ---------------- Hardening (review fixes) ----------------
+  describe("hardening", () => {
+    let hWs = "";
+    let hProj = "";
+    let hProjWs = "";
+
+    beforeAll(async () => {
+      hWs = (await db.workspace.create({ data: { ownerId: ids.owner, title: "Hardening WS" } })).id;
+      hProj = (await db.project.create({ data: { ownerId: ids.owner, name: "Hardening Project" } })).id;
+      hProjWs = (
+        await db.workspace.create({ data: { ownerId: ids.owner, title: "Hardening Project WS", projectId: hProj } })
+      ).id;
+      await db.workspaceMember.create({
+        data: { workspaceId: hWs, userId: ids.admin, role: "ADMIN", invitedById: ids.owner },
+      });
+      await db.projectMember.createMany({
+        data: [
+          { projectId: hProj, userId: ids.admin, role: "ADMIN", invitedById: ids.owner },
+          { projectId: hProj, userId: ids.editor, role: "ADMIN", invitedById: ids.owner },
+        ],
+      });
+    });
+
+    it("role changes cannot add non-members (workspace and project)", async () => {
+      await expect(
+        updateWorkspaceMemberRole(actorFor("admin"), hWs, ids.stranger, "VIEWER")
+      ).rejects.toMatchObject({ status: 404 });
+      expect(await resolveWorkspaceRole(ids.stranger, hWs)).toBeNull();
+
+      await expect(
+        updateProjectMemberRole(actorFor("owner"), hProj, ids.stranger, "VIEWER")
+      ).rejects.toMatchObject({ status: 404 });
+      expect(
+        await db.projectMember.findUnique({ where: { projectId_userId: { projectId: hProj, userId: ids.stranger } } })
+      ).toBeNull();
+    });
+
+    it("non-owner admins cannot change or remove an Admin inherited from the project", async () => {
+      await expect(
+        updateWorkspaceMemberRole(actorFor("admin"), hProjWs, ids.editor, "NONE")
+      ).rejects.toMatchObject({ status: 403 });
+      await expect(removeWorkspaceMember(actorFor("admin"), hProjWs, ids.editor)).rejects.toMatchObject({
+        status: 403,
+      });
+      expect((await resolveWorkspaceRole(ids.editor, hProjWs))?.role).toBe("ADMIN");
+    });
+
+    it("leaving or removing on a resource you can't access is 404 and logs nothing", async () => {
+      await expect(removeWorkspaceMember(actorFor("stranger"), hWs, ids.stranger)).rejects.toMatchObject({
+        status: 404,
+      });
+      await expect(removeProjectMember(actorFor("stranger"), hProj, ids.stranger)).rejects.toMatchObject({
+        status: 404,
+      });
+      // Removing someone who isn't a member is also 404
+      await expect(removeWorkspaceMember(actorFor("owner"), hWs, ids.viewer)).rejects.toMatchObject({
+        status: 404,
+      });
+      const logs = await db.activityLog.findMany({
+        where: { actorId: ids.stranger, OR: [{ workspaceId: hWs }, { projectId: hProj }] },
+      });
+      expect(logs).toHaveLength(0);
+    });
+
+    it("inviting someone who already has access sends nothing", async () => {
+      const res = await createInvitation(actorFor("owner"), {
+        workspaceId: hWs,
+        emailOrUsername: email("admin"),
+        role: "VIEWER",
+      });
+      expect(res).toEqual({ success: true, message: "Invitation sent" });
+      expect(sentEmails).toHaveLength(0);
+      expect(await db.invitation.count({ where: { workspaceId: hWs, email: email("admin") } })).toBe(0);
+
+      // Inherited project access counts as access too
+      await createInvitation(actorFor("owner"), {
+        workspaceId: hProjWs,
+        emailOrUsername: email("editor"),
+        role: "VIEWER",
+      });
+      expect(sentEmails).toHaveLength(0);
+    });
+
+    it("revoked and accepted invitations cannot be resent", async () => {
+      await createInvitation(actorFor("owner"), { workspaceId: hWs, emailOrUsername: `rv_${sfx}@example.com`, role: "VIEWER" });
+      const revoked = await db.invitation.findFirstOrThrow({ where: { workspaceId: hWs, email: `rv_${sfx}@example.com` } });
+      await revokeInvitation(actorFor("owner"), { workspaceId: hWs, invitationId: revoked.id });
+      await expect(
+        resendInvitation(actorFor("owner"), { workspaceId: hWs, invitationId: revoked.id })
+      ).rejects.toMatchObject({ status: 400 });
+      expect((await db.invitation.findUniqueOrThrow({ where: { id: revoked.id } })).status).toBe("REVOKED");
+
+      await createInvitation(actorFor("owner"), { workspaceId: hWs, emailOrUsername: email("viewer"), role: "VIEWER" });
+      const token = tokenFromLastEmail();
+      await acceptInvitation(actorFor("viewer"), token);
+      const accepted = await db.invitation.findUniqueOrThrow({ where: { tokenHash: hashInviteToken(token) } });
+      await expect(
+        resendInvitation(actorFor("owner"), { workspaceId: hWs, invitationId: accepted.id })
+      ).rejects.toMatchObject({ status: 400 });
+      expect((await db.invitation.findUniqueOrThrow({ where: { id: accepted.id } })).status).toBe("ACCEPTED");
+    });
+
+    it("an expired invitation can be resent, but only within the plan limit", async () => {
+      setUserPlanOverride(ids.owner, "LITE"); // 2 seats
+      const before = await db.workspaceMember.count({ where: { workspaceId: hWs, role: { not: "NONE" } } });
+      expect(before).toBe(2); // admin + viewer -> plan full
+
+      await db.invitation.create({
+        data: {
+          workspaceId: hWs,
+          email: `lapsed_${sfx}@example.com`,
+          role: "VIEWER",
+          tokenHash: hashInviteToken(`lapsed-${sfx}`),
+          invitedById: ids.owner,
+          expiresAt: new Date(Date.now() - 1000),
+        },
+      });
+      const lapsed = await db.invitation.findUniqueOrThrow({ where: { tokenHash: hashInviteToken(`lapsed-${sfx}`) } });
+      await expect(
+        resendInvitation(actorFor("owner"), { workspaceId: hWs, invitationId: lapsed.id })
+      ).rejects.toMatchObject({ status: 403, code: "member_limit_reached" });
+
+      setUserPlanOverride(ids.owner, "PRO");
+      await resendInvitation(actorFor("owner"), { workspaceId: hWs, invitationId: lapsed.id });
+      expect((await getInvitationInfoByToken(tokenFromLastEmail())).valid).toBe(true);
+    });
+
+    it("concurrent invites cannot exceed the plan member limit", async () => {
+      setUserPlanOverride(ids.owner, "LITE"); // 2 seats
+      await db.projectMember.deleteMany({ where: { projectId: hProj, userId: ids.editor } });
+      // 1 member (admin) -> exactly 1 seat left
+      const results = await Promise.allSettled(
+        [1, 2, 3, 4].map((n) =>
+          createInvitation(actorFor("owner"), {
+            projectId: hProj,
+            emailOrUsername: `race${n}_${sfx}@example.com`,
+            role: "VIEWER",
+          })
+        )
+      );
+      expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+      expect(
+        await db.invitation.count({ where: { projectId: hProj, status: "PENDING", email: { startsWith: "race" } } })
+      ).toBe(1);
+    });
+
+    it("unusable tokens all return the same generic message and never the raw email", async () => {
+      await createInvitation(actorFor("owner"), { workspaceId: hWs, emailOrUsername: `gen_${sfx}@example.com`, role: "VIEWER" });
+      const token = tokenFromLastEmail();
+
+      const ok = await getInvitationInfoByToken(token, { email: `GEN_${sfx}@example.com` });
+      expect(ok).toMatchObject({ valid: true, signedInEmailMatches: true });
+      expect(JSON.stringify(ok)).not.toContain(`gen_${sfx}@example.com`);
+      expect((await getInvitationInfoByToken(token, { email: email("viewer") })).signedInEmailMatches).toBe(false);
+      expect((await getInvitationInfoByToken(token)).signedInEmailMatches).toBeNull();
+
+      const unknown = await getInvitationInfoByToken("not-a-real-token");
+      await db.invitation.update({ where: { tokenHash: hashInviteToken(token) }, data: { status: "REVOKED" } });
+      const revoked = await getInvitationInfoByToken(token);
+      await db.invitation.update({
+        where: { tokenHash: hashInviteToken(token) },
+        data: { status: "PENDING", expiresAt: new Date(Date.now() - 1000) },
+      });
+      const expired = await getInvitationInfoByToken(token);
+      expect(revoked).toEqual(unknown);
+      expect(expired).toEqual(unknown);
+      expect(unknown.valid).toBe(false);
+    });
+
+    it("member.added activity stores a masked email", async () => {
+      const log = await db.activityLog.findFirstOrThrow({
+        where: { workspaceId: hWs, action: "member.added", targetId: ids.viewer },
+      });
+      expect(JSON.stringify(log.meta)).not.toContain(email("viewer"));
+    });
+
+    it("counts effective members (owner + explicit + inherited − NONE)", async () => {
+      // hProjWs: owner + project admin (editor was removed above)
+      expect(await countWorkspaceMembers(hProjWs)).toBe(2);
+      await db.workspaceMember.create({
+        data: { workspaceId: hProjWs, userId: ids.admin, role: "NONE", invitedById: ids.owner },
+      });
+      expect(await countWorkspaceMembers(hProjWs)).toBe(1);
+    });
+
+    it("logActivity failures inside a transaction roll the change back", async () => {
+      await expect(
+        db.$transaction(async (tx) => {
+          await tx.workspace.update({ where: { id: hWs }, data: { title: "Should Roll Back" } });
+          // actorId FK violation -> activity insert fails
+          await logActivity(tx, { workspaceId: hWs, actorId: "no-such-user", action: "test.fail" });
+        })
+      ).rejects.toBeDefined();
+      expect((await db.workspace.findUniqueOrThrow({ where: { id: hWs } })).title).toBe("Hardening WS");
+
+      // Outside a transaction it stays best-effort
+      const err = jest.spyOn(console, "error").mockImplementation(() => {});
+      await expect(
+        logActivity(db, { workspaceId: hWs, actorId: "no-such-user", action: "test.fail" })
+      ).resolves.toBeNull();
+      err.mockRestore();
     });
   });
 });

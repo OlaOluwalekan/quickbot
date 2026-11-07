@@ -36,6 +36,10 @@ export async function logActivity(
       },
     });
   } catch (err) {
+    // Inside a transaction a failed INSERT aborts the whole Postgres transaction,
+    // so swallowing here would make the caller's COMMIT silently roll back.
+    // Let it propagate so the change and its activity entry stay atomic (§7.4).
+    if (prisma !== db) throw err;
     console.error("[ActivityLog] Failed to log activity:", err);
     return null;
   }

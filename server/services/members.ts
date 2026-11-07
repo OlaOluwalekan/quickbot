@@ -278,17 +278,29 @@ export async function updateWorkspaceMemberRole(
   const existingMember = await db.workspaceMember.findUnique({
     where: { workspaceId_userId: { workspaceId, userId: targetUserId } },
   });
+  const projectMember = ws.projectId
+    ? await db.projectMember.findUnique({
+        where: { projectId_userId: { projectId: ws.projectId, userId: targetUserId } },
+      })
+    : null;
+
+  // Role changes only apply to existing members (explicit or inherited from the
+  // project). Granting access to anyone else must go through an invitation.
+  const isExplicitMember = Boolean(existingMember && existingMember.role !== "NONE");
+  if (!isExplicitMember && !projectMember) {
+    throw Errors.notFound("Member");
+  }
 
   if (!isOwner) {
     if (newRole === "ADMIN") {
       throw Errors.forbidden("Only the owner can assign the Admin role");
     }
-    if (existingMember?.role === "ADMIN") {
+    if (existingMember?.role === "ADMIN" || projectMember?.role === "ADMIN") {
       throw Errors.forbidden("Only the owner can modify an Admin's role");
     }
   }
 
-  const oldRole = existingMember?.role || "NONE";
+  const oldRole = isExplicitMember ? existingMember!.role : projectMember?.role ?? "NONE";
 
   const updated = await db.workspaceMember.upsert({
     where: { workspaceId_userId: { workspaceId, userId: targetUserId } },
@@ -335,6 +347,11 @@ export async function updateProjectMemberRole(
     where: { projectId_userId: { projectId, userId: targetUserId } },
   });
 
+  // Role changes only apply to existing members; new people must be invited
+  if (!existingMember) {
+    throw Errors.notFound("Member");
+  }
+
   if (!isOwner) {
     if (newRole === "ADMIN") {
       throw Errors.forbidden("Only the owner can assign the Admin role");
@@ -344,17 +361,11 @@ export async function updateProjectMemberRole(
     }
   }
 
-  const oldRole = existingMember?.role || "NONE";
+  const oldRole = existingMember.role;
 
-  const updated = await db.projectMember.upsert({
-    where: { projectId_userId: { projectId, userId: targetUserId } },
-    update: { role: newRole as ProjectRole },
-    create: {
-      projectId,
-      userId: targetUserId,
-      role: newRole as ProjectRole,
-      invitedById: actor.userId,
-    },
+  const updated = await db.projectMember.update({
+    where: { id: existingMember.id },
+    data: { role: newRole as ProjectRole },
   });
 
   await logActivity(db, {
@@ -374,46 +385,42 @@ export async function removeWorkspaceMember(
   workspaceId: string,
   targetUserId: string
 ) {
-  const ws = await db.workspace.findUnique({
-    where: { id: workspaceId },
-    select: { id: true, ownerId: true, projectId: true },
-  });
+  const isSelf = actor.userId === targetUserId;
 
-  if (!ws) throw Errors.notFound("Workspace");
+  // Authorize first so strangers get 404 (no existence leak, no activity entries).
+  // Leaving only needs read access; removing someone else needs manage_members.
+  const { ws } = await requireWorkspace(
+    actor,
+    workspaceId,
+    isSelf ? "workspace.read" : "workspace.manage_members"
+  );
 
   if (targetUserId === ws.ownerId) {
     throw Errors.badRequest("Cannot remove the workspace owner. Transfer ownership first.");
-  }
-
-  const isSelf = actor.userId === targetUserId;
-
-  if (!isSelf) {
-    // Requires manage_members
-    await requireWorkspace(actor, workspaceId, "workspace.manage_members");
-
-    const isOwner = actor.userId === ws.ownerId;
-    if (!isOwner) {
-      // Check if target is admin
-      const targetMember = await db.workspaceMember.findUnique({
-        where: { workspaceId_userId: { workspaceId, userId: targetUserId } },
-      });
-      if (targetMember?.role === "ADMIN") {
-        throw Errors.forbidden("Only the owner can remove an Admin");
-      }
-    }
   }
 
   // Check if member exists in workspace or inherits from project
   const existingWm = await db.workspaceMember.findUnique({
     where: { workspaceId_userId: { workspaceId, userId: targetUserId } },
   });
+  const pm = ws.projectId
+    ? await db.projectMember.findUnique({
+        where: { projectId_userId: { projectId: ws.projectId, userId: targetUserId } },
+      })
+    : null;
+  const inheritsFromProject = Boolean(pm);
 
-  let inheritsFromProject = false;
-  if (ws.projectId) {
-    const pm = await db.projectMember.findUnique({
-      where: { projectId_userId: { projectId: ws.projectId, userId: targetUserId } },
-    });
-    inheritsFromProject = Boolean(pm);
+  const hasAccess = Boolean(existingWm && existingWm.role !== "NONE") || inheritsFromProject;
+  if (!hasAccess || existingWm?.role === "NONE") {
+    // Not a member, or already excluded
+    throw Errors.notFound("Member");
+  }
+
+  if (!isSelf && actor.userId !== ws.ownerId) {
+    // Admins (explicit or inherited from the project) can only be removed by the owner
+    if (existingWm?.role === "ADMIN" || (!existingWm && pm?.role === "ADMIN")) {
+      throw Errors.forbidden("Only the owner can remove an Admin");
+    }
   }
 
   if (inheritsFromProject) {
@@ -451,37 +458,32 @@ export async function removeProjectMember(
   projectId: string,
   targetUserId: string
 ) {
-  const project = await db.project.findUnique({
-    where: { id: projectId },
-    select: { id: true, ownerId: true },
-  });
+  const isSelf = actor.userId === targetUserId;
 
-  if (!project) throw Errors.notFound("Project");
+  // Authorize first so strangers get 404 (no existence leak, no activity entries)
+  const { project } = await requireProject(
+    actor,
+    projectId,
+    isSelf ? "workspace.read" : "workspace.manage_members"
+  );
 
   if (targetUserId === project.ownerId) {
     throw Errors.badRequest("Cannot remove the project owner. Transfer ownership first.");
   }
 
-  const isSelf = actor.userId === targetUserId;
+  const targetMember = await db.projectMember.findUnique({
+    where: { projectId_userId: { projectId, userId: targetUserId } },
+  });
+  if (!targetMember) {
+    throw Errors.notFound("Member");
+  }
 
-  if (!isSelf) {
-    await requireProject(actor, projectId, "workspace.manage_members");
-
-    const isOwner = actor.userId === project.ownerId;
-    if (!isOwner) {
-      const targetMember = await db.projectMember.findUnique({
-        where: { projectId_userId: { projectId, userId: targetUserId } },
-      });
-      if (targetMember?.role === "ADMIN") {
-        throw Errors.forbidden("Only the owner can remove an Admin");
-      }
-    }
+  if (!isSelf && actor.userId !== project.ownerId && targetMember.role === "ADMIN") {
+    throw Errors.forbidden("Only the owner can remove an Admin");
   }
 
   // Removing from project deletes ProjectMember row, removing inherited workspace access
-  await db.projectMember.deleteMany({
-    where: { projectId, userId: targetUserId },
-  });
+  await db.projectMember.delete({ where: { id: targetMember.id } });
 
   await logActivity(db, {
     projectId,
@@ -653,4 +655,29 @@ export async function transferProjectOwnership(
 
     return { success: true, newOwnerId };
   });
+}
+
+/**
+ * Number of people with access to a workspace: the owner, plus explicit
+ * members, plus project members inheriting access, minus `NONE` exclusions.
+ */
+export async function countWorkspaceMembers(workspaceId: string): Promise<number> {
+  const ws = await db.workspace.findUnique({
+    where: { id: workspaceId },
+    select: {
+      ownerId: true,
+      members: { select: { userId: true, role: true } },
+      project: { select: { members: { select: { userId: true } } } },
+    },
+  });
+  if (!ws) return 0;
+
+  const people = new Set<string>();
+  for (const pm of ws.project?.members ?? []) people.add(pm.userId);
+  for (const wm of ws.members ?? []) {
+    if (wm.role === "NONE") people.delete(wm.userId);
+    else people.add(wm.userId);
+  }
+  people.delete(ws.ownerId);
+  return people.size + 1;
 }

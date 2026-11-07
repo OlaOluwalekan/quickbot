@@ -16,7 +16,7 @@ interface InviteInfo {
   error?: string;
   id?: string;
   email?: string;
-  invitedEmail?: string;
+  signedInEmailMatches?: boolean | null;
   role?: string;
   expiresAt?: string;
   workspace?: { id: string; title: string } | null;
@@ -128,10 +128,7 @@ export default function InviteLandingPage() {
   const resourceType = inviteInfo.workspace ? "workspace" : "project";
   const inviterName = inviteInfo.inviter?.name || "A collaborator";
   const roleName = inviteInfo.role?.toLowerCase() || "member";
-  const isEmailMatch =
-    actor &&
-    inviteInfo.invitedEmail &&
-    actor.email.trim().toLowerCase() === inviteInfo.invitedEmail.trim().toLowerCase();
+  const isEmailMatch = Boolean(actor && inviteInfo.signedInEmailMatches);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-bg p-4">

@@ -9,5 +9,5 @@ const infoQuerySchema = z.object({
 export const GET = route({
   auth: "optional",
   query: infoQuerySchema,
-  handler: async ({ query }) => getInvitationInfoByToken(query.token),
+  handler: async ({ actor, query }) => getInvitationInfoByToken(query.token, actor),
 });

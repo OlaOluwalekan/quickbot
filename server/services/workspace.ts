@@ -3,6 +3,7 @@ import { db } from "@/server/db/client";
 import type { Actor } from "@/server/auth/session";
 import { Errors } from "@/server/http/errors";
 import { logActivity } from "./activity";
+import { countWorkspaceMembers } from "./members";
 import { toPage } from "@/server/http/pagination";
 import {
   requireProject,
@@ -155,6 +156,9 @@ export async function getWorkspace(actor: Actor, workspaceId: string) {
   return {
     ...workspace,
     role,
+    // Effective headcount (owner + explicit + inherited project members - NONE);
+    // `_count.members` would count NONE exclusions and miss inherited access.
+    memberCount: await countWorkspaceMembers(workspaceId),
   };
 }
 

@@ -33,7 +33,7 @@ const SingleWorkspacePage = async ({
         title: workspace.title,
         createdBy: workspace.ownerId,
         projectId: workspace.projectId,
-        memberCount: (workspace._count?.members ?? 0) + 1,
+        memberCount: workspace.memberCount,
         createdAt: workspace.createdAt.toISOString(),
         updatedAt: workspace.updatedAt.toISOString(),
       }}

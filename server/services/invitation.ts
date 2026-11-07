@@ -3,12 +3,17 @@ import crypto from "node:crypto";
 import { db } from "@/server/db/client";
 import type { Actor } from "@/server/auth/session";
 import { Errors } from "@/server/http/errors";
-import { requireWorkspace, requireProject } from "@/server/authz/access";
+import {
+  requireWorkspace,
+  requireProject,
+  resolveWorkspaceRole,
+  resolveProjectRole,
+} from "@/server/authz/access";
 import { logActivity } from "./activity";
 import { sendEmail, maskEmail } from "@/server/email/send";
 import { env } from "@/server/env";
 import { PLANS, getUserPlanOverride, type PlanKey } from "@/server/billing/plans";
-import type { WorkspaceRole, ProjectRole } from "../db/generated/client";
+import type { WorkspaceRole, ProjectRole, Prisma } from "../db/generated/client";
 
 export type CreateInvitationOptions = {
   workspaceId?: string;
@@ -23,6 +28,57 @@ export function hashInviteToken(token: string): string {
 
 export function generateInviteToken(): string {
   return crypto.randomBytes(32).toString("base64url");
+}
+
+const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** Single generic message for every unusable token (invalid, revoked, expired, used). */
+const INVALID_INVITE_MESSAGE = "This invitation is invalid or has expired";
+
+type InviteTarget = { workspaceId: string } | { projectId: string };
+
+/**
+ * Serializes invitation writes per resource for the rest of the transaction so
+ * concurrent invites can't both pass the member-limit check.
+ */
+async function lockInviteTarget(tx: Prisma.TransactionClient, target: InviteTarget) {
+  const key = "workspaceId" in target ? `ws:${target.workspaceId}` : `proj:${target.projectId}`;
+  await tx.$queryRaw`SELECT 1 FROM pg_advisory_xact_lock(hashtext(${key}))`;
+}
+
+/** Throws `member_limit_reached` when members + live pending invites would exceed the owner's plan. */
+async function assertMemberCapacity(
+  tx: Prisma.TransactionClient,
+  target: InviteTarget,
+  ownerId: string,
+  opts: { excludeInvitationId?: string } = {}
+) {
+  const ownerPlanKey = await resolveOwnerPlan(ownerId);
+  const maxMembers = PLANS[ownerPlanKey]?.limits?.members ?? 0;
+  const now = new Date();
+
+  const currentMembersCount =
+    "workspaceId" in target
+      ? await tx.workspaceMember.count({
+          where: { workspaceId: target.workspaceId, role: { not: "NONE" } },
+        })
+      : await tx.projectMember.count({ where: { projectId: target.projectId } });
+
+  const pendingInvitesCount = await tx.invitation.count({
+    where: {
+      ...target,
+      status: "PENDING",
+      expiresAt: { gt: now },
+      ...(opts.excludeInvitationId ? { id: { not: opts.excludeInvitationId } } : {}),
+    },
+  });
+
+  if (currentMembersCount + pendingInvitesCount >= maxMembers) {
+    throw Errors.forbidden(
+      `Plan member limit reached (${maxMembers} members max on ${PLANS[ownerPlanKey]?.name || "Free"} plan). Upgrade to invite more members.`,
+      "member_limit_reached"
+    );
+  }
 }
 
 async function resolveOwnerPlan(ownerId: string): Promise<PlanKey> {
@@ -146,72 +202,49 @@ export async function createInvitation(
     return { success: true, message: "Invitation sent" };
   }
 
-  // 3. Check plan member limit (§4.4) on the owner's plan
-  const ownerPlanKey = await resolveOwnerPlan(ownerId);
-  const planLimits = PLANS[ownerPlanKey]?.limits;
-  const maxMembers = planLimits?.members ?? 0;
-
-  let currentMembersCount = 0;
-  let pendingInvitesCount = 0;
-
-  if (workspaceId) {
-    currentMembersCount = await db.workspaceMember.count({
-      where: { workspaceId, role: { not: "NONE" } },
-    });
-    pendingInvitesCount = await db.invitation.count({
-      where: {
-        workspaceId,
-        status: "PENDING",
-        expiresAt: { gt: new Date() },
-      },
-    });
-  } else {
-    currentMembersCount = await db.projectMember.count({
-      where: { projectId: projectId! },
-    });
-    pendingInvitesCount = await db.invitation.count({
-      where: {
-        projectId: projectId!,
-        status: "PENDING",
-        expiresAt: { gt: new Date() },
-      },
-    });
+  // Already has access (explicit or inherited) -> nothing to send; stay generic
+  if (targetUserId) {
+    const existingAccess = workspaceId
+      ? await resolveWorkspaceRole(targetUserId, workspaceId)
+      : await resolveProjectRole(targetUserId, projectId!);
+    if (existingAccess) {
+      return { success: true, message: "Invitation sent" };
+    }
   }
 
-  if (currentMembersCount + pendingInvitesCount >= maxMembers) {
-    throw Errors.forbidden(
-      `Plan member limit reached (${maxMembers} members max on ${PLANS[ownerPlanKey]?.name || "Free"} plan). Upgrade to invite more members.`,
-      "member_limit_reached"
-    );
-  }
-
-  // 4. Invalidate any existing PENDING invitation for this email on this resource
-  await db.invitation.updateMany({
-    where: {
-      email: targetEmail,
-      status: "PENDING",
-      ...(workspaceId ? { workspaceId } : { projectId }),
-    },
-    data: { status: "REVOKED" },
-  });
+  const target: InviteTarget = workspaceId ? { workspaceId } : { projectId: projectId! };
 
   // 5. Generate 32-byte crypto token (sha256 hash stored in DB)
   const rawToken = generateInviteToken();
   const tokenHash = hashInviteToken(rawToken);
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+  const expiresAt = new Date(Date.now() + INVITE_TTL_MS);
 
-  await db.invitation.create({
-    data: {
-      workspaceId: workspaceId ?? null,
-      projectId: projectId ?? null,
-      email: targetEmail,
-      invitedUserId: targetUserId,
-      role,
-      tokenHash,
-      status: "PENDING",
-      invitedById: actor.userId,
-      expiresAt,
-    },
+  await db.$transaction(async (tx) => {
+    await lockInviteTarget(tx, target);
+
+    // 3. Invalidate any existing PENDING invitation for this email on this resource
+    //    (before the limit check, so re-inviting the same person doesn't count twice)
+    await tx.invitation.updateMany({
+      where: { ...target, email: targetEmail, status: "PENDING" },
+      data: { status: "REVOKED" },
+    });
+
+    // 4. Check plan member limit (§4.4) on the owner's plan
+    await assertMemberCapacity(tx, target, ownerId);
+
+    await tx.invitation.create({
+      data: {
+        workspaceId: workspaceId ?? null,
+        projectId: projectId ?? null,
+        email: targetEmail,
+        invitedUserId: targetUserId,
+        role,
+        tokenHash,
+        status: "PENDING",
+        invitedById: actor.userId,
+        expiresAt,
+      },
+    });
   });
 
   // 6. Send transactional invitation email
@@ -351,12 +384,15 @@ export async function resendInvitation(
   }
 
   let resourceName: string;
+  let ownerId: string;
   if (workspaceId) {
-    await requireWorkspace(actor, workspaceId, "workspace.manage_members");
+    const { ws: access } = await requireWorkspace(actor, workspaceId, "workspace.manage_members");
+    ownerId = access.ownerId;
     const ws = await db.workspace.findUnique({ where: { id: workspaceId }, select: { title: true } });
     resourceName = ws?.title || "Workspace";
   } else {
-    await requireProject(actor, projectId!, "workspace.manage_members");
+    const { project: access } = await requireProject(actor, projectId!, "workspace.manage_members");
+    ownerId = access.ownerId;
     const p = await db.project.findUnique({ where: { id: projectId }, select: { name: true } });
     resourceName = p?.name || "Project";
   }
@@ -369,17 +405,36 @@ export async function resendInvitation(
     throw Errors.notFound("Invitation");
   }
 
+  // Only open or lapsed invitations can be resent. Revoked and accepted ones are
+  // final: resending them would resurrect a cancelled or single-use invite.
+  const isLapsed =
+    invitation.status === "EXPIRED" ||
+    (invitation.status === "PENDING" && invitation.expiresAt <= new Date());
+  if (invitation.status !== "PENDING" && !isLapsed) {
+    throw Errors.badRequest("Invitation is already " + invitation.status.toLowerCase());
+  }
+
   const rawToken = generateInviteToken();
   const tokenHash = hashInviteToken(rawToken);
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  const expiresAt = new Date(Date.now() + INVITE_TTL_MS);
+  const target: InviteTarget = workspaceId ? { workspaceId } : { projectId: projectId! };
 
-  await db.invitation.update({
-    where: { id: invitationId },
-    data: {
-      tokenHash,
-      status: "PENDING",
-      expiresAt,
-    },
+  await db.$transaction(async (tx) => {
+    await lockInviteTarget(tx, target);
+
+    // A lapsed invite no longer holds a seat, so reviving it must fit the plan again
+    if (isLapsed) {
+      await assertMemberCapacity(tx, target, ownerId, { excludeInvitationId: invitationId });
+    }
+
+    // Guard against a concurrent revoke/accept between the read above and this write
+    const updated = await tx.invitation.updateMany({
+      where: { id: invitationId, status: { in: ["PENDING", "EXPIRED"] } },
+      data: { tokenHash, status: "PENDING", expiresAt },
+    });
+    if (updated.count === 0) {
+      throw Errors.badRequest("Invitation is no longer pending");
+    }
   });
 
   const inviteUrl = `${env.APP_URL}/invite/${rawToken}`;
@@ -409,9 +464,12 @@ export async function resendInvitation(
   return { success: true, message: "Invitation resent" };
 }
 
-export async function getInvitationInfoByToken(token: string) {
+export async function getInvitationInfoByToken(
+  token: string,
+  viewer?: Pick<Actor, "email"> | null
+) {
   if (!token || typeof token !== "string") {
-    return { valid: false, error: "Invalid invitation link" };
+    return { valid: false, error: INVALID_INVITE_MESSAGE };
   }
 
   const tokenHash = hashInviteToken(token);
@@ -424,27 +482,19 @@ export async function getInvitationInfoByToken(token: string) {
     },
   });
 
-  if (!invite) {
-    return { valid: false, error: "Invalid or expired invitation" };
-  }
-
-  const isExpired = invite.expiresAt <= new Date();
-  if (invite.status !== "PENDING" || isExpired) {
-    return {
-      valid: false,
-      status: invite.status,
-      isExpired,
-      error: isExpired
-        ? "This invitation has expired"
-        : `This invitation is ${invite.status.toLowerCase()}`,
-    };
+  // Invalid, revoked, expired and already-used tokens are indistinguishable (§7.4)
+  if (!invite || invite.status !== "PENDING" || invite.expiresAt <= new Date()) {
+    return { valid: false, error: INVALID_INVITE_MESSAGE };
   }
 
   return {
     valid: true,
     id: invite.id,
     email: maskEmail(invite.email),
-    invitedEmail: invite.email,
+    // Compare server-side so the raw address never leaves the server
+    signedInEmailMatches: viewer
+      ? viewer.email.trim().toLowerCase() === invite.email.trim().toLowerCase()
+      : null,
     role: invite.role,
     expiresAt: invite.expiresAt,
     workspace: invite.workspace ? { id: invite.workspace.id, title: invite.workspace.title } : null,
@@ -466,12 +516,8 @@ export async function acceptInvitation(actor: Actor, token: string) {
     where: { tokenHash },
   });
 
-  if (!invite) {
-    throw Errors.badRequest("Invalid or expired invitation");
-  }
-
-  if (invite.status !== "PENDING" || invite.expiresAt <= new Date()) {
-    throw Errors.badRequest("Invalid or expired invitation");
+  if (!invite || invite.status !== "PENDING" || invite.expiresAt <= new Date()) {
+    throw Errors.badRequest(INVALID_INVITE_MESSAGE);
   }
 
   // Must be signed in with the same, verified email
@@ -505,7 +551,7 @@ export async function acceptInvitation(actor: Actor, token: string) {
     });
 
     if (updated.count === 0) {
-      throw Errors.badRequest("Invitation is no longer valid or has already been accepted");
+      throw Errors.badRequest(INVALID_INVITE_MESSAGE);
     }
 
     if (invite.workspaceId) {
@@ -533,7 +579,7 @@ export async function acceptInvitation(actor: Actor, token: string) {
         action: "member.added",
         targetType: "user",
         targetId: actor.userId,
-        meta: { role: invite.role, email: invite.email },
+        meta: { role: invite.role, email: maskEmail(invite.email) },
       });
     } else if (invite.projectId) {
       await tx.projectMember.upsert({
@@ -560,7 +606,7 @@ export async function acceptInvitation(actor: Actor, token: string) {
         action: "member.added",
         targetType: "user",
         targetId: actor.userId,
-        meta: { role: invite.role, email: invite.email },
+        meta: { role: invite.role, email: maskEmail(invite.email) },
       });
     }
 
