@@ -273,6 +273,13 @@ describe("Step 3.4 — AppShell, Sidebar, Topbar, Mobile Drawer & Command Palett
       }),
     });
     global.fetch = fetchMock as unknown as typeof fetch;
+    // The Topbar also renders NotificationBell, which polls
+    // /api/v1/notifications/unread-count through the same fetch. Only count
+    // calls that hit the workspace endpoint.
+    const workspaceCalls = () =>
+      fetchMock.mock.calls.filter(([url]) =>
+        String(url).startsWith("/api/v1/workspaces/")
+      );
 
     renderAppShell(false);
 
@@ -291,7 +298,7 @@ describe("Step 3.4 — AppShell, Sidebar, Topbar, Mobile Drawer & Command Palett
     // Press Escape -> cancels without calling API
     fireEvent.change(input, { target: { value: "Aborted Name" } });
     fireEvent.keyDown(input, { key: "Escape" });
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(workspaceCalls()).toHaveLength(0);
     expect(
       screen.getByRole("button", { name: /Bernoulli Numbers/i })
     ).toBeInTheDocument();
@@ -307,9 +314,9 @@ describe("Step 3.4 — AppShell, Sidebar, Topbar, Mobile Drawer & Command Palett
     fireEvent.keyDown(inputAgain, { key: "Enter" });
 
     await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(workspaceCalls()).toHaveLength(1);
     });
-    expect(fetchMock.mock.calls[0][0]).toBe("/api/v1/workspaces/ws-today");
+    expect(workspaceCalls()[0][0]).toBe("/api/v1/workspaces/ws-today");
     expect(
       screen.getByRole("button", { name: /Updated Bernoulli Title/i })
     ).toBeInTheDocument();
