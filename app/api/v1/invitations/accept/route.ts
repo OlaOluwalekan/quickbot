@@ -1,8 +1,14 @@
 import { route } from "@/server/http/route";
 import { acceptInvitationSchema } from "@/lib/schemas/member";
-import { acceptInvitation } from "@/server/services/invitation";
+import {
+  acceptInvitation,
+  acceptInvitationById,
+} from "@/server/services/invitation";
 
 export const POST = route({
   body: acceptInvitationSchema,
-  handler: async ({ actor, body }) => acceptInvitation(actor, body.token),
+  handler: async ({ actor, body }) =>
+    "token" in body
+      ? acceptInvitation(actor, body.token)
+      : acceptInvitationById(actor, body.invitationId),
 });

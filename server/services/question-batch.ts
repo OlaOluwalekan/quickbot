@@ -4,6 +4,7 @@ import { db } from "@/server/db/client";
 import { Errors } from "@/server/http/errors";
 import { requireWorkspace } from "@/server/authz/access";
 import { resolveBilledAccount, reserveForWorkspaceGeneration } from "./billing-owner";
+import { notify } from "./notify";
 import type { Actor } from "@/server/auth/session";
 import type { RunQuestionBatchInput } from "@/lib/schemas/annotation";
 import {
@@ -323,6 +324,8 @@ export async function runQuestionBatch(
 
         let answeredCount = 0;
         let failedCount = 0;
+        // Per question author, so each person hears about their own questions
+        const answeredByAuthor = new Map<string, number>();
 
         for (const annot of claimedAnnotations) {
           const answer = answersMap.get(annot.id);
@@ -355,6 +358,10 @@ export async function runQuestionBatch(
               )
             );
             answeredCount++;
+            answeredByAuthor.set(
+              annot.createdById,
+              (answeredByAuthor.get(annot.createdById) ?? 0) + 1
+            );
           } else {
             // Missing in output -> FAILED (retryable, not charged separately)
             await db.annotation.update({
@@ -395,6 +402,23 @@ export async function runQuestionBatch(
             chargedCredits,
           },
         });
+
+        // Best-effort: questions may have been queued by other members, and
+        // the runner may have left the page before the stream finished.
+        for (const [authorId, count] of answeredByAuthor) {
+          await notify(
+            authorId,
+            "QUESTIONS_ANSWERED",
+            {
+              workspaceId,
+              answeredCount: count,
+              href: `/workspaces/${workspaceId}`,
+            },
+            { dedupeKey: `questions_answered:${generationId}` }
+          ).catch((notifyErr) => {
+            console.error("[QuestionBatch] Failed to notify:", notifyErr);
+          });
+        }
 
         controller.enqueue(
           encoder.encode(formatSSEEvent("status", { stage: "complete" }))

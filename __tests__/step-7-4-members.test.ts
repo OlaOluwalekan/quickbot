@@ -34,7 +34,7 @@ const sentEmails: Array<{ to: string; data: { inviteUrl?: string } }> = [];
 jest.mock("../server/email/send", () => ({
   sendEmail: jest.fn(async (_tpl: string, to: string, data: { inviteUrl?: string }) => {
     sentEmails.push({ to, data });
-    return { ok: true };
+    return { success: true };
   }),
   maskEmail: (e: string) => e.replace(/^(.).*(@.*)$/, "$1***$2"),
 }));

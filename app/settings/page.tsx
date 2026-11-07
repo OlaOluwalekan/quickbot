@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { SessionProps } from "@/types/user";
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
-import { Laptop, ChevronRight } from "lucide-react";
+import { Laptop, Bell, ChevronRight } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Settings",
@@ -92,6 +92,18 @@ const SettingsPage = async () => {
                       <span className="flex items-center gap-2">
                         <Laptop className="w-3.5 h-3.5 text-muted" />
                         Sessions & Devices
+                      </span>
+                      <ChevronRight className="w-3.5 h-3.5 text-muted" />
+                    </Link>
+                  </Button>
+                </div>
+
+                <div className="pt-1">
+                  <Button asChild variant="outline" className="w-full justify-between text-xs font-medium border-border hover:bg-surface-2">
+                    <Link href="/settings/notifications">
+                      <span className="flex items-center gap-2">
+                        <Bell className="w-3.5 h-3.5 text-muted" />
+                        Notifications
                       </span>
                       <ChevronRight className="w-3.5 h-3.5 text-muted" />
                     </Link>

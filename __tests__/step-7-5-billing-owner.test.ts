@@ -42,7 +42,7 @@ jest.mock("../server/email/send", () => ({
   sendEmail: jest.fn(
     async (template: string, to: string, data: Record<string, unknown>) => {
       sentEmails.push({ template, to, data });
-      return { ok: true };
+      return { success: true };
     }
   ),
   maskEmail: (e: string) => e.replace(/^(.).*(@.*)$/, "$1***$2"),
@@ -488,6 +488,8 @@ describe("Step 7.5 — Billing-owner resolution and collaborator spend controls"
         },
       },
     });
+    // Threshold alerts are also deduped per period by the notification row
+    await db.notification.deleteMany({ where: { userId: ids.owner } });
     clearThresholdNotificationsForTesting();
     sentEmails.length = 0;
 

@@ -5,7 +5,7 @@ import { env } from "@/server/env";
 
 // Bump to the latest migration name so dev hot-reload drops a client generated
 // against an older schema.
-const CURRENT_SCHEMA_VER = "20261107110000_add_share_links";
+const CURRENT_SCHEMA_VER = "20261107120000_add_notifications";
 
 const make = () =>
   new PrismaClient({
@@ -22,7 +22,8 @@ if (
   g.__db &&
   (g.__dbSchemaVer !== CURRENT_SCHEMA_VER ||
     !("auditLog" in g.__db) ||
-    !("shareLink" in g.__db))
+    !("shareLink" in g.__db) ||
+    !("notification" in g.__db))
 ) {
   g.__db.$disconnect().catch(() => {});
   g.__db = undefined;

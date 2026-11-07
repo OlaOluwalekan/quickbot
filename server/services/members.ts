@@ -5,6 +5,7 @@ import { Errors } from "@/server/http/errors";
 import { requireWorkspace, requireProject, resolveWorkspaceRole } from "@/server/authz/access";
 import { can } from "@/server/authz/permissions";
 import { logActivity } from "./activity";
+import { notify } from "./notify";
 import { getUserAvatar } from "./avatar";
 import { getMonthlySpendByActor } from "./billing-owner";
 import type { WorkspaceRole, ProjectRole } from "../db/generated/client";
@@ -16,6 +17,54 @@ async function getOwnerMonthlySpendByActor(ownerId: string): Promise<Map<string,
   });
   if (!account) return new Map();
   return getMonthlySpendByActor(account.id).catch(() => new Map<string, number>());
+}
+
+type MemberNotifyTarget = { workspaceId: string } | { projectId: string };
+
+/**
+ * Tell a member their access changed (ROLE_CHANGED / MEMBER_REMOVED).
+ * Best-effort: a notification failure must never fail the membership change.
+ */
+async function notifyMemberChange(
+  userId: string,
+  type: "ROLE_CHANGED" | "MEMBER_REMOVED",
+  target: MemberNotifyTarget,
+  extra: Record<string, unknown> = {}
+) {
+  try {
+    const isWorkspace = "workspaceId" in target;
+    const resourceName = isWorkspace
+      ? (
+          await db.workspace.findUnique({
+            where: { id: target.workspaceId },
+            select: { title: true },
+          })
+        )?.title
+      : (
+          await db.project.findUnique({
+            where: { id: target.projectId },
+            select: { name: true },
+          })
+        )?.name;
+    const label = isWorkspace ? "workspace" : "project";
+    const name = resourceName || `a ${label}`;
+
+    await notify(userId, type, {
+      ...target,
+      resourceName: name,
+      ...(type === "MEMBER_REMOVED"
+        ? { message: `Your access to the ${label} "${name}" was removed.` }
+        : {}),
+      // Removed members can no longer open the resource itself
+      href:
+        type === "ROLE_CHANGED" && isWorkspace
+          ? `/workspaces/${target.workspaceId}`
+          : "/workspaces",
+      ...extra,
+    });
+  } catch (err) {
+    console.error(`[Members] Failed to send ${type} notification:`, err);
+  }
 }
 
 export type MemberSummary = {
@@ -342,6 +391,19 @@ export async function updateWorkspaceMemberRole(
     meta: { oldRole, newRole },
   });
 
+  if (oldRole !== newRole) {
+    if (newRole === "NONE") {
+      await notifyMemberChange(targetUserId, "MEMBER_REMOVED", { workspaceId });
+    } else {
+      await notifyMemberChange(
+        targetUserId,
+        "ROLE_CHANGED",
+        { workspaceId },
+        { oldRole, newRole }
+      );
+    }
+  }
+
   return { success: true, member: updated };
 }
 
@@ -396,6 +458,15 @@ export async function updateProjectMemberRole(
     targetId: targetUserId,
     meta: { oldRole, newRole },
   });
+
+  if (oldRole !== newRole) {
+    await notifyMemberChange(
+      targetUserId,
+      "ROLE_CHANGED",
+      { projectId },
+      { oldRole, newRole }
+    );
+  }
 
   return { success: true, member: updated };
 }
@@ -470,6 +541,10 @@ export async function removeWorkspaceMember(
     meta: { selfLeave: isSelf },
   });
 
+  if (!isSelf) {
+    await notifyMemberChange(targetUserId, "MEMBER_REMOVED", { workspaceId });
+  }
+
   return { success: true };
 }
 
@@ -513,6 +588,10 @@ export async function removeProjectMember(
     targetId: targetUserId,
     meta: { selfLeave: isSelf },
   });
+
+  if (!isSelf) {
+    await notifyMemberChange(targetUserId, "MEMBER_REMOVED", { projectId });
+  }
 
   return { success: true };
 }
