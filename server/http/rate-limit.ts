@@ -17,7 +17,8 @@ export const policies = {
   "share:create": { n: 20,  window: "1 h"  as Duration },
   "share:view":   { n: 60,  window: "1 m"  as Duration }, // key: ip
   "invite:send":  { n: 20,  window: "1 h"  as Duration },
-  "support:send": { n: 3,   window: "1 h"  as Duration }, // key: ip or userId
+  "support:send": { n: 3,   window: "1 h"  as Duration }, // key: ip or userId
+
   "link:fetch":   { n: 10,  window: "1 m"  as Duration }, // key: userId
   "annotation:create": { n: 60, window: "1 m"  as Duration }, // key: userId
   "username:check":    { n: 20, window: "1 m"  as Duration }, // key: userId or ip
@@ -174,7 +175,10 @@ export function normalizeAndValidateIp(raw: string): string | null {
  *   (e.g. `proxy_set_header X-Forwarded-For $remote_addr;` and
  *   `proxy_set_header X-Real-IP $remote_addr;`).
  */
-export function readTrustedProxyAddress(req: Request): string | null {
+/** Anything with a `headers.get()` — a `Request`, or `{ headers: await headers() }` in Server Components. */
+export type HeaderSource = { headers: { get(name: string): string | null } };
+
+export function readTrustedProxyAddress(req: HeaderSource): string | null {
   const xff = req.headers.get("x-forwarded-for");
   if (xff !== null) {
     const first = xff.split(",")[0];
@@ -197,7 +201,7 @@ export function readTrustedProxyAddress(req: Request): string | null {
  * or when no valid proxy address header is present.
  */
 export function resolveClientIp(
-  req: Request,
+  req: HeaderSource,
   trustProxy: boolean = env.TRUST_PROXY
 ): string | null {
   if (!trustProxy) return null;
@@ -208,7 +212,7 @@ export function resolveClientIp(
  * Alias for `resolveClientIp`.
  */
 export function getClientIp(
-  req: Request,
+  req: HeaderSource,
   trustProxy: boolean = env.TRUST_PROXY
 ): string | null {
   return resolveClientIp(req, trustProxy);

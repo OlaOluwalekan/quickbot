@@ -6,6 +6,7 @@ import { env } from "@/server/env";
 import {
   resolvePublicShareByToken,
   getPublicShareHeaders,
+  shareViewRateLimitKey,
 } from "@/server/services/share";
 
 export async function GET(
@@ -19,10 +20,10 @@ export async function GET(
   };
 
   try {
-    const ip = resolveClientIp(req, env.TRUST_PROXY) ?? "untrusted-anon";
-    await limit("share:view", ip);
-
     const { token } = await ctx.params;
+    const ip = resolveClientIp(req, env.TRUST_PROXY);
+    await limit("share:view", shareViewRateLimitKey(ip, token));
+
     const data = await resolvePublicShareByToken(token);
 
     return NextResponse.json({ data }, { status: 200, headers: baseHeaders });

@@ -61,6 +61,7 @@ import {
   useCreateResponseEdit,
   type ResponseVersionDto,
 } from "@/lib/api/hooks/responses";
+import { useWorkspace } from "@/lib/api/hooks/workspaces";
 import type { CitationDto } from "@/lib/api/sse";
 
 export interface ResponseItemData {
@@ -154,6 +155,10 @@ export function ResponseCard({
   const [copied, setCopied] = React.useState(false);
   const [lightboxOpen, setLightboxOpen] = React.useState(false);
   const [shareDialogOpen, setShareDialogOpen] = React.useState(false);
+  // Public links require `workspace.share` (owner/admin); everyone else sees a disabled button
+  const { data: workspace } = useWorkspace(userId, workspaceId);
+  const canShare = workspace?.role === "OWNER" || workspace?.role === "ADMIN";
+  const currentPageTitle = useUiStore((s) => s.currentPageTitle);
   const [signedUrlsByAttachmentId, setSignedUrlsByAttachmentId] = React.useState<
     Record<string, string>
   >({});
@@ -899,16 +904,39 @@ export function ResponseCard({
                   </Tooltip>
 
                   {/* Share (Step 7.6) */}
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShareDialogOpen(true)}
-                    className="text-fg-muted hover:text-fg hidden h-8 px-2.5 text-xs md:inline-flex"
-                  >
-                    <Share2 className="mr-1 h-3.5 w-3.5" />
-                    <span>{t("share")}</span>
-                  </Button>
+                  {canShare ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShareDialogOpen(true)}
+                      className="text-fg-muted hover:text-fg hidden h-8 px-2.5 text-xs md:inline-flex"
+                    >
+                      <Share2 className="mr-1 h-3.5 w-3.5" />
+                      <span>{t("share")}</span>
+                    </Button>
+                  ) : (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        {/* span wrapper so the tooltip still fires on a disabled button */}
+                        <span className="hidden md:inline-flex" tabIndex={0}>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            disabled
+                            className="text-fg-muted/50 h-8 cursor-not-allowed px-2 text-xs"
+                          >
+                            <Share2 className="mr-1 h-3.5 w-3.5" />
+                            <span>{t("share")}</span>
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">
+                        <p className="text-xs">{t("shareNoPermission")}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
 
                   {/* Export (Step 5.6: Markdown, PDF, DOCX) */}
                   {!isImageResponse && (
@@ -1022,12 +1050,12 @@ export function ResponseCard({
           )}
         </div>
       </div>
-      {shareDialogOpen && (
+      {shareDialogOpen && canShare && (
         <ShareAndPeopleDialog
           open={shareDialogOpen}
           onOpenChange={setShareDialogOpen}
           workspaceId={workspaceId}
-          workspaceTitle={useUiStore.getState().currentPageTitle || "Workspace"}
+          workspaceTitle={workspace?.title || currentPageTitle || "Workspace"}
           currentUserId={userId}
           initialTab="public"
           initialScope="RESPONSE"

@@ -24,6 +24,20 @@ export function getPublicShareHeaders(): Record<string, string> {
   };
 }
 
+/**
+ * Rate-limit key for anonymous share views (`share:view`, 60/min).
+ * Keyed by client IP when a trusted proxy supplies one. Without a trusted IP we
+ * key by the link itself, so one abusive client can never exhaust a single
+ * site-wide bucket and lock every public link for everyone.
+ */
+export function shareViewRateLimitKey(
+  clientIp: string | null,
+  rawToken: string
+): string {
+  if (clientIp) return `ip:${clientIp}`;
+  return `link:${hashShareToken((rawToken || "").trim())}`;
+}
+
 export type ShareLinkStatus = "ACTIVE" | "REVOKED" | "EXPIRED";
 
 export function computeShareStatus(
@@ -106,37 +120,31 @@ export async function createShareLink(
     },
   });
 
-  // Notify workspace owner via share-created email
+  // Notify workspace owner via share-created email (non-blocking on failure)
   try {
-    const isTestEnv = process.env.NODE_ENV === "test";
-    const isMockedSendEmail = Boolean(
-      (sendEmail as unknown as { _isMockFunction?: boolean })?._isMockFunction
-    );
-    if (!isTestEnv || isMockedSendEmail) {
-      const [owner, fullWs] = await Promise.all([
-        db.user.findUnique({
-          where: { id: ws.ownerId },
-          select: {
-            email: true,
-            preference: { select: { uiLocale: true } },
-          },
-        }),
-        db.workspace.findUnique({
-          where: { id: ws.id },
-          select: { title: true },
-        }),
-      ]);
-      if (owner?.email) {
-        await sendEmail(
-          "share-created",
-          owner.email,
-          {
-            title: fullWs?.title || "Untitled Workspace",
-            shareUrl: url,
-          },
-          { locale: owner.preference?.uiLocale ?? undefined }
-        );
-      }
+    const [owner, fullWs] = await Promise.all([
+      db.user.findUnique({
+        where: { id: ws.ownerId },
+        select: {
+          email: true,
+          preference: { select: { uiLocale: true } },
+        },
+      }),
+      db.workspace.findUnique({
+        where: { id: ws.id },
+        select: { title: true },
+      }),
+    ]);
+    if (owner?.email) {
+      await sendEmail(
+        "share-created",
+        owner.email,
+        {
+          title: fullWs?.title || "Untitled Workspace",
+          shareUrl: url,
+        },
+        { locale: owner.preference?.uiLocale ?? undefined }
+      );
     }
   } catch (err) {
     console.warn("[share] Failed to send share-created notification email:", err);
@@ -248,18 +256,20 @@ export async function revokeShareLink(actor: Actor, shareId: string) {
 
   const { ws } = await requireWorkspace(actor, link.workspaceId, "workspace.share");
 
-  const now = new Date();
-  const updated = link.revokedAt
-    ? link
-    : await db.shareLink.update({
-        where: { id: shareId },
-        data: { revokedAt: now },
-        select: {
-          id: true,
-          workspaceId: true,
-          revokedAt: true,
-        },
-      });
+  // Already revoked: idempotent no-op (no second update, no duplicate activity entry)
+  if (link.revokedAt) {
+    return {
+      id: link.id,
+      revokedAt: link.revokedAt.toISOString(),
+      status: "REVOKED" as ShareLinkStatus,
+    };
+  }
+
+  const updated = await db.shareLink.update({
+    where: { id: shareId },
+    data: { revokedAt: new Date() },
+    select: { id: true, revokedAt: true },
+  });
 
   await logActivity(db, {
     workspaceId: ws.id,
@@ -277,7 +287,7 @@ export async function revokeShareLink(actor: Actor, shareId: string) {
 
   return {
     id: updated.id,
-    revokedAt: (updated.revokedAt ?? now).toISOString(),
+    revokedAt: (updated.revokedAt ?? new Date()).toISOString(),
     status: "REVOKED" as ShareLinkStatus,
   };
 }
@@ -359,6 +369,18 @@ async function signAttachmentForPublicShare(att: {
     signedUrl,
   };
 }
+
+const attachmentSignSelect = {
+  id: true,
+  kind: true,
+  originalName: true,
+  mime: true,
+  bytes: true,
+  width: true,
+  height: true,
+  providerId: true,
+  resourceType: true,
+} as const;
 
 function isDirectUrl(val: string): boolean {
   return (
@@ -458,17 +480,47 @@ export async function resolvePublicShareByToken(
       kind: true,
       activeVersionId: true,
       createdAt: true,
+      // Fallback when activeVersionId is unset: only the latest version's id
       versions: {
         orderBy: { number: "desc" },
+        take: 1,
+        select: { id: true },
+      },
+      attachments: {
+        where: {
+          deletedAt: null,
+          status: "READY",
+        },
+        select: attachmentSignSelect,
+      },
+    },
+  });
+
+  if (share.scope === "RESPONSE" && rawResponses.length === 0) {
+    throw Errors.notFound("ShareLink");
+  }
+
+  // Load ONLY the displayed version of each response (not its whole history)
+  const displayedVersionIdByResponse = new Map<string, string>();
+  for (const r of rawResponses) {
+    const vid = r.activeVersionId ?? r.versions[0]?.id;
+    if (vid) displayedVersionIdByResponse.set(r.id, vid);
+  }
+  const displayedVersionIds = [...displayedVersionIdByResponse.values()];
+
+  const versions = displayedVersionIds.length
+    ? await db.responseVersion.findMany({
+        where: {
+          id: { in: displayedVersionIds },
+          responseId: { in: rawResponses.map((r) => r.id) },
+        },
         select: {
           id: true,
           content: true,
           edits: {
             orderBy: { revision: "desc" },
             take: 1,
-            select: {
-              content: true,
-            },
+            select: { content: true },
           },
           citations: {
             orderBy: { index: "asc" },
@@ -482,30 +534,41 @@ export async function resolvePublicShareByToken(
             },
           },
         },
-      },
-      attachments: {
-        where: {
-          deletedAt: null,
-          status: "READY",
-        },
-        select: {
-          id: true,
-          kind: true,
-          originalName: true,
-          mime: true,
-          bytes: true,
-          width: true,
-          height: true,
-          providerId: true,
-          resourceType: true,
-        },
-      },
-    },
-  });
+      })
+    : [];
+  const versionById = new Map(versions.map((v) => [v.id, v]));
 
-  if (share.scope === "RESPONSE" && rawResponses.length === 0) {
-    throw Errors.notFound("ShareLink");
+  const displayedContentByResponse = new Map<string, string>();
+  for (const r of rawResponses) {
+    const vid = displayedVersionIdByResponse.get(r.id);
+    const ver = vid ? versionById.get(vid) : undefined;
+    const originalContent = ver?.content ?? "";
+    const latestEditContent = ver?.edits?.[0]?.content ?? null;
+    displayedContentByResponse.set(
+      r.id,
+      share.view === "ORIGINAL"
+        ? originalContent
+        : latestEditContent ?? originalContent
+    );
   }
+
+  // IMAGE responses store an attachment id as content: resolve them in one query
+  const imageAttachmentIds = rawResponses
+    .filter((r) => r.kind === "IMAGE")
+    .map((r) => displayedContentByResponse.get(r.id) ?? "")
+    .filter((c) => c && !isDirectUrl(c));
+  const imageAttachments = imageAttachmentIds.length
+    ? await db.attachment.findMany({
+        where: {
+          id: { in: imageAttachmentIds },
+          workspaceId: share.workspaceId,
+          status: "READY",
+          deletedAt: null,
+        },
+        select: attachmentSignSelect,
+      })
+    : [];
+  const imageAttachmentById = new Map(imageAttachments.map((a) => [a.id, a]));
 
   // Increment viewCount and update lastViewedAt
   await db.shareLink.update({
@@ -516,89 +579,61 @@ export async function resolvePublicShareByToken(
     },
   });
 
-  const serializedResponses: PublicShareResponseDto[] = [];
+  const serializedResponses: PublicShareResponseDto[] = await Promise.all(
+    rawResponses.map(async (r) => {
+      const vid = displayedVersionIdByResponse.get(r.id);
+      const ver = vid ? versionById.get(vid) : undefined;
+      const displayedContent = displayedContentByResponse.get(r.id) ?? "";
 
-  for (const r of rawResponses) {
-    const activeVer =
-      (r.activeVersionId
-        ? r.versions.find((v) => v.id === r.activeVersionId)
-        : null) ?? r.versions[0];
-
-    const originalContent = activeVer?.content ?? "";
-    const latestEditContent = activeVer?.edits?.[0]?.content ?? null;
-
-    const displayedContent =
-      share.view === "ORIGINAL"
-        ? originalContent
-        : latestEditContent ?? originalContent;
-
-    // Resolve image attachment signed URL if response is IMAGE and displayedContent is an attachment ID
-    let imageUrl: string | null = null;
-    if (r.kind === "IMAGE" && displayedContent) {
-      if (isDirectUrl(displayedContent)) {
-        imageUrl = displayedContent;
-      } else {
-        const imgAtt = await db.attachment.findFirst({
-          where: {
-            id: displayedContent,
-            workspaceId: share.workspaceId,
-            status: "READY",
-            deletedAt: null,
-          },
-          select: {
-            id: true,
-            kind: true,
-            originalName: true,
-            mime: true,
-            bytes: true,
-            width: true,
-            height: true,
-            providerId: true,
-            resourceType: true,
-          },
-        });
-        if (imgAtt) {
-          const signed = await signAttachmentForPublicShare(imgAtt);
-          imageUrl = signed.signedUrl;
+      let imageUrl: string | null = null;
+      if (r.kind === "IMAGE" && displayedContent) {
+        if (isDirectUrl(displayedContent)) {
+          imageUrl = displayedContent;
+        } else {
+          const imgAtt = imageAttachmentById.get(displayedContent);
+          if (imgAtt) {
+            imageUrl = (await signAttachmentForPublicShare(imgAtt)).signedUrl;
+          }
         }
       }
-    }
 
-    const promptAttachments: PublicShareAttachmentDto[] = [];
-    const generatedDocuments: PublicShareAttachmentDto[] = [];
+      const signed = await Promise.all(
+        r.attachments.map(async (att) => ({
+          kind: att.kind,
+          dto: await signAttachmentForPublicShare(att),
+        }))
+      );
+      const promptAttachments = signed
+        .filter((x) => x.kind !== "GENERATED_DOCUMENT")
+        .map((x) => x.dto);
+      const generatedDocuments = signed
+        .filter((x) => x.kind === "GENERATED_DOCUMENT")
+        .map((x) => x.dto);
 
-    for (const att of r.attachments) {
-      const signed = await signAttachmentForPublicShare(att);
-      if (att.kind === "GENERATED_DOCUMENT") {
-        generatedDocuments.push(signed);
-      } else {
-        promptAttachments.push(signed);
-      }
-    }
+      const citations: PublicShareCitationDto[] = (ver?.citations ?? []).map(
+        (c) => ({
+          id: c.id,
+          index: c.index,
+          source: c.source,
+          title: c.title || c.url,
+          url: c.url,
+          snippet: c.snippet ?? null,
+        })
+      );
 
-    const citations: PublicShareCitationDto[] = (activeVer?.citations ?? []).map(
-      (c) => ({
-        id: c.id,
-        index: c.index,
-        source: c.source,
-        title: c.title || c.url,
-        url: c.url,
-        snippet: c.snippet ?? null,
-      })
-    );
-
-    serializedResponses.push({
-      id: r.id,
-      prompt: r.prompt,
-      kind: r.kind,
-      content: r.kind === "IMAGE" && imageUrl ? imageUrl : displayedContent,
-      imageUrl,
-      createdAt: r.createdAt.toISOString(),
-      citations,
-      attachments: promptAttachments,
-      generatedDocuments,
-    });
-  }
+      return {
+        id: r.id,
+        prompt: r.prompt,
+        kind: r.kind,
+        content: r.kind === "IMAGE" && imageUrl ? imageUrl : displayedContent,
+        imageUrl,
+        createdAt: r.createdAt.toISOString(),
+        citations,
+        attachments: promptAttachments,
+        generatedDocuments,
+      };
+    })
+  );
 
   const authorName = share.showAuthor
     ? share.workspace.owner.name ||

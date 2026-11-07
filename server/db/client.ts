@@ -3,7 +3,9 @@ import { PrismaClient } from "./generated/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { env } from "@/server/env";
 
-const CURRENT_SCHEMA_VER = "20261107110000_add_share_links_v2";
+// Bump to the latest migration name so dev hot-reload drops a client generated
+// against an older schema.
+const CURRENT_SCHEMA_VER = "20261107110000_add_share_links";
 
 const make = () =>
   new PrismaClient({
@@ -15,37 +17,19 @@ const g = globalThis as unknown as {
   __dbSchemaVer?: string;
 };
 
-function getClient(): PrismaClient {
-  if (
-    g.__db &&
-    (g.__dbSchemaVer !== CURRENT_SCHEMA_VER ||
-      !("auditLog" in g.__db) ||
-      !("shareLink" in g.__db))
-  ) {
-    g.__db.$disconnect().catch(() => {});
-    g.__db = undefined;
-  }
-
-  if (!g.__db) {
-    g.__db = make();
-    if (env.NODE_ENV !== "production") {
-      g.__dbSchemaVer = CURRENT_SCHEMA_VER;
-    }
-  }
-
-  return g.__db;
+// Runs once per module evaluation (i.e. on each dev hot reload), never per query.
+if (
+  g.__db &&
+  (g.__dbSchemaVer !== CURRENT_SCHEMA_VER ||
+    !("auditLog" in g.__db) ||
+    !("shareLink" in g.__db))
+) {
+  g.__db.$disconnect().catch(() => {});
+  g.__db = undefined;
 }
 
-const initialClient = getClient();
-
-export const db: PrismaClient = new Proxy(initialClient, {
-  get(_target, prop, _receiver) {
-    const active = getClient();
-    const val = Reflect.get(active, prop, active);
-    return typeof val === "function" ? val.bind(active) : val;
-  },
-  has(_target, prop) {
-    const active = getClient();
-    return prop in active;
-  },
-});
+export const db = g.__db ?? make();
+if (env.NODE_ENV !== "production") {
+  g.__db = db;
+  g.__dbSchemaVer = CURRENT_SCHEMA_VER;
+}

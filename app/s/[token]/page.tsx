@@ -12,9 +12,10 @@ import {
 } from "lucide-react";
 import {
   resolvePublicShareByToken,
+  shareViewRateLimitKey,
   type PublicSharePayloadDto,
 } from "@/server/services/share";
-import { limit } from "@/server/http/rate-limit";
+import { limit, resolveClientIp } from "@/server/http/rate-limit";
 import { env } from "@/server/env";
 import { ApiError } from "@/server/http/errors";
 import { Markdown } from "@/components/markdown";
@@ -51,20 +52,12 @@ export default async function PublicSharePage({
 }) {
   const { token } = await params;
 
-  const h = await headers();
-  let ip = "untrusted-anon";
-  if (env.TRUST_PROXY) {
-    const xff = h.get("x-forwarded-for");
-    const realIp = h.get("x-real-ip");
-    const candidate = (xff ? xff.split(",")[0] : realIp)?.trim();
-    if (candidate) {
-      ip = candidate;
-    }
-  }
+  // Same validated IP resolution as the API route (only trusts proxy headers when TRUST_PROXY=true)
+  const ip = resolveClientIp({ headers: await headers() }, env.TRUST_PROXY);
 
   let payload: PublicSharePayloadDto;
   try {
-    await limit("share:view", ip);
+    await limit("share:view", shareViewRateLimitKey(ip, token));
     payload = await resolvePublicShareByToken(token);
   } catch (err) {
     if (err instanceof ApiError && err.status === 429) {
@@ -79,7 +72,11 @@ export default async function PublicSharePage({
         </div>
       );
     }
-    notFound();
+    if (err instanceof ApiError && err.status === 404) {
+      notFound();
+    }
+    // Real failures (DB outage etc.) surface via the error boundary instead of masquerading as 404
+    throw err;
   }
 
   return (

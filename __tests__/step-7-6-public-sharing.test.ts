@@ -10,6 +10,7 @@ import {
   resolvePublicShareByToken,
   getPublicShareHeaders,
   hashShareToken,
+  shareViewRateLimitKey,
 } from "@/server/services/share";
 import { GET as publicShareGet } from "@/app/api/v1/s/[token]/route";
 import { POST as sharesPost } from "@/app/api/v1/shares/route";
@@ -577,5 +578,64 @@ describe("Step 7.6 — Public sharing (workspace or single response)", () => {
     expect(delRes.status).toBe(200);
     const delJson = await delRes.json();
     expect(delJson.data.status).toBe("REVOKED");
+  });
+  test("7. Without a trusted client IP, share views are rate limited per link (no site-wide anonymous bucket)", async () => {
+    const shareA = await createShareLink(ownerActor(), {
+      workspaceId,
+      scope: "WORKSPACE",
+      view: "EDITED_IF_AVAILABLE",
+      showAuthor: false,
+    });
+    const shareB = await createShareLink(ownerActor(), {
+      workspaceId,
+      scope: "RESPONSE",
+      responseId: response1Id,
+      view: "EDITED_IF_AVAILABLE",
+      showAuthor: false,
+    });
+    const tokenA = shareA.url.split("/s/")[1]!;
+    const tokenB = shareB.url.split("/s/")[1]!;
+
+    expect(shareViewRateLimitKey(null, tokenA)).not.toBe(
+      shareViewRateLimitKey(null, tokenB)
+    );
+    expect(shareViewRateLimitKey("203.0.113.7", tokenA)).toBe(
+      shareViewRateLimitKey("203.0.113.7", tokenB)
+    );
+
+    const view = (token: string) =>
+      publicShareGet(new Request(`http://localhost:3000/api/v1/s/${token}`), {
+        params: { token },
+      });
+
+    // Exhaust link A's bucket (share:view = 60/min)
+    for (let i = 0; i < 60; i++) {
+      expect((await view(tokenA)).status).toBe(200);
+    }
+    const limited = await view(tokenA);
+    expect(limited.status).toBe(429);
+    expect(limited.headers.get("Retry-After")).toBeTruthy();
+
+    // Link B is unaffected
+    expect((await view(tokenB)).status).toBe(200);
+  });
+
+  test("8. Revoking an already-revoked link is idempotent and logs share.revoked only once", async () => {
+    const share = await createShareLink(ownerActor(), {
+      workspaceId,
+      scope: "WORKSPACE",
+      view: "EDITED_IF_AVAILABLE",
+      showAuthor: false,
+    });
+
+    const first = await revokeShareLink(ownerActor(), share.id);
+    const second = await revokeShareLink(ownerActor(), share.id);
+    expect(second.status).toBe("REVOKED");
+    expect(second.revokedAt).toBe(first.revokedAt);
+
+    const logs = await db.activityLog.count({
+      where: { action: "share.revoked", targetId: share.id },
+    });
+    expect(logs).toBe(1);
   });
 });
