@@ -169,6 +169,9 @@ describe("Step 3.4 — AppShell, Sidebar, Topbar, Mobile Drawer & Command Palett
     mockPush.mockClear();
     mockRefresh.mockClear();
     document.cookie = "sidebar=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
+    // Suppress the one-time "Choose your username" modal so every test sees the
+    // same, non-aria-hidden shell regardless of run order or `-t` filtering.
+    sessionStorage.setItem("klecx_username_prompted", "true");
     useUiStore.getState().resetTransientUi();
     useUiStore.setState({
       sidebarCollapsed: false,
@@ -238,9 +241,15 @@ describe("Step 3.4 — AppShell, Sidebar, Topbar, Mobile Drawer & Command Palett
     // Shared with me section
     expect(screen.getByText("Charles Shared Spec")).toBeInTheDocument();
 
+    // Each project row has a separate share button labelled "Share: <name>"
+    expect(
+      screen.getByRole("button", { name: /^Share: Analytical Engine$/i })
+    ).toBeInTheDocument();
+
     // Expand project tree node to see nested workspace with aria-current="page"
+    // (anchored so it doesn't also match the "Share: Analytical Engine" button)
     const projectBtn = screen.getByRole("button", {
-      name: /Analytical Engine/i,
+      name: /^Analytical Engine/i,
     });
     expect(projectBtn).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(projectBtn);
