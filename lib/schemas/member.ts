@@ -20,9 +20,16 @@ export const createInvitationSchema = z.object({
   role: z.string().min(1),
 });
 
-export const updateMemberRoleSchema = z.object({
-  role: z.string().min(1),
-});
+export const updateMemberRoleSchema = z
+  .object({
+    role: z.string().min(1).optional(),
+    monthlyCreditCap: z.number().int().min(0).max(1_000_000).nullable().optional(),
+  })
+  // Exactly one: the two updates have different permission rules, so a
+  // combined request could apply the role change and then fail on the cap.
+  .refine((d) => (d.role !== undefined) !== (d.monthlyCreditCap !== undefined), {
+    message: "Provide either role or monthlyCreditCap, not both",
+  });
 
 export const transferOwnershipSchema = z.object({
   newOwnerId: z.string().min(1),

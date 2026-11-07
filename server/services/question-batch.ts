@@ -3,12 +3,10 @@ import crypto from "node:crypto";
 import { db } from "@/server/db/client";
 import { Errors } from "@/server/http/errors";
 import { requireWorkspace } from "@/server/authz/access";
+import { resolveBilledAccount, reserveForWorkspaceGeneration } from "./billing-owner";
 import type { Actor } from "@/server/auth/session";
 import type { RunQuestionBatchInput } from "@/lib/schemas/annotation";
 import {
-  getAccountByUserId,
-  createAccountWithFreeGrant,
-  reserve,
   settle,
   release,
 } from "@/server/services/credits";
@@ -143,12 +141,7 @@ export async function runQuestionBatch(
   }
 
   // 4. Resolve workspace owner's credit account
-  const wsOwnerId = wsAccess.ws.ownerId;
-  let ownerAccount = await getAccountByUserId(wsOwnerId);
-  if (!ownerAccount) {
-    ownerAccount = await createAccountWithFreeGrant(wsOwnerId);
-  }
-  const billedAccountId = ownerAccount.id;
+  const { billedAccountId } = await resolveBilledAccount(wsAccess.ws);
 
   // 5. Group questions by version
   const versionMap = new Map<string, VersionQuestionsGroup>();
@@ -201,11 +194,22 @@ export async function runQuestionBatch(
   const settleKey = `stl_qbatch_${generationId}`;
   const releaseKey = `rel_qbatch_${generationId}`;
 
-  await reserve(billedAccountId, reserveAmount, reservationKey, {
-    generationId,
-    actorId: actor.userId,
-    estimated: true,
-  });
+  try {
+    await reserveForWorkspaceGeneration({
+      workspace: wsAccess.ws,
+      actorId: actor.userId,
+      amount: reserveAmount,
+      reservationKey,
+      generationId,
+      estimated: true,
+    });
+  } catch (err) {
+    await db.annotation.updateMany({
+      where: { id: { in: claimedAnnotations.map((a) => a.id) }, questionState: "ANSWERING" },
+      data: { questionState: "QUEUED" },
+    });
+    throw err;
+  }
 
   await db.generation.create({
     data: {

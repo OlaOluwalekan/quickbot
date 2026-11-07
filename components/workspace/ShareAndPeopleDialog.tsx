@@ -47,6 +47,8 @@ interface MemberItem {
   avatarUrl: string | null;
   role: string;
   inherited?: boolean;
+  monthlyCreditCap?: number | null;
+  monthlyCreditsUsed?: number;
 }
 
 interface PendingInvite {
@@ -134,6 +136,9 @@ export function ShareAndPeopleDialog({
 
   // Copy link state
   const [copiedLink, setCopiedLink] = React.useState(false);
+
+  // Custom collaborator credit cap being typed (replaces the select inline)
+  const [customCap, setCustomCap] = React.useState<{ userId: string; value: string } | null>(null);
 
   const fetchMembers = React.useCallback(async () => {
     if (!resourceId) return;
@@ -259,6 +264,57 @@ export function ShareAndPeopleDialog({
       const msg = err instanceof Error ? err.message : "Failed to resend invitation";
       toast.error(msg);
     }
+  };
+
+  const saveCap = async (targetUserId: string, monthlyCreditCap: number | null) => {
+    try {
+      const res = await fetch(`${baseApiPath}/members/${targetUserId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ monthlyCreditCap }),
+      });
+      if (!res.ok) {
+        const json = await res.json();
+        throw new Error(json?.error?.message || "Failed to update credit cap");
+      }
+      toast.success(
+        monthlyCreditCap === null
+          ? "Collaborator credit cap set to unlimited"
+          : `Collaborator credit cap set to ${monthlyCreditCap} credits/month`
+      );
+      fetchMembers();
+      fetchActivity();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to update credit cap";
+      toast.error(msg);
+    }
+  };
+
+  const handleCapSelect = (m: MemberItem, val: string) => {
+    if (val === "custom") {
+      setCustomCap({
+        userId: m.userId,
+        value: m.monthlyCreditCap === null ? "" : String(m.monthlyCreditCap ?? 300),
+      });
+      return;
+    }
+    void saveCap(m.userId, val === "unlimited" ? null : Number(val));
+  };
+
+  const submitCustomCap = async () => {
+    if (!customCap) return;
+    const trimmed = customCap.value.trim();
+    let cap: number | null = null;
+    if (trimmed) {
+      const parsed = Number(trimmed);
+      if (!Number.isInteger(parsed) || parsed < 0) {
+        toast.error("Please enter a whole number of 0 or more");
+        return;
+      }
+      cap = parsed;
+    }
+    await saveCap(customCap.userId, cap);
+    setCustomCap(null);
   };
 
   const handleUpdateRole = async (targetUserId: string, newRole: string) => {
@@ -546,6 +602,91 @@ export function ShareAndPeopleDialog({
                         </div>
 
                         <div className="flex items-center gap-2 shrink-0">
+                          {!isMemberOwner && (
+                            isOwner && customCap?.userId === m.userId ? (
+                              <form
+                                className="flex items-center gap-1"
+                                onSubmit={(e) => {
+                                  e.preventDefault();
+                                  void submitCustomCap();
+                                }}
+                              >
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  step={1}
+                                  inputMode="numeric"
+                                  autoFocus
+                                  value={customCap.value}
+                                  onChange={(e) =>
+                                    setCustomCap({ userId: m.userId, value: e.target.value })
+                                  }
+                                  placeholder="Unlimited"
+                                  aria-label="Monthly credit cap (leave blank for unlimited)"
+                                  className="h-8 w-24 text-xs"
+                                />
+                                <Button type="submit" size="sm" className="h-8 px-2 text-xs">
+                                  Save
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 px-2 text-xs"
+                                  onClick={() => setCustomCap(null)}
+                                >
+                                  Cancel
+                                </Button>
+                              </form>
+                            ) : isOwner && !(m.inherited && !isProject) ? (
+                              <Select
+                                value={
+                                  m.monthlyCreditCap === null || m.monthlyCreditCap === undefined
+                                    ? "unlimited"
+                                    : [100, 300, 500, 1000].includes(m.monthlyCreditCap)
+                                      ? String(m.monthlyCreditCap)
+                                      : "custom"
+                                }
+                                onValueChange={(val) => handleCapSelect(m, val)}
+                              >
+                                <SelectTrigger
+                                  className="h-8 text-xs w-36 bg-surface"
+                                  title="Monthly credit cap: covers everything this person spends from the owner's credits, across all of the owner's workspaces"
+                                >
+                                  <span className="truncate">
+                                    {m.monthlyCreditsUsed ?? 0} /{" "}
+                                    {m.monthlyCreditCap === null || m.monthlyCreditCap === undefined
+                                      ? "∞ cr"
+                                      : `${m.monthlyCreditCap} cr`}
+                                  </span>
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="100">Cap: 100 cr/mo</SelectItem>
+                                  <SelectItem value="300">Cap: 300 cr/mo</SelectItem>
+                                  <SelectItem value="500">Cap: 500 cr/mo</SelectItem>
+                                  <SelectItem value="1000">Cap: 1000 cr/mo</SelectItem>
+                                  <SelectItem value="unlimited">Unlimited</SelectItem>
+                                  <SelectItem value="custom">Custom cap...</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <Badge
+                                variant="outline"
+                                className="text-[11px] text-muted font-mono"
+                                title={
+                                  m.inherited && !isProject
+                                    ? "Credit cap is set on the project's members"
+                                    : "Monthly credit cap"
+                                }
+                              >
+                                {m.monthlyCreditsUsed ?? 0} /{" "}
+                                {m.monthlyCreditCap === null || m.monthlyCreditCap === undefined
+                                  ? "∞"
+                                  : m.monthlyCreditCap}{" "}
+                                cr
+                              </Badge>
+                            )
+                          )}
                           {isMemberOwner ? (
                             <span className="text-xs font-semibold text-muted px-2 py-1">
                               Owner

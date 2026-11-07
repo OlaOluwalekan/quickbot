@@ -1,11 +1,19 @@
 import "server-only";
 import { db } from "@/server/db/client";
 import { Errors } from "@/server/http/errors";
+import type { Prisma } from "../db/generated/client";
 
 export type ReserveContext = {
   generationId: string;
   actorId?: string | null;
   estimated?: boolean;
+  /**
+   * Runs inside the reservation transaction after the account row has been
+   * locked (FOR UPDATE) and debited, before the ledger entry is written.
+   * Throwing rolls the reservation back. Because every reservation on the
+   * account waits on that lock, checks made here see all earlier reservations.
+   */
+  guard?: (tx: Prisma.TransactionClient) => Promise<void>;
 };
 
 export type BalanceResult = {
@@ -79,6 +87,10 @@ export async function reserve(
       const row = rows[0];
       if (!row) {
         throw Errors.paymentRequired();
+      }
+
+      if (ctx.guard) {
+        await ctx.guard(tx);
       }
 
       const planDelta = row.plan_balance - row.plan_before;

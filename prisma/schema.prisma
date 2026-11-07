@@ -166,12 +166,13 @@ model Workspace {
 }
 
 model ProjectMember {
-  id          String      @id @default(uuid(7))
-  projectId   String
-  userId      String
-  role        ProjectRole
-  invitedById String
-  createdAt   DateTime    @default(now())
+  id               String      @id @default(uuid(7))
+  projectId        String
+  userId           String
+  role             ProjectRole
+  monthlyCreditCap Int?        @default(300) @map("monthly_credit_cap")
+  invitedById      String
+  createdAt        DateTime    @default(now())
   project     Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
   user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -181,12 +182,13 @@ model ProjectMember {
 }
 
 model WorkspaceMember {
-  id          String        @id @default(uuid(7))
-  workspaceId String
-  userId      String
-  role        WorkspaceRole
-  invitedById String
-  createdAt   DateTime      @default(now())
+  id               String        @id @default(uuid(7))
+  workspaceId      String
+  userId           String
+  role             WorkspaceRole
+  monthlyCreditCap Int?          @default(300) @map("monthly_credit_cap")
+  invitedById      String
+  createdAt        DateTime      @default(now())
   workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -361,6 +363,7 @@ model Generation {
   @@index([workspaceId, createdAt])
   @@index([status, startedAt])
   @@index([billedAccountId, createdAt])
+  @@index([billedAccountId, actorId, createdAt])
   @@map("generations")
 }
 

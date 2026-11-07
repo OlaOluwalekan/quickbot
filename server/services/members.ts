@@ -6,7 +6,17 @@ import { requireWorkspace, requireProject, resolveWorkspaceRole } from "@/server
 import { can } from "@/server/authz/permissions";
 import { logActivity } from "./activity";
 import { getUserAvatar } from "./avatar";
+import { getMonthlySpendByActor } from "./billing-owner";
 import type { WorkspaceRole, ProjectRole } from "../db/generated/client";
+
+async function getOwnerMonthlySpendByActor(ownerId: string): Promise<Map<string, number>> {
+  const account = await db.creditAccount.findUnique({
+    where: { userId: ownerId },
+    select: { id: true },
+  });
+  if (!account) return new Map();
+  return getMonthlySpendByActor(account.id).catch(() => new Map<string, number>());
+}
 
 export type MemberSummary = {
   id: string;
@@ -20,6 +30,8 @@ export type MemberSummary = {
   invitedById: string | null;
   createdAt: Date;
   inherited?: boolean;
+  monthlyCreditCap?: number | null;
+  monthlyCreditsUsed?: number;
 };
 
 export async function listWorkspaceMembers(actor: Actor, workspaceId: string) {
@@ -114,6 +126,7 @@ export async function listWorkspaceMembers(actor: Actor, workspaceId: string) {
         invitedById: pm.invitedById,
         createdAt: pm.createdAt,
         inherited: true,
+        monthlyCreditCap: pm.monthlyCreditCap,
       });
     }
   }
@@ -138,10 +151,13 @@ export async function listWorkspaceMembers(actor: Actor, workspaceId: string) {
       invitedById: wm.invitedById,
       createdAt: wm.createdAt,
       inherited: false,
+      monthlyCreditCap: wm.monthlyCreditCap,
     });
   }
 
-  // Populate avatars for members
+  // Populate avatars & monthly spend for members. Read-only: an owner without
+  // a credit account yet simply shows 0 used (no account is created here).
+  const spendByActor = await getOwnerMonthlySpendByActor(workspace.ownerId);
   const memberList = Array.from(membersMap.values());
   await Promise.all(
     memberList.map(async (m) => {
@@ -149,6 +165,7 @@ export async function listWorkspaceMembers(actor: Actor, workspaceId: string) {
       if (av?.avatarUrl) {
         m.avatarUrl = av.avatarUrl;
       }
+      m.monthlyCreditsUsed = spendByActor.get(m.userId) ?? 0;
     })
   );
 
@@ -230,14 +247,17 @@ export async function listProjectMembers(actor: Actor, projectId: string) {
       invitedById: m.invitedById,
       createdAt: m.createdAt,
       inherited: false,
+      monthlyCreditCap: m.monthlyCreditCap,
     }));
 
+  const spendByActor = await getOwnerMonthlySpendByActor(proj.ownerId);
   await Promise.all(
     memberList.map(async (m) => {
       const av = await getUserAvatar(m.userId).catch(() => null);
       if (av?.avatarUrl) {
         m.avatarUrl = av.avatarUrl;
       }
+      m.monthlyCreditsUsed = spendByActor.get(m.userId) ?? 0;
     })
   );
 
@@ -680,4 +700,103 @@ export async function countWorkspaceMembers(workspaceId: string): Promise<number
   }
   people.delete(ws.ownerId);
   return people.size + 1;
+}
+
+
+export async function updateWorkspaceMemberCap(
+  actor: Actor,
+  workspaceId: string,
+  targetUserId: string,
+  monthlyCreditCap: number | null
+) {
+  const { ws } = await requireWorkspace(actor, workspaceId, "workspace.manage_members");
+  if (actor.userId !== ws.ownerId) {
+    throw Errors.forbidden("Only the workspace owner can modify collaborator spend caps");
+  }
+  if (targetUserId === ws.ownerId) {
+    throw Errors.badRequest("Cannot set a collaborator cap on the workspace owner");
+  }
+  if (monthlyCreditCap !== null && (!Number.isInteger(monthlyCreditCap) || monthlyCreditCap < 0)) {
+    throw Errors.badRequest("monthlyCreditCap must be a non-negative integer or null");
+  }
+
+  const existingMember = await db.workspaceMember.findUnique({
+    where: { workspaceId_userId: { workspaceId, userId: targetUserId } },
+  });
+  if (!existingMember || existingMember.role === "NONE") {
+    // A member who only inherits access from the project has no WorkspaceMember
+    // row. Creating one just to hold the cap would turn them into an explicit
+    // member whose access survives removal from the project, so their cap is
+    // managed on the project instead (resolveMemberMonthlyCreditCap reads it there).
+    const projectMember =
+      ws.projectId && !existingMember
+        ? await db.projectMember.findUnique({
+            where: { projectId_userId: { projectId: ws.projectId, userId: targetUserId } },
+            select: { id: true },
+          })
+        : null;
+    if (projectMember) {
+      throw Errors.conflict(
+        "This member has access through the project. Change their credit cap from the project's members."
+      );
+    }
+    throw Errors.notFound("Member");
+  }
+
+  const updated = await db.workspaceMember.update({
+    where: { id: existingMember.id },
+    data: { monthlyCreditCap },
+  });
+
+  await logActivity(db, {
+    workspaceId,
+    actorId: actor.userId,
+    action: "member.cap_changed",
+    targetType: "user",
+    targetId: targetUserId,
+    meta: { monthlyCreditCap },
+  });
+
+  return { success: true, member: updated };
+}
+
+export async function updateProjectMemberCap(
+  actor: Actor,
+  projectId: string,
+  targetUserId: string,
+  monthlyCreditCap: number | null
+) {
+  const { project } = await requireProject(actor, projectId, "workspace.manage_members");
+  if (actor.userId !== project.ownerId) {
+    throw Errors.forbidden("Only the project owner can modify collaborator spend caps");
+  }
+  if (targetUserId === project.ownerId) {
+    throw Errors.badRequest("Cannot set a collaborator cap on the project owner");
+  }
+  if (monthlyCreditCap !== null && (!Number.isInteger(monthlyCreditCap) || monthlyCreditCap < 0)) {
+    throw Errors.badRequest("monthlyCreditCap must be a non-negative integer or null");
+  }
+
+  const existingMember = await db.projectMember.findUnique({
+    where: { projectId_userId: { projectId, userId: targetUserId } },
+  });
+  if (!existingMember) {
+    throw Errors.notFound("Member");
+  }
+
+  const updated = await db.projectMember.update({
+    where: { id: existingMember.id },
+    data: { monthlyCreditCap },
+  });
+
+  await logActivity(db, {
+    projectId,
+    actorId: actor.userId,
+    action: "member.cap_changed",
+    targetType: "user",
+    targetId: targetUserId,
+    meta: { monthlyCreditCap },
+  });
+
+  return { success: true, member: updated };
 }
