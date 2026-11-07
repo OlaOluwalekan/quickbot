@@ -10,11 +10,8 @@ import { requireWorkspace } from "@/server/authz/access";
 import { logActivity } from "./activity";
 import { resolveBilledAccount, reserveForWorkspaceGeneration } from "./billing-owner";
 import {
-  reserve,
   settle,
   release,
-  createAccountWithFreeGrant,
-  getAccountByUserId,
   getDailyUsage,
 } from "@/server/services/credits";
 import {

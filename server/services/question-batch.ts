@@ -7,9 +7,6 @@ import { resolveBilledAccount, reserveForWorkspaceGeneration } from "./billing-o
 import type { Actor } from "@/server/auth/session";
 import type { RunQuestionBatchInput } from "@/lib/schemas/annotation";
 import {
-  getAccountByUserId,
-  createAccountWithFreeGrant,
-  reserve,
   settle,
   release,
 } from "@/server/services/credits";

@@ -6,8 +6,17 @@ import { requireWorkspace, requireProject, resolveWorkspaceRole } from "@/server
 import { can } from "@/server/authz/permissions";
 import { logActivity } from "./activity";
 import { getUserAvatar } from "./avatar";
-import { getMemberMonthlySpend, resolveBilledAccount } from "./billing-owner";
+import { getMonthlySpendByActor } from "./billing-owner";
 import type { WorkspaceRole, ProjectRole } from "../db/generated/client";
+
+async function getOwnerMonthlySpendByActor(ownerId: string): Promise<Map<string, number>> {
+  const account = await db.creditAccount.findUnique({
+    where: { userId: ownerId },
+    select: { id: true },
+  });
+  if (!account) return new Map();
+  return getMonthlySpendByActor(account.id).catch(() => new Map<string, number>());
+}
 
 export type MemberSummary = {
   id: string;
@@ -146,23 +155,17 @@ export async function listWorkspaceMembers(actor: Actor, workspaceId: string) {
     });
   }
 
-  // Populate avatars & monthly spend for members
-  const { billedAccountId } = await resolveBilledAccount({
-    id: workspace.id,
-    ownerId: workspace.ownerId,
-    projectId: workspace.projectId,
-  });
+  // Populate avatars & monthly spend for members. Read-only: an owner without
+  // a credit account yet simply shows 0 used (no account is created here).
+  const spendByActor = await getOwnerMonthlySpendByActor(workspace.ownerId);
   const memberList = Array.from(membersMap.values());
   await Promise.all(
     memberList.map(async (m) => {
-      const [av, spent] = await Promise.all([
-        getUserAvatar(m.userId).catch(() => null),
-        getMemberMonthlySpend(m.userId, billedAccountId).catch(() => 0),
-      ]);
+      const av = await getUserAvatar(m.userId).catch(() => null);
       if (av?.avatarUrl) {
         m.avatarUrl = av.avatarUrl;
       }
-      m.monthlyCreditsUsed = spent;
+      m.monthlyCreditsUsed = spendByActor.get(m.userId) ?? 0;
     })
   );
 
@@ -247,20 +250,14 @@ export async function listProjectMembers(actor: Actor, projectId: string) {
       monthlyCreditCap: m.monthlyCreditCap,
     }));
 
-  const ownerAcct = await db.creditAccount.findUnique({
-    where: { userId: proj.ownerId },
-    select: { id: true },
-  });
+  const spendByActor = await getOwnerMonthlySpendByActor(proj.ownerId);
   await Promise.all(
     memberList.map(async (m) => {
-      const [av, spent] = await Promise.all([
-        getUserAvatar(m.userId).catch(() => null),
-        ownerAcct ? getMemberMonthlySpend(m.userId, ownerAcct.id).catch(() => 0) : Promise.resolve(0),
-      ]);
+      const av = await getUserAvatar(m.userId).catch(() => null);
       if (av?.avatarUrl) {
         m.avatarUrl = av.avatarUrl;
       }
-      m.monthlyCreditsUsed = spent;
+      m.monthlyCreditsUsed = spendByActor.get(m.userId) ?? 0;
     })
   );
 
@@ -726,29 +723,29 @@ export async function updateWorkspaceMemberCap(
   const existingMember = await db.workspaceMember.findUnique({
     where: { workspaceId_userId: { workspaceId, userId: targetUserId } },
   });
-  const projectMember = ws.projectId
-    ? await db.projectMember.findUnique({
-        where: { projectId_userId: { projectId: ws.projectId, userId: targetUserId } },
-      })
-    : null;
-
-  const isExplicitMember = Boolean(existingMember && existingMember.role !== "NONE");
-  if (!isExplicitMember && !projectMember) {
+  if (!existingMember || existingMember.role === "NONE") {
+    // A member who only inherits access from the project has no WorkspaceMember
+    // row. Creating one just to hold the cap would turn them into an explicit
+    // member whose access survives removal from the project, so their cap is
+    // managed on the project instead (resolveMemberMonthlyCreditCap reads it there).
+    const projectMember =
+      ws.projectId && !existingMember
+        ? await db.projectMember.findUnique({
+            where: { projectId_userId: { projectId: ws.projectId, userId: targetUserId } },
+            select: { id: true },
+          })
+        : null;
+    if (projectMember) {
+      throw Errors.conflict(
+        "This member has access through the project. Change their credit cap from the project's members."
+      );
+    }
     throw Errors.notFound("Member");
   }
 
-  const effectiveRole = isExplicitMember ? existingMember!.role : (projectMember!.role as WorkspaceRole);
-
-  const updated = await db.workspaceMember.upsert({
-    where: { workspaceId_userId: { workspaceId, userId: targetUserId } },
-    update: { monthlyCreditCap },
-    create: {
-      workspaceId,
-      userId: targetUserId,
-      role: effectiveRole,
-      monthlyCreditCap,
-      invitedById: actor.userId,
-    },
+  const updated = await db.workspaceMember.update({
+    where: { id: existingMember.id },
+    data: { monthlyCreditCap },
   });
 
   await logActivity(db, {

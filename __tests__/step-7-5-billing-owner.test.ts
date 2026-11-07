@@ -23,6 +23,7 @@ import {
   reserveForWorkspaceGeneration,
   getUsageByMember,
   clearThresholdNotificationsForTesting,
+  waitForPendingOwnerNotifications,
 } from "@/server/services/billing-owner";
 import {
   listWorkspaceMembers,
@@ -278,7 +279,7 @@ describe("Step 7.5 — Billing-owner resolution and collaborator spend controls"
     ).rejects.toMatchObject({
       status: 402,
       code: "collaborator_cap_exceeded",
-      message: expect.stringContaining("Monthly collaborator credit cap of 20 credits reached"),
+      message: expect.stringContaining("monthly limit of 20 credits for this owner's workspaces"),
     });
 
     // Owner's balance was not deducted on rejected reservation
@@ -309,6 +310,106 @@ describe("Step 7.5 — Billing-owner resolution and collaborator spend controls"
     ).resolves.toMatchObject({
       ownerId: ids.owner,
     });
+  });
+
+  it("enforces the cap atomically under concurrent reservations and lets an idempotent retry through", async () => {
+    const ownerAcct = await getAccountByUserId(ids.owner);
+    const used = await getMemberMonthlySpend(ids.collab, ownerAcct!.id);
+    // Room for exactly one 6-credit reservation
+    await updateWorkspaceMemberCap(actorFor("owner"), workspaceId, ids.collab, used + 10);
+
+    // Hold the owner's account row lock so all three requests get through the
+    // early (unlocked) cap check before any of them can reserve. Only the check
+    // made under the lock can stop the second and third.
+    let releaseLock!: () => void;
+    const lockReleased = new Promise<void>((r) => (releaseLock = r));
+    let lockTaken!: () => void;
+    const lockHeld = new Promise<void>((r) => (lockTaken = r));
+    const holder = db.$transaction(
+      async (tx) => {
+        await tx.$queryRaw`SELECT id FROM credit_accounts WHERE id = ${ownerAcct!.id} FOR UPDATE`;
+        lockTaken();
+        await lockReleased;
+      },
+      { timeout: 20000 }
+    );
+    await lockHeld;
+
+    const keys = [0, 1, 2].map((i) => `res_concurrent_${i}_${sfx}`);
+    const pending = Promise.allSettled(
+      keys.map((reservationKey, i) =>
+        reserveForWorkspaceGeneration({
+          workspace: workspaceId,
+          actorId: ids.collab,
+          amount: 6,
+          reservationKey,
+          generationId: `gen_concurrent_${i}_${sfx}`,
+        })
+      )
+    );
+    await new Promise((r) => setTimeout(r, 500));
+    releaseLock();
+    await holder;
+    const results = await pending;
+    const fulfilled = results.filter((r) => r.status === "fulfilled");
+    const rejected = results.filter((r) => r.status === "rejected") as PromiseRejectedResult[];
+    expect(fulfilled).toHaveLength(1);
+    expect(rejected).toHaveLength(2);
+    for (const r of rejected) {
+      expect(r.reason).toMatchObject({ status: 402, code: "collaborator_cap_exceeded" });
+    }
+    expect(await getMemberMonthlySpend(ids.collab, ownerAcct!.id)).toBe(used + 6);
+
+    // Retrying the reservation that went through is not re-checked against the
+    // (now exhausted) cap and doesn't charge twice.
+    const okKey = keys[results.findIndex((r) => r.status === "fulfilled")]!;
+    await updateWorkspaceMemberCap(actorFor("owner"), workspaceId, ids.collab, 0);
+    await expect(
+      reserveForWorkspaceGeneration({
+        workspace: workspaceId,
+        actorId: ids.collab,
+        amount: 6,
+        reservationKey: okKey,
+        generationId: "ignored-on-retry",
+      })
+    ).resolves.toMatchObject({ ownerId: ids.owner });
+    expect(await getMemberMonthlySpend(ids.collab, ownerAcct!.id)).toBe(used + 6);
+
+    await updateWorkspaceMemberCap(actorFor("owner"), workspaceId, ids.collab, null);
+  });
+
+  it("does not turn a project member into a workspace member when a cap is set on the workspace", async () => {
+    await expect(
+      updateWorkspaceMemberCap(actorFor("owner"), projectWorkspaceId, ids.projectCollab, 50)
+    ).rejects.toMatchObject({ status: 409 });
+    expect(
+      await db.workspaceMember.findUnique({
+        where: {
+          workspaceId_userId: { workspaceId: projectWorkspaceId, userId: ids.projectCollab },
+        },
+      })
+    ).toBeNull();
+  });
+
+  it("rejects a member PATCH that sets both role and monthlyCreditCap", async () => {
+    mockActor = actorFor("owner");
+    const req = new NextRequest(
+      `http://localhost/api/v1/workspaces/${workspaceId}/members/${ids.collab}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ role: "VIEWER", monthlyCreditCap: 10 }),
+        headers: { "content-type": "application/json" },
+      }
+    );
+    const res = await patchWorkspaceMemberRoute(req, {
+      params: Promise.resolve({ id: workspaceId, userId: ids.collab }),
+    });
+    mockActor = null;
+    expect(res.status).toBe(422);
+    const wm = await db.workspaceMember.findUnique({
+      where: { workspaceId_userId: { workspaceId, userId: ids.collab } },
+    });
+    expect(wm!.role).toBe("EDITOR");
   });
 
   it("enforces inherited ProjectMember.monthlyCreditCap on project workspaces", async () => {
@@ -366,6 +467,7 @@ describe("Step 7.5 — Billing-owner resolution and collaborator spend controls"
     });
 
     // Owner was notified via email
+    await waitForPendingOwnerNotifications();
     expect(
       sentEmails.some(
         (e) => e.template === "credits-low" && e.to === email("owner")
@@ -389,7 +491,7 @@ describe("Step 7.5 — Billing-owner resolution and collaborator spend controls"
     clearThresholdNotificationsForTesting();
     sentEmails.length = 0;
 
-    // Owner has 100 monthly allowance on FREE plan; already spent ~22 in earlier tests, so reserve 65 more to cross 80%
+    // Owner has 100 monthly allowance on FREE plan; already spent ~28 in earlier tests, so reserve 65 more to cross 80%
     const gen80a = `gen_80a_${sfx}`;
     await reserveForWorkspaceGeneration({
       workspace: workspaceId,
@@ -398,6 +500,7 @@ describe("Step 7.5 — Billing-owner resolution and collaborator spend controls"
       reservationKey: `res_${gen80a}`,
       generationId: gen80a,
     });
+    await waitForPendingOwnerNotifications();
     expect(sentEmails.filter((e) => e.to === email("owner"))).toHaveLength(1);
 
     // Another small reservation still between 80% and 100% must NOT re-send the 80% email
@@ -409,6 +512,7 @@ describe("Step 7.5 — Billing-owner resolution and collaborator spend controls"
       reservationKey: `res_${gen80b}`,
       generationId: gen80b,
     });
+    await waitForPendingOwnerNotifications();
     expect(sentEmails.filter((e) => e.to === email("owner"))).toHaveLength(1);
 
     // Exhaust remaining 30 credits to hit 100% -> sends 100% notification once
@@ -420,6 +524,7 @@ describe("Step 7.5 — Billing-owner resolution and collaborator spend controls"
       reservationKey: `res_${gen100a}`,
       generationId: gen100a,
     });
+    await waitForPendingOwnerNotifications();
     expect(sentEmails.filter((e) => e.to === email("owner"))).toHaveLength(2);
 
     // Subsequent out-of-credits attempt in the same period does NOT send a third email
@@ -432,6 +537,7 @@ describe("Step 7.5 — Billing-owner resolution and collaborator spend controls"
         generationId: `gen_100b_${sfx}`,
       })
     ).rejects.toMatchObject({ status: 402 });
+    await waitForPendingOwnerNotifications();
     expect(sentEmails.filter((e) => e.to === email("owner"))).toHaveLength(2);
   });
 

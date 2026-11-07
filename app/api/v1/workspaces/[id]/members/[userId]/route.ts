@@ -11,14 +11,11 @@ export const PATCH = route({
   handler: async ({ actor, params, body }) => {
     const workspaceId = params.id as string;
     const targetUserId = params.userId as string;
-    let res: unknown = { success: true };
-    if (body.role !== undefined) {
-      res = await updateWorkspaceMemberRole(actor, workspaceId, targetUserId, body.role);
-    }
+    // The schema guarantees exactly one of role / monthlyCreditCap.
     if (body.monthlyCreditCap !== undefined) {
-      res = await updateWorkspaceMemberCap(actor, workspaceId, targetUserId, body.monthlyCreditCap);
+      return updateWorkspaceMemberCap(actor, workspaceId, targetUserId, body.monthlyCreditCap);
     }
-    return res;
+    return updateWorkspaceMemberRole(actor, workspaceId, targetUserId, body.role as string);
   },
 });
 

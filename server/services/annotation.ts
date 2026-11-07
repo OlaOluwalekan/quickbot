@@ -13,9 +13,6 @@ import type {
   PromoteAnnotationInput,
 } from "@/lib/schemas/annotation";
 import {
-  getAccountByUserId,
-  createAccountWithFreeGrant,
-  reserve,
   settle,
   release,
 } from "@/server/services/credits";

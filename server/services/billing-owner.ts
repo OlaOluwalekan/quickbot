@@ -15,6 +15,9 @@ import {
 import { sendEmail } from "@/server/email/send";
 import { env } from "@/server/env";
 import { logActivity } from "@/server/services/activity";
+import type { Prisma } from "@/server/db/generated/client";
+
+type DbClient = Prisma.TransactionClient | typeof db;
 
 export const DEFAULT_COLLABORATOR_MONTHLY_CAP = 300;
 
@@ -182,9 +185,10 @@ export async function resolveMemberMonthlyCreditCap(
 export async function getMemberMonthlySpend(
   actorId: string,
   billedAccountId: string,
-  periodStart: Date = getCurrentBillingPeriodStart()
+  periodStart: Date = getCurrentBillingPeriodStart(),
+  client: DbClient = db
 ): Promise<number> {
-  const genRows = await db.$queryRaw<{ total: bigint | number | null }[]>`
+  const genRows = await client.$queryRaw<{ total: bigint | number | null }[]>`
     SELECT COALESCE(
       SUM(
         CASE
@@ -201,7 +205,7 @@ export async function getMemberMonthlySpend(
       AND status IN ('COMPLETED'::"GenStatus", 'RUNNING'::"GenStatus", 'CANCELLED'::"GenStatus")
   `;
 
-  const ledgerRows = await db.$queryRaw<{ total: bigint | number | null }[]>`
+  const ledgerRows = await client.$queryRaw<{ total: bigint | number | null }[]>`
     SELECT COALESCE(SUM(-(plan_delta + topup_delta)), 0) AS total
     FROM credit_ledger
     WHERE account_id = ${billedAccountId}
@@ -215,11 +219,66 @@ export async function getMemberMonthlySpend(
   return Math.max(fromGenerations, fromLedger);
 }
 
+/**
+ * Same figure as `getMemberMonthlySpend`, for every actor on the account at
+ * once (two grouped queries instead of two per member). Used by member lists.
+ */
+export async function getMonthlySpendByActor(
+  billedAccountId: string,
+  periodStart: Date = getCurrentBillingPeriodStart()
+): Promise<Map<string, number>> {
+  const [genRows, ledgerRows] = await Promise.all([
+    db.$queryRaw<{ actor_id: string; total: bigint | number | null }[]>`
+      SELECT actor_id, COALESCE(
+        SUM(
+          CASE
+            WHEN status = 'RUNNING'::"GenStatus" AND charged_credits = 0 THEN reserved_credits
+            ELSE charged_credits
+          END
+        ),
+        0
+      ) AS total
+      FROM generations
+      WHERE billed_account_id = ${billedAccountId}
+        AND created_at >= ${periodStart}
+        AND status IN ('COMPLETED'::"GenStatus", 'RUNNING'::"GenStatus", 'CANCELLED'::"GenStatus")
+      GROUP BY actor_id
+    `,
+    db.$queryRaw<{ actor_id: string | null; total: bigint | number | null }[]>`
+      SELECT actor_id, COALESCE(SUM(-(plan_delta + topup_delta)), 0) AS total
+      FROM credit_ledger
+      WHERE account_id = ${billedAccountId}
+        AND actor_id IS NOT NULL
+        AND type IN ('RESERVE'::"LedgerType", 'SETTLE'::"LedgerType", 'RELEASE'::"LedgerType")
+        AND created_at >= ${periodStart}
+      GROUP BY actor_id
+    `,
+  ]);
+
+  const spend = new Map<string, number>();
+  for (const r of [...genRows, ...ledgerRows]) {
+    if (!r.actor_id) continue;
+    const total = Math.max(0, Number(r.total ?? 0));
+    spend.set(r.actor_id, Math.max(spend.get(r.actor_id) ?? 0, total));
+  }
+  return spend;
+}
+
 // In-memory deduplication fallback alongside DB activity log deduplication
 const sentThresholdNotifications = new Set<string>();
 
 export function clearThresholdNotificationsForTesting(): void {
   sentThresholdNotifications.clear();
+}
+
+// Threshold checks started in the background by reserveForWorkspaceGeneration
+const pendingThresholdChecks = new Set<Promise<unknown>>();
+
+/** Resolves once every background allowance-threshold check has finished. */
+export async function waitForPendingOwnerNotifications(): Promise<void> {
+  while (pendingThresholdChecks.size > 0) {
+    await Promise.allSettled(Array.from(pendingThresholdChecks));
+  }
 }
 
 /**
@@ -353,26 +412,37 @@ export async function reserveForWorkspaceGeneration(opts: {
   estimated?: boolean;
 }): Promise<BalanceResult & { billedAccountId: string; ownerId: string }> {
   const ws = await normalizeWorkspaceTarget(opts.workspace);
-  const { account, billedAccountId, ownerId } = await resolveBilledAccount(ws);
+  const { billedAccountId, ownerId } = await resolveBilledAccount(ws);
   const isCollaborator = opts.actorId !== ownerId;
 
-  // 1. Collaborator monthly spend cap check BEFORE reserving
-  if (isCollaborator) {
-    const cap = await resolveMemberMonthlyCreditCap(opts.actorId, ws);
-    if (cap !== null) {
-      const usedThisMonth = await getMemberMonthlySpend(
-        opts.actorId,
-        billedAccountId
+  // A retry of a reservation that already went through must not be re-checked
+  // against the cap: reserve() returns the recorded result for the same key.
+  const alreadyReserved = await db.creditLedger.findUnique({
+    where: { idempotencyKey: opts.reservationKey },
+    select: { id: true },
+  });
+
+  // 1. Collaborator monthly spend cap.
+  // The cap counts everything the member spends from this owner's credits this
+  // month, across all of the owner's workspaces (Step 7.5), not just this one.
+  const cap =
+    isCollaborator && !alreadyReserved
+      ? await resolveMemberMonthlyCreditCap(opts.actorId, ws)
+      : null;
+  const assertWithinCap = (usedThisMonth: number) => {
+    if (cap !== null && usedThisMonth + opts.amount > cap) {
+      throw new ApiError(
+        402,
+        "collaborator_cap_exceeded",
+        `You've reached your monthly limit of ${cap} credits for this owner's workspaces.`,
+        { cap, used: usedThisMonth }
       );
-      if (usedThisMonth >= cap || usedThisMonth + opts.amount > cap) {
-        throw new ApiError(
-          402,
-          "collaborator_cap_exceeded",
-          `Monthly collaborator credit cap of ${cap} credits reached in this workspace.`,
-          { cap, used: usedThisMonth }
-        );
-      }
     }
+  };
+  if (cap !== null) {
+    // Fast pre-check so an over-cap member gets the cap message even when the
+    // owner is also out of credits.
+    assertWithinCap(await getMemberMonthlySpend(opts.actorId, billedAccountId));
   }
 
   // 2. Reserve on the OWNER's CreditAccount
@@ -382,9 +452,23 @@ export async function reserveForWorkspaceGeneration(opts: {
       generationId: opts.generationId,
       actorId: opts.actorId,
       estimated: opts.estimated ?? true,
+      // Authoritative check, made while the owner's account row is locked so
+      // concurrent generations can't each pass the pre-check and overspend.
+      guard:
+        cap !== null
+          ? async (tx) =>
+              assertWithinCap(
+                await getMemberMonthlySpend(
+                  opts.actorId,
+                  billedAccountId,
+                  getCurrentBillingPeriodStart(),
+                  tx
+                )
+              )
+          : undefined,
     });
   } catch (err: unknown) {
-    if (err instanceof ApiError && err.status === 402) {
+    if (err instanceof ApiError && err.status === 402 && err.code !== "collaborator_cap_exceeded") {
       await checkAndNotifyOwnerAllowanceThresholds({
         ownerId,
         accountId: billedAccountId,
@@ -401,14 +485,18 @@ export async function reserveForWorkspaceGeneration(opts: {
     throw err;
   }
 
-  // 3. Check 80% / 100% allowance thresholds after reservation
+  // 3. Check 80% / 100% allowance thresholds after reservation. Runs in the
+  // background: it never affects the generation, so it shouldn't delay it.
   const remainingAfter = balance.planBalance + balance.topupBalance;
-  await checkAndNotifyOwnerAllowanceThresholds({
+  const thresholdCheck = checkAndNotifyOwnerAllowanceThresholds({
     ownerId,
     accountId: billedAccountId,
     workspaceId: ws.id,
     remainingBalance: remainingAfter,
-  }).catch(() => {});
+  })
+    .catch(() => {})
+    .finally(() => pendingThresholdChecks.delete(thresholdCheck));
+  pendingThresholdChecks.add(thresholdCheck);
 
   return {
     ...balance,
