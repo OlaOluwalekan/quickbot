@@ -479,7 +479,7 @@
     "modelEconomy": "Fast & Efficient",
     "modelPro": "Deep Reasoning",
     "readAloudSoon": "Read aloud will be available in Phase 9",
-    "shareSoon": "Sharing will be available in Phase 7",
+    "shareNoPermission": "Solo los propietarios y administradores del espacio de trabajo pueden crear enlaces públicos",
     "exportSoon": "Exporting will be available in Phase 5",
     "sources": "Fuentes",
     "downloadImage": "Descargar imagen"

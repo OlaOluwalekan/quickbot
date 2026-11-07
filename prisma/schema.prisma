@@ -65,6 +65,7 @@ model User {
   sentInvitations      Invitation[]        @relation("SentInvitations")
   receivedInvitations  Invitation[]        @relation("ReceivedInvitations")
   activityLogs         ActivityLog[]       @relation("ActorActivityLogs")
+  createdShareLinks    ShareLink[]         @relation("CreatedShareLinks")
 
   @@map("users")
 }
@@ -159,6 +160,7 @@ model Workspace {
   annotations    Annotation[]
   invitations    Invitation[]
   activityLogs   ActivityLog[]
+  shareLinks     ShareLink[]
 
   @@index([ownerId, deletedAt, lastActivityAt(sort: Desc)])
   @@index([projectId, deletedAt])
@@ -273,6 +275,7 @@ model Response {
   versions        ResponseVersion[]
   attachments     Attachment[]
   annotations     Annotation[]
+  shareLinks      ShareLink[]
   quote           String?           @db.Text
   sourceAnnotationId String?        @map("source_annotation_id")
 
@@ -642,4 +645,33 @@ model ActivityLog {
   @@index([workspaceId, createdAt(sort: Desc)])
   @@index([projectId, createdAt(sort: Desc)])
   @@map("activity_log")
+}
+
+enum ShareScope {
+  WORKSPACE
+  RESPONSE
+}
+
+model ShareLink {
+  id           String     @id @default(uuid(7))
+  workspaceId  String     @map("workspace_id")
+  responseId   String?    @map("response_id")
+  scope        ShareScope
+  view         String     @default("EDITED_IF_AVAILABLE")
+  tokenHash    String     @unique @map("token_hash")
+  tokenPrefix  String     @map("token_prefix")
+  showAuthor   Boolean    @default(false) @map("show_author")
+  expiresAt    DateTime?  @map("expires_at")
+  revokedAt    DateTime?  @map("revoked_at")
+  createdById  String     @map("created_by_id")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  viewCount    Int        @default(0) @map("view_count")
+  lastViewedAt DateTime?  @map("last_viewed_at")
+
+  workspace    Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  response     Response?  @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  createdBy    User       @relation("CreatedShareLinks", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@map("share_links")
 }

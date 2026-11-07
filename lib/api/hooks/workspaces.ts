@@ -21,6 +21,8 @@ export interface WorkspaceDto {
   archivedAt?: string | null;
   deletedAt?: string | null;
   memberCount?: number;
+  /** Caller's effective role (returned by GET /api/v1/workspaces/:id). */
+  role?: "OWNER" | "ADMIN" | "EDITOR" | "COMMENTER" | "VIEWER";
   createdAt: string;
   updatedAt: string;
 }

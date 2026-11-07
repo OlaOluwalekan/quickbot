@@ -3,7 +3,9 @@ import { PrismaClient } from "./generated/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { env } from "@/server/env";
 
-const CURRENT_SCHEMA_VER = "20261107100000_add_monthly_credit_cap";
+// Bump to the latest migration name so dev hot-reload drops a client generated
+// against an older schema.
+const CURRENT_SCHEMA_VER = "20261107110000_add_share_links";
 
 const make = () =>
   new PrismaClient({
@@ -15,9 +17,12 @@ const g = globalThis as unknown as {
   __dbSchemaVer?: string;
 };
 
+// Runs once per module evaluation (i.e. on each dev hot reload), never per query.
 if (
   g.__db &&
-  (g.__dbSchemaVer !== CURRENT_SCHEMA_VER || !("auditLog" in g.__db))
+  (g.__dbSchemaVer !== CURRENT_SCHEMA_VER ||
+    !("auditLog" in g.__db) ||
+    !("shareLink" in g.__db))
 ) {
   g.__db.$disconnect().catch(() => {});
   g.__db = undefined;
