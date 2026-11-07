@@ -29,9 +29,11 @@ import {
 import { useUiStore } from "@/lib/stores/ui";
 import LocaleSwitcher from "@/components/layout/locale-switcher";
 import type { SidebarProjectItem, SidebarWorkspaceItem } from "./types";
+import { ShareAndPeopleDialog } from "@/components/workspace/ShareAndPeopleDialog";
 
 export interface TopbarProps {
   activeWorkspace: SidebarWorkspaceItem | null;
+  currentUserId?: string;
   projects: SidebarProjectItem[];
   onRenameWorkspace: (workspaceId: string, title: string) => Promise<void>;
   onMoveWorkspace: (
@@ -44,6 +46,7 @@ export interface TopbarProps {
 
 export function Topbar({
   activeWorkspace,
+  currentUserId,
   projects,
   onRenameWorkspace,
   onMoveWorkspace,
@@ -118,8 +121,14 @@ export function Topbar({
     }
   };
 
+  const [shareOpen, setShareOpen] = React.useState(false);
+
   const handleShareClick = () => {
-    toast.info(t("shareComingSoon"));
+    if (!activeWorkspace || !currentUserId) {
+      toast.info(t("shareComingSoon"));
+      return;
+    }
+    setShareOpen(true);
   };
 
   return (
@@ -292,6 +301,15 @@ export function Topbar({
           </DropdownMenu>
         )}
       </div>
+      {activeWorkspace && currentUserId && (
+        <ShareAndPeopleDialog
+          open={shareOpen}
+          onOpenChange={setShareOpen}
+          workspaceId={activeWorkspace.id}
+          workspaceTitle={activeWorkspace.title}
+          currentUserId={currentUserId}
+        />
+      )}
     </header>
   );
 }

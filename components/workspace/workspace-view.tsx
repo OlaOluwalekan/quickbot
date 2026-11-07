@@ -398,6 +398,7 @@ export function WorkspaceView({
         workspaceId={workspace.id}
         actor={actor}
         responses={displayedResponses}
+        memberCount={workspace.memberCount ?? 1}
         optimisticPrompt={optimisticFirstPrompt}
         onRegenerateTurn={handleRegenerateTurn}
         onRetryFailed={handleRetryFailed}

@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import { db } from "@/server/db/client";
 import { Errors } from "@/server/http/errors";
 import { requireWorkspace } from "@/server/authz/access";
+import { logActivity } from "./activity";
 import type { Actor } from "@/server/auth/session";
 import type {
   CreateAnnotationInput,
@@ -235,7 +236,7 @@ export async function createAnnotation(
     );
   }
 
-  return db.annotation.create({
+  const created = await db.annotation.create({
     data: {
       workspaceId: version.response.workspaceId,
       responseId: version.response.id,
@@ -275,6 +276,17 @@ export async function createAnnotation(
       },
     },
   });
+
+  await logActivity(db, {
+    workspaceId: version.response.workspaceId,
+    actorId: actor.userId,
+    action: "annotation.created",
+    targetType: "annotation",
+    targetId: created.id,
+    meta: { kind: created.kind },
+  });
+
+  return created;
 }
 
 /**

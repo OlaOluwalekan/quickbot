@@ -3,7 +3,7 @@ import { PrismaClient } from "./generated/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { env } from "@/server/env";
 
-const CURRENT_SCHEMA_VER = "20261106090000_add_session_device_metadata";
+const CURRENT_SCHEMA_VER = "20261106130000_add_invitations_and_activity_log";
 
 const make = () =>
   new PrismaClient({

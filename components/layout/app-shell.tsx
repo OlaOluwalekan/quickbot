@@ -418,6 +418,7 @@ export function AppShell({
       <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
         <Topbar
           activeWorkspace={activeWorkspace}
+          currentUserId={user.id}
           projects={projects}
           onRenameWorkspace={handleRenameWorkspace}
           onMoveWorkspace={handleMoveWorkspace}
