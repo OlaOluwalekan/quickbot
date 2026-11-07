@@ -56,6 +56,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UserAvatar } from "@/components/user/user-avatar";
+import { ShareAndPeopleDialog } from "@/components/workspace/ShareAndPeopleDialog";
 import Logo from "@/components/logo/Logo";
 import AppName from "@/components/logo/AppName";
 import type {
@@ -183,9 +184,8 @@ export function Sidebar({
     });
   };
 
-  const handleShareClick = () => {
-    toast.info(t("shareComingSoon"));
-  };
+  const [sharingWorkspace, setSharingWorkspace] = React.useState<SidebarWorkspaceItem | null>(null);
+  const [sharingProject, setSharingProject] = React.useState<SidebarProjectItem | null>(null);
 
   const renderWorkspaceRow = (ws: SidebarWorkspaceItem, nested = false) => {
     const isActive = activeWorkspaceId === ws.id;
@@ -282,7 +282,7 @@ export function Sidebar({
               </DropdownMenuSubContent>
             </DropdownMenuSub>
 
-            <DropdownMenuItem onSelect={handleShareClick}>
+            <DropdownMenuItem onSelect={() => setSharingWorkspace(ws)}>
               <Share2 className="h-4 w-4" strokeWidth={1.5} />
               <span>{t("share")}</span>
             </DropdownMenuItem>
@@ -526,36 +526,47 @@ export function Sidebar({
 
                         return (
                           <div key={project.id} className="space-y-0.5">
-                            <button
-                              type="button"
-                              aria-expanded={isExpanded}
-                              onClick={() => toggleProjectNode(project.id)}
-                              className="text-muted hover:bg-surface-2 hover:text-fg focus-visible:ring-ring flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-xs focus-visible:ring-2 focus-visible:outline-none sm:text-sm"
-                            >
-                              <span className="flex min-w-0 items-center gap-2 truncate">
-                                {isExpanded ? (
-                                  <ChevronDown
-                                    className="text-subtle h-3.5 w-3.5 shrink-0"
+                            <div className="group flex items-center justify-between gap-1 rounded-lg px-2 py-1.5 text-xs hover:bg-surface-2 sm:text-sm">
+                              <button
+                                type="button"
+                                aria-expanded={isExpanded}
+                                onClick={() => toggleProjectNode(project.id)}
+                                className="text-muted hover:text-fg focus-visible:ring-ring flex min-w-0 flex-1 cursor-pointer items-center justify-between gap-2 rounded-sm text-left focus-visible:ring-2 focus-visible:outline-none"
+                              >
+                                <span className="flex min-w-0 items-center gap-2 truncate">
+                                  {isExpanded ? (
+                                    <ChevronDown
+                                      className="text-subtle h-3.5 w-3.5 shrink-0"
+                                      strokeWidth={1.5}
+                                    />
+                                  ) : (
+                                    <ChevronRight
+                                      className="text-subtle h-3.5 w-3.5 shrink-0"
+                                      strokeWidth={1.5}
+                                    />
+                                  )}
+                                  <FolderKanban
+                                    className="text-accent h-3.5 w-3.5 shrink-0"
                                     strokeWidth={1.5}
                                   />
-                                ) : (
-                                  <ChevronRight
-                                    className="text-subtle h-3.5 w-3.5 shrink-0"
-                                    strokeWidth={1.5}
-                                  />
-                                )}
-                                <FolderKanban
-                                  className="text-accent h-3.5 w-3.5 shrink-0"
-                                  strokeWidth={1.5}
-                                />
-                                <span className="truncate font-medium">
-                                  {project.name}
+                                  <span className="truncate font-medium">
+                                    {project.name}
+                                  </span>
                                 </span>
-                              </span>
-                              <span className="text-subtle text-[11px]">
-                                {childWorkspaces.length}
-                              </span>
-                            </button>
+                                <span className="text-subtle text-[11px]">
+                                  {childWorkspaces.length}
+                                </span>
+                              </button>
+                              <button
+                                type="button"
+                                title={t("share")}
+                                aria-label={`${t("share")}: ${project.name}`}
+                                onClick={() => setSharingProject(project)}
+                                className="text-subtle hover:bg-surface-3 hover:text-fg focus-visible:ring-ring shrink-0 cursor-pointer rounded-md p-1 opacity-100 focus:opacity-100 focus-visible:ring-2 focus-visible:outline-none sm:opacity-0 sm:group-hover:opacity-100"
+                              >
+                                <Share2 className="h-3.5 w-3.5" strokeWidth={1.5} />
+                              </button>
+                            </div>
 
                             {isExpanded && childWorkspaces.length > 0 && (
                               <div className="space-y-0.5">
@@ -818,6 +829,28 @@ export function Sidebar({
           </DropdownMenu>
         </div>
       </aside>
+      {sharingWorkspace && (
+        <ShareAndPeopleDialog
+          open={Boolean(sharingWorkspace)}
+          onOpenChange={(o) => {
+            if (!o) setSharingWorkspace(null);
+          }}
+          workspaceId={sharingWorkspace.id}
+          workspaceTitle={sharingWorkspace.title}
+          currentUserId={user.id}
+        />
+      )}
+      {sharingProject && (
+        <ShareAndPeopleDialog
+          open={Boolean(sharingProject)}
+          onOpenChange={(o) => {
+            if (!o) setSharingProject(null);
+          }}
+          projectId={sharingProject.id}
+          projectName={sharingProject.name}
+          currentUserId={user.id}
+        />
+      )}
     </TooltipProvider>
   );
 }

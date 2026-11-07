@@ -2,6 +2,7 @@ import "server-only";
 import { db } from "@/server/db/client";
 import type { Actor } from "@/server/auth/session";
 import { Errors } from "@/server/http/errors";
+import { logActivity } from "./activity";
 import { toPage } from "@/server/http/pagination";
 import {
   requireProject,
@@ -107,7 +108,7 @@ export async function createWorkspace(
   const title = trimmedTitle || "New workspace";
   const titleSource = trimmedTitle ? ("USER" as const) : ("AUTO" as const);
 
-  return db.workspace.create({
+  const ws = await db.workspace.create({
     data: {
       ownerId: actor.userId,
       projectId: input.projectId ?? null,
@@ -115,6 +116,18 @@ export async function createWorkspace(
       titleSource,
     },
   });
+
+  await logActivity(db, {
+    workspaceId: ws.id,
+    projectId: ws.projectId,
+    actorId: actor.userId,
+    action: "workspace.created",
+    targetType: "workspace",
+    targetId: ws.id,
+    meta: { title: ws.title },
+  });
+
+  return ws;
 }
 
 export async function getWorkspace(actor: Actor, workspaceId: string) {
@@ -168,7 +181,7 @@ export async function updateWorkspace(
     await requireProject(actor, input.projectId, "workspace.generate");
   }
 
-  return db.workspace.update({
+  const updated = await db.workspace.update({
     where: { id: workspaceId },
     data: {
       ...(input.title !== undefined
@@ -180,16 +193,52 @@ export async function updateWorkspace(
         : {}),
     },
   });
+
+  if (input.title !== undefined) {
+    await logActivity(db, {
+      workspaceId,
+      projectId: updated.projectId,
+      actorId: actor.userId,
+      action: "workspace.renamed",
+      targetType: "workspace",
+      targetId: workspaceId,
+      meta: { title: updated.title },
+    });
+  }
+
+  if (input.archived !== undefined) {
+    await logActivity(db, {
+      workspaceId,
+      projectId: updated.projectId,
+      actorId: actor.userId,
+      action: input.archived ? "workspace.archived" : "workspace.unarchived",
+      targetType: "workspace",
+      targetId: workspaceId,
+    });
+  }
+
+  return updated;
 }
 
 export async function deleteWorkspace(actor: Actor, workspaceId: string) {
   // Soft delete: owner only
   await requireWorkspace(actor, workspaceId, "workspace.delete");
 
-  return db.workspace.update({
+  const deleted = await db.workspace.update({
     where: { id: workspaceId },
     data: { deletedAt: new Date() },
   });
+
+  await logActivity(db, {
+    workspaceId,
+    projectId: deleted.projectId,
+    actorId: actor.userId,
+    action: "workspace.deleted",
+    targetType: "workspace",
+    targetId: workspaceId,
+  });
+
+  return deleted;
 }
 
 export async function restoreWorkspace(actor: Actor, workspaceId: string) {
@@ -212,10 +261,21 @@ export async function restoreWorkspace(actor: Actor, workspaceId: string) {
     throw Errors.conflict("Workspace deleted more than 30 days ago cannot be restored");
   }
 
-  return db.workspace.update({
+  const restored = await db.workspace.update({
     where: { id: workspaceId },
     data: { deletedAt: null },
   });
+
+  await logActivity(db, {
+    workspaceId,
+    projectId: restored.projectId,
+    actorId: actor.userId,
+    action: "workspace.restored",
+    targetType: "workspace",
+    targetId: workspaceId,
+  });
+
+  return restored;
 }
 
 export async function touchWorkspaceActivity(workspaceId: string) {

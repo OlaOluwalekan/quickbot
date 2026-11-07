@@ -3,6 +3,8 @@ import { db } from "@/server/db/client";
 import { Errors } from "@/server/http/errors";
 import type { Actor } from "@/server/auth/session";
 import { requireWorkspace, resolveWorkspaceRole } from "@/server/authz/access";
+import { logActivity } from "./activity";
+import { resolveAvatarUrl } from "@/lib/avatar";
 import { toPage } from "@/server/http/pagination";
 import { createAndStreamGeneration } from "./generation";
 import type {
@@ -78,6 +80,24 @@ export async function listWorkspaceResponses(
     },
   });
 
+  const userIds = Array.from(
+    new Set(responses.map((r) => r.createdById).filter(Boolean))
+  );
+  const users =
+    userIds.length > 0
+      ? await db.user.findMany({
+          where: { id: { in: userIds } },
+          include: { avatarAttachment: true },
+        })
+      : [];
+  const authorMap = new Map<string, { name: string; avatarUrl: string | null }>();
+  for (const u of users) {
+    authorMap.set(u.id, {
+      name: u.name,
+      avatarUrl: resolveAvatarUrl(u),
+    });
+  }
+
   const formatted = responses.map((r) => {
     const versionCount = r.versions.length;
     // activeVersion is either the explicit activeVersionId or the latest version
@@ -122,6 +142,8 @@ export async function listWorkspaceResponses(
       };
     }
 
+    const author = authorMap.get(r.createdById) ?? null;
+
     return {
       id: r.id,
       workspaceId: r.workspaceId,
@@ -134,6 +156,7 @@ export async function listWorkspaceResponses(
       createdAt: r.createdAt,
       activeVersion: activeVersionSummary,
       versionCount,
+      author: author ? { name: author.name, avatarUrl: author.avatarUrl ?? undefined } : undefined,
       attachments: (r.attachments ?? []).filter((a) => a.kind !== "GENERATED_DOCUMENT"),
       generatedDocuments: (r.attachments ?? []).filter((a) => a.kind === "GENERATED_DOCUMENT"),
     };
@@ -374,6 +397,15 @@ export async function createResponseEdit(
             editorId: actor.userId,
           },
         });
+      });
+
+      await logActivity(db, {
+        workspaceId: version.response.workspaceId,
+        actorId: actor.userId,
+        action: "response.edited",
+        targetType: "response",
+        targetId: version.response.id,
+        meta: { versionId, revision: edit.revision },
       });
 
       return edit;

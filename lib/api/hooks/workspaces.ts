@@ -20,6 +20,7 @@ export interface WorkspaceDto {
   projectId?: string | null;
   archivedAt?: string | null;
   deletedAt?: string | null;
+  memberCount?: number;
   createdAt: string;
   updatedAt: string;
 }

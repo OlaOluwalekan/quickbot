@@ -62,6 +62,9 @@ model User {
   auditLogs            AuditLog[]
   avatarAttachmentId   String?             @unique @map("avatar_attachment_id")
   avatarAttachment     Attachment?         @relation("UserAvatarAttachment", fields: [avatarAttachmentId], references: [id], onDelete: SetNull)
+  sentInvitations      Invitation[]        @relation("SentInvitations")
+  receivedInvitations  Invitation[]        @relation("ReceivedInvitations")
+  activityLogs         ActivityLog[]       @relation("ActorActivityLogs")
 
   @@map("users")
 }
@@ -129,6 +132,8 @@ model Project {
   owner       User            @relation(fields: [ownerId], references: [id], onDelete: Restrict)
   workspaces  Workspace[]
   members     ProjectMember[]
+  invitations Invitation[]
+  activityLogs ActivityLog[]
 
   @@index([ownerId, deletedAt, updatedAt(sort: Desc)])
   @@map("projects")
@@ -152,6 +157,8 @@ model Workspace {
   generations    Generation[]
   attachments    Attachment[]
   annotations    Annotation[]
+  invitations    Invitation[]
+  activityLogs   ActivityLog[]
 
   @@index([ownerId, deletedAt, lastActivityAt(sort: Desc)])
   @@index([projectId, deletedAt])
@@ -580,4 +587,56 @@ model AuditLog {
   @@index([userId, createdAt])
   @@index([action, createdAt])
   @@map("audit_logs")
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+  EXPIRED
+}
+
+model Invitation {
+  id            String       @id @default(uuid(7))
+  workspaceId   String?      @map("workspace_id")
+  projectId     String?      @map("project_id")
+  email         String
+  invitedUserId String?      @map("invited_user_id")
+  role          String
+  tokenHash     String       @unique @map("token_hash")
+  status        InviteStatus @default(PENDING)
+  invitedById   String       @map("invited_by_id")
+  expiresAt     DateTime     @map("expires_at")
+  acceptedAt    DateTime?    @map("accepted_at")
+  createdAt     DateTime     @default(now()) @map("created_at")
+
+  workspace     Workspace?   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  project       Project?     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  invitedBy     User         @relation("SentInvitations", fields: [invitedById], references: [id], onDelete: Cascade)
+  invitedUser   User?        @relation("ReceivedInvitations", fields: [invitedUserId], references: [id], onDelete: SetNull)
+
+  @@index([email, status])
+  @@index([workspaceId])
+  @@index([projectId])
+  @@map("invitations")
+}
+
+model ActivityLog {
+  id          String     @id @default(uuid(7))
+  workspaceId String?    @map("workspace_id")
+  projectId   String?    @map("project_id")
+  actorId     String     @map("actor_id")
+  action      String
+  targetType  String?    @map("target_type")
+  targetId    String?    @map("target_id")
+  meta        Json?
+  createdAt   DateTime   @default(now()) @map("created_at")
+
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  project     Project?   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  actor       User       @relation("ActorActivityLogs", fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, createdAt(sort: Desc)])
+  @@index([projectId, createdAt(sort: Desc)])
+  @@map("activity_log")
 }

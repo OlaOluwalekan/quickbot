@@ -6,6 +6,7 @@ import { toPage } from "@/server/http/pagination";
 import {
   requireProject,
 } from "@/server/authz/access";
+import { logActivity } from "./activity";
 import type {
   CreateProjectInput,
   UpdateProjectInput,
@@ -59,13 +60,24 @@ export async function listProjects(
 }
 
 export async function createProject(actor: Actor, input: CreateProjectInput) {
-  return db.project.create({
+  const p = await db.project.create({
     data: {
       ownerId: actor.userId,
       name: input.name.trim(),
       description: input.description?.trim() || null,
     },
   });
+
+  await logActivity(db, {
+    projectId: p.id,
+    actorId: actor.userId,
+    action: "project.created",
+    targetType: "project",
+    targetId: p.id,
+    meta: { name: p.name },
+  });
+
+  return p;
 }
 
 export async function getProject(actor: Actor, projectId: string) {
@@ -109,7 +121,7 @@ export async function updateProject(
     await requireProject(actor, projectId, "workspace.archive");
   }
 
-  return db.project.update({
+  const updated = await db.project.update({
     where: { id: projectId },
     data: {
       ...(input.name !== undefined ? { name: input.name.trim() } : {}),
@@ -121,16 +133,49 @@ export async function updateProject(
         : {}),
     },
   });
+
+  if (input.name !== undefined) {
+    await logActivity(db, {
+      projectId,
+      actorId: actor.userId,
+      action: "project.renamed",
+      targetType: "project",
+      targetId: projectId,
+      meta: { name: updated.name },
+    });
+  }
+
+  if (input.archived !== undefined) {
+    await logActivity(db, {
+      projectId,
+      actorId: actor.userId,
+      action: input.archived ? "project.archived" : "project.unarchived",
+      targetType: "project",
+      targetId: projectId,
+    });
+  }
+
+  return updated;
 }
 
 export async function deleteProject(actor: Actor, projectId: string) {
   await requireProject(actor, projectId, "workspace.delete");
 
   // Soft delete the project (workspaces remain intact)
-  return db.project.update({
+  const deleted = await db.project.update({
     where: { id: projectId },
     data: { deletedAt: new Date() },
   });
+
+  await logActivity(db, {
+    projectId,
+    actorId: actor.userId,
+    action: "project.deleted",
+    targetType: "project",
+    targetId: projectId,
+  });
+
+  return deleted;
 }
 
 export async function getProjectWorkspaces(

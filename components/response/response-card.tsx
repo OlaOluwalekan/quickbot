@@ -27,7 +27,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Tooltip,
   TooltipContent,
@@ -458,7 +458,10 @@ export function ResponseCard({
         {/* Left Author / Brand Avatar */}
         <div className="shrink-0 pt-0.5">
           {memberCount > 1 && response.author ? (
-            <Avatar className="border-border h-8 w-8 rounded-xl border">
+            <Avatar className="border-border h-8 w-8 rounded-xl border" title={response.author.name}>
+              {response.author.avatarUrl ? (
+                <AvatarImage src={response.author.avatarUrl} alt={response.author.name || "User"} />
+              ) : null}
               <AvatarFallback className="bg-surface-2 text-xs font-medium">
                 {response.author.name?.charAt(0) || "U"}
               </AvatarFallback>
@@ -482,6 +485,12 @@ export function ResponseCard({
               >
                 {modelName}
               </Badge>
+
+              {memberCount > 1 && response.author?.name ? (
+                <span className="text-xs text-subtle font-medium">
+                  by {response.author.name}
+                </span>
+              ) : null}
 
               {response.origin === "PROMOTED" && (
                 <Tooltip>

@@ -7,6 +7,7 @@ import { env } from "@/server/env";
 import { Errors } from "@/server/http/errors";
 import type { Actor } from "@/server/auth/session";
 import { requireWorkspace } from "@/server/authz/access";
+import { logActivity } from "./activity";
 import {
   reserve,
   settle,
@@ -1302,6 +1303,15 @@ export async function createAndStreamGeneration(
             data: { responseId: targetResponse.id },
           });
         }
+
+        await logActivity(tx, {
+          workspaceId,
+          actorId: actor.userId,
+          action: input.regenerateResponseId ? "response.regenerated" : "response.created",
+          targetType: "response",
+          targetId: targetResponse.id,
+          meta: { versionNumber, kind: targetResponse.kind },
+        });
 
         return { response: targetResponse, version: newVersion, generation: newGen };
       });
