@@ -1,4 +1,5 @@
 import "server-only";
+import { getSiteConfig } from "@/server/config/site";
 import { renderEmailLayout } from "./layout";
 import { EmailTemplateResult, EmailTranslator, ShareCreatedData } from "./types";
 
@@ -7,6 +8,7 @@ export function renderShareCreated(
   t: EmailTranslator,
   toEmail: string
 ): EmailTemplateResult {
+  const site = getSiteConfig();
   const subject = t("shareCreated.subject", { title: data.title });
   const heading = t("shareCreated.heading");
   const greeting = t("shareCreated.greeting");
@@ -25,14 +27,20 @@ export function renderShareCreated(
     disclaimerHtml: disclaimerText,
     disclaimerText,
     toEmail,
-    copyUrlNotice: t("common.copyUrlNotice"),
-    supportNotice: t("common.supportNotice", {
-      supportEmail: "support@mail.klecx.vyraxity.com",
+    supportEmail: site.emails.support,
+    copyUrlNotice: t("layout.copyUrlNotice"),
+    supportNotice: t("layout.supportNotice", {
+      supportEmail: site.emails.support,
     }),
-    legalNotice: t("common.legalNotice", {
+    legalNotice: t("layout.legalNotice", {
+      companyLegalName: site.company.legalName,
+      companyAddress: site.company.address,
       year: new Date().getFullYear().toString(),
     }),
-    transactionalDisclaimer: t("common.transactionalDisclaimer", {
+    merchantOfRecordNotice: site.billingEnabled
+      ? t("layout.merchantOfRecordNotice")
+      : undefined,
+    transactionalDisclaimer: t("layout.transactionalDisclaimer", {
       email: toEmail,
     }),
   });

@@ -223,9 +223,10 @@
     "common": {
       "appName": "Klecx",
       "supportNotice": "¿Tienes preguntas o necesitas ayuda? Contacta a nuestro equipo en {supportEmail}",
-      "legalNotice": "© {year} Klecx AI. Todos los derechos reservados. 123 Innovation Way, Suite 400. Servicios de Merchant of Record proporcionados por Creem.",
+      "legalNotice": "Klecx es un producto de {companyLegalName} · {companyAddress} · © {year}",
       "transactionalDisclaimer": "Este es un mensaje transaccional automatizado enviado a {email}. Lo recibes por un evento o acción de seguridad en tu cuenta.",
-      "copyUrlNotice": "Si el botón anterior no funciona, copia y pega este enlace en tu navegador web:"
+      "copyUrlNotice": "Si el botón anterior no funciona, copia y pega este enlace en tu navegador web:",
+      "merchantOfRecordNotice": "Servicios de Merchant of Record proporcionados por Creem."
     },
     "verifyEmail": {
       "subject": "Verifica tu dirección de correo electrónico de Klecx",
@@ -302,6 +303,13 @@
       "body": "Gracias por contactar al soporte de Klecx. Hemos recibido su solicitud sobre \"{topic}\" (Ticket #{ticketId}).",
       "quoteNotice": "Su mensaje:",
       "responseTimeNotice": "Nuestro equipo de soporte revisa los tickets en un plazo de ≤ 3 días hábiles."
+    },
+    "layout": {
+      "copyUrlNotice": "Si el botón de arriba no funciona, copie y pegue este enlace en su navegador web:",
+      "supportNotice": "¿Tiene preguntas o necesita ayuda? Contacte a nuestro equipo de soporte en {supportEmail}",
+      "legalNotice": "Klecx es un producto de {companyLegalName} · {companyAddress} · © {year}",
+      "merchantOfRecordNotice": "Servicios de Merchant of Record proporcionados por Creem.",
+      "transactionalDisclaimer": "Este es un mensaje transaccional automatizado enviado a {email}. Lo recibe porque ocurrió un evento de cuenta o una acción de seguridad."
     }
   },
   "AppShell": {
@@ -818,7 +826,7 @@
       "childrenHeading": "5. Age Restrictions",
       "childrenBody": "Klecx is designed for professional and educational adult productivity. It is not intended for or directed at children under the age of 18 (or under 16 in applicable European jurisdictions). We do not knowingly collect personal data from minors.",
       "contactHeading": "6. Contact Our Privacy Team",
-      "contactBody": "For privacy inquiries, data subject access requests, or regulatory questions, contact privacy@mail.klecx.vyraxity.com or support@mail.klecx.vyraxity.com."
+      "contactBody": "For privacy inquiries, data subject access requests, or regulatory questions, contact {privacyEmail} or {supportEmail}."
     },
     "terms": {
       "title": "Términos de Servicio",
@@ -855,7 +863,7 @@
       "enforcementHeading": "2. Monitoring & Enforcement",
       "enforcementBody": "We employ automated rate-limiting, keyword filtering, and abuse detection. Violations of this policy will result in immediate content blocking, prompt termination, temporary suspension, or permanent account revocation without refund.",
       "reportingHeading": "3. How to Report Abuse",
-      "reportingBody": "If you detect abusive content, prompt misuse, or copyright infringement created using Klecx, report it immediately to our dedicated abuse inbox at abuse@mail.klecx.vyraxity.com. We investigate all valid reports within 24 hours."
+      "reportingBody": "If you detect abusive content, prompt misuse, or copyright infringement created using Klecx, report it immediately to our dedicated abuse inbox at {abuseEmail}. We investigate all valid reports within 24 hours."
     },
     "cookies": {
       "title": "Política de Cookies",

@@ -75,7 +75,7 @@ describe("Marketing Pages & Components", () => {
   });
 
   describe("MarketingFooter", () => {
-    it("renders legal links, branded support email, and mandatory AI model disclosure", () => {
+    it("renders legal links, support email from site config, and mandatory AI model disclosure", () => {
       render(<MarketingFooter />);
 
       // Legal links
@@ -84,9 +84,9 @@ describe("Marketing Pages & Components", () => {
       expect(screen.getAllByRole("link", { name: "Acceptable Use Policy" })[0]).toHaveAttribute("href", "/acceptable-use");
       expect(screen.getByRole("link", { name: "Cookie Policy" })).toHaveAttribute("href", "/cookies");
 
-      // Support email
-      const supportLink = screen.getByRole("link", { name: "support@klecx.com" });
-      expect(supportLink).toHaveAttribute("href", "mailto:support@klecx.com");
+      // Support email from site config
+      const supportLink = screen.getByRole("link", { name: "support@example.test" });
+      expect(supportLink).toHaveAttribute("href", "mailto:support@example.test");
 
       // Required disclosure
       expect(
@@ -205,8 +205,8 @@ describe("Marketing Pages & Components", () => {
         screen.getByText(/Klecx is an independent interface built on top of third-party AI models/i)
       ).toBeInTheDocument();
 
-      // Support contact
-      expect(screen.getByText("support@klecx.com")).toBeInTheDocument();
+      // Support contact from site config
+      expect(screen.getByText("support@example.test")).toBeInTheDocument();
     });
   });
 });

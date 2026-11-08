@@ -1,5 +1,6 @@
 import "server-only";
-import { env } from "@/server/env";
+import enMessages from "@/messages/en.json";
+import { getSiteConfig } from "@/server/config/site";
 
 export interface EmailLayoutOptions {
   title: string;
@@ -16,6 +17,7 @@ export interface EmailLayoutOptions {
   copyUrlNotice?: string;
   supportNotice?: string;
   legalNotice?: string;
+  merchantOfRecordNotice?: string;
   transactionalDisclaimer?: string;
 }
 
@@ -25,27 +27,40 @@ export interface RenderedEmail {
 }
 
 export function renderEmailLayout(options: EmailLayoutOptions): RenderedEmail {
-  const currentYear = new Date().getFullYear();
-  const supportEmail = options.supportEmail || env.SUPPORT_EMAIL || "support@mail.klecx.vyraxity.com";
+  const site = getSiteConfig();
+  const currentYear = new Date().getFullYear().toString();
+  const supportEmail = options.supportEmail || site.emails.support;
 
-  const copyUrlNotice =
-    options.copyUrlNotice ||
-    "If the button above does not work, copy and paste this link into your web browser:";
+  const enLayout = enMessages.Email.layout;
+
+  const copyUrlNotice = options.copyUrlNotice || enLayout.copyUrlNotice;
 
   const supportNotice =
     options.supportNotice ||
-    `Questions or need help? Contact our support team at ${supportEmail}`;
+    enLayout.supportNotice.replace("{supportEmail}", supportEmail);
+
+  const baseLegalNotice =
+    options.legalNotice ||
+    enLayout.legalNotice
+      .replace("{companyLegalName}", site.company.legalName)
+      .replace("{companyAddress}", site.company.address)
+      .replace("{year}", currentYear);
+
+  const morNotice =
+    options.merchantOfRecordNotice || enLayout.merchantOfRecordNotice;
 
   const legalNotice =
-    options.legalNotice ||
-    `© ${currentYear} Klecx AI. All rights reserved. 123 Innovation Way, Suite 400. Merchant of Record services provided by Creem.`;
+    site.billingEnabled && !baseLegalNotice.includes("Creem")
+      ? `${baseLegalNotice} · ${morNotice}`
+      : baseLegalNotice;
 
   const transactionalDisclaimer =
     options.transactionalDisclaimer ||
-    `This is an automated transactional message sent to ${options.toEmail}. You are receiving this because an account event or security action occurred.`;
+    enLayout.transactionalDisclaimer.replace("{email}", options.toEmail);
 
-  const actionBlockHtml = options.actionUrl && options.actionLabel
-    ? `
+  const actionBlockHtml =
+    options.actionUrl && options.actionLabel
+      ? `
       <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 28px 0 24px 0;">
         <tr>
           <td align="center" style="border-radius: 8px; background: #4f46e5;">
@@ -62,7 +77,7 @@ export function renderEmailLayout(options: EmailLayoutOptions): RenderedEmail {
         <a href="${options.actionUrl}" style="color: #818cf8; text-decoration: underline;">${options.actionUrl}</a>
       </p>
     `
-    : "";
+      : "";
 
   const disclaimerBlockHtml = options.disclaimerHtml
     ? `
@@ -96,7 +111,7 @@ export function renderEmailLayout(options: EmailLayoutOptions): RenderedEmail {
                 <tr>
                   <td align="left">
                     <span style="display: inline-block; font-size: 24px; font-weight: 800; letter-spacing: -0.03em; color: #818cf8;">
-                      Klecx
+                      ${site.appName}
                     </span>
                   </td>
                 </tr>
@@ -123,7 +138,7 @@ export function renderEmailLayout(options: EmailLayoutOptions): RenderedEmail {
             </td>
           </tr>
 
-          <!-- Footer (Support & Creem Legal Info) -->
+          <!-- Footer (Support & Legal Info) -->
           <tr>
             <td style="padding: 28px 32px; background-color: #090d16; border-top: 1px solid #1e293b; font-size: 12px; line-height: 1.5; color: #64748b;">
               <p style="margin: 0 0 10px 0;">

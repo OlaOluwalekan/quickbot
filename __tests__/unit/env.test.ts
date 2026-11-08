@@ -20,15 +20,21 @@ describe("server/env validation", () => {
     GOOGLE_CLIENT_SECRET: "google_secret",
   };
 
-  it("succeeds and returns typed object with valid env", () => {
+  it("succeeds and returns typed object with valid env (using .test fallbacks in test/dev)", () => {
     const result = envSchema.safeParse(baseValidEnv);
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.APP_URL).toBe("http://localhost:3000");
       expect(result.data.DATABASE_URL).toBe(baseValidEnv.DATABASE_URL);
       expect(result.data.BETTER_AUTH_SECRET).toBe(baseValidEnv.BETTER_AUTH_SECRET);
-      expect(result.data.SUPPORT_EMAIL).toBe("support@mail.klecx.vyraxity.com");
-      expect(result.data.ABUSE_EMAIL).toBe("abuse@mail.klecx.vyraxity.com");
+      expect(result.data.SUPPORT_EMAIL).toBe("support@example.test");
+      expect(result.data.PRIVACY_EMAIL).toBe("privacy@example.test");
+      expect(result.data.ABUSE_EMAIL).toBe("abuse@example.test");
+      expect(result.data.LEGAL_EMAIL).toBe("support@example.test");
+      expect(result.data.BILLING_EMAIL).toBe("support@example.test");
+      expect(result.data.COMPANY_LEGAL_NAME).toBe("Vyraxity");
+      expect(result.data.COMPANY_ADDRESS).toBe("Lagos, Nigeria");
+      expect(result.data.COMPANY_COUNTRY).toBe("NG");
       expect(result.data.GEMINI_TEXT_MODEL_ECONOMY).toBeDefined();
       expect(result.data.GEMINI_TEXT_MODEL_STANDARD).toBeDefined();
     }
@@ -49,7 +55,7 @@ describe("server/env validation", () => {
     }
   });
 
-  it("accepts a custom SUPPORT_EMAIL when specified", () => {
+  it("accepts a custom SUPPORT_EMAIL when specified and falls back LEGAL_EMAIL/BILLING_EMAIL to it", () => {
     const result = envSchema.safeParse({
       ...baseValidEnv,
       SUPPORT_EMAIL: "help@custom.domain.com",
@@ -57,6 +63,8 @@ describe("server/env validation", () => {
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.SUPPORT_EMAIL).toBe("help@custom.domain.com");
+      expect(result.data.LEGAL_EMAIL).toBe("help@custom.domain.com");
+      expect(result.data.BILLING_EMAIL).toBe("help@custom.domain.com");
     }
   });
 
@@ -80,17 +88,23 @@ describe("server/env validation", () => {
     }
   });
 
-  it("rejects missing Redis credentials in production", () => {
-    const prodWithoutRedis = {
+  it("rejects missing Redis and site identity credentials in production", () => {
+    const prodWithoutRequired = {
       ...baseValidEnv,
       NODE_ENV: "production",
     };
-    const result = envSchema.safeParse(prodWithoutRedis);
+    const result = envSchema.safeParse(prodWithoutRequired);
     expect(result.success).toBe(false);
     if (!result.success) {
       const issues = result.error.flatten().fieldErrors;
       expect(issues.UPSTASH_REDIS_REST_URL).toBeDefined();
       expect(issues.UPSTASH_REDIS_REST_TOKEN).toBeDefined();
+      expect(issues.SUPPORT_EMAIL).toBeDefined();
+      expect(issues.PRIVACY_EMAIL).toBeDefined();
+      expect(issues.ABUSE_EMAIL).toBeDefined();
+      expect(issues.COMPANY_LEGAL_NAME).toBeDefined();
+      expect(issues.COMPANY_ADDRESS).toBeDefined();
+      expect(issues.COMPANY_COUNTRY).toBeDefined();
     }
   });
 
@@ -122,14 +136,20 @@ describe("server/env validation", () => {
     }
   });
 
-  it("accepts complete Redis credentials in production", () => {
-    const prodWithRedis = {
+  it("accepts complete Redis and site identity credentials in production", () => {
+    const prodComplete = {
       ...baseValidEnv,
       NODE_ENV: "production",
       UPSTASH_REDIS_REST_URL: "https://example-redis.upstash.io",
       UPSTASH_REDIS_REST_TOKEN: "secret-redis-token",
+      SUPPORT_EMAIL: "support@vyraxity.com",
+      PRIVACY_EMAIL: "privacy@vyraxity.com",
+      ABUSE_EMAIL: "abuse@vyraxity.com",
+      COMPANY_LEGAL_NAME: "Vyraxity",
+      COMPANY_ADDRESS: "Lagos, Nigeria",
+      COMPANY_COUNTRY: "NG",
     };
-    const result = envSchema.safeParse(prodWithRedis);
+    const result = envSchema.safeParse(prodComplete);
     expect(result.success).toBe(true);
   });
 });

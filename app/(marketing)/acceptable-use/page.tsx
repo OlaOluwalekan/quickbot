@@ -2,7 +2,8 @@ import * as React from "react";
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { LegalNav } from "@/components/marketing/legal-nav";
-import { CheckCircle2, AlertOctagon, ShieldAlert, Mail, Lock } from "lucide-react";
+import { AlertOctagon, ShieldAlert, Mail, Lock } from "lucide-react";
+import { getSiteConfig } from "@/server/config/site";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("Legal");
@@ -22,6 +23,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function AcceptableUsePage() {
   const t = await getTranslations("Legal");
+  const site = getSiteConfig();
 
   // Get raw items array
   const rawItems = t.raw("acceptableUse.prohibitedItems") as string[];
@@ -94,14 +96,18 @@ export default async function AcceptableUsePage() {
               <Mail className="h-4 w-4 text-accent" />
               <h2>{t("acceptableUse.reportingHeading")}</h2>
             </div>
-            <p className="text-fg-muted">{t("acceptableUse.reportingBody")}</p>
+            <p className="text-fg-muted">
+              {t("acceptableUse.reportingBody", {
+                abuseEmail: site.emails.abuse,
+              })}
+            </p>
             <div className="pt-2">
               <a
-                href="mailto:abuse@mail.klecx.vyraxity.com"
+                href={`mailto:${site.emails.abuse}`}
                 className="inline-flex items-center gap-2 rounded-lg bg-surface-2 border border-border px-3.5 py-2 font-mono text-xs text-accent hover:underline"
               >
                 <Mail className="h-3.5 w-3.5" />
-                <span>abuse@mail.klecx.vyraxity.com</span>
+                <span>{site.emails.abuse}</span>
               </a>
             </div>
           </section>

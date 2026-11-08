@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import Logo from "@/components/logo/Logo";
 import AppName from "@/components/logo/AppName";
+import { getSiteConfig } from "@/server/config/site";
 
 export const metadata: Metadata = {
   title: "Under Scheduled Maintenance · Klecx",
@@ -18,6 +19,7 @@ export const metadata: Metadata = {
 
 export default async function MaintenancePage() {
   const t = await getTranslations("Errors");
+  const site = getSiteConfig();
 
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-between bg-bg text-fg px-4 py-8">
@@ -64,9 +66,9 @@ export default async function MaintenancePage() {
                   size="sm"
                   className="rounded-xl inline-flex items-center gap-2"
                 >
-                  <a href="mailto:support@mail.klecx.vyraxity.com">
+                  <a href={`mailto:${site.emails.support}`}>
                     <Mail className="h-3.5 w-3.5 text-accent" />
-                    <span>support@mail.klecx.vyraxity.com</span>
+                    <span>{site.emails.support}</span>
                   </a>
                 </Button>
               </div>
@@ -77,7 +79,10 @@ export default async function MaintenancePage() {
 
       {/* Footer */}
       <footer className="w-full max-w-4xl text-center text-xs text-fg-subtle pt-6">
-        <span>© {new Date().getFullYear()} Klecx. All systems monitored 24/7.</span>
+        <span>
+          © {new Date().getFullYear()} {site.appName} · {site.company.legalName} ·{" "}
+          {site.company.address}. All systems monitored 24/7.
+        </span>
       </footer>
     </div>
   );

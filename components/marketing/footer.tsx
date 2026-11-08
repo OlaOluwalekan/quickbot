@@ -6,9 +6,11 @@ import { Mail, ShieldCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Logo from "@/components/logo/Logo";
 import AppName from "@/components/logo/AppName";
+import { useSiteConfig } from "@/components/providers/site-config-provider";
 
 export function MarketingFooter() {
   const t = useTranslations("Marketing.footer");
+  const site = useSiteConfig();
   const currentYear = new Date().getFullYear();
 
   return (
@@ -27,10 +29,10 @@ export function MarketingFooter() {
             <div className="flex items-center gap-2 text-xs text-fg-muted">
               <Mail className="h-3.5 w-3.5 text-accent" />
               <a
-                href="mailto:support@klecx.com"
+                href={`mailto:${site.emails.support}`}
                 className="hover:text-fg hover:underline transition-colors font-mono"
               >
-                support@klecx.com
+                {site.emails.support}
               </a>
             </div>
           </div>
@@ -113,7 +115,10 @@ export function MarketingFooter() {
 
         {/* Bottom Bar */}
         <div className="mt-12 pt-6 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-fg-subtle">
-          <p>© {currentYear} Klecx. {t("allRightsReserved")}</p>
+          <p>
+            © {currentYear} {site.appName} is a product of {site.company.legalName} ·{" "}
+            {site.company.address}. {t("allRightsReserved")}
+          </p>
           <div className="flex items-center gap-4">
             <Link href="/terms" className="hover:underline">
               {t("terms")}

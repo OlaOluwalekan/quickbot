@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { getSiteConfig } from "@/server/config/site";
 import {
   HelpArticle,
   HelpArticleMeta,
@@ -23,7 +24,38 @@ export function toHelpLocale(locale?: string): HelpLocale {
   return "en";
 }
 
-export function parseFrontmatter(rawContent: string): { data: Record<string, any>; content: string } {
+export function replaceHelpTokens(raw: string): string {
+  const site = getSiteConfig();
+  const replacements: Record<string, string> = {
+    "%%SUPPORT_EMAIL%%": site.emails.support,
+    "{{supportEmail}}": site.emails.support,
+    "%%PRIVACY_EMAIL%%": site.emails.privacy,
+    "{{privacyEmail}}": site.emails.privacy,
+    "%%ABUSE_EMAIL%%": site.emails.abuse,
+    "{{abuseEmail}}": site.emails.abuse,
+    "%%LEGAL_EMAIL%%": site.emails.legal,
+    "{{legalEmail}}": site.emails.legal,
+    "%%BILLING_EMAIL%%": site.emails.billing,
+    "{{billingEmail}}": site.emails.billing,
+    "%%COMPANY_LEGAL_NAME%%": site.company.legalName,
+    "{{companyLegalName}}": site.company.legalName,
+    "%%COMPANY_ADDRESS%%": site.company.address,
+    "{{companyAddress}}": site.company.address,
+  };
+
+  let out = raw;
+  for (const [token, val] of Object.entries(replacements)) {
+    if (out.includes(token)) {
+      out = out.split(token).join(val);
+    }
+  }
+  return out;
+}
+
+export function parseFrontmatter(rawContent: string): {
+  data: Record<string, any>;
+  content: string;
+} {
   const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/.exec(rawContent);
   if (!match) {
     return { data: {}, content: rawContent };
@@ -70,7 +102,9 @@ function computeReadMinutes(content: string): number {
 }
 
 function getBaseHelpDir(): string {
-  return process.env.HELP_CONTENT_DIR || path.join(process.cwd(), "content", "help");
+  return (
+    process.env.HELP_CONTENT_DIR || path.join(process.cwd(), "content", "help")
+  );
 }
 
 export function getHelpSlugs(): string[] {
@@ -106,7 +140,10 @@ export function getArticles(locale?: string): HelpArticle[] {
       let filePath = path.join(enDir, enFile);
       let isFallback = targetLocale !== "en";
 
-      if (targetLocale !== "en" && fs.existsSync(/*turbopackIgnore: true*/ targetDir)) {
+      if (
+        targetLocale !== "en" &&
+        fs.existsSync(/*turbopackIgnore: true*/ targetDir)
+      ) {
         // Look for matching file in target locale (.mdx or .md)
         const targetPathMdx = path.join(targetDir, `${slug}.mdx`);
         const targetPathMd = path.join(targetDir, `${slug}.md`);
@@ -121,7 +158,8 @@ export function getArticles(locale?: string): HelpArticle[] {
       }
 
       const fileContents = fs.readFileSync(filePath, "utf8");
-      const { data, content } = parseFrontmatter(fileContents);
+      const { data, content: rawBody } = parseFrontmatter(fileContents);
+      const content = replaceHelpTokens(rawBody);
 
       articles.push({
         slug,
@@ -142,14 +180,18 @@ export function getArticles(locale?: string): HelpArticle[] {
   }
 }
 
-export function getArticle(locale: string | undefined, slug: string): HelpArticle | null {
+export function getArticle(
+  locale: string | undefined,
+  slug: string
+): HelpArticle | null {
   const articles = getArticles(locale);
   return articles.find((a) => a.slug === slug) ?? null;
 }
 
 // Backward-compatible exports
 export const getAllArticles = (locale?: string) => getArticles(locale);
-export const getArticleBySlug = (slug: string, locale?: string) => getArticle(locale, slug);
+export const getArticleBySlug = (slug: string, locale?: string) =>
+  getArticle(locale, slug);
 export const getCategories = () => HELP_CATEGORY_KEYS;
 export const searchArticles = (query: string, articles = getArticles()) => {
   return articles.filter((a) => matchesQuery(a, query));

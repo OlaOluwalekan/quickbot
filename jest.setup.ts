@@ -1,4 +1,17 @@
 delete process.env.DEV_DEFAULT_PLAN;
+delete process.env.SUPPORT_EMAIL;
+delete process.env.PRIVACY_EMAIL;
+delete process.env.ABUSE_EMAIL;
+delete process.env.LEGAL_EMAIL;
+delete process.env.BILLING_EMAIL;
+delete process.env.COMPANY_LEGAL_NAME;
+delete process.env.COMPANY_ADDRESS;
+delete process.env.COMPANY_COUNTRY;
+delete process.env.COMPANY_REG_NUMBER;
+delete process.env.COMPANY_WEBSITE;
+delete process.env.SOCIAL_X_URL;
+delete process.env.SOCIAL_GITHUB_URL;
+delete process.env.BILLING_ENABLED;
 process.env.CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || 'test_cloudinary_cloud';
 process.env.CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY || 'test_cloudinary_key';
 process.env.CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET || 'test_cloudinary_secret';

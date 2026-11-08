@@ -2,11 +2,13 @@ import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import QueryProvider from "@/components/providers/query-provider";
+import { SiteConfigProvider } from "@/components/providers/site-config-provider";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
 import { OfflineBanner } from "@/components/offline/offline-banner";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
+import { getSiteConfig } from "@/server/config/site";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -85,6 +87,7 @@ export default async function RootLayout({
 }>) {
   const locale = await getLocale();
   const messages = await getMessages();
+  const siteConfig = getSiteConfig();
 
   return (
     <html
@@ -94,18 +97,20 @@ export default async function RootLayout({
     >
       <body className="bg-bg text-fg font-sans antialiased">
         <NextIntlClientProvider locale={locale} messages={messages}>
-          <QueryProvider>
-            <ThemeProvider
-              attribute="data-theme"
-              defaultTheme="system"
-              enableSystem
-              disableTransitionOnChange
-            >
-              <OfflineBanner />
-              {children}
-              <Toaster position="bottom-right" />
-            </ThemeProvider>
-          </QueryProvider>
+          <SiteConfigProvider value={siteConfig}>
+            <QueryProvider>
+              <ThemeProvider
+                attribute="data-theme"
+                defaultTheme="system"
+                enableSystem
+                disableTransitionOnChange
+              >
+                <OfflineBanner />
+                {children}
+                <Toaster position="bottom-right" />
+              </ThemeProvider>
+            </QueryProvider>
+          </SiteConfigProvider>
         </NextIntlClientProvider>
       </body>
     </html>
