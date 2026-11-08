@@ -3,7 +3,7 @@ import { db } from "@/server/db/client";
 import type { Actor } from "@/server/auth/session";
 import { Errors } from "@/server/http/errors";
 import { requireWorkspace, requireProject, resolveWorkspaceRole } from "@/server/authz/access";
-import { can, ROLE_RANK, maxRole } from "@/server/authz/permissions";
+import { can, ROLE_RANK, maxRole, computeCapabilities, type EffectiveRole } from "@/server/authz/permissions";
 import { logActivity } from "./activity";
 import { notify } from "./notify";
 import { getUserAvatar } from "./avatar";
@@ -83,8 +83,12 @@ export type MemberSummary = {
   inheritedRole?: string | null;
   canComment?: boolean | null;
   canAsk?: boolean | null;
-  inheritedCanComment?: boolean | null;
-  inheritedCanAsk?: boolean | null;
+  /** True when the project level already grants the capability (locked "on" in the UI). */
+  inheritedCanComment?: boolean;
+  inheritedCanAsk?: boolean;
+  /** What the member can actually do here, after role defaults, toggles and suspension. */
+  effectiveCanComment?: boolean;
+  effectiveCanAsk?: boolean;
   suspendedAt?: Date | null;
   suspendedReason?: string | null;
   monthlyCreditCap?: number | null;
@@ -197,16 +201,17 @@ export async function listWorkspaceMembers(actor: Actor, workspaceId: string) {
         inherited: true,
         source: "PROJECT",
         inheritedRole: "ADMIN",
-        canComment: true,
-        canAsk: true,
         inheritedCanComment: true,
         inheritedCanAsk: true,
+        effectiveCanComment: true,
+        effectiveCanAsk: true,
       });
     }
 
     if (workspace.project.members) {
       for (const pm of workspace.project.members) {
         if (pm.userId === workspace.ownerId || pm.userId === workspace.project.ownerId) continue;
+        const inheritedCaps = rowCapabilities(pm);
         membersMap.set(pm.userId, {
           id: pm.id,
           userId: pm.userId,
@@ -223,8 +228,10 @@ export async function listWorkspaceMembers(actor: Actor, workspaceId: string) {
           inheritedRole: pm.role,
           canComment: pm.canComment,
           canAsk: pm.canAsk,
-          inheritedCanComment: pm.canComment,
-          inheritedCanAsk: pm.canAsk,
+          inheritedCanComment: inheritedCaps.comment,
+          inheritedCanAsk: inheritedCaps.ask,
+          effectiveCanComment: inheritedCaps.comment,
+          effectiveCanAsk: inheritedCaps.ask,
           suspendedAt: pm.suspendedAt,
           suspendedReason: pm.suspendedReason,
           monthlyCreditCap: pm.monthlyCreditCap,
@@ -237,12 +244,17 @@ export async function listWorkspaceMembers(actor: Actor, workspaceId: string) {
   for (const wm of workspace.members) {
     if (wm.userId === workspace.ownerId) continue;
     const existing = membersMap.get(wm.userId);
+    const wsCaps = rowCapabilities(wm);
     if (existing) {
       existing.source = "BOTH";
       existing.role = maxRole(existing.inheritedRole, wm.role) ?? wm.role;
       existing.id = wm.id;
-      existing.canComment = wm.canComment ?? existing.inheritedCanComment;
-      existing.canAsk = wm.canAsk ?? existing.inheritedCanAsk;
+      // Toggles shown/edited here are the workspace row's own; the project
+      // grant is unioned on top (top-down: a row can add, never remove).
+      existing.canComment = wm.canComment;
+      existing.canAsk = wm.canAsk;
+      existing.effectiveCanComment = Boolean(existing.inheritedCanComment) || wsCaps.comment;
+      existing.effectiveCanAsk = Boolean(existing.inheritedCanAsk) || wsCaps.ask;
       existing.suspendedAt = wm.suspendedAt ?? existing.suspendedAt;
       existing.suspendedReason = wm.suspendedReason ?? existing.suspendedReason;
       if (wm.monthlyCreditCap !== undefined) {
@@ -265,6 +277,8 @@ export async function listWorkspaceMembers(actor: Actor, workspaceId: string) {
         inheritedRole: null,
         canComment: wm.canComment,
         canAsk: wm.canAsk,
+        effectiveCanComment: wsCaps.comment,
+        effectiveCanAsk: wsCaps.ask,
         suspendedAt: wm.suspendedAt,
         suspendedReason: wm.suspendedReason,
         monthlyCreditCap: wm.monthlyCreditCap,
@@ -370,6 +384,8 @@ export async function listProjectMembers(actor: Actor, projectId: string) {
       inheritedRole: null,
       canComment: m.canComment,
       canAsk: m.canAsk,
+      effectiveCanComment: rowCapabilities(m).comment,
+      effectiveCanAsk: rowCapabilities(m).ask,
       suspendedAt: m.suspendedAt,
       suspendedReason: m.suspendedReason,
       monthlyCreditCap: m.monthlyCreditCap,
@@ -393,6 +409,20 @@ export async function listProjectMembers(actor: Actor, projectId: string) {
     canManage: can(actorRole, "workspace.manage_members"),
     isOwner: actor.userId === proj.ownerId,
   };
+}
+
+function rowCapabilities(row: {
+  role: string;
+  canComment?: boolean | null;
+  canAsk?: boolean | null;
+  suspendedAt?: Date | null;
+}) {
+  const caps = computeCapabilities(row.role as EffectiveRole, {
+    canComment: row.canComment,
+    canAsk: row.canAsk,
+    suspended: Boolean(row.suspendedAt),
+  });
+  return { comment: caps.has("workspace.comment"), ask: caps.has("workspace.ask") };
 }
 
 export type UpdateMemberRoleInput =
@@ -459,11 +489,14 @@ export async function updateWorkspaceMemberRole(
     throw Errors.notFound("Member");
   }
 
-  const effectiveTargetRole = newRole ?? existingMember?.role ?? inheritedRole ?? "VIEWER";
-
-  // ADMIN rows reject toggles with 422
+  // ADMIN rows reject toggles with 422. Judge by the role the member will have
+  // after this request, so "demote to Editor + set toggles" in one call works.
+  const effectiveTargetRole = maxRole(
+    (newRole as WorkspaceRole | undefined) ?? existingMember?.role ?? null,
+    inheritedRole
+  );
   const hasToggles = canComment !== undefined || canAsk !== undefined;
-  if (hasToggles && (effectiveTargetRole === "ADMIN" || existingMember?.role === "ADMIN" || inheritedRole === "ADMIN")) {
+  if (hasToggles && effectiveTargetRole === "ADMIN") {
     throw Errors.unprocessable(
       "Admin role has fixed capabilities and does not support toggles",
       "admin_toggles_not_allowed"
@@ -572,9 +605,9 @@ export async function updateProjectMemberRole(
 
   const effectiveRole = newRole ?? existingMember.role;
 
-  // ADMIN rows reject toggles with 422
+  // ADMIN rows reject toggles with 422 (judged by the role after this request)
   const hasToggles = canComment !== undefined || canAsk !== undefined;
-  if (hasToggles && (effectiveRole === "ADMIN" || existingMember.role === "ADMIN")) {
+  if (hasToggles && effectiveRole === "ADMIN") {
     throw Errors.unprocessable(
       "Admin role has fixed capabilities and does not support toggles",
       "admin_toggles_not_allowed"

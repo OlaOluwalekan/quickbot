@@ -1072,7 +1072,9 @@
       "comment": "Can comment",
       "ask": "Can ask Klecx",
       "askHint": "Side questions are answered by Klecx and billed to the owner",
-      "inheritedLocked": "Inherited from project"
+      "inheritedLocked": "Inherited from project",
+      "updated": "Member permissions updated",
+      "updateFailed": "Couldn't update member permissions"
     }
   }
 }

@@ -179,7 +179,7 @@ export async function listWorkspaceQuestions(
 
 /**
  * Creates a new annotation and its initial USER message on a response version.
- * Requires `workspace.annotate` permission.
+ * Requires `workspace.comment` (COMMENT) or `workspace.ask` (QUESTION).
  * Validates that `anchor.exact` is a true substring of the version text.
  */
 export async function createAnnotation(

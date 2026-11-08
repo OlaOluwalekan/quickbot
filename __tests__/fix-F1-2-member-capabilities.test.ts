@@ -9,6 +9,7 @@ import { resolveWorkspaceRole, requireWorkspace } from "@/server/authz/access";
 import {
   updateWorkspaceMemberRole,
   updateProjectMemberRole,
+  listWorkspaceMembers,
 } from "@/server/services/members";
 import { createAnnotation } from "@/server/services/annotation";
 import { PATCH as memberPatchRoute } from "@/app/api/v1/workspaces/[id]/members/[userId]/route";
@@ -27,6 +28,9 @@ describe("Fix F1.2 — Member capabilities (Comment and Ask)", () => {
     projMember: `f12_pm_${sfx}`,
     adminMember: `f12_adm_${sfx}`,
     suspendedMember: `f12_susp_${sfx}`,
+    demotedAdmin: `f12_dadm_${sfx}`,
+    projEditorNoAsk: `f12_pena_${sfx}`,
+    suspendedAdmin: `f12_sadm_${sfx}`,
   };
   const allIds = Object.values(ids);
   const email = (k: keyof typeof ids) => `${k}_${sfx}@example.com`;
@@ -307,7 +311,8 @@ describe("Fix F1.2 — Member capabilities (Comment and Ask)", () => {
     await expect(
       requireWorkspace(actorFor("suspendedMember"), workspace1Id, "workspace.read")
     ).resolves.toMatchObject({
-      role: "EDITOR",
+      // A suspended row also contributes only VIEWER to the effective role.
+      role: "VIEWER",
     });
 
     // Comment, Ask, Generate all reject with 403
@@ -326,5 +331,78 @@ describe("Fix F1.2 — Member capabilities (Comment and Ask)", () => {
     ).rejects.toMatchObject({
       status: 403,
     });
+  });
+
+  it("6. Demoting an Admin and setting toggles in one request is allowed", async () => {
+    await db.workspaceMember.create({
+      data: {
+        workspaceId: workspace1Id,
+        userId: ids.demotedAdmin,
+        role: "ADMIN",
+        invitedById: ids.owner,
+      },
+    });
+
+    const { member } = await updateWorkspaceMemberRole(
+      actorFor("owner"),
+      workspace1Id,
+      ids.demotedAdmin,
+      { role: "EDITOR", canAsk: false }
+    );
+    expect(member).toMatchObject({ role: "EDITOR", canAsk: false });
+
+    const access = await resolveWorkspaceRole(ids.demotedAdmin, workspace1Id);
+    expect(access?.capabilities.has("workspace.ask")).toBe(false);
+    expect(access?.capabilities.has("workspace.generate")).toBe(true);
+  });
+
+  it("7. Member list reports inherited/effective capabilities including project-level overrides", async () => {
+    await db.projectMember.create({
+      data: {
+        projectId,
+        userId: ids.projEditorNoAsk,
+        role: "EDITOR",
+        canAsk: false,
+        invitedById: ids.owner,
+      },
+    });
+
+    const { members } = await listWorkspaceMembers(actorFor("owner"), workspace2Id);
+    expect(members.find((m) => m.userId === ids.projEditorNoAsk)).toMatchObject({
+      inheritedCanComment: true,
+      inheritedCanAsk: false, // the project row turned Ask off: not a locked "on"
+      effectiveCanComment: true,
+      effectiveCanAsk: false,
+    });
+
+    // A workspace row can add Ask on top of the project grant.
+    await updateWorkspaceMemberRole(actorFor("owner"), workspace2Id, ids.projEditorNoAsk, {
+      canAsk: true,
+    });
+    const after = await listWorkspaceMembers(actorFor("owner"), workspace2Id);
+    expect(after.members.find((m) => m.userId === ids.projEditorNoAsk)).toMatchObject({
+      source: "BOTH",
+      inheritedCanAsk: false,
+      canAsk: true,
+      effectiveCanAsk: true,
+    });
+    const access = await resolveWorkspaceRole(ids.projEditorNoAsk, workspace2Id);
+    expect(access?.capabilities.has("workspace.ask")).toBe(true);
+  });
+
+  it("8. A suspended Admin loses role-based moderation rights", async () => {
+    await db.workspaceMember.create({
+      data: {
+        workspaceId: workspace2Id,
+        userId: ids.suspendedAdmin,
+        role: "ADMIN",
+        suspendedAt: new Date(),
+        suspendedReason: "PLAN_LIMIT",
+        invitedById: ids.owner,
+      },
+    });
+    const access = await resolveWorkspaceRole(ids.suspendedAdmin, workspace2Id);
+    expect(access?.role).toBe("VIEWER");
+    expect([...(access?.capabilities ?? [])]).toEqual(["workspace.read"]);
   });
 });

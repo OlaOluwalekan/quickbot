@@ -1071,8 +1071,10 @@
     "capabilities": {
       "comment": "Peut commenter",
       "ask": "Peut demander à Klecx",
-      "askHint": "Les questions secondaires sont traitées par Klecx et factur?es au propriétaire",
-      "inheritedLocked": "Hérité du projet"
+      "askHint": "Les questions secondaires sont traitées par Klecx et facturées au propriétaire",
+      "inheritedLocked": "Hérité du projet",
+      "updated": "Autorisations du membre mises à jour",
+      "updateFailed": "Impossible de mettre à jour les autorisations du membre"
     }
   }
 }

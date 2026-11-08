@@ -4,7 +4,6 @@ import { db } from "@/server/db/client";
 import { Errors } from "@/server/http/errors";
 import {
   ALL_PERMISSIONS,
-  can,
   computeCapabilities,
   maxRole,
   type EffectiveRole,
@@ -42,7 +41,7 @@ export type ResolvedProjectAccess = {
  *   where projectRole = OWNER->ADMIN* if user owns the workspace's project, else ProjectMember.role or none
  *
  * Capabilities = projectCapabilities ∪ workspaceCapabilities
- * - Suspended row contributes only workspace.read.
+ * - Suspended row contributes only workspace.read (and VIEWER to the role).
  * - Explicit false removes only from its row; cannot remove a grant from the other level.
  */
 export async function resolveWorkspaceRole(
@@ -114,7 +113,9 @@ export async function resolveWorkspaceRole(
     } else {
       const pm = ws.project.members?.[0];
       if (pm) {
-        projectRole = pm.role as EffectiveRole;
+        // A suspended row is read-only: it also contributes only VIEWER to the
+        // effective role, so role-based checks (moderation, revert) agree.
+        projectRole = pm.suspendedAt ? "VIEWER" : (pm.role as EffectiveRole);
         projectCapabilities = computeCapabilities(pm.role as EffectiveRole, {
           canComment: pm.canComment,
           canAsk: pm.canAsk,
@@ -130,7 +131,7 @@ export async function resolveWorkspaceRole(
 
   const wm = ws.members?.[0];
   if (wm) {
-    workspaceRole = wm.role as EffectiveRole;
+    workspaceRole = wm.suspendedAt ? "VIEWER" : (wm.role as EffectiveRole);
     workspaceCapabilities = computeCapabilities(wm.role as EffectiveRole, {
       canComment: wm.canComment,
       canAsk: wm.canAsk,
@@ -229,7 +230,8 @@ export async function resolveProjectRole(
       canAsk: pm.canAsk,
       suspended: Boolean(pm.suspendedAt),
     });
-    return { project: summary, role: pm.role as EffectiveRole, capabilities };
+    const role: EffectiveRole = pm.suspendedAt ? "VIEWER" : (pm.role as EffectiveRole);
+    return { project: summary, role, capabilities };
   }
 
   return null;

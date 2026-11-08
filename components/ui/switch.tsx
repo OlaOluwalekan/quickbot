@@ -13,8 +13,8 @@ const Switch = React.forwardRef<
   React.ElementRef<typeof SwitchPrimitives.Root>,
   SwitchProps
 >(({ className, size = "default", ...props }, ref) => {
-  const isXs = size === "xs" || className?.includes("h-4");
-  const isSm = size === "sm" || (!isXs && className?.includes("h-5"));
+  const isXs = size === "xs";
+  const isSm = size === "sm";
 
   return (
     <SwitchPrimitives.Root
@@ -29,7 +29,7 @@ const Switch = React.forwardRef<
     >
       <SwitchPrimitives.Thumb
         className={cn(
-          "pointer-events-none block rounded-full bg-white shadow-sm transition-transform",
+          "pointer-events-none block rounded-full bg-surface shadow-sm transition-transform",
           isXs
             ? "h-3 w-3 data-[state=checked]:translate-x-3 data-[state=unchecked]:translate-x-0"
             : isSm

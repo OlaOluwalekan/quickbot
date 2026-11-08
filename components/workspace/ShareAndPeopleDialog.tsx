@@ -72,8 +72,10 @@ interface MemberItem {
   inheritedRole?: string | null;
   canComment?: boolean | null;
   canAsk?: boolean | null;
-  inheritedCanComment?: boolean | null;
-  inheritedCanAsk?: boolean | null;
+  inheritedCanComment?: boolean;
+  inheritedCanAsk?: boolean;
+  effectiveCanComment?: boolean;
+  effectiveCanAsk?: boolean;
   suspendedAt?: string | null;
   suspendedReason?: string | null;
   monthlyCreditCap?: number | null;
@@ -546,12 +548,12 @@ export function ShareAndPeopleDialog({
       });
       if (!res.ok) {
         const json = await res.json();
-        throw new Error(json?.error?.message || "Failed to update member capability");
+        throw new Error(json?.error?.message || tMembers("capabilities.updateFailed"));
       }
-      toast.success("Member capability updated");
+      toast.success(tMembers("capabilities.updated"));
       fetchMembers();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to update capability";
+      const msg = err instanceof Error ? err.message : tMembers("capabilities.updateFailed");
       toast.error(msg);
     }
   };
@@ -1122,27 +1124,12 @@ export function ShareAndPeopleDialog({
                       {!isMemberOwner && m.role !== "ADMIN" && (
                         <div className="pt-2 border-t border-border/40 flex items-center justify-between gap-3 text-xs">
                           {(() => {
-                            const isCommentInherited = Boolean(
-                              m.inheritedCanComment === true ||
-                                (m.inheritedRole &&
-                                  ["COMMENTER", "EDITOR", "ADMIN"].includes(m.inheritedRole))
-                            );
-                            const effectiveComment =
-                              isCommentInherited ||
-                              (m.canComment !== undefined && m.canComment !== null
-                                ? m.canComment
-                                : ["COMMENTER", "EDITOR"].includes(m.role));
-
-                            const isAskInherited = Boolean(
-                              m.inheritedCanAsk === true ||
-                                (m.inheritedRole &&
-                                  ["EDITOR", "ADMIN"].includes(m.inheritedRole))
-                            );
-                            const effectiveAsk =
-                              isAskInherited ||
-                              (m.canAsk !== undefined && m.canAsk !== null
-                                ? m.canAsk
-                                : m.role === "EDITOR");
+                            // The server resolves role defaults, toggles,
+                            // suspension and project inheritance.
+                            const isCommentInherited = Boolean(m.inheritedCanComment);
+                            const effectiveComment = Boolean(m.effectiveCanComment);
+                            const isAskInherited = Boolean(m.inheritedCanAsk);
+                            const effectiveAsk = Boolean(m.effectiveCanAsk);
 
                             return (
                               <div className="flex items-center gap-5 sm:gap-6 flex-wrap">
