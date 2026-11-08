@@ -4,6 +4,7 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { Mail, Clock, ShieldAlert, BookOpen, ArrowRight } from "lucide-react";
 import { SupportForm } from "@/components/support/support-form";
+import { getSiteConfig } from "@/server/config/site";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("Support");
@@ -23,6 +24,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function SupportPage() {
   const t = await getTranslations("Support");
+  const site = getSiteConfig();
 
   return (
     <div className="py-12 md:py-16">
@@ -64,10 +66,10 @@ export default async function SupportPage() {
               {t("directInboxDesc")}
             </p>
             <a
-              href="mailto:support@mail.klecx.vyraxity.com"
+              href={`mailto:${site.emails.support}`}
               className="inline-block font-mono text-xs text-accent hover:underline"
             >
-              support@mail.klecx.vyraxity.com
+              {site.emails.support}
             </a>
           </div>
 
@@ -80,10 +82,10 @@ export default async function SupportPage() {
               {t("abuseInboxDesc")}
             </p>
             <a
-              href="mailto:abuse@mail.klecx.vyraxity.com"
+              href={`mailto:${site.emails.abuse}`}
               className="inline-block font-mono text-xs text-danger hover:underline"
             >
-              abuse@mail.klecx.vyraxity.com
+              {site.emails.abuse}
             </a>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import "server-only";
+import { getSiteConfig } from "@/server/config/site";
 import { renderEmailLayout } from "./layout";
 import { EmailTemplateResult, EmailTranslator, PaymentFailedData } from "./types";
 
@@ -7,6 +8,7 @@ export function renderPaymentFailed(
   t: EmailTranslator,
   toEmail: string
 ): EmailTemplateResult {
+  const site = getSiteConfig();
   const subject = t("paymentFailed.subject");
   const heading = t("paymentFailed.heading");
   const greeting = t("paymentFailed.greeting");
@@ -27,14 +29,20 @@ export function renderPaymentFailed(
     disclaimerHtml: disclaimerText,
     disclaimerText,
     toEmail,
-    copyUrlNotice: t("common.copyUrlNotice"),
-    supportNotice: t("common.supportNotice", {
-      supportEmail: "support@mail.klecx.vyraxity.com",
+    supportEmail: site.emails.support,
+    copyUrlNotice: t("layout.copyUrlNotice"),
+    supportNotice: t("layout.supportNotice", {
+      supportEmail: site.emails.support,
     }),
-    legalNotice: t("common.legalNotice", {
+    legalNotice: t("layout.legalNotice", {
+      companyLegalName: site.company.legalName,
+      companyAddress: site.company.address,
       year: new Date().getFullYear().toString(),
     }),
-    transactionalDisclaimer: t("common.transactionalDisclaimer", {
+    merchantOfRecordNotice: site.billingEnabled
+      ? t("layout.merchantOfRecordNotice")
+      : undefined,
+    transactionalDisclaimer: t("layout.transactionalDisclaimer", {
       email: toEmail,
     }),
   });

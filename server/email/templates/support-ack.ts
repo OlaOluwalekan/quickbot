@@ -1,4 +1,5 @@
 import "server-only";
+import { getSiteConfig } from "@/server/config/site";
 import { renderEmailLayout } from "./layout";
 import { EmailTemplateResult, EmailTranslator, SupportAckData } from "./types";
 
@@ -7,6 +8,7 @@ export function renderSupportAck(
   t: EmailTranslator,
   toEmail: string
 ): EmailTemplateResult {
+  const site = getSiteConfig();
   const shortId = data.ticketId.slice(0, 8);
   const subject = t("supportAck.subject", { ticketId: shortId });
   const heading = t("supportAck.heading");
@@ -36,14 +38,20 @@ export function renderSupportAck(
     bodyHtml,
     bodyText: `${bodyText}\n\n${quoteNotice}:\n${data.message}\n\n${responseTimeNotice}`,
     toEmail,
-    copyUrlNotice: t("common.copyUrlNotice"),
-    supportNotice: t("common.supportNotice", {
-      supportEmail: "support@mail.klecx.vyraxity.com",
+    supportEmail: site.emails.support,
+    copyUrlNotice: t("layout.copyUrlNotice"),
+    supportNotice: t("layout.supportNotice", {
+      supportEmail: site.emails.support,
     }),
-    legalNotice: t("common.legalNotice", {
+    legalNotice: t("layout.legalNotice", {
+      companyLegalName: site.company.legalName,
+      companyAddress: site.company.address,
       year: new Date().getFullYear().toString(),
     }),
-    transactionalDisclaimer: t("common.transactionalDisclaimer", {
+    merchantOfRecordNotice: site.billingEnabled
+      ? t("layout.merchantOfRecordNotice")
+      : undefined,
+    transactionalDisclaimer: t("layout.transactionalDisclaimer", {
       email: toEmail,
     }),
   });

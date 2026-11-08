@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { LegalNav } from "@/components/marketing/legal-nav";
 import { Shield, Lock, Server, Clock, UserCheck, AlertTriangle, Mail } from "lucide-react";
+import { getSiteConfig } from "@/server/config/site";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("Legal");
@@ -22,6 +23,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function PrivacyPage() {
   const t = await getTranslations("Legal");
+  const site = getSiteConfig();
 
   return (
     <div className="py-12 md:py-16">
@@ -104,7 +106,12 @@ export default async function PrivacyPage() {
               <Mail className="h-4 w-4 text-accent" />
               <h2>{t("privacy.contactHeading")}</h2>
             </div>
-            <p className="text-fg-muted">{t("privacy.contactBody")}</p>
+            <p className="text-fg-muted">
+              {t("privacy.contactBody", {
+                privacyEmail: site.emails.privacy,
+                supportEmail: site.emails.support,
+              })}
+            </p>
           </section>
         </div>
       </div>

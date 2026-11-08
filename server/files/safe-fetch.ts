@@ -4,8 +4,14 @@ import ipaddr from "ipaddr.js";
 import { Agent, request } from "undici";
 import { parseHTML } from "linkedom";
 import { Readability } from "@mozilla/readability";
+import { getSiteConfig } from "@/server/config/site";
 
-export const USER_AGENT = "KlecxBot/1.0 (+https://klecx.com/bot)";
+export const BOT_NAME = "KlecxBot";
+
+/** Crawler user agent; the info URL comes from site config (F0.2). */
+export function getUserAgent(): string {
+  return `${BOT_NAME}/1.0 (+${getSiteConfig().appUrl}/support)`;
+}
 export const DEFAULT_MAX_BYTES = 2 * 1024 * 1024; // 2 MB
 export const DEFAULT_CONNECT_TIMEOUT_MS = 5_000; // 5 s
 export const DEFAULT_TOTAL_TIMEOUT_MS = 10_000; // 10 s
@@ -164,7 +170,7 @@ export async function resolveDnsAndValidate(
 export function isPathDisallowedByRobotsTxt(
   robotsTxt: string,
   pathname: string,
-  botName = "KlecxBot"
+  botName = BOT_NAME
 ): boolean {
   const lines = robotsTxt.split(/\r?\n/);
   let activeUserAgentMatches = false;
@@ -352,7 +358,7 @@ export async function safeFetch(
         method: "GET",
         headers: {
           Host: parsedUrl.host,
-          "User-Agent": USER_AGENT,
+          "User-Agent": getUserAgent(),
           Accept: "text/html, text/plain, application/pdf;q=0.9, */*;q=0.1",
         },
         signal: abortController.signal,

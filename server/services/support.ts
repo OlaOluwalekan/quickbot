@@ -1,6 +1,6 @@
 import "server-only";
 import { db } from "@/server/db/client";
-import { env } from "@/server/env";
+import { getSiteConfig } from "@/server/config/site";
 import { sendEmail } from "@/server/email/send";
 import type { Actor } from "@/server/auth/session";
 import type { SupportTicketInput } from "@/lib/schemas/support";
@@ -55,7 +55,8 @@ export async function createSupportTicket(
 
   try {
     // 2. Send notification to the support inbox
-    await sendEmail("support-notification", env.SUPPORT_EMAIL, {
+    const site = getSiteConfig();
+    await sendEmail("support-notification", site.emails.support, {
       ticketId: ticket.id,
       senderEmail: cleanEmail,
       topic: cleanTopic,

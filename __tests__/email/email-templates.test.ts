@@ -8,11 +8,15 @@ import {
   EmailTemplateName,
   EmailTemplateMap,
 } from "@/server/email/send";
+import {
+  setSiteConfigForTesting,
+  clearSiteConfigForTesting,
+} from "@/server/config/site";
 import { Resend } from "resend";
 
 jest.mock("resend");
 
-describe("Step 1.7 — Transactional Email Module", () => {
+describe("Step 1.7 & F0.2 — Transactional Email Module", () => {
   const locales = ["en", "es", "fr"] as const;
 
   const sampleData: EmailTemplateMap = {
@@ -80,6 +84,10 @@ describe("Step 1.7 — Transactional Email Module", () => {
     "support-notification",
   ];
 
+  afterEach(() => {
+    clearSiteConfigForTesting();
+  });
+
   describe("Localization & Template Rendering", () => {
     for (const locale of locales) {
       describe(`Locale: ${locale}`, () => {
@@ -100,14 +108,16 @@ describe("Step 1.7 — Transactional Email Module", () => {
             expect(rendered.html).toContain("<!DOCTYPE html>");
             expect(rendered.html).toContain("Klecx"); // Brand in header
             expect(rendered.html).toContain("role=\"presentation\""); // Table-based layout
-            expect(rendered.html).toContain("Creem"); // Legal/postal Creem compliance
-            expect(rendered.html).toContain("support@mail.klecx.vyraxity.com"); // Branded support email
+            expect(rendered.html).toContain("Vyraxity"); // Company legal name from site config
+            expect(rendered.html).toContain("Lagos, Nigeria"); // Company address from site config
+            expect(rendered.html).toContain("support@example.test"); // Support email from site config
+            expect(rendered.html).not.toContain("123 Innovation Way");
 
             // 3. Verify plaintext version
             expect(rendered.text).toBeTruthy();
             expect(rendered.text).toContain("KLECX AI");
-            expect(rendered.text).toContain("support@mail.klecx.vyraxity.com");
-            expect(rendered.text).toContain("Creem");
+            expect(rendered.text).toContain("support@example.test");
+            expect(rendered.text).toContain("Vyraxity");
             expect(rendered.text).not.toContain("<table"); // Plain text should not contain HTML
           });
         }
@@ -141,17 +151,25 @@ describe("Step 1.7 — Transactional Email Module", () => {
       expect(rendered.text).toContain("https://klecx.vyraxity.com/auth/verify/verification?token=secret-token-123");
     });
 
-    it("includes postal and Merchant of Record compliance line for Creem", async () => {
-      const rendered = await renderEmail(
+    it("shows Merchant of Record compliance line for Creem only when billingEnabled is true", async () => {
+      const disabledRendered = await renderEmail(
         "reset-password",
         "bob@example.com",
         sampleData["reset-password"],
         { locale: "en" }
       );
+      expect(disabledRendered.html).not.toContain("Merchant of Record services provided by Creem");
 
-      expect(rendered.html).toContain("123 Innovation Way, Suite 400");
-      expect(rendered.html).toContain("Merchant of Record services provided by Creem");
-      expect(rendered.text).toContain("Merchant of Record services provided by Creem");
+      setSiteConfigForTesting({ billingEnabled: true });
+      const enabledRendered = await renderEmail(
+        "reset-password",
+        "bob@example.com",
+        sampleData["reset-password"],
+        { locale: "en" }
+      );
+      expect(enabledRendered.html).toContain("Klecx is a product of Vyraxity · Lagos, Nigeria");
+      expect(enabledRendered.html).toContain("Merchant of Record services provided by Creem");
+      expect(enabledRendered.text).toContain("Merchant of Record services provided by Creem");
     });
   });
 

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
+import { useSiteConfig } from "@/components/providers/site-config-provider";
 import { Sparkles } from "lucide-react";
 import { Composer } from "@/components/workspace/composer";
 
@@ -19,6 +20,7 @@ export function GreetingSection({
   credits,
 }: GreetingSectionProps) {
   const tHome = useTranslations("Home");
+  const site = useSiteConfig();
 
   const greeting = React.useMemo(() => {
     const hour = new Date().getHours();
@@ -36,7 +38,7 @@ export function GreetingSection({
     <section className="flex flex-col items-center justify-center text-center max-w-3xl mx-auto w-full pt-4 pb-2">
       <div className="inline-flex items-center gap-2 rounded-full bg-accent-soft px-3 py-1 text-xs font-semibold text-accent mb-3 border border-border">
         <Sparkles className="h-3.5 w-3.5" strokeWidth={1.5} />
-        <span>Klecx AI Studio</span>
+        <span>{tHome("studioBadge", { appName: site.appName })}</span>
       </div>
 
       <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-fg mb-6">

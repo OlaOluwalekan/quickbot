@@ -1,4 +1,5 @@
 import "server-only";
+import { getSiteConfig } from "@/server/config/site";
 import { renderEmailLayout } from "./layout";
 import { EmailTemplateResult, EmailTranslator, NewSignInData } from "./types";
 
@@ -7,6 +8,7 @@ export function renderNewSignIn(
   t: EmailTranslator,
   toEmail: string
 ): EmailTemplateResult {
+  const site = getSiteConfig();
   const subject = t("newSignIn.subject");
   const heading = t("newSignIn.heading");
   const greeting = t("newSignIn.greeting");
@@ -25,19 +27,25 @@ export function renderNewSignIn(
     greeting,
     bodyHtml: `<p style="margin: 0;">${bodyText}</p>`,
     bodyText,
-    actionUrl: "https://klecx.vyraxity.com/settings",
+    actionUrl: `${site.appUrl}/settings`,
     actionLabel,
     disclaimerHtml: disclaimerText,
     disclaimerText,
     toEmail,
-    copyUrlNotice: t("common.copyUrlNotice"),
-    supportNotice: t("common.supportNotice", {
-      supportEmail: "support@mail.klecx.vyraxity.com",
+    supportEmail: site.emails.support,
+    copyUrlNotice: t("layout.copyUrlNotice"),
+    supportNotice: t("layout.supportNotice", {
+      supportEmail: site.emails.support,
     }),
-    legalNotice: t("common.legalNotice", {
+    legalNotice: t("layout.legalNotice", {
+      companyLegalName: site.company.legalName,
+      companyAddress: site.company.address,
       year: new Date().getFullYear().toString(),
     }),
-    transactionalDisclaimer: t("common.transactionalDisclaimer", {
+    merchantOfRecordNotice: site.billingEnabled
+      ? t("layout.merchantOfRecordNotice")
+      : undefined,
+    transactionalDisclaimer: t("layout.transactionalDisclaimer", {
       email: toEmail,
     }),
   });

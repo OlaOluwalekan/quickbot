@@ -11,9 +11,11 @@ import {
   Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useSiteConfig } from "@/components/providers/site-config-provider";
 
 export function AboutView() {
   const t = useTranslations("Marketing.aboutPage");
+  const site = useSiteConfig();
 
   return (
     <div className="flex flex-col w-full py-10">
@@ -105,10 +107,10 @@ export function AboutView() {
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border bg-surface-2 text-xs font-mono">
                 <span className="text-fg-subtle">{t("emailLabel")}</span>
                 <a
-                  href="mailto:support@klecx.com"
+                  href={`mailto:${site.emails.support}`}
                   className="text-accent hover:underline font-semibold"
                 >
-                  support@klecx.com
+                  {site.emails.support}
                 </a>
               </div>
               <Button asChild size="sm">

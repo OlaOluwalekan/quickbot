@@ -1,11 +1,9 @@
 import type { MetadataRoute } from "next";
 import { getHelpSlugs } from "@/lib/help/articles";
+import { getSiteConfig } from "@/server/config/site";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const siteUrl =
-    process.env.NEXT_PUBLIC_APP_URL ||
-    process.env.APP_URL ||
-    "https://klecx.com";
+  const siteUrl = getSiteConfig().appUrl;
   const baseUrl = siteUrl.replace(/\/$/, "");
 
   const staticRoutes = [
