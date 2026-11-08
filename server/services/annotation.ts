@@ -201,8 +201,11 @@ export async function createAnnotation(
   }
 
   // Caller needs workspace.comment for COMMENT, workspace.ask for QUESTION
-  const reqPerm = input.kind === "COMMENT" ? "workspace.comment" : "workspace.ask";
-  await requireWorkspace(actor, version.response.workspaceId, reqPerm);
+  await requireWorkspace(
+    actor,
+    version.response.workspaceId,
+    annotationKindPermission(input.kind)
+  );
 
   // Re-check anchor.exact substring on server against stored text
   let targetContent = version.content;
@@ -324,9 +327,14 @@ export async function getAnnotation(actor: Actor, annotationId: string) {
   return annot;
 }
 
+/** The capability needed to create or change an annotation of this kind. */
+function annotationKindPermission(kind: string) {
+  return kind === "COMMENT" ? "workspace.comment" : "workspace.ask";
+}
+
 /**
  * Updates an annotation (text, resolved status, or visibility).
- * Permissions: creator only (or workspace admin for WORKSPACE-visible annotations).
+ * Permissions: creator holding the kind's capability, or workspace admin.
  */
 export async function updateAnnotation(
   actor: Actor,
@@ -360,6 +368,12 @@ export async function updateAnnotation(
     throw Errors.forbidden(
       "Only the creator or workspace admin can update this annotation"
     );
+  }
+
+  // F1.2: a creator who lost the capability for this kind (toggle off,
+  // role lowered, or suspended) can no longer change it. Admins moderate.
+  if (!isAdmin && !access.capabilities.has(annotationKindPermission(annot.kind))) {
+    throw Errors.forbidden();
   }
 
   // Update text of creator's initial message if provided
@@ -413,7 +427,7 @@ export async function updateAnnotation(
 
 /**
  * Soft deletes an annotation (`deletedAt = now()`).
- * Permissions: creator or workspace admin.
+ * Permissions: creator holding the kind's capability, or workspace admin.
  */
 export async function deleteAnnotation(actor: Actor, annotationId: string) {
   const annot = await db.annotation.findUnique({
@@ -437,6 +451,12 @@ export async function deleteAnnotation(actor: Actor, annotationId: string) {
     throw Errors.forbidden(
       "Only the creator or workspace admin can delete this annotation"
     );
+  }
+
+  // F1.2: a creator who lost the capability for this kind (toggle off,
+  // role lowered, or suspended) can no longer change it. Admins moderate.
+  if (!isAdmin && !access.capabilities.has(annotationKindPermission(annot.kind))) {
+    throw Errors.forbidden();
   }
 
   await db.annotation.update({
@@ -463,8 +483,7 @@ export async function createAnnotationMessage(
     throw Errors.notFound("Annotation");
   }
 
-  const msgPerm = annot.kind === "COMMENT" ? "workspace.comment" : "workspace.ask";
-  await requireWorkspace(actor, annot.workspaceId, msgPerm);
+  await requireWorkspace(actor, annot.workspaceId, annotationKindPermission(annot.kind));
 
   if (annot.visibility === "PRIVATE" && annot.createdById !== actor.userId) {
     throw Errors.notFound("Annotation");

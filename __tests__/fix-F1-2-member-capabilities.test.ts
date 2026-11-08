@@ -11,7 +11,11 @@ import {
   updateProjectMemberRole,
   listWorkspaceMembers,
 } from "@/server/services/members";
-import { createAnnotation } from "@/server/services/annotation";
+import {
+  createAnnotation,
+  updateAnnotation,
+  deleteAnnotation,
+} from "@/server/services/annotation";
 import { PATCH as memberPatchRoute } from "@/app/api/v1/workspaces/[id]/members/[userId]/route";
 
 let mockActor: Actor | null = null;
@@ -31,6 +35,7 @@ describe("Fix F1.2 — Member capabilities (Comment and Ask)", () => {
     demotedAdmin: `f12_dadm_${sfx}`,
     projEditorNoAsk: `f12_pena_${sfx}`,
     suspendedAdmin: `f12_sadm_${sfx}`,
+    revokedCommenter: `f12_rc_${sfx}`,
   };
   const allIds = Object.values(ids);
   const email = (k: keyof typeof ids) => `${k}_${sfx}@example.com`;
@@ -404,5 +409,46 @@ describe("Fix F1.2 — Member capabilities (Comment and Ask)", () => {
     const access = await resolveWorkspaceRole(ids.suspendedAdmin, workspace2Id);
     expect(access?.role).toBe("VIEWER");
     expect([...(access?.capabilities ?? [])]).toEqual(["workspace.read"]);
+  });
+
+  it("9. Turning Comment off stops the creator editing or deleting their comment; the owner still can", async () => {
+    await db.workspaceMember.create({
+      data: {
+        workspaceId: workspace1Id,
+        userId: ids.revokedCommenter,
+        role: "COMMENTER",
+        invitedById: ids.owner,
+      },
+    });
+    const annot = await createAnnotation(actorFor("revokedCommenter"), versionId, {
+      kind: "COMMENT",
+      text: "Worth a citation",
+      anchor: { exact: "Raft and Paxos", prefix: "", suffix: " ensure consistency" },
+      contentSource: "ORIGINAL",
+    });
+
+    // While allowed, the creator can edit (and shares it so the owner sees it).
+    await expect(
+      updateAnnotation(actorFor("revokedCommenter"), annot.id, {
+        text: "Needs a citation",
+        visibility: "WORKSPACE",
+      })
+    ).resolves.toBeTruthy();
+
+    await updateWorkspaceMemberRole(actorFor("owner"), workspace1Id, ids.revokedCommenter, {
+      canComment: false,
+    });
+
+    await expect(
+      updateAnnotation(actorFor("revokedCommenter"), annot.id, { resolved: true })
+    ).rejects.toMatchObject({ status: 403 });
+    await expect(
+      deleteAnnotation(actorFor("revokedCommenter"), annot.id)
+    ).rejects.toMatchObject({ status: 403 });
+
+    // Moderation by the owner is unaffected.
+    await expect(deleteAnnotation(actorFor("owner"), annot.id)).resolves.toEqual({
+      success: true,
+    });
   });
 });
