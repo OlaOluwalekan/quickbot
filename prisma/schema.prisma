@@ -173,6 +173,10 @@ model ProjectMember {
   userId           String
   role             ProjectRole
   monthlyCreditCap Int?        @default(300) @map("monthly_credit_cap")
+  canComment       Boolean?    @map("can_comment")
+  canAsk           Boolean?    @map("can_ask")
+  suspendedAt      DateTime?   @map("suspended_at")
+  suspendedReason  String?     @map("suspended_reason")
   invitedById      String
   createdAt        DateTime    @default(now())
   project     Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
@@ -189,6 +193,10 @@ model WorkspaceMember {
   userId           String
   role             WorkspaceRole
   monthlyCreditCap Int?          @default(300) @map("monthly_credit_cap")
+  canComment       Boolean?      @map("can_comment")
+  canAsk           Boolean?      @map("can_ask")
+  suspendedAt      DateTime?     @map("suspended_at")
+  suspendedReason  String?       @map("suspended_reason")
   invitedById      String
   createdAt        DateTime      @default(now())
   workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)

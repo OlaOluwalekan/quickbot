@@ -200,8 +200,9 @@ export async function createAnnotation(
     throw Errors.notFound("ResponseVersion");
   }
 
-  // Caller needs workspace.annotate (COMMENTER, EDITOR, ADMIN, OWNER)
-  await requireWorkspace(actor, version.response.workspaceId, "workspace.annotate");
+  // Caller needs workspace.comment for COMMENT, workspace.ask for QUESTION
+  const reqPerm = input.kind === "COMMENT" ? "workspace.comment" : "workspace.ask";
+  await requireWorkspace(actor, version.response.workspaceId, reqPerm);
 
   // Re-check anchor.exact substring on server against stored text
   let targetContent = version.content;
@@ -462,7 +463,8 @@ export async function createAnnotationMessage(
     throw Errors.notFound("Annotation");
   }
 
-  await requireWorkspace(actor, annot.workspaceId, "workspace.annotate");
+  const msgPerm = annot.kind === "COMMENT" ? "workspace.comment" : "workspace.ask";
+  await requireWorkspace(actor, annot.workspaceId, msgPerm);
 
   if (annot.visibility === "PRIVATE" && annot.createdById !== actor.userId) {
     throw Errors.notFound("Annotation");
@@ -533,8 +535,8 @@ export async function createAndStreamAnnotationReply(
 
     workspaceId = targetVersion.response.workspaceId;
 
-    // Enforce workspace.generate permission upfront
-    const access = await requireWorkspace(actor, workspaceId, "workspace.generate");
+    // Enforce workspace.ask permission upfront
+    const access = await requireWorkspace(actor, workspaceId, "workspace.ask");
 
     // Re-check substring
     let targetContent = targetVersion.content;
@@ -618,8 +620,8 @@ export async function createAndStreamAnnotationReply(
     workspaceId = targetAnnotation.workspaceId;
     targetVersion = targetAnnotation.version;
 
-    // Enforce workspace.generate
-    await requireWorkspace(actor, workspaceId, "workspace.generate");
+    // Enforce workspace.ask
+    await requireWorkspace(actor, workspaceId, "workspace.ask");
 
     if (
       targetAnnotation.visibility === "PRIVATE" &&
@@ -640,7 +642,7 @@ export async function createAndStreamAnnotationReply(
   }
 
   // Resolve billing account = workspace owner's credit account
-  const wsAccess = await requireWorkspace(actor, workspaceId, "workspace.generate");
+  const wsAccess = await requireWorkspace(actor, workspaceId, "workspace.ask");
   const { billedAccountId } = await resolveBilledAccount(wsAccess.ws);
 
   // Idempotency & Generation creation

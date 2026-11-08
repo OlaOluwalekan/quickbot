@@ -127,7 +127,7 @@ export async function createWorkspace(
 }
 
 export async function getWorkspace(actor: Actor, workspaceId: string) {
-  const { role } = await requireWorkspace(actor, workspaceId, "workspace.read");
+  const { role, capabilities } = await requireWorkspace(actor, workspaceId, "workspace.read");
 
   const workspace = await db.workspace.findFirst({
     where: { id: workspaceId, deletedAt: null },
@@ -151,6 +151,7 @@ export async function getWorkspace(actor: Actor, workspaceId: string) {
   return {
     ...workspace,
     role,
+    capabilities: Array.from(capabilities),
     // Effective headcount (owner + explicit + inherited project members);
     // `_count.members` would miss inherited access.
     memberCount: await countWorkspaceMembers(workspaceId),

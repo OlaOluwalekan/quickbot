@@ -22,6 +22,11 @@ export const Errors = {
   conflict: (m: string, code = "conflict") => new ApiError(409, code, m),
   validation: (details: unknown) =>
     new ApiError(422, "validation_error", "Invalid input", details),
+  unprocessable: (
+    m = "Unprocessable entity",
+    code = "unprocessable_entity",
+    details?: unknown
+  ) => new ApiError(422, code, m, details),
   contentBlocked: (
     m = "Prompt blocked by content safety policy",
     details?: unknown

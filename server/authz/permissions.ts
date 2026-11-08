@@ -2,8 +2,9 @@ import "server-only";
 
 export type Permission =
   | "workspace.read"
+  | "workspace.comment"
+  | "workspace.ask"
   | "workspace.generate"
-  | "workspace.annotate"
   | "workspace.edit_response"
   | "workspace.regenerate"
   | "workspace.rename"
@@ -16,7 +17,8 @@ export type Permission =
 
 export const ALL_PERMISSIONS: readonly Permission[] = [
   "workspace.read",
-  "workspace.annotate",
+  "workspace.comment",
+  "workspace.ask",
   "workspace.generate",
   "workspace.regenerate",
   "workspace.edit_response",
@@ -60,10 +62,11 @@ export function maxRole<
 
 const base = {
   VIEWER: ["workspace.read"],
-  COMMENTER: ["workspace.read", "workspace.annotate"],
+  COMMENTER: ["workspace.read", "workspace.comment"],
   EDITOR: [
     "workspace.read",
-    "workspace.annotate",
+    "workspace.comment",
+    "workspace.ask",
     "workspace.generate",
     "workspace.regenerate",
     "workspace.edit_response",
@@ -72,7 +75,8 @@ const base = {
   ],
   ADMIN: [
     "workspace.read",
-    "workspace.annotate",
+    "workspace.comment",
+    "workspace.ask",
     "workspace.generate",
     "workspace.regenerate",
     "workspace.edit_response",
@@ -93,14 +97,52 @@ const rolePermissionSets: Record<EffectiveRole, ReadonlySet<Permission>> = {
   OWNER: new Set<Permission>(ALL_PERMISSIONS),
 };
 
+export function computeCapabilities(
+  role: EffectiveRole,
+  opts?: {
+    canComment?: boolean | null;
+    canAsk?: boolean | null;
+    suspended?: boolean;
+  }
+): Set<Permission> {
+  if (opts?.suspended) {
+    return new Set<Permission>(["workspace.read"]);
+  }
+
+  const basePermissions = getPermissionsForRole(role);
+  const set = new Set<Permission>(basePermissions);
+
+  if (role === "OWNER" || role === "ADMIN") {
+    // Admin and Owner have fixed capabilities
+    return set;
+  }
+
+  if (opts?.canComment === true) {
+    set.add("workspace.comment");
+  } else if (opts?.canComment === false) {
+    set.delete("workspace.comment");
+  }
+
+  if (opts?.canAsk === true) {
+    set.add("workspace.ask");
+  } else if (opts?.canAsk === false) {
+    set.delete("workspace.ask");
+  }
+
+  return set;
+}
+
 export function can(
-  role: RoleWithNone | null | undefined,
+  target: RoleWithNone | ReadonlySet<Permission> | Set<Permission> | null | undefined,
   perm: Permission
 ): boolean {
-  if (!role || role === "NONE") {
+  if (!target || target === "NONE") {
     return false;
   }
-  return rolePermissionSets[role].has(perm);
+  if (typeof target === "object" && "has" in target) {
+    return target.has(perm);
+  }
+  return rolePermissionSets[target as EffectiveRole]?.has(perm) ?? false;
 }
 
 export function getPermissionsForRole(

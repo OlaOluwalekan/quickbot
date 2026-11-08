@@ -18,6 +18,8 @@ import {
   Eye,
   Clock,
   ShieldAlert,
+  Lock,
+  HelpCircle,
 } from "lucide-react";
 import {
   Dialog,
@@ -40,6 +42,12 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
+import { Switch } from "@/components/ui/switch";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 
@@ -62,6 +70,12 @@ interface MemberItem {
   inherited?: boolean;
   source?: "WORKSPACE" | "PROJECT" | "BOTH";
   inheritedRole?: string | null;
+  canComment?: boolean | null;
+  canAsk?: boolean | null;
+  inheritedCanComment?: boolean | null;
+  inheritedCanAsk?: boolean | null;
+  suspendedAt?: string | null;
+  suspendedReason?: string | null;
   monthlyCreditCap?: number | null;
   monthlyCreditsUsed?: number;
 }
@@ -519,6 +533,29 @@ export function ShareAndPeopleDialog({
     setCustomCap(null);
   };
 
+  const handleToggleCapability = async (
+    targetUserId: string,
+    capability: "canComment" | "canAsk",
+    value: boolean
+  ) => {
+    try {
+      const res = await fetch(`${baseApiPath}/members/${targetUserId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [capability]: value }),
+      });
+      if (!res.ok) {
+        const json = await res.json();
+        throw new Error(json?.error?.message || "Failed to update member capability");
+      }
+      toast.success("Member capability updated");
+      fetchMembers();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to update capability";
+      toast.error(msg);
+    }
+  };
+
   const handleUpdateRole = async (targetUserId: string, newRole: string) => {
     try {
       const res = await fetch(`${baseApiPath}/members/${targetUserId}`, {
@@ -819,57 +856,58 @@ export function ShareAndPeopleDialog({
                     return (
                       <div
                         key={m.id}
-                        className="flex items-center justify-between gap-3 p-3 rounded-xl border border-border bg-surface hover:bg-surface-2/60 transition-colors"
+                        className="p-3 sm:p-3.5 rounded-xl border border-border bg-surface hover:bg-surface-2/40 transition-colors space-y-2.5"
                       >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <Avatar className="h-9 w-9 rounded-xl border border-border shrink-0">
-                            {m.avatarUrl ? (
-                              <AvatarImage
-                                src={m.avatarUrl}
-                                alt={m.name || "Member"}
-                              />
-                            ) : null}
-                            <AvatarFallback className="bg-surface-2 text-xs font-semibold">
-                              {m.name?.charAt(0) || "U"}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="font-semibold text-sm text-fg truncate">
-                                {m.name}
-                              </span>
-                              {isSelf && (
-                                <Badge
-                                  variant="secondary"
-                                  className="text-[10px] px-1.5 py-0"
-                                >
-                                  You
-                                </Badge>
-                              )}
-                              {isMemberOwner && (
-                                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-accent bg-accent-soft px-1.5 py-0.5 rounded-md">
-                                  <Crown className="h-3 w-3" /> Owner
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <Avatar className="h-9 w-9 rounded-xl border border-border shrink-0">
+                              {m.avatarUrl ? (
+                                <AvatarImage
+                                  src={m.avatarUrl}
+                                  alt={m.name || "Member"}
+                                />
+                              ) : null}
+                              <AvatarFallback className="bg-surface-2 text-xs font-semibold">
+                                {m.name?.charAt(0) || "U"}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="font-semibold text-sm text-fg truncate">
+                                  {m.name}
                                 </span>
-                              )}
-                              {(m.inherited || m.inheritedRole) && (
-                                <Badge
-                                  variant="outline"
-                                  className="text-[10px] px-1.5 py-0 text-muted"
-                                >
-                                  {m.inheritedRole
-                                    ? tMembers("inheritedBadge", {
-                                        role: roleLabel(m.inheritedRole),
-                                      })
-                                    : tMembers("inheritedBadgePlain")}
-                                </Badge>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-2 text-xs text-muted truncate">
-                              {m.username && <span>@{m.username}</span>}
-                              <span>{m.email}</span>
+                                {isSelf && (
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-[10px] px-1.5 py-0"
+                                  >
+                                    You
+                                  </Badge>
+                                )}
+                                {isMemberOwner && (
+                                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-accent bg-accent-soft px-1.5 py-0.5 rounded-md">
+                                    <Crown className="h-3 w-3" /> Owner
+                                  </span>
+                                )}
+                                {(m.inherited || m.inheritedRole) && (
+                                  <Badge
+                                    variant="outline"
+                                    className="text-[10px] px-1.5 py-0 text-muted"
+                                  >
+                                    {m.inheritedRole
+                                      ? tMembers("inheritedBadge", {
+                                          role: roleLabel(m.inheritedRole),
+                                        })
+                                      : tMembers("inheritedBadgePlain")}
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 text-xs text-muted truncate">
+                                {m.username && <span>@{m.username}</span>}
+                                <span>{m.email}</span>
+                              </div>
                             </div>
                           </div>
-                        </div>
 
                         <div className="flex items-center gap-2 shrink-0">
                           {!isMemberOwner &&
@@ -1080,8 +1118,115 @@ export function ShareAndPeopleDialog({
                           )}
                         </div>
                       </div>
-                    );
-                  })}
+
+                      {!isMemberOwner && m.role !== "ADMIN" && (
+                        <div className="pt-2 border-t border-border/40 flex items-center justify-between gap-3 text-xs">
+                          {(() => {
+                            const isCommentInherited = Boolean(
+                              m.inheritedCanComment === true ||
+                                (m.inheritedRole &&
+                                  ["COMMENTER", "EDITOR", "ADMIN"].includes(m.inheritedRole))
+                            );
+                            const effectiveComment =
+                              isCommentInherited ||
+                              (m.canComment !== undefined && m.canComment !== null
+                                ? m.canComment
+                                : ["COMMENTER", "EDITOR"].includes(m.role));
+
+                            const isAskInherited = Boolean(
+                              m.inheritedCanAsk === true ||
+                                (m.inheritedRole &&
+                                  ["EDITOR", "ADMIN"].includes(m.inheritedRole))
+                            );
+                            const effectiveAsk =
+                              isAskInherited ||
+                              (m.canAsk !== undefined && m.canAsk !== null
+                                ? m.canAsk
+                                : m.role === "EDITOR");
+
+                            return (
+                              <div className="flex items-center gap-5 sm:gap-6 flex-wrap">
+                                <div className="flex items-center gap-2">
+                                  {isCommentInherited ? (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <div className="flex items-center gap-2 cursor-not-allowed opacity-75 select-none">
+                                          <Switch size="sm" checked={true} disabled />
+                                          <span className="text-xs text-muted font-medium flex items-center gap-1 whitespace-nowrap">
+                                            {tMembers("capabilities.comment")}
+                                            <Lock className="h-3 w-3 text-muted" />
+                                          </span>
+                                        </div>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        {tMembers("capabilities.inheritedLocked")}
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  ) : (
+                                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                                      <Switch
+                                        size="sm"
+                                        checked={effectiveComment}
+                                        disabled={!canEditThisMember}
+                                        onCheckedChange={(val) =>
+                                          handleToggleCapability(m.userId, "canComment", val)
+                                        }
+                                      />
+                                      <span className="text-xs text-fg-muted font-medium whitespace-nowrap">
+                                        {tMembers("capabilities.comment")}
+                                      </span>
+                                    </label>
+                                  )}
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                  {isAskInherited ? (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <div className="flex items-center gap-2 cursor-not-allowed opacity-75 select-none">
+                                          <Switch size="sm" checked={true} disabled />
+                                          <span className="text-xs text-muted font-medium flex items-center gap-1 whitespace-nowrap">
+                                            {tMembers("capabilities.ask")}
+                                            <Lock className="h-3 w-3 text-muted" />
+                                          </span>
+                                        </div>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        {tMembers("capabilities.inheritedLocked")}
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  ) : (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                                          <Switch
+                                            size="sm"
+                                            checked={effectiveAsk}
+                                            disabled={!canEditThisMember}
+                                            onCheckedChange={(val) =>
+                                              handleToggleCapability(m.userId, "canAsk", val)
+                                            }
+                                          />
+                                          <span className="text-xs text-fg-muted font-medium flex items-center gap-1 whitespace-nowrap">
+                                            {tMembers("capabilities.ask")}
+                                            <HelpCircle className="h-3 w-3 text-muted/70 hover:text-fg-muted" />
+                                          </span>
+                                        </label>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        {tMembers("capabilities.askHint")}
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
                 </div>
               )}
             </TabsContent>

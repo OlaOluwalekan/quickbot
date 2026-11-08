@@ -3,7 +3,9 @@ import type { Actor } from "@/server/auth/session";
 import { db } from "@/server/db/client";
 import { Errors } from "@/server/http/errors";
 import {
+  ALL_PERMISSIONS,
   can,
+  computeCapabilities,
   maxRole,
   type EffectiveRole,
   type Permission,
@@ -17,6 +19,7 @@ export type ResolvedWorkspaceAccess = {
     archivedAt: Date | null;
   };
   role: EffectiveRole;
+  capabilities: Set<Permission>;
 };
 
 export type ResolvedProjectAccess = {
@@ -26,23 +29,21 @@ export type ResolvedProjectAccess = {
     archivedAt: Date | null;
   };
   role: EffectiveRole;
+  capabilities: Set<Permission>;
 };
 
 /**
- * Resolves a user's effective role on a workspace.
+ * Resolves a user's effective role and capability set on a workspace.
  *
- * Top-down permission inheritance (F1.1):
+ * Top-down permission inheritance (F1.1) + Member capabilities (F1.2):
  * effectiveRole(user, workspace) =
  *   OWNER                                  if workspace.ownerId == user
  *   max(projectRole, workspaceRole)        by rank VIEWER < COMMENTER < EDITOR < ADMIN
  *   where projectRole = OWNER->ADMIN* if user owns the workspace's project, else ProjectMember.role or none
  *
- * * The project owner gets ADMIN on every workspace in their project even if someone else
- *   owns the workspace (owner of the container must be able to see/manage what's in it).
- *   Keep billing with the workspace owner.
- *
- * A workspace row can add rights, never remove inherited ones.
- * Soft-deleted workspaces (`deletedAt != null`) return `null`.
+ * Capabilities = projectCapabilities ∪ workspaceCapabilities
+ * - Suspended row contributes only workspace.read.
+ * - Explicit false removes only from its row; cannot remove a grant from the other level.
  */
 export async function resolveWorkspaceRole(
   userId: string,
@@ -55,13 +56,31 @@ export async function resolveWorkspaceRole(
       ownerId: true,
       projectId: true,
       archivedAt: true,
-      members: { where: { userId }, select: { role: true } },
+      members: {
+        where: { userId },
+        select: {
+          role: true,
+          canComment: true,
+          canAsk: true,
+          suspendedAt: true,
+          suspendedReason: true,
+        },
+      },
       project: {
         select: {
           id: true,
           ownerId: true,
           deletedAt: true,
-          members: { where: { userId }, select: { role: true } },
+          members: {
+            where: { userId },
+            select: {
+              role: true,
+              canComment: true,
+              canAsk: true,
+              suspendedAt: true,
+              suspendedReason: true,
+            },
+          },
         },
       },
     },
@@ -77,35 +96,69 @@ export async function resolveWorkspaceRole(
   };
 
   if (ws.ownerId === userId) {
-    return { ws: summary, role: "OWNER" };
+    return {
+      ws: summary,
+      role: "OWNER",
+      capabilities: new Set<Permission>(ALL_PERMISSIONS),
+    };
   }
 
-  // Inherited project role (loaded in the same query). The project owner is
-  // ADMIN on every workspace in their project; a soft-deleted project grants nothing.
+  // 1. Project level
   let projectRole: EffectiveRole | null = null;
+  let projectCapabilities = new Set<Permission>();
+
   if (ws.project && !ws.project.deletedAt) {
-    projectRole =
-      ws.project.ownerId === userId ? "ADMIN" : (ws.project.members?.[0]?.role ?? null);
+    if (ws.project.ownerId === userId) {
+      projectRole = "ADMIN";
+      projectCapabilities = computeCapabilities("ADMIN");
+    } else {
+      const pm = ws.project.members?.[0];
+      if (pm) {
+        projectRole = pm.role as EffectiveRole;
+        projectCapabilities = computeCapabilities(pm.role as EffectiveRole, {
+          canComment: pm.canComment,
+          canAsk: pm.canAsk,
+          suspended: Boolean(pm.suspendedAt),
+        });
+      }
+    }
   }
 
-  const workspaceRole = ws.members?.[0]?.role ?? null;
+  // 2. Workspace level
+  let workspaceRole: EffectiveRole | null = null;
+  let workspaceCapabilities = new Set<Permission>();
+
+  const wm = ws.members?.[0];
+  if (wm) {
+    workspaceRole = wm.role as EffectiveRole;
+    workspaceCapabilities = computeCapabilities(wm.role as EffectiveRole, {
+      canComment: wm.canComment,
+      canAsk: wm.canAsk,
+      suspended: Boolean(wm.suspendedAt),
+    });
+  }
 
   const effective = maxRole(projectRole, workspaceRole);
   if (!effective) {
     return null;
   }
 
-  return { ws: summary, role: effective };
+  const capabilities = new Set<Permission>([
+    ...projectCapabilities,
+    ...workspaceCapabilities,
+  ]);
+
+  return { ws: summary, role: effective, capabilities };
 }
 
 /**
- * Enforces that `actor` holds `perm` on `workspaceId`.
- * - Throws `404 Not Found` when the workspace does not exist, is soft-deleted,
- *   or the actor has no role (`null`) — never leaking existence via `403`.
- * - Throws `403 Forbidden` when the actor has access to the workspace (`VIEWER+`)
- *   but their role does not grant `perm`.
- * - Throws `409 Conflict` when the workspace is archived and `perm` is anything
- *   other than `"workspace.read"` or `"workspace.archive"`.
+ * Enforces that actor holds perm on workspaceId.
+ * - Throws 404 Not Found when the workspace does not exist, is soft-deleted,
+ *   or the actor has no role (null) - never leaking existence via 403.
+ * - Throws 403 Forbidden when the actor has access to the workspace
+ *   but their capabilities set does not grant perm.
+ * - Throws 409 Conflict when the workspace is archived and perm is anything
+ *   other than "workspace.read" or "workspace.archive".
  */
 export async function requireWorkspace(
   actor: Actor,
@@ -114,7 +167,7 @@ export async function requireWorkspace(
 ): Promise<ResolvedWorkspaceAccess> {
   const r = await resolveWorkspaceRole(actor.userId, workspaceId);
   if (!r) throw Errors.notFound("Workspace"); // never 403 -> no existence leak
-  if (!can(r.role, perm)) throw Errors.forbidden();
+  if (!r.capabilities.has(perm)) throw Errors.forbidden();
   if (
     r.ws.archivedAt &&
     perm !== "workspace.read" &&
@@ -128,7 +181,7 @@ export async function requireWorkspace(
 /**
  * Resolves a user's effective role on a project.
  * Precedence: OWNER > ProjectMember role > none.
- * Soft-deleted projects (`deletedAt != null`) return `null`.
+ * Soft-deleted projects (deletedAt != null) return null.
  */
 export async function resolveProjectRole(
   userId: string,
@@ -140,7 +193,16 @@ export async function resolveProjectRole(
       id: true,
       ownerId: true,
       archivedAt: true,
-      members: { where: { userId }, select: { role: true } },
+      members: {
+        where: { userId },
+        select: {
+          role: true,
+          canComment: true,
+          canAsk: true,
+          suspendedAt: true,
+          suspendedReason: true,
+        },
+      },
     },
   });
 
@@ -153,25 +215,34 @@ export async function resolveProjectRole(
   };
 
   if (project.ownerId === userId) {
-    return { project: summary, role: "OWNER" };
+    return {
+      project: summary,
+      role: "OWNER",
+      capabilities: new Set<Permission>(ALL_PERMISSIONS),
+    };
   }
 
-  const memberRole = project.members?.[0]?.role;
-  if (memberRole) {
-    return { project: summary, role: memberRole };
+  const pm = project.members?.[0];
+  if (pm) {
+    const capabilities = computeCapabilities(pm.role as EffectiveRole, {
+      canComment: pm.canComment,
+      canAsk: pm.canAsk,
+      suspended: Boolean(pm.suspendedAt),
+    });
+    return { project: summary, role: pm.role as EffectiveRole, capabilities };
   }
 
   return null;
 }
 
 /**
- * Enforces that `actor` holds `perm` on `projectId`.
- * - Throws `404 Not Found` when the project does not exist, is soft-deleted,
- *   or the actor is neither owner nor member — never leaking existence via `403`.
- * - Throws `403 Forbidden` when the actor is a member (`VIEWER+`)
- *   but their role does not grant `perm`.
- * - Throws `409 Conflict` when the project is archived and `perm` is anything
- *   other than `"workspace.read"` or `"workspace.archive"`.
+ * Enforces that actor holds perm on projectId.
+ * - Throws 404 Not Found when the project does not exist, is soft-deleted,
+ *   or the actor is neither owner nor member - never leaking existence via 403.
+ * - Throws 403 Forbidden when the actor is a member
+ *   but their capability set does not grant perm.
+ * - Throws 409 Conflict when the project is archived and perm is anything
+ *   other than "workspace.read" or "workspace.archive".
  */
 export async function requireProject(
   actor: Actor,
@@ -180,7 +251,7 @@ export async function requireProject(
 ): Promise<ResolvedProjectAccess> {
   const r = await resolveProjectRole(actor.userId, projectId);
   if (!r) throw Errors.notFound("Project"); // never 403 -> no existence leak
-  if (!can(r.role, perm)) throw Errors.forbidden();
+  if (!r.capabilities.has(perm)) throw Errors.forbidden();
   if (
     r.project.archivedAt &&
     perm !== "workspace.read" &&

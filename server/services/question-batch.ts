@@ -44,7 +44,7 @@ function formatSSEEvent(event: string, data: unknown): string {
  * Runs batch answers for queued questions in a workspace.
  *
  * Rules:
- * 1. Re-checks permissions (workspace.generate) at run time.
+ * 1. Re-checks permissions (workspace.ask) at run time.
  * 2. Concurrency: uses row-level atomic update QUEUED -> ANSWERING.
  * 3. Billed to workspace owner, actor recorded.
  * 4. Groups questions by version so version context is included once.
@@ -59,8 +59,8 @@ export async function runQuestionBatch(
   input: RunQuestionBatchInput,
   options: { providerInstance?: AiProvider } = {}
 ): Promise<{ stream: ReadableStream<Uint8Array>; generationId: string; count: number }> {
-  // 1. Enforce workspace.generate permission
-  const wsAccess = await requireWorkspace(actor, workspaceId, "workspace.generate");
+  // 1. Enforce workspace.ask permission
+  const wsAccess = await requireWorkspace(actor, workspaceId, "workspace.ask");
 
   // 2. Fetch candidate questions (caller's questions in QUEUED state, max 10)
   const candidateAnnotations = await db.annotation.findMany({

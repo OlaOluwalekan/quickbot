@@ -1067,6 +1067,12 @@
       "EDITOR": "Editor",
       "ADMIN": "Admin"
     },
-    "manageOnProject": "Access comes from the project. Change or remove it there."
+    "manageOnProject": "Access comes from the project. Change or remove it there.",
+    "capabilities": {
+      "comment": "Can comment",
+      "ask": "Can ask Klecx",
+      "askHint": "Side questions are answered by Klecx and billed to the owner",
+      "inheritedLocked": "Inherited from project"
+    }
   }
 }
