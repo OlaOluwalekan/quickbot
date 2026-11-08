@@ -1055,7 +1055,8 @@
   },
   "Members": {
     "errors": {
-      "belowInherited": "Workspace role cannot be lower than the inherited project role"
+      "belowInherited": "Workspace role cannot be lower than the inherited project role",
+      "inheritedMember": "This member's access comes from the project. Remove them from the project instead."
     },
     "inheritedBadge": "Inherited from project · {role}",
     "inheritedBadgePlain": "Inherited from project",
@@ -1065,6 +1066,7 @@
       "COMMENTER": "Commenter",
       "EDITOR": "Editor",
       "ADMIN": "Admin"
-    }
+    },
+    "manageOnProject": "Access comes from the project. Change or remove it there."
   }
 }

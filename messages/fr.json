@@ -1055,7 +1055,8 @@
   },
   "Members": {
     "errors": {
-      "belowInherited": "Le rôle dans l'espace de travail ne peut pas être inférieur au rôle hérité du projet"
+      "belowInherited": "Le rôle dans l'espace de travail ne peut pas être inférieur au rôle hérité du projet",
+      "inheritedMember": "L'accès de ce membre vient du projet. Retirez-le plutôt du projet."
     },
     "inheritedBadge": "Hérité du projet · {role}",
     "inheritedBadgePlain": "Hérité du projet",
@@ -1065,6 +1066,7 @@
       "COMMENTER": "Commentateur",
       "EDITOR": "Éditeur",
       "ADMIN": "Administrateur"
-    }
+    },
+    "manageOnProject": "L'accès vient du projet. Modifiez-le ou retirez-le là-bas."
   }
 }

@@ -592,8 +592,11 @@ export async function removeWorkspaceMember(
   }
 
   if (!existingWm && inheritsFromProject) {
-    throw Errors.badRequest(
-      "Cannot remove a member whose access is inherited from the project. Remove them from the project instead."
+    // Top-down rule: a workspace can't take away access that comes from the
+    // project. The only way to remove it is to remove them from the project.
+    throw Errors.conflict(
+      "This member's access comes from the project. Remove them from the project instead.",
+      "member_inherited"
     );
   }
 

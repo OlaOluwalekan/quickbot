@@ -554,6 +554,9 @@ export function ShareAndPeopleDialog({
       });
       if (!res.ok) {
         const json = await res.json();
+        if (json?.error?.code === "member_inherited") {
+          throw new Error(tMembers("errors.inheritedMember"));
+        }
         throw new Error(json?.error?.message || "Failed to remove member");
       }
       toast.success(
@@ -993,7 +996,7 @@ export function ShareAndPeopleDialog({
                                   className="h-8 text-xs w-28 bg-surface"
                                   title={
                                     m.inheritedRole
-                                      ? tMembers("lowerOnProject")
+                                      ? tMembers(m.source === "PROJECT" ? "manageOnProject" : "lowerOnProject")
                                       : undefined
                                   }
                                 >
@@ -1015,7 +1018,7 @@ export function ShareAndPeopleDialog({
                               </Select>
                               {m.inheritedRole && (
                                 <span className="text-[10px] text-muted">
-                                  {tMembers("lowerOnProject")}
+                                  {tMembers(m.source === "PROJECT" ? "manageOnProject" : "lowerOnProject")}
                                 </span>
                               )}
                             </div>
@@ -1029,7 +1032,7 @@ export function ShareAndPeopleDialog({
                               </Badge>
                               {m.inheritedRole && (
                                 <span className="text-[10px] text-muted">
-                                  {tMembers("lowerOnProject")}
+                                  {tMembers(m.source === "PROJECT" ? "manageOnProject" : "lowerOnProject")}
                                 </span>
                               )}
                             </div>

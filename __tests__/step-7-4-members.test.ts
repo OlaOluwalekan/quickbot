@@ -341,11 +341,11 @@ describe("Step 7.4 — Members and invitations", () => {
       expect(await resolveWorkspaceRole(ids.editor, projectWorkspaceId)).toBeNull();
     });
 
-    it("attempting to remove an inherited member with no explicit workspace row rejects with 400", async () => {
+    it("removing a member whose access comes only from the project rejects with 409 member_inherited", async () => {
       await db.projectMember.create({ data: { projectId, userId: ids.viewer, role: "VIEWER", invitedById: ids.owner } });
       await expect(
         removeWorkspaceMember(actorFor("owner"), projectWorkspaceId, ids.viewer)
-      ).rejects.toMatchObject({ status: 400 });
+      ).rejects.toMatchObject({ status: 409, code: "member_inherited" });
       // Access remains via project
       expect(await resolveWorkspaceRole(ids.viewer, projectWorkspaceId)).not.toBeNull();
     });

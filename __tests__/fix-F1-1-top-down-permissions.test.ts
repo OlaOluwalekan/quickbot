@@ -250,11 +250,19 @@ describe("Fix F1.1 — Top-down permission inheritance", () => {
       let ws1Access = await resolveWorkspaceRole(ids.memberC, workspace1Id);
       expect(ws1Access?.role).toBe("EDITOR");
 
-      // Attempting to remove from workspace when access is only inherited rejects with 400
+      // Removing them from the workspace alone is refused: access comes from the project
       await expect(
         removeWorkspaceMember(actorFor("wsOwner"), workspace1Id, ids.memberC)
       ).rejects.toMatchObject({
-        status: 400,
+        status: 409,
+        code: "member_inherited",
+      });
+      // ...and leaving the workspace on their own is refused the same way
+      await expect(
+        removeWorkspaceMember(actorFor("memberC"), workspace1Id, ids.memberC)
+      ).rejects.toMatchObject({
+        status: 409,
+        code: "member_inherited",
       });
 
       // Remove memberC from the project
