@@ -40,6 +40,8 @@ export function entitlementsForPlan(plan: PlanKey): Entitlements {
   };
 }
 
+let warnedDevDefaultPlanInProduction = false;
+
 function resolveEffectivePlanForUser(
   override: PlanKey | undefined,
   nodeEnv: string,
@@ -51,6 +53,8 @@ function resolveEffectivePlanForUser(
 
   if (rawDevDefaultPlan && rawDevDefaultPlan in PLANS) {
     if (nodeEnv === "production") {
+      if (warnedDevDefaultPlanInProduction) return "FREE";
+      warnedDevDefaultPlanInProduction = true;
       console.warn(
         `[Entitlements] DEV_DEFAULT_PLAN="${rawDevDefaultPlan}" is set in production and will be ignored. Defaulting to FREE.`
       );

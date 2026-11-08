@@ -351,6 +351,54 @@ describe("Step F0.1 — Interim entitlements + plan-gating primitives", () => {
         ).toBeInTheDocument();
       });
     });
+    it("keeps the tooltip open while the pointer moves from the trigger into it (Upgrade link stays reachable)", async () => {
+      jest.useFakeTimers();
+      try {
+        render(
+          <Gated reason={{ code: "requires_plan", plan: "LITE" }}>
+            <button type="button">Create image</button>
+          </Gated>
+        );
+        const wrapper = document.querySelector(
+          "span[tabindex='0']"
+        ) as HTMLElement;
+
+        fireEvent.mouseEnter(wrapper);
+        const link = await screen.findByRole("link", { name: "Upgrade" });
+        fireEvent.mouseLeave(wrapper);
+        fireEvent.mouseEnter(link.closest("[data-slot='tooltip-content']")!);
+        React.act(() => {
+          jest.advanceTimersByTime(500);
+        });
+        expect(screen.getByRole("link", { name: "Upgrade" })).toBeInTheDocument();
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+  });
+
+  describe("5b. Gates translations", () => {
+    it("has every Gates key in en, es and fr with no encoding damage", () => {
+      const keys = Object.keys(
+        (enMessages as unknown as Record<string, Record<string, string>>).Gates ??
+          {}
+      );
+      expect(keys.length).toBeGreaterThan(0);
+      for (const locale of ["es", "fr"]) {
+        const messages = JSON.parse(
+          fs.readFileSync(
+            path.join(process.cwd(), "messages", `${locale}.json`),
+            "utf8"
+          )
+        ) as Record<string, Record<string, string>>;
+        for (const key of keys) {
+          const value = messages.Gates?.[key];
+          expect(typeof value).toBe("string");
+          // A "?" next to a letter means an accented character was lost.
+          expect(value).not.toMatch(/\p{L}\?|\?\p{L}/u);
+        }
+      }
+    });
   });
 
   describe("6. Codebase hygiene: no TEMPORARY plan hacks remain", () => {

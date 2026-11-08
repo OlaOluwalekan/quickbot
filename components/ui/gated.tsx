@@ -19,78 +19,31 @@ export interface GatedProps {
   side?: "top" | "right" | "bottom" | "left";
 }
 
-function formatGateReasonMessage(
-  reason: GateReason,
-  t: (key: string, values?: Record<string, string | number>) => string
-): { message: string; upgradeLabel: string } {
-  const translateWithFallback = (
-    key: string,
-    values: Record<string, string | number> | undefined,
-    fallback: string
-  ): string => {
-    try {
-      const res = t(key, values);
-      if (!res || res === key || res === `Gates.${key}`) {
-        return fallback;
-      }
-      return res;
-    } catch {
-      return fallback;
-    }
-  };
+type GateTranslator = (
+  key: string,
+  values?: Record<string, string | number>
+) => string;
 
-  const upgradeLabel = translateWithFallback("upgrade", undefined, "Upgrade");
-
+function gateMessage(reason: GateReason, t: GateTranslator): string {
   switch (reason.code) {
-    case "requires_plan": {
-      const planName = PLANS[reason.plan]?.name ?? reason.plan;
-      return {
-        message: translateWithFallback(
-          "requires_plan",
-          { plan: planName },
-          `Available on the ${planName} plan and above`
-        ),
-        upgradeLabel,
-      };
-    }
+    case "requires_plan":
+      return t("requires_plan", {
+        plan: PLANS[reason.plan]?.name ?? reason.plan,
+      });
     case "member_limit":
-      return {
-        message: translateWithFallback(
-          "member_limit",
-          { limit: reason.limit },
-          `Your plan allows up to ${reason.limit} collaborators`
-        ),
-        upgradeLabel,
-      };
+      return t("member_limit", { limit: reason.limit });
     case "daily_cap":
-      return {
-        message: translateWithFallback(
-          "daily_cap",
-          undefined,
-          "You have reached your daily limit for this feature"
-        ),
-        upgradeLabel,
-      };
+      return t("daily_cap");
     case "no_permission":
-      return {
-        message: translateWithFallback(
-          "no_permission",
-          { capability: reason.capability },
-          `You don't have permission to ${reason.capability}`
-        ),
-        upgradeLabel,
-      };
+      return t("no_permission", { capability: reason.capability });
     case "max_depth":
-      return {
-        message: translateWithFallback(
-          "max_depth",
-          { depth: reason.depth },
-          `Maximum thread depth (${reason.depth}) reached. Promote this answer to a new workspace to continue.`
-        ),
-        upgradeLabel,
-      };
+      return t("max_depth", { depth: reason.depth });
   }
 }
+
+// Short delay before closing so the pointer can travel from the trigger
+// into the tooltip (e.g. to click the Upgrade link).
+const CLOSE_DELAY_MS = 150;
 
 export function Gated({
   reason,
@@ -100,12 +53,31 @@ export function Gated({
 }: GatedProps) {
   const t = useTranslations("Gates");
   const [open, setOpen] = React.useState(false);
+  const closeTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const cancelClose = React.useCallback(() => {
+    if (closeTimer.current) {
+      clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+  }, []);
+  const show = React.useCallback(() => {
+    cancelClose();
+    setOpen(true);
+  }, [cancelClose]);
+  const scheduleClose = React.useCallback(() => {
+    cancelClose();
+    closeTimer.current = setTimeout(() => setOpen(false), CLOSE_DELAY_MS);
+  }, [cancelClose]);
+
+  React.useEffect(() => cancelClose, [cancelClose]);
 
   if (!reason) {
     return children;
   }
 
-  const { message, upgradeLabel } = formatGateReasonMessage(reason, t);
+  const message = gateMessage(reason, t as GateTranslator);
+  const upgradeLabel = t("upgrade");
   const childProps = (children.props ?? {}) as Record<string, unknown>;
 
   const gatedChild = React.cloneElement(
@@ -136,14 +108,14 @@ export function Gated({
           tabIndex={0}
           data-gated={reason.code}
           className={cn("inline-flex cursor-not-allowed", className)}
-          onFocus={() => setOpen(true)}
+          onFocus={show}
           onBlur={(e) => {
             if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
               setOpen(false);
             }
           }}
-          onMouseEnter={() => setOpen(true)}
-          onMouseLeave={() => setOpen(false)}
+          onMouseEnter={show}
+          onMouseLeave={scheduleClose}
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -162,6 +134,8 @@ export function Gated({
         side={side}
         aria-label={ariaLabel}
         className="flex items-center gap-2"
+        onMouseEnter={show}
+        onMouseLeave={scheduleClose}
       >
         <span>{message}</span>
         {reason.code === "requires_plan" && (
