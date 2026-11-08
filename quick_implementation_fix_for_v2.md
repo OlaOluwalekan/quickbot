@@ -120,7 +120,7 @@ Severity: 🔴 wrong/misleading to users or legal risk · 🟠 broken behaviour 
 |---|---|
 | **Actions** | **Comment** and **Ask**. "Reply" and "Add question" are merged into **Ask**. The Ask popover has two buttons: **Ask now** (answer streams immediately) and **Add to queue** (answered later in a batch with "Ask all"). |
 | **Targets** | An annotation can anchor to: a **response version** (main conversation, includes uploaded documents, see F3.1), an **Ask answer message** (nested asks), or a **generated document revision** (F3.4). One polymorphic target per annotation, enforced by a DB `CHECK`. |
-| **Depth** | `depth = 0` on main-conversation targets; `depth = parent.depth + 1` on an Ask answer. Server cap: **8**. At the cap, Ask is disabled with a tooltip suggesting promotion to a new workspace. |
+| **Depth** | `depth = 0` on main-conversation targets; `depth = parent.depth + 1` on an Ask answer. **No product limit** — users can nest as deep as they like (see §2.3 for why the layout makes this safe). The only limit is a hidden safety ceiling `MAX_ANNOTATION_DEPTH = 100` in `lib/annotations/limits.ts`, which protects against scripts or bugs that create endless chains. A person won't reach it in normal use. If they do, Ask is disabled with a tooltip suggesting they promote the answer to a new workspace. |
 | **Ask context** | Only the **text that contains the highlight** (the response version / the parent Ask answer / the document revision) + the prompt or question that produced that text + this thread's own messages + active Klecx notes (§2.2). **Never** the whole workspace history. Batches include each containing text once. |
 | **Comment threads** | A comment is a thread too: members can reply to a comment (no AI involved). |
 | **AI authorship** | Annotations get `authorType` = `USER` or `AI`. AI review comments (F3.3) are `AI`, shown as "Klecx", may carry a **quick-fix suggestion**. |
@@ -135,7 +135,7 @@ Severity: 🔴 wrong/misleading to users or legal risk · 🟠 broken behaviour 
 
 ### 2.3 Nested Ask columns — layout recommendation
 
-You asked for nesting without "seven columns that are too thin to read". Recommended pattern: a **column stack with collapsible spines** (similar to Miller columns / Slack threads):
+You asked for nesting without "seven columns that are too thin to read". Recommended pattern: a **column stack with collapsible spines** (similar to Miller columns / Slack threads). Because only the last 1–3 levels are ever shown at full width, **depth can be unlimited** without hurting readability. Each Ask also sends only the text that contains the highlight to the AI (§2.1), so cost doesn't grow with depth either.
 
 ```
 Desktop ≥ 1280 px, 2 levels open           Desktop, 4 levels open (only 2 fit)
@@ -151,7 +151,7 @@ Desktop ≥ 1280 px, 2 levels open           Desktop, 4 levels open (only 2 fit)
 Rules (implemented by one pure function `computeColumnLayout(availableWidth, levels)` that is unit-tested):
 
 1. **Readable minimums:** main column ≥ 480 px, Ask column ≥ 420 px, preferred Ask width 520 px (user-resizable, remembered).
-2. The **deepest column is always fully visible**. Walking backwards, each column is shown fully while it fits; the rest (oldest first, *including the main conversation*) collapse into **44 px spines** showing a level badge and a vertical, truncated quote. Never more than **3 full columns**.
+2. The **deepest column is always fully visible**. Walking backwards, each column is shown fully while it fits; the rest (oldest first, *including the main conversation*) collapse into **44 px spines** showing a level badge and a vertical, truncated quote. Never more than **3 full columns**. When more than 6 spines would show, the oldest ones merge into a single **`+N` spine** that opens a list of hidden levels, so the strip of spines never grows wider than about 300 px however deep the thread goes.
 3. Clicking a spine (or a breadcrumb item) **closes every level deeper than it** — the same as pressing ← Back repeatedly.
 4. Every Ask column header: **← Back** (close this level), **⌂ Main conversation** (close all), breadcrumb `Main › «quote 1» › «quote 2»` (middle items collapse to `…`), a ⋯ menu (resolve, visibility, promote, delete).
 5. **< 1024 px (tablet/phone):** one column at a time, full width (a `Sheet` on phones), breadcrumb + Back; swiping right = Back.
@@ -183,6 +183,41 @@ Search becomes a **model-callable tool** instead of a request-level switch: the 
 
 Record with `MediaRecorder` → **Stop** uploads the clip to `POST /api/v1/transcriptions`, the server transcribes it with an audio-capable model from the registry and returns text into the composer for review. **Send while recording** = stop → transcribe → send in one go. The audio is processed in memory and never stored. Charged in credits to the **speaker's own account** (it's personal input preparation). The browser Web Speech API is not used as the primary path (unsupported in Firefox, inconsistent elsewhere, and it sends audio to a browser vendor).
 
+### 2.7 Company identity (Vyraxity, Lagos, Nigeria)
+
+- **Klecx is a product of Vyraxity** (vyraxity.com). Product copy says "Klecx"; legal text, the email footer and the copyright line say "Klecx is a product of Vyraxity · Lagos, Nigeria". The JSON-LD `Organization` is Vyraxity, with Klecx as its `SoftwareApplication`.
+- Values come from env (F0.2): `COMPANY_LEGAL_NAME="Vyraxity"`, `COMPANY_ADDRESS="Lagos, Nigeria"`, `COMPANY_COUNTRY="NG"`.
+- **Recommendation: register Vyraxity with Nigeria's Corporate Affairs Commission (CAC)** before you take live payments. A Business Name registration is the quick option; a private limited company ("Vyraxity Ltd") is better if you'll raise money or want limited liability. When that's done, update `COMPANY_LEGAL_NAME` (e.g. "Vyraxity Ltd") and add the registration number to the legal pages (`COMPANY_REG_NUMBER`, optional). Until then, the Terms name the founders as operating under the name Vyraxity, so a real party is responsible for the contract. Check this wording with a lawyer.
+- **Governing law:** the laws of the Federal Republic of Nigeria, with the courts of Lagos State. Keep a line that consumers keep any mandatory rights of their own country.
+- **Data protection:** the Privacy policy follows the **Nigeria Data Protection Act 2023 (NDPA)**, and the supervisory authority is the **Nigeria Data Protection Commission (NDPC)**. It also covers GDPR/UK GDPR rights for visitors from Europe, because the site is open to them. Transfers outside Nigeria (AI provider, hosting, storage, email) are disclosed with their safeguards.
+- **Postal address:** "Lagos, Nigeria" is fine for transactional emails and the legal pages. Before sending *marketing* emails (newsletters), get a full postal address (office, virtual office or PO box), because anti-spam laws (e.g. CAN-SPAM) require one in commercial emails.
+- **Branded email domain:** use one domain consistently for support/privacy/abuse (e.g. `support@vyraxity.com` or `support@klecx.vyraxity.com`). Creem requires a branded address (not Gmail) on the site and in its dashboard.
+- **Creem:** before Phase 8, check that **Nigeria** is on Creem's supported payout countries and what identity/business documents its onboarding asks for (individual vs registered business). If Nigeria isn't supported, plan for USDC payouts (if offered) or the fallback providers in main-guide §4.2.
+
+### 2.8 Refund policy (recommendation — one policy everywhere)
+
+Goal: fair enough to prevent chargebacks (each costs $25 plus risk to the Creem account), simple enough to enforce from the credit ledger, and protective against "use it all, then ask for a refund".
+
+1. **Cancel anytime.** Cancelling stops the next renewal. You keep the plan and its remaining credits until the end of the period you paid for. No partial refunds for unused time after the refund windows below.
+2. **First-purchase guarantee (14 days):** a full refund of your **first** payment for a paid plan (monthly or yearly) if you ask within **14 days** and have used **less than 20 %** of the credits that payment gave you. Once per customer.
+3. **Forgot-to-cancel renewals (7 days):** a full refund of an automatic **renewal** if you ask within **7 days** of it and have used **no credits** since it renewed.
+4. **Always refunded:** duplicate charges, charges after a confirmed cancellation, billing errors, and periods when a Klecx outage stopped you using the service (pro-rated for the outage).
+5. **Not refunded:** after the windows above; accounts suspended for Acceptable Use Policy violations (except where the law requires it).
+6. **What a refund does:** a full refund ends the paid plan immediately (back to Free) and removes the **unused** credits from that payment. The balance never goes below zero (main-guide Step 8.3 `refund.created`).
+7. **How:** Settings → Billing → "Request a refund" (opens the support form with the Billing topic and the subscription pre-filled), or email `{billingEmail}`. Replies within 3 business days. Creem, as merchant of record, sends the money back to the original payment method. Banks usually take 5–10 business days.
+8. **Statutory rights:** nothing in the policy limits consumer rights under the law of the customer's country. For EU/UK customers, checkout asks for consent to start the service immediately (the merchant of record handles this), and the 14-day guarantee above matches the usual withdrawal period anyway.
+
+Implementation: main-guide Step 8.4 adds `getRefundEligibility(subscriptionId)` (computed from the ledger: credits used since the payment, payment number, days since payment, earlier refunds) for the support/admin view. Step 8.5 shows the refund link. The FAQ, Terms and help center (F5.4/F5.5/F5.7) use this exact text, and only when `BILLING_ENABLED=true`.
+
+### 2.9 Built for more languages later (marketing URLs per language)
+
+You want localized marketing pages (Spanish, French and more) **later**. This interlude **prepares the code** so that switching it on is a configuration change and a folder move, not a rewrite (F5.9):
+- One locale registry, `i18n/locales.ts`: code, native name, `hreflang`, OG locale, text direction, and status `stable | beta`. Adding a language = one entry + `messages/<code>.json` + `content/help/<code>/`.
+- `i18n/routing.ts` (next-intl `defineRouting`) with `localePrefix: "never"` **today**. `i18n/navigation.ts` (`createNavigation`) supplies `Link`, `redirect`, `usePathname`, `getPathname`. **All internal links in marketing, help and legal pages use these**, never a raw `next/link` with hard-coded paths.
+- `lib/seo/routes.ts` lists the public routes once (used by the sitemap, metadata and alternates). `lib/seo/alternates.ts` `buildAlternates(path)` returns the canonical URL today and adds `languages` (hreflang) when `MARKETING_LOCALE_URLS=true`.
+- Missing keys in a `beta` language fall back to English at runtime (`getMessageFallback` + deep merge with `en`). `check:i18n` reports gaps for beta languages but only fails CI for `stable` ones.
+- The later switch is main-guide **Step 10.7**: move `app/(marketing)` to `app/[locale]/(marketing)`, set `localePrefix: "as-needed"`, turn on `MARKETING_LOCALE_URLS`, and add hreflang to the sitemap.
+
 ---
 
 ## 3. Phase map
@@ -213,7 +248,7 @@ Total: **33 steps / PRs.** Recommended order is top to bottom. F5.2, F5.4, F5.7 
   export type Entitlements = {
     plan: PlanKey;                       // effective plan
     models: ModelKey[];                  // allowed model keys
-    limits: PlanLimits & { searchesPerDay: number; voiceSecondsPerDay: number; maxAskDepth: number };
+    limits: PlanLimits & { searchesPerDay: number; voiceSecondsPerDay: number };
     features: { images: boolean; webSearch: boolean; documentReview: boolean; voiceInput: boolean; collaboration: boolean };
   };
   export async function getEntitlements(userId: string): Promise<Entitlements>;
@@ -228,7 +263,7 @@ Total: **33 steps / PRs.** Recommended order is top to bottom. F5.2, F5.4, F5.7 
   - Otherwise renders the child with `aria-disabled="true"`, `data-disabled`, removes its `onClick`, and wraps it in a focusable `<span tabIndex={0}>` + `Tooltip` (disabled buttons don't emit pointer events, so the tooltip must sit on the wrapper). Tooltip text comes from `t("Gates.<code>", {...})`, plus an "Upgrade" link for `requires_plan` that goes to `/pricing`.
 
 **Update**
-- `server/billing/plans.ts`: add `searchesPerDay`, `voiceSecondsPerDay`, `maxAskDepth` to `PlanLimits`; set `FREE.limits.grounding = true` (web search for everyone — see F4.1). Suggested values: searches/day Free 10 · Lite 50 · Standard 100 · Pro 200; voice seconds/day Free 120 · Lite 600 · Standard 1200 · Pro 2400; maxAskDepth 8 for all.
+- `server/billing/plans.ts`: add `searchesPerDay`, `voiceSecondsPerDay` to `PlanLimits`; set `FREE.limits.grounding = true` (web search for everyone — see F4.1). Suggested values: searches/day Free 10 · Lite 50 · Standard 100 · Pro 200; voice seconds/day Free 120 · Lite 600 · Standard 1200 · Pro 2400. (Nesting depth is **not** a plan limit — see §2.1.)
 - Replace the "TEMPORARY" plan logic:
   - `components/workspace/composer.tsx:210-213` → `entitlements.limits.attachmentsPerWorkspace` / `maxFileMB`.
   - `server/documents/index.ts` `resolveExportPlanForUser` → `getEntitlements(userId).plan` (delete the `planBalance` inference and the non-test PRO unlock).
@@ -256,9 +291,11 @@ ABUSE_EMAIL=abuse@example.com
 LEGAL_EMAIL=legal@example.com            # optional, falls back to SUPPORT_EMAIL
 BILLING_EMAIL=billing@example.com        # optional, falls back to SUPPORT_EMAIL
 EMAIL_FROM="Klecx <no-reply@example.com>"   # already exists
-COMPANY_LEGAL_NAME="Your Company Ltd"
-COMPANY_ADDRESS="Street, City, Country"
-COMPANY_COUNTRY="NG"                     # ISO code, used for governing-law text
+COMPANY_LEGAL_NAME="Vyraxity"            # → "Vyraxity Ltd" after CAC registration (§2.7)
+COMPANY_ADDRESS="Lagos, Nigeria"
+COMPANY_COUNTRY="NG"                     # ISO code → governing law "Federal Republic of Nigeria", courts of Lagos State
+COMPANY_REG_NUMBER=                      # optional, CAC number once registered
+COMPANY_WEBSITE="https://vyraxity.com"
 SOCIAL_X_URL=                            # optional
 SOCIAL_GITHUB_URL=                       # optional
 ```
@@ -269,8 +306,8 @@ Remove the `.default("support@mail.klecx.vyraxity.com")` / `abuse@…` defaults 
 - `components/providers/site-config-provider.tsx` → React context with the **public** subset; filled in `app/layout.tsx` from `getSiteConfig()`; hook `useSiteConfig()` for client components.
 
 **Update (replace every hard-coded address/identity)**
-- `server/email/templates/*.ts` (11 files) and `layout.ts`: use `getSiteConfig()`. Footer becomes `© {year} {company.legalName} · {company.address}` and the "Merchant of Record services provided by Creem" line is shown **only when billing is enabled** (`BILLING_ENABLED`, see F5.4). Move the English fallbacks in `layout.ts` (`copyUrlNotice`, `supportNotice`, `legalNotice`, `transactionalDisclaimer`) into `messages/*` → `Email.layout.*`.
-- `components/seo/json-ld.tsx` (`contactPoint.email`, `sameAs` from `social`, drop entries that are unset), `app/maintenance/page.tsx`, `components/marketing/footer.tsx`, `components/marketing/about-view.tsx`.
+- `server/email/templates/*.ts` (11 files) and `layout.ts`: use `getSiteConfig()`. Footer becomes `Klecx is a product of {company.legalName} · {company.address} · © {year}` and the "Merchant of Record services provided by Creem" line is shown **only when billing is enabled** (`BILLING_ENABLED`, see F5.4). Move the English fallbacks in `layout.ts` (`copyUrlNotice`, `supportNotice`, `legalNotice`, `transactionalDisclaimer`) into `messages/*` → `Email.layout.*`.
+- `components/seo/json-ld.tsx` (`Organization` = Vyraxity with `url` = `COMPANY_WEBSITE`, `address.addressLocality` Lagos / `addressCountry` NG; `contactPoint.email`, `sameAs` from `social`, drop entries that are unset; Klecx stays the `SoftwareApplication` with `publisher` → the organization), `app/maintenance/page.tsx`, `components/marketing/footer.tsx`, `components/marketing/about-view.tsx`.
 - `messages/*.json` `Legal.*` and `content/help/**/*.mdx`: replace literal addresses with ICU placeholders `{supportEmail}`, `{privacyEmail}`, `{abuseEmail}`. Help MDX: the loader (`lib/help/articles.ts`) replaces `{{supportEmail}}`-style tokens before compiling (MDX braces are JSX, so use a distinct token like `%%SUPPORT_EMAIL%%`).
 - `server/services/support.ts` keeps using `env.SUPPORT_EMAIL` via `getSiteConfig()`.
 
@@ -518,7 +555,7 @@ model WorkspaceNote {                          // "Klecx notes"
        OR (target_type='ANNOTATION_MESSAGE' AND target_message_id IS NOT NULL AND version_id IS NULL AND document_id IS NULL)
        OR (target_type='DOCUMENT_REVISION'  AND document_id IS NOT NULL AND document_revision IS NOT NULL AND version_id IS NULL AND target_message_id IS NULL))
    ```
-4. `CHECK (depth >= 0 AND depth <= 8)`.
+4. `CHECK (depth >= 0)`. The upper safety ceiling is enforced in the service (`MAX_ANNOTATION_DEPTH`), **not** in the database, so it can change without a migration.
 
 **Update**
 - `lib/schemas/annotation.ts`: `kind: z.enum(["COMMENT","ASK"])`, `mode: z.enum(["now","queue"]).optional()` (ASK only), `text` ≤ 2000 (comment) / ≤ 500 (ask), `anchor` unchanged.
@@ -537,7 +574,7 @@ model WorkspaceNote {                          // "Klecx notes"
 - Generalize the root detection: any element with `data-annot-root` plus `data-annot-target-type="RESPONSE_VERSION|ANNOTATION_MESSAGE|DOCUMENT_REVISION"`, `data-annot-target-id`, `data-annot-depth`, and for versions `data-annot-content-source` / `data-annot-edit-revision`. The toolbar reads these instead of assuming a response card.
 - Buttons:
   1. **Comment** (`<Gated>` on `capabilities.comment`) → textarea with mention support; **Save** (Enter) / Cancel (Esc). A hint under the box: "Type @ to mention a member or @klecx to have Klecx remember this."
-  2. **Ask** (`<Gated>` on `capabilities.ask`, `max_depth` when `depth + 1 > 8`, and out-of-credits) → input; two buttons: **Ask now** (primary, Enter) → creates the ASK with `mode: "now"` and **opens its column** (F2.4) where the answer streams; **Add to queue** (secondary, Ctrl/⌘+Enter) → creates with `mode: "queue"`, toast "Added to your queue (3)", popover stays open for the next selection ("Add & select another").
+  2. **Ask** (`<Gated>` on `capabilities.ask`, `max_depth` only when `depth + 1 > MAX_ANNOTATION_DEPTH`, and out-of-credits) → input; two buttons: **Ask now** (primary, Enter) → creates the ASK with `mode: "now"` and **opens its column** (F2.4) where the answer streams; **Add to queue** (secondary, Ctrl/⌘+Enter) → creates with `mode: "queue"`, toast "Added to your queue (3)", popover stays open for the next selection ("Add & select another").
 - Keyboard shortcuts become `Ctrl/⌘+Alt+M` (comment) and `Ctrl/⌘+Alt+A` (ask). Remove the reply/question shortcuts.
 - Mobile bottom-docked bar behaviour (Step 6.3) unchanged, just two buttons.
 
@@ -551,7 +588,7 @@ model WorkspaceNote {                          // "Klecx notes"
   - `/api/v1/response-versions/:id/annotations` (exists — extend)
   - `/api/v1/annotation-messages/:id/annotations` (new, nested; target must be an `ASSISTANT` message)
   - `/api/v1/documents/:id/revisions/:rev/annotations` (added in F3.4)
-  - Each validates: the anchor is a real substring of the target text (server re-check, as Step 6.2), depth ≤ 8, capability by kind, and computes `workspaceId`, `depth`, `parentAnnotationId`, `rootAnnotationId` **from the target row** (never from the body).
+  - Each validates: the anchor is a real substring of the target text (server re-check, as Step 6.2), `depth ≤ MAX_ANNOTATION_DEPTH`, capability by kind, and computes `workspaceId`, `depth`, `parentAnnotationId`, `rootAnnotationId` **from the target row** (never from the body).
 
 **i18n:** `Annotations.toolbar.*` (comment, ask, askNow, addToQueue, addAndAnother, mentionHint, klecxLabel, klecxDescription, maxDepth, …). Move **all** current literals in `selection-toolbar.tsx` here.
 **Done when:** Playwright/RTL tests: selecting text in a main response and inside an Ask answer both show the toolbar; Ask now opens the column; Add to queue increments the composer badge; mention list filters and inserts; a Viewer without capabilities sees both buttons disabled with tooltips; selection copy still works.
@@ -609,7 +646,8 @@ export async function loadActiveNotes(workspaceId: string, budgetTokens = 4000):
   export function parseThreadParam(v: string | null): StackEntry[];   // "a:<id>.a:<id>.d:<id>"
   export function serializeThreadParam(s: StackEntry[]): string;
   ```
-  Unit-test widths 1024/1280/1440/1920 with 0–8 levels.
+  Unit-test widths 1024/1280/1440/1920 with 0, 1, 2, 3, 8, 25 and 100 levels (deep stacks must still give the last 1–3 columns readable widths and render the rest as spines, with the oldest spines grouped into one `+N` spine once more than 6 spines would show).
+- Loading a deep chain: `GET /api/v1/annotations/:id/chain` returns the ancestors from root to this annotation in **one query** (recursive CTE over `parent_annotation_id`, using `$queryRaw` tagged template, capped at `MAX_ANNOTATION_DEPTH`). Used when opening a deep link or an item from the All-annotations drawer.
 - `lib/stores/thread-stack.ts` (Zustand, **not persisted**): `stack`, `open(entry, { fromIndex })` (truncate after `fromIndex`, then push), `back()`, `closeAll()`, `goTo(index)`. A small hook `useThreadStackUrlSync()` keeps it in sync with `?thread=` using `router.replace` (no scroll) and supports browser Back.
 - `components/threads/thread-stack-layout.tsx` — wraps the workspace page body: renders the main conversation as column 0 and each stack entry as a column with the computed widths (`ResizeObserver` on the container); spines are buttons (`aria-label="Back to level 2: «quote»"`); width transitions 200 ms (none with reduced motion); a drag handle between the last two full columns resizes the Ask column (saved in `localStorage` key `klecx-ask-col-width`, try/catch).
 - `components/threads/thread-column.tsx` — header (← Back, ⌂ Main conversation, breadcrumb, ⋯ menu), scrollable body, sticky footer composer (follow-up for Ask threads, reply for comment threads). Body by kind:
@@ -1139,9 +1177,9 @@ model UserPreference {
 | `creditDef` | Use registry-derived numbers: "≈ 2 credits for a typical message with the Fast model, ≈ 7 with the Standard model, ≈ 35 per image. When Klecx searches the web, each search adds 3 credits." Remove "zero markup tricks". |
 | `rollover` | "No. Plan credits reset at the start of each billing period and unused credits don't carry over." **Remove the top-up sentence.** |
 | `cancel` | `billingEnabled` → "Yes — Settings → Billing → Cancel. Your plan stays active until the end of the paid period." Otherwise → "Paid plans are launching soon. When they do, you'll be able to cancel anytime from Settings, and your plan will stay active until the end of the period you paid for." |
-| `refund` | **One policy everywhere** (FAQ, Terms §, help). Recommendation: "If something went wrong — for example you were charged by mistake or a technical problem stopped you from using your credits — contact support within 14 days of the charge. Refunds are processed by our payment partner." Show only when `billingEnabled`, else the "launching soon" variant. Remove the "< 20 % usage" rule unless you'll enforce it in code (Step 8.4). |
+| `refund` | **The policy from §2.8, shortened**: "Cancel anytime and keep your plan until the end of the period. New subscribers get a full refund within 14 days of their first payment if they've used less than 20 % of its credits. Forgot to cancel? Renewals are refunded within 7 days if you haven't used any credits since. Duplicate charges and billing errors are always refunded." + link to the Terms section. Show only when `billingEnabled`, else the "launching soon" variant. The usage rules are enforced with `getRefundEligibility` (main-guide Step 8.4). |
 | `models` | "Klecx is an independent workspace built on third-party AI models. Each model option shows its typical credit cost before you send." |
-| `privacy` | "Your workspaces are private by default and only visible to people you invite. We don't sell personal data. Prompts are sent to our AI model provider only to generate your answers, under terms that don't allow them to train on your data." — **keep the last sentence only after verifying the provider tier** (Appendix C). Remove "encrypted at rest" unless your database host confirms it. |
+| `privacy` | "Your workspaces are private by default and only visible to people you invite. We don't sell personal data. Prompts are sent to our AI model provider only to generate your answers, under terms that don't allow them to train on your data." — **confirmed by you on 2026-11-08** (Appendix C #3); record the evidence in `docs/compliance/ai-provider-data-use.md`. Remove "encrypted at rest" unless your database host confirms it. |
 | new `free` | "Can I use Klecx for free?" → 100 credits/month, Fast model, web search included, collaboration on paid plans. |
 | new `collaboration` | "Who pays when collaborators use a workspace?" → the owner's credits; owners control what each member can do (comment, ask, prompt). |
 | new `search` | "Does Klecx search the web?" → yes when needed, can be turned off in Settings. |
@@ -1202,18 +1240,18 @@ model UserPreference {
 15. Suspension & termination (by you: delete account — say "contact support" until Step 9.5 adds self-service; by us: AUP violations).
 16. Disclaimers & limitation of liability; indemnity.
 17. Changes to the terms (notice by email/in-app for material changes).
-18. Governing law & disputes (`{governingLaw}` from `COMPANY_COUNTRY` mapping, e.g. "the laws of Nigeria" — **not Delaware** unless you're incorporated there).
+18. Governing law & disputes: the laws of the Federal Republic of Nigeria; courts of Lagos State; a line that consumers keep the mandatory protections of their own country; "contact us first" informal resolution step (30 days) before any claim or chargeback. Remove "Delaware".
 19. Contact.
 
 **Privacy Policy — sections to include**
-1. Controller identity & contact (`{companyName}`, `{privacyEmail}`).
+1. Controller identity & contact: "Klecx is a product of Vyraxity, Lagos, Nigeria" (`{companyName}`, `{companyAddress}`, `{privacyEmail}`); applicable law: **Nigeria Data Protection Act 2023**, plus GDPR/UK GDPR rights for people in Europe.
 2. Data we collect, **accurate to the schema**: account (name, email, username, avatar, OAuth profile image), authentication & sessions (IP address, user agent, device label, **country**, timestamps), content (prompts, responses, versions, edits, annotations, mentions, Klecx notes, uploaded files and their extracted text, generated documents, share links), collaboration (memberships, invitations, activity log, ownership transfers), usage & billing (credit ledger, generations metadata, plan, payment status from the payment partner — no card numbers), support (tickets, optional diagnostics, **screenshots** — F5.8), preferences (UI locale, AI language, web search, notification settings), voice (**audio processed to create a transcript and not stored**), cookies & local storage.
 3. Purposes and legal bases (contract, legitimate interests — security/abuse prevention, consent where required, legal obligations).
 4. Recipients / sub-processors (see F5.2 decision): AI model provider, cloud hosting/database, file storage, email delivery, rate-limit/cache service, payment partner (merchant of record). Note that **web search queries** are sent to the AI provider's search service.
-5. AI processing statement: provider terms on training — verify before stating "not used for training".
-6. International transfers (safeguards such as standard contractual clauses).
+5. AI processing statement: prompts, context and files are sent to the AI model provider only to produce answers; **the provider does not use this data to train its models** (confirmed — keep the evidence file from F5.4 and re-check yearly or when you change provider/tier).
+6. International transfers: data is processed outside Nigeria (AI provider, hosting, storage, email, payments); say which safeguards apply (NDPA cross-border transfer rules — adequacy or contractual safeguards; standard contractual clauses for EU data).
 7. Retention: active account data kept while the account exists; **say "deleted workspaces can be restored for 30 days and are then permanently deleted" only after the purge job (Step 10.3) exists** — until then: "deleted workspaces are hidden immediately and permanently removed in a scheduled clean-up"; sessions until expiry/revocation; support tickets N months; backups rotation per your host.
-8. Your rights (access, rectification, deletion, portability, objection, withdraw consent, complain to a supervisory authority) and **how**: today via `{privacyEmail}` (self-service export/deletion arrives in Step 9.5 — update then).
+8. Your rights (access, rectification, deletion, portability, objection, withdraw consent, complain to the **Nigeria Data Protection Commission (NDPC)** or your local authority in the EU/UK) and **how**: today via `{privacyEmail}` (self-service export/deletion arrives in Step 9.5 — update then).
 9. Security measures (high level).
 10. Children (18+, consistent with Terms).
 11. Changes; contact.
@@ -1327,9 +1365,15 @@ model SupportAttachment {
 - `app/sitemap.ts`: add new help articles; `lastModified` from article front matter/updatedAt instead of `new Date()`.
 - `<html lang={locale}>` is already dynamic in `app/layout.tsx` — keep it.
 
-**Note on multilingual indexing (decision needed — recommended as a follow-up PR `F5.9b`):** the locale is chosen by cookie/`Accept-Language`, so every language shares one URL. Search engines mostly crawl without those signals and will index **English only**, and `hreflang` alternates are impossible without per-locale URLs. For real multilingual SEO, move the **marketing group only** to locale-prefixed routes with next-intl routing (`localePrefix: "as-needed"`: `/pricing` = en, `/es/pricing`, `/fr/pricing`), add `alternates.languages` in `generateMetadata` and the sitemap, and keep the app (`/workspaces`, `/settings`) cookie-based. Size `L`. Do it before launch if non-English traffic matters to you.
+**Prepare for per-language marketing URLs (§2.9) — part of this step:**
+- Create `i18n/locales.ts` (registry: code, native name, `hreflang`, `ogLocale`, `dir`, `status`), and make `i18n/config.ts`, `lib/locale.ts` (`UI_LOCALES`), the locale switcher, `server/email/send.ts` (`messagesMap`), `lib/help/articles.ts` and `check:i18n` read from it — today the locale list is duplicated in at least four places.
+- Create `i18n/routing.ts` (`defineRouting({ locales, defaultLocale: "en", localePrefix: "never" })`) and `i18n/navigation.ts` (`createNavigation(routing)`); replace `next/link`/`useRouter` in `components/marketing/**`, `components/help/**`, `components/legal/**`, `app/(marketing)/**` with the next-intl versions (a lint rule `no-restricted-imports` for `next/link` in those folders keeps it that way).
+- Create `lib/seo/routes.ts` (public routes + help slugs) and `lib/seo/alternates.ts` `buildAlternates(path)`; every marketing `generateMetadata` uses it for `alternates`; `app/sitemap.ts` uses the route list. With `MARKETING_LOCALE_URLS` unset, output is identical to today.
+- Message fallback for `beta` languages (`getMessageFallback` + deep merge with `en` in `i18n/request.ts`).
+- Help MDX loader already falls back to English (`notTranslated` notice) — keep it and drive it from the registry.
+- Don't move pages into `app/[locale]/` yet — that's main-guide **Step 10.7**.
 
-**Done when:** with `NEXT_LOCALE=fr` the landing page `<title>`, description, OG image text and manifest are French; JSON-LD FAQ equals the visible FAQ (test); one manifest file served.
+**Done when:** with `NEXT_LOCALE=fr` the landing page `<title>`, description, OG image text and manifest are French; JSON-LD FAQ equals the visible FAQ (test); one manifest file served. The locale list exists in one place (`i18n/locales.ts`); marketing/help/legal code imports navigation only from `i18n/navigation.ts` (lint rule); `buildAlternates` is used by every marketing page; adding a fake `beta` locale in a test renders with English fallbacks and doesn't fail `check:i18n`.
 
 ---
 
@@ -1426,13 +1470,14 @@ Effective role = `max(project role, workspace role)` (F1.1). Capabilities = role
 
 1. **Provider: search + function calling together** (F4.1) — whether the configured model accepts built-in search grounding and custom function tools in one request. Decide native vs. the separate-request fallback.
 2. **Provider: audio transcription model and price** (F4.5) — which configured model accepts audio input, its token rate per second of audio, and the resulting credits.
-3. **Provider data-use terms** (F5.4, F5.5) — make sure the API tier you use does **not** use prompts/responses to improve the provider's products before saying so in the FAQ, About page and Privacy policy. Some providers' free/unpaid API tiers allow it.
+3. ✅ **Provider data-use terms** — confirmed by you (2026-11-08): the AI provider doesn't train on data sent by third-party apps. Keep the link/screenshot and date in `docs/compliance/ai-provider-data-use.md`; make sure production always runs on the account/tier those terms cover; re-check yearly or when switching provider.
 4. **Database encryption at rest** (FAQ/About) — confirm with your Postgres host before claiming it.
 5. **Better Auth `afterEmailVerification` hook** availability in the installed version (F4.6).
 6. **Search scope of `searchWorkspaces`** (F5.4) — whether "all" scope searches response content or only titles.
 7. **Real cookie and storage names in production** (F5.5) — check DevTools after deploying (cookie prefixes change with `Secure`).
-8. **Governing law / company identity / refund policy** (F5.5) — your legal entity, country and the refund promise you are willing to honour; lawyer review recommended.
+8. ✅ **Company identity / governing law / refund policy** — decided in §2.7 and §2.8 (Vyraxity, Lagos, Nigeria; Nigerian law; refund policy). Still to do: CAC registration (recommended before live payments) and a lawyer's review of the legal pages.
 9. **Creem wording** (F5.4/F5.5) — Creem requires visible Terms/Privacy/AUP, pricing, branded support email, in-app cancellation (once billing is live) and an honest "independent product on third-party AI models" disclosure; re-check their current merchant guidelines at Step 8.6.
+11. **Creem and Nigeria** — confirm Nigeria is a supported payout country and what onboarding documents Creem needs from an unregistered business vs. a registered one (§2.7).
 10. **`/dev/ui` in production** (F5.2) — confirm it's disabled.
 
 ---
@@ -1444,7 +1489,9 @@ Effective role = `max(project role, workspace role)` (F1.1). Capabilities = role
 | `DEV_DEFAULT_PLAN` | F0.1 | no (ignored) | one of `FREE`, `LITE`, `STANDARD`, `PRO`; development only |
 | `SUPPORT_EMAIL`, `PRIVACY_EMAIL`, `ABUSE_EMAIL` | F0.2 | yes | defaults removed |
 | `LEGAL_EMAIL`, `BILLING_EMAIL` | F0.2 | no | fall back to `SUPPORT_EMAIL` |
-| `COMPANY_LEGAL_NAME`, `COMPANY_ADDRESS`, `COMPANY_COUNTRY` | F0.2 | yes | email footer, legal pages |
+| `COMPANY_LEGAL_NAME`, `COMPANY_ADDRESS`, `COMPANY_COUNTRY` | F0.2 | yes | `Vyraxity`, `Lagos, Nigeria`, `NG` |
+| `COMPANY_REG_NUMBER`, `COMPANY_WEBSITE` | F0.2 | no | CAC number once registered; `https://vyraxity.com` |
+| `MARKETING_LOCALE_URLS` | F5.9 (used in main-guide 10.7) | no | leave unset until per-language marketing URLs go live |
 | `SOCIAL_X_URL`, `SOCIAL_GITHUB_URL` | F0.2 | no | JSON-LD `sameAs`, footer |
 | `AI_TRANSCRIBE_MODEL` | F4.5 | no | defaults to an audio-capable economy model |
 | `BILLING_ENABLED` | F5.4 | yes | `false` until main-guide Step 8.5 is live |
@@ -1489,18 +1536,21 @@ Timestamps are placeholders — use the real ones Prisma generates, but keep thi
 
 # Appendix G — What changes in the main guide after this interlude
 
-Update `Klecx_Implementation_Guide_v2.md` (or keep these notes next to it) before starting Phase 8:
+**Done (2026-11-08):** these changes have been written directly into `Klecx_Implementation_Guide_v2.md`. See its new **§5.1 "Interlude"** note and the "↳ After the interlude" blocks in Steps 8.1–10.6, the new **Step 10.7**, and the updated appendices A, B, C, E and F. Summary:
 
 | Main-guide step | Change |
 |---|---|
-| **8.1** Plan catalog & entitlements | Keep the `getEntitlements(userId)` signature from F0.1; replace only the plan resolution with Subscription status rules. Plan limits now include `searchesPerDay`, `voiceSecondsPerDay`, `maxAskDepth`; **Free has web search**; features include document review and voice input. Plan copy is message keys (F5.1), not English strings. Remove `DEV_DEFAULT_PLAN` from production paths. |
-| **8.3** Webhooks | On downgrade/expiry/cancel-at-period-end → call `startOverLimitGrace(ownerId, newLimit)`; on re-subscribe → `restoreWithinLimit(ownerId)` (F1.3). |
-| **8.4** Credit grants | Daily job (or 10.3 runner) calls `enforceMemberLimit` for owners whose grace ended. Ownership transfers re-check entitlements at acceptance (already). |
-| **8.5** Pricing page & billing settings | Set `BILLING_ENABLED=true` when live; FAQ/Terms/help billing sections switch automatically (F5.4/F5.5). Re-verify the help article `billing-and-cancellation` against Creem's customer portal features. |
-| **8.6** Creem compliance | Use the corrected legal pages, single refund policy, real company identity in emails (F0.2), brand-neutral copy (F5.2), cookie notice (F5.6). |
-| **9.1** Settings shell | Move the "AI preferences" card (F4.2) into `/settings/language` (or `/settings/ai`); move member capability UI and transfer requests into the right subpages. |
-| **9.3** Usage dashboard | Add per-kind breakdown for `DOCUMENT_REVIEW`, `TRANSCRIPTION` and web-search surcharges; collaborators' Ask usage per member. |
-| **9.5** Data export & deletion | Include Klecx notes, mentions, documents/revisions, support screenshots in exports; then update the Privacy policy and help "account deletion" text (they currently say "contact support"). |
-| **10.3** Jobs | Add: expire ownership transfers, enforce member-limit grace, purge support screenshots after 90 days, purge soft-deleted workspaces after 30 days (then update the Privacy retention text). |
-| **10.5** i18n completeness | Already covered by F5.1 (`check:i18n` + lint rule); keep it in CI. |
-| Appendix A (permission matrix) | Replace with Appendix A of this guide. |
+| §4.3 / §4.4 | Web search +3 per *executed* search, available on Free with a daily cap; refund wording points to §2.8 of this guide. |
+| **8.1** | Keep `getEntitlements` from F0.1; new limits (`searchesPerDay`, `voiceSecondsPerDay`); Free web search; plan copy as message keys; remove `DEV_DEFAULT_PLAN` in production. |
+| **8.2** | Creem store under Vyraxity (product Klecx); confirm Nigeria payouts/onboarding documents. |
+| **8.3** | `refund.created` follows the refund policy (full refund ends the plan now); downgrade/expiry → `startOverLimitGrace`; re-subscribe → `restoreWithinLimit`. |
+| **8.4** | `getRefundEligibility`; member-limit enforcement after grace; top-ups not advertised until built. |
+| **8.5** | `BILLING_ENABLED=true` at launch; "Request a refund" link; `<Gated>` upgrade prompts. |
+| **8.6** | Checklist: Vyraxity identity + CAC, NDPA privacy, single refund policy, cookie notice, brand-neutral copy, provider data-use record. |
+| **9.1 / 9.2** | "Language & AI" settings page (AI language + web search); new cookies go into `lib/legal/cookies.ts`. |
+| **9.3** | Usage by kind includes asks, document reviews, transcription and searches. |
+| **9.4** | Read-aloud on every target (answers, Ask answers, documents); neutral voice names. |
+| **9.5** | Export/deletion include notes, mentions, documents, support screenshots, pending transfers; then update Privacy/help text. |
+| **10.1 – 10.6** | Authz suite rows for new resources; new metrics; new jobs (transfers, member limits, screenshot purge); E2E journeys for annotations v2, documents, voice, transfers; feature flags. |
+| **10.7 (new)** | Per-language marketing URLs and adding languages. |
+| Appendix A / E | Permission matrix v2; decisions D-02 changed, D-16 – D-24 added. |

@@ -2,6 +2,7 @@
 title: Klecx — Production Implementation Guide (v2)
 status: Ready to execute — verify each step against the live branch before coding
 date: 2026-10-21
+updated: 2026-11-08 — Phases 8–10 and appendices adjusted for the interlude in quick_implementation_fix_for_v2.md
 replaces: Klecx_Detailed_Implementation_Guide.md (ChatGPT v1.0)
 audience: You (solo developer) + any AI coding agent you hand a single step to
 ---
@@ -240,7 +241,7 @@ Planning numbers (put the *real* current prices in the registry — I could not 
 | Standard text (Flash class) | $1.50 in / $7.50 out per 1M *(Google's published post-introductory rate for the 3.7 Flash class from Jan 2027; intro rate is half)* | ≈ $0.0135 | **7** |
 | Image generation (1K image) | ≈ $0.067 per image | — | **34 → charge 35** |
 | TTS / read-aloud | Verify on Google's page; charge per 1,000 characters | — | start at **1 / 1k chars** and measure |
-| Web-search grounding | Billed per query by Google; add a flat surcharge | — | **+3 per grounded request** (measure) |
+| Web search | Billed per query by the provider; add a flat surcharge | — | **+3 per executed search** (the model calls search only when needed; on every plan incl. Free, with a daily search cap — interlude F4.1) |
 
 ### 4.4 Recommended plans
 
@@ -277,7 +278,7 @@ Rules I used: **≤ 45% of net revenue is spent on provider cost even if the use
 
 **Guardrails to build (Phase 2/8):** daily spend cap per plan; max concurrent generations (free 1, Lite 2, Standard 3, Pro 5); per-request max output tokens by plan; reserve-then-settle accounting; alert if a single user's cost > 80% of their plan's revenue; monthly review of `ModelRegistry` prices (Gemini Flash-class prices change — e.g. the 3.7 Flash introductory price ends Dec 31, 2026).
 
-**Credit rules (put in Terms):** plan credits expire at period end; purchased top-up credits (optional, Step 8.4) last 12 months — confirm refund/expiry wording with a lawyer; refunds are processed through Creem and reverse the unused part of that period's grant (ledger `REFUND` entry; balance may not go below 0 — the shortfall is written off, not charged back to the user).
+**Credit rules (put in Terms):** plan credits expire at period end; refunds follow the **refund policy in `quick_implementation_fix_for_v2.md` §2.8** (14-day first-purchase guarantee under 20 % usage, 7-day forgotten-renewal refund with no usage, errors always refunded), are processed through Creem and reverse the unused part of that payment's grant (ledger `REFUND` entry; balance may not go below 0 — the shortfall is written off, not charged back to the user). Top-up credits are **not mentioned anywhere public** until the pack exists; their expiry wording is decided then.
 
 **Optional top-up pack:** 500 credits for $4.99 (≈100 credits/$ vs 160/$ on Lite) so subscribing is always the better deal. Ship after launch.
 
@@ -291,6 +292,9 @@ Steps 1.1 → 3.6 replace the data model, auth and the whole UI, so the old app 
 2. Create a long-lived integration branch **`v2`** from `main`. Every PR from Step 1.1 onward targets `v2`.
 3. Merge `v2` → `main` at **Gate B** (end of Phase 3), once the new shell, auth, workspaces and text generation work end to end.
 4. Use a separate Postgres database for `v2` (`klecx_v2_dev`) so the old app keeps working locally until the switch.
+
+### 5.1 Interlude between Phase 7 and Phase 8 (added 2026-11-08)
+Before Step 8.1, execute **`quick_implementation_fix_for_v2.md`** (steps F0.1 – F5.10): annotations v2 (Comment/Ask, @mentions, @klecx notes, unlimited nested columns), top-down permissions + per-member comment/ask capabilities, ownership-transfer acceptance and member-limit policy, project page, workspace documents + AI review, generated-document panel, web search by default, voice input, welcome email, and the content/i18n/legal/SEO/logo fixes. Steps below that changed because of it carry a **"↳ After the interlude"** block — read it before implementing the step. Company identity for all legal/billing text: **Klecx is a product of Vyraxity, Lagos, Nigeria** (env-driven, interlude F0.2 / §2.7).
 
 ### Phase map
 
@@ -306,9 +310,10 @@ Steps 1.1 → 3.6 replace the data model, auth and the whole UI, so the old app 
 | **7** | Identity, sessions, collaboration, sharing, notifications | 7.1 – 7.7 | Permission matrix tests + share-isolation tests |
 | **8** | Plans, Creem billing, entitlements | 8.1 – 8.6 | Webhook replay/forgery tests; Creem test-mode e2e |
 | **9** | Settings, language prefs, usage charts, read-aloud, account data | 9.1 – 9.5 | Preferences persist across devices |
-| **10** | Hardening, observability, jobs, QA, launch | 10.1 – 10.6 | **Gate C:** launch checklist signed off |
+| **F** | Interlude: fixes & features (separate guide) | F0.1 – F5.10 | Gates in `quick_implementation_fix_for_v2.md` §3 |
+| **10** | Hardening, observability, jobs, QA, launch | 10.1 – 10.7 | **Gate C:** launch checklist signed off (10.7 is post-launch) |
 
-Total: **68 steps / PRs.** Phases 0–3 are the critical path to a usable product; Phase 4 and Step 8.6 can be reordered earlier if you want to apply for Creem sooner (see §4.2).
+Total: **69 steps / PRs** (+ 33 in the interlude guide). Phases 0–3 are the critical path to a usable product; Phase 4 and Step 8.6 can be reordered earlier if you want to apply for Creem sooner (see §4.2).
 
 ---
 
@@ -2128,6 +2133,13 @@ export const PLANS = {
 **Wire into existing code (replace the stubs left in earlier steps):** model allow-list (2.1) · concurrency + daily cap (2.2/2.4) · max output tokens · upload limits (5.1) · export formats (5.6) · member limits (7.4) · grounding/image toggles (3.6, 5.4, 5.5) · `GET /api/v1/me/entitlements` for the UI (locks, upgrade prompts).
 **Done when:** a table-driven test proves every status → effective plan; changing `PLANS` in one place changes pricing page, composer options and server enforcement.
 
+**↳ After the interlude**
+- `server/billing/entitlements.ts` and `GET /api/v1/me/entitlements` **already exist** (F0.1). Keep the `getEntitlements(userId)` signature and `entitlementsForPlan()`; only replace the plan resolution (test override → `DEV_DEFAULT_PLAN` → FREE) with the Subscription rules above. `DEV_DEFAULT_PLAN` must have no effect in production (keep the test).
+- `PLANS` limits now also contain `searchesPerDay` and `voiceSecondsPerDay`; **Free has web search** (`grounding: true`) with its daily search cap. Nesting depth of annotations is **not** a plan limit.
+- Plan `name`/`tagline`/`features` are **message keys** (F5.1) — the pricing page, JSON-LD and emails translate them; `BILLING_FAQ` is gone (FAQ lives in messages).
+- Also wire into entitlements: document review (F3.3), voice input seconds (F4.5), search cap (F4.1), member limits used by ownership transfers (F1.3) and the member-limit grace service.
+- UI gating already uses `<Gated>` + `useEntitlements()` (F4.4) — no component changes should be needed beyond removing temporary paths.
+
 ---
 
 ## Step 8.2 — Billing provider interface and Creem client `M`
@@ -2156,6 +2168,11 @@ export const PLANS = {
 **Endpoints** (`route()`, fresh session): `POST /api/v1/billing/checkout`, `POST /api/v1/billing/portal`, `POST /api/v1/billing/cancel { atPeriodEnd: true }`, `GET /api/v1/me/subscription`.
 **Rules:** the success redirect proves nothing — the UI shows "Activating your plan…" and polls `GET /me/subscription` until the webhook (8.3) flips the status (give up after 60 s with a "taking longer than usual" message); users who already have an active subscription are sent to the portal/plan-change flow instead of creating a second subscription.
 **Done when:** in test mode a checkout URL is created for each plan/interval; the product mapping has a unit test; errors from Creem surface as a generic "billing unavailable" (details logged with request id).
+
+**↳ After the interlude**
+- Create the Creem store as **Vyraxity** with the product **Klecx**; the store's support email is the branded `SUPPORT_EMAIL`/`BILLING_EMAIL` from F0.2 (one domain).
+- Before anything else, confirm in Creem's docs/dashboard that **Nigeria** is a supported payout country and which onboarding documents are needed (individual vs. CAC-registered business). If not supported, decide between USDC payouts (if offered) and a fallback provider now.
+- Checkout must collect consent to immediate service start where the merchant of record requires it (EU/UK digital-content rules) — check Creem's checkout settings.
 
 ---
 
@@ -2201,6 +2218,12 @@ export async function POST(req: Request) {
 **Tests (required):** forged/missing signature → 401 and no DB writes; the same event delivered 3× → one credit grant; `paid` arriving before `active` still ends ACTIVE with one grant; `refund.created` never drives a balance negative; `dispute.created` blocks generation; handler exception → 500 and the retry succeeds without duplicates.
 **Done when:** a full test-mode purchase on your machine through the tunnel upgrades the account and grants credits exactly once.
 
+**↳ After the interlude**
+- `refund.created`: follow the refund policy (interlude §2.8). **Full refund** → status back to FREE immediately, remove the unused plan credits from that payment (floor 0), cancel at once; **partial refund** (e.g. outage credit) → reverse only the matching credits. Record `refund.reason` from support in `BillingEvent`.
+- Plan downgrade, `canceled`/`expired` at period end, `paused`, `unpaid` past grace → call `startOverLimitGrace(ownerId, newLimits.members)` (F1.3). Re-activation/upgrade → `restoreWithinLimit(ownerId)`. Add both to the handler tests.
+- Pending ownership transfers whose recipient no longer fits are re-checked at acceptance (already in F1.3) — no webhook work needed.
+- Send emails through the F0.2 templates (company identity, no hard-coded addresses).
+
 ---
 
 ## Step 8.4 — Credit grant lifecycle (monthly refills, yearly plans, top-ups) `M`
@@ -2217,6 +2240,11 @@ export async function POST(req: Request) {
 - **Abuse guard for Free:** one free allowance per verified email + per-IP signup limit (Step 1.4) + disposable-email domain blocklist; Free image generation disabled.
 **Done when:** time-travel tests (fake clock) cover month rollover, yearly month 7, downgrade at period end, and repeated calls in the same period granting once.
 
+**↳ After the interlude**
+- Add `getRefundEligibility(subscriptionId)` in `server/billing/refunds.ts`: returns `{ eligible, rule: "first_purchase_14d" | "renewal_7d" | "error" | null, creditsUsedPct, daysSincePayment, previousRefunds }` computed from the ledger (credits used since the grant for that payment) and `BillingEvent`s. Used by support/admin and shown on the support ticket for billing topics. Unit-test each rule with a fake clock.
+- Daily (or lazy) call to `enforceMemberLimit(ownerId)` for owners whose 14-day grace ended (F1.3); move it to the job runner in 10.3.
+- **Top-up pack:** keep it post-launch and **unmentioned** in FAQ/Terms/help until it exists (interlude F5.4 removed the claims).
+
 ---
 
 ## Step 8.5 — Pricing page, upgrade flow and billing settings `L`
@@ -2229,6 +2257,12 @@ export async function POST(req: Request) {
 - `/settings/billing`: current plan + status badge, renewal/reset dates, payment-issue banner (PAST_DUE → portal), **Manage payment methods / invoices** (portal), **Change plan**, **Cancel** (confirmation explaining "you keep access until {date}"; calls cancel endpoint), **Resume** if `cancelAtPeriodEnd`.
 - Emails: welcome-to-plan, payment failed, cancellation confirmation, refund processed.
 **Done when:** Playwright test-mode journey: Free → Lite → cancel → resume works; PAST_DUE banner appears from a simulated webhook; no price or product id is ever read from the client.
+
+**↳ After the interlude**
+- Set `BILLING_ENABLED=true` when live: the FAQ cancel/refund answers, the Terms subscription section, the help article `billing-and-cancellation` and the email footer's merchant-of-record line switch automatically (F5.4/F5.5). Re-read them in the running app.
+- `/settings/billing`: add **Request a refund** (opens the support form with topic Billing and the subscription pre-filled) and a link to the refund policy section of the Terms.
+- `<UpgradeDialog reason>` reuses the `GateReason` codes from F0.1 so tooltips and the dialog say the same thing.
+- Plan comparison and credit examples come from `PLANS` + registry (no hand-typed numbers; F4.4 `model-catalog`).
 
 ---
 
@@ -2251,6 +2285,13 @@ export async function POST(req: Request) {
 - [ ] Your payout country/bank is on Creem's supported list (check before applying).
 **If rejected:** (1) read the reason and appeal with fixes; (2) ship the Free plan + waitlist; (3) write another adapter (`server/billing/<provider>.ts`) for the fallback providers in §4.2 — webhooks, checkout and portal are already abstracted; no domain code changes.
 **Done when:** the checklist is ticked and you have a written one-page "how we prevent abuse" document you can paste into the application.
+
+**↳ After the interlude** — add to the application checklist:
+- [ ] Company identity everywhere: "Klecx is a product of Vyraxity · Lagos, Nigeria" (email footer, legal pages, JSON-LD); CAC registration done or planned (state it honestly in the application).
+- [ ] Privacy policy follows the **NDPA 2023** (NDPC as authority) and lists international transfers; provider data-use evidence stored in `docs/compliance/ai-provider-data-use.md`.
+- [ ] One refund policy (interlude §2.8) identical in Terms, FAQ and help.
+- [ ] Brand-neutral product copy (F5.2), cookie notice (F5.6), truthful features/FAQ/status page (F5.4), complete es/fr legal text (F5.5).
+- [ ] Web search is on for all plans — mention in the "how we prevent abuse" document that search runs only when the model needs it, with a per-day cap.
 
 ---
 
@@ -2277,6 +2318,12 @@ export async function POST(req: Request) {
 **API:** `GET/PATCH /api/v1/me` (name; username & avatar via their own endpoints), `GET/PATCH /api/v1/me/preferences`, `GET/DELETE /api/v1/me/linked-accounts/:provider`. Save pattern: toggles autosave with optimistic update + toast on failure; text forms use explicit Save with dirty-state indicator.
 **Done when:** every page works at 360 px; each has loading/error states; every mutation is an API call covered by an authorization test.
 
+**↳ After the interlude**
+- Rename the `language` page to **"Language & AI"**: app language, AI response language (**Auto = match my message** or a fixed language — the composer has no language control anymore, F4.2) and **"Search the web when helpful"** (F4.1). Move the temporary "AI preferences" card from `/settings` here.
+- Replace the remaining v1 settings pieces (F4.2 removed the tokens card) and move existing `/settings/sessions` and `/settings/notifications` pages under the new shell (`app/(app)/settings/…`).
+- `notifications` matrix includes the new types: `MENTIONED`, `OWNERSHIP_TRANSFER_*`, `MEMBER_LIMIT_EXCEEDED`, `MEMBER_SUSPENDED`, `MEMBER_RESTORED`, `WELCOME`.
+- Pending ownership-transfer requests get a section in `profile` (or a dedicated `transfers` tab) with Accept/Decline.
+
 ---
 
 ## Step 9.2 — Preferences model, theme sync and locale detection `M`
@@ -2288,6 +2335,10 @@ export async function POST(req: Request) {
 - Theme: cookie `theme` read in `app/layout.tsx` to set `data-theme` on `<html>` server-side → no flash; `next-themes` handles local toggles; changing it calls `PATCH` (best effort) so other devices pick it up on next load.
 - Locale first-visit suggestion: if the detected language ≠ current UI language (from `Accept-Language`/country hint), show a dismissible banner "Switch to Français?" — remembered in a cookie so it doesn't nag.
 **Done when:** changing theme/locale on device A appears on device B after reload; no flash of the wrong theme.
+
+**↳ After the interlude**
+- Any new cookie (`theme`, locale-suggestion banner) **must be added to `lib/legal/cookies.ts`** so the Cookie policy table (F5.5) stays true; `theme` moves from local storage to a cookie here — update the table in the same PR.
+- `UserPreference` already has `aiLanguage` (nullable = Auto) and `webSearchEnabled` (F4.1/F4.2).
 
 ---
 
@@ -2304,6 +2355,11 @@ export async function POST(req: Request) {
 **UI** `/settings/usage`: allowance ring (used/remaining + reset date), **daily-usage area chart**, **breakdown bars** (text / images / replies / questions / speech), **by model**, **by member** (if collaborators exist), history table with filters + CSV export, low-credit nudge to upgrade.
 **Packages:** `npm i recharts` (via shadcn `chart` component). Lazy-load the charts (`next/dynamic`).
 **Done when:** numbers on the page equal ledger sums in a test with seeded data; empty/new accounts render sensible empty states; charts are keyboard/screen-reader described (table fallback).
+
+**↳ After the interlude**
+- Breakdown by kind includes `ANNOTATION_REPLY` + `QUESTION_BATCH` (shown together as **Asks**), `DOCUMENT_REVIEW`, `TRANSCRIPTION` (seconds + credits) and **web-search surcharges** (from `Generation.usage.searches`).
+- By-member view shows each collaborator's Asks separately from main prompts (owners asked for this control in F1.2).
+- Transcription is billed to the speaker, so it appears in the speaker's own usage, never in the owner's by-member table.
 
 ---
 
@@ -2333,6 +2389,10 @@ export async function POST(req: Request) {
 **ElevenLabs later:** implement `SpeechProvider` + add its voices to the list and prices to the registry; nothing else changes.
 **Done when:** second play of the same response is instant and free; switching voice re-synthesizes; fallback to browser works when Gemini TTS errors; a viewer without access gets 404.
 
+**↳ After the interlude**
+- Read-aloud works on **every** readable surface: main responses, Ask answers at any depth, uploaded documents and generated documents (reuse `AnswerBody` from F2.5 to place the button).
+- Voice names shown to users are neutral ("Voice A — warm, English") — no provider brand in UI copy (F5.2); the plan table's "Gemini voices" wording becomes "Natural voices".
+
 ---
 
 ## Step 9.5 — Data export and account deletion `M`
@@ -2343,6 +2403,11 @@ export async function POST(req: Request) {
 - **Delete account:** requires fresh login + typed confirmation. Order (one service, resumable job): (1) cancel Creem subscription (`atPeriodEnd: false` after warning about no refund unless within policy) → (2) revoke all sessions → (3) for each owned workspace/project **with other members**: require ownership transfer or deletion (UI forces a choice) → (4) mark user `deletedAt` and **immediately** disable sign-in → (5) after a **14-day grace** (cancellable by logging in via an emailed link), purge: Cloudinary assets, workspaces/responses/annotations/shares, notifications, preferences → (6) **anonymize** the `User` row (`email = deleted+{id}@invalid`, `name = "Deleted user"`) and **retain** `CreditLedger`, `BillingEvent`, `Subscription` rows for accounting/dispute obligations (document in the Privacy Policy).
 - Collaborator content: responses the deleted user authored in *other people's* workspaces stay, attributed to "Deleted user".
 **Done when:** a test account with files, shares, annotations and a subscription can be exported and deleted; no orphaned Cloudinary assets remain (checked by the orphan job); sharing links stop working immediately.
+
+**↳ After the interlude**
+- Export also contains: Klecx notes, mentions, Ask threads at every depth, uploaded documents (content + edit revisions), generated documents (all revisions), support tickets and screenshot links, ownership-transfer history.
+- Deletion: cancel pending ownership transfers (sent and received); a workspace/project with other members must be transferred **and accepted** (F1.3) or deleted — the deletion flow waits for acceptance or offers "delete instead"; purge support screenshots.
+- After shipping, update the Privacy policy and help `account-and-security` (they say "contact support" until this step — F5.5/F5.7).
 
 ---
 
@@ -2366,6 +2431,8 @@ export async function POST(req: Request) {
 - **Checklist mapping:** go through OWASP ASVS Level 1 and the OWASP API Top 10 (BOLA ↔ authz suite, broken auth ↔ 1.3/1.4/7.3, excessive data exposure ↔ response DTOs/safe selects, unrestricted resource consumption ↔ credits/caps/rate limits, SSRF ↔ 5.3, security misconfiguration ↔ headers/CSP) and record "pass / N/A / gap" in `docs/security-review.md`.
 **Done when:** the review doc has no open gaps, the authz suite is in CI, and an external pair of eyes (friend/pentester) has tried to break sharing, invitations and billing webhooks.
 
+**↳ After the interlude** — add authz-suite rows for: notes, mentions/mentionables, nested annotations (`/annotation-messages/:id/annotations`, `/annotations/:id/chain`), uploaded documents, document reviews, generated documents + revisions + downloads, ownership transfers, transcriptions, support screenshots (staff-only signed URLs), member capabilities PATCH. Also test: top-down inheritance (project grant applies; workspace row can't lower it), suspended members are read-only, the annotation depth ceiling, mention spam (rate limit on mentions per minute), prompt-injection text inside uploaded documents and Klecx notes doesn't change system behaviour beyond the documented note semantics.
+
 ---
 
 ## Step 10.2 — Observability and cost monitoring `M`
@@ -2379,6 +2446,11 @@ export async function POST(req: Request) {
 - **Business metrics (SQL views or a small `/admin/metrics` page, admin-only):** generations/day, success rate by error category, p50/p95 time-to-first-token and total latency per model, **provider cost per day** (from usage × registry prices), **revenue vs cost per plan**, credits burned per plan, refund rate, dispute rate, webhook failures, signup → verified → first generation → paid funnel.
 - **Alerts:** Gemini error-rate spike or auth failure (key revoked/quota), webhook 5xx or `FAILED` events, any account whose 24 h provider cost exceeds a threshold (e.g. $2 on Free/Lite), daily cost > 60 % of daily revenue, queue/job failures, DB connections near the limit.
 **Done when:** a forced error shows in Sentry with a request id that also appears in logs; the cost view matches a hand calculation on seeded data; alerts fire in a staging drill.
+
+**↳ After the interlude**
+- `/api/health` and `/api/ready` already exist (F5.4) and feed the public status page — reuse them for uptime checks.
+- Extra metrics: searches/day and search surcharge revenue vs provider search cost, transcription seconds and cost, document-review cost per review, Ask generations per workspace and depth distribution, notes per workspace.
+- Alerts: an account exceeding its search or voice daily cap repeatedly (abuse signal); refund rate per rule (first purchase vs renewal).
 
 ---
 
@@ -2400,6 +2472,15 @@ export async function POST(req: Request) {
 Self-hosting without a platform scheduler: a tiny `cron` container curling these endpoints, or `pg-boss` if you outgrow that. Keep schedules in `vercel.json` (or your compose file).
 **Done when:** each job has a unit test and a "run twice → same result" test.
 
+**↳ After the interlude** — add jobs:
+| Job | Schedule | What it does |
+|---|---|---|
+| `expire-ownership-transfers` | hourly | `PENDING` past `expiresAt` → `EXPIRED`, notify sender (F1.3). |
+| `enforce-member-limits` | daily | run `enforceMemberLimit` for owners whose grace ended; notify suspended members. |
+| `purge-support-screenshots` | daily | delete support screenshots older than 90 days (F5.8 / Privacy policy). |
+| `reap-ask-messages` | every 5 min | `AnnotationMessage.status = STREAMING` older than 10 min → `FAILED`, release credits (same as `reap-generations`). |
+When `purge-deleted` ships, update the Privacy policy and help retention wording ("restorable for 30 days, then permanently deleted").
+
 ---
 
 ## Step 10.4 — Test strategy and end-to-end suite `L`
@@ -2411,6 +2492,13 @@ Self-hosting without a platform scheduler: a tiny `cron` container curling these
 - **Flake policy:** a flaky test is a bug — quarantine within a day, fix within a week.
 **Done when:** CI runs units + the 9 journeys on every PR to `main` (or nightly if too slow) and blocks on failure.
 
+**↳ After the interlude** — journeys change/add:
+- (2) becomes: select → Comment with @user and @klecx → Ask now → Ask inside the answer (L2, L3) → Back/Main → queue questions on two levels → Ask all → promote from L2 to timeline and to a new workspace.
+- (10) Documents: add a DOCX to the workspace → Ask Klecx to review → accept a fix → Save → new revision; generate a Word document → open panel → edit → download.
+- (11) Voice: mocked `MediaRecorder` + fake transcription provider → Stop inserts text; Send while recording sends.
+- (12) Ownership transfer: request → recipient accepts; blocked when the recipient's plan can't hold the members.
+- (13) Plan gating: Free user sees disabled-with-tooltip controls; the server rejects forged requests.
+
 ---
 
 ## Step 10.5 — Performance, accessibility, i18n completeness `M`
@@ -2418,6 +2506,10 @@ Self-hosting without a platform scheduler: a tiny `cron` container curling these
 - **Accessibility:** axe in Playwright on every main page in both themes; full keyboard walkthrough (sidebar, composer, selection toolbar via shortcuts, dialogs, menus); focus returns correctly after closing dialogs/panels; `prefers-reduced-motion` respected (transitions, view transitions); contrast verified for both themes including highlight colors; screen-reader pass with VoiceOver/NVDA on the conversation page.
 - **i18n completeness:** `scripts/check-i18n.mjs` fails CI if any key exists in `en` but not `es`/`fr` (and flags unused keys); a pseudo-locale (`en-XA`, strings +30 % with accents) catches overflow; dates/numbers/currency only via `Intl`; use logical CSS (`ms-*`, `ps-*`, `text-start`) so adding an RTL language later is feasible; translated email templates.
 **Done when:** Lighthouse ≥ 90 performance / ≥ 95 accessibility / ≥ 95 SEO on marketing, ≥ 95 a11y in the app; the i18n check is in CI.
+
+**↳ After the interlude**
+- `scripts/check-i18n.mjs` and the `i18next/no-literal-string` lint rule already exist (F5.1) — extend them here (pseudo-locale, unused keys), don't rebuild.
+- The locale registry (`i18n/locales.ts`) and next-intl navigation helpers already exist (F5.9) — the RTL/logical-CSS work here should use `dir` from the registry.
 
 ---
 
@@ -2448,9 +2540,31 @@ Self-hosting without a platform scheduler: a tiny `cron` container curling these
 3. Fix, then open sign-ups with the Free plan; enable paid plans when Creem approval and the real purchase test are done.
 4. First 30 days: track activation (first generation within 24 h), free → paid conversion, refund and dispute rate, gross margin per plan (revenue − Creem fees − provider cost), and the most-used features; re-tune plan credits using **measured** credits per user, not guesses.
 
+**↳ After the interlude**
+- Feature flags add: `WEB_SEARCH`, `VOICE_INPUT`, `DOCUMENT_REVIEW`, `BILLING_ENABLED` (already env-driven in the interlude).
+- Product & legal: refund policy **decided** (interlude §2.8); company identity Vyraxity · Lagos, Nigeria in every legal surface; CAC registration complete (recommended) and number added; NDPA-aligned privacy policy reviewed by a lawyer.
+- Rollout: after launch, plan **Step 10.7** (localized marketing URLs) once you're ready to market in other languages.
+
+
+---
+
+## Step 10.7 — Localized marketing URLs and more languages (post-launch) `L`
+**Goal:** marketing, pricing, help and legal pages get their own URL per language (`/pricing`, `/es/pricing`, `/fr/pricing`, …) so search engines index every language; adding a new language becomes routine.
+**Depends on:** interlude F5.9 (locale registry, next-intl navigation helpers, `buildAlternates`, route registry), 10.5
+
+- Move `app/(marketing)/**` to `app/[locale]/(marketing)/**`; add `generateStaticParams` from the locale registry; set `i18n/routing.ts` `localePrefix: "as-needed"` (default English keeps clean URLs). The **app** (`/workspaces`, `/projects`, `/settings`, `/s/*`, `/invite/*`, `/auth/*`) stays cookie-based and unprefixed.
+- `proxy.ts`: run the next-intl middleware **only** for marketing paths (matcher), before the existing auth/security-header logic; never redirect app or API paths.
+- Turn on `MARKETING_LOCALE_URLS=true`: `buildAlternates` emits `alternates.languages` (+ `x-default` → English) on every marketing page; `app/sitemap.ts` emits one entry per locale with `alternates.languages`; OG images and JSON-LD use the URL's locale; `robots.ts` unchanged.
+- Locale switcher on marketing pages navigates to the localized URL (and still sets `NEXT_LOCALE` for the app).
+- **Adding a language** (e.g. Portuguese, Arabic): add it to `i18n/locales.ts` with `status: "beta"`, add `messages/pt.json` (fallbacks to English work), add `content/help/pt/` progressively, translate legal pages (lawyer/translator review), flip to `stable` when `check:i18n` passes. RTL languages use `dir` from the registry + logical CSS (10.5).
+- 301 redirects are not needed (English URLs don't change).
+**Done when:** `/es/pricing` renders Spanish server-side without cookies; every marketing page has correct hreflang alternates (validated with a test over the route registry); the sitemap lists all locales; app routes are unaffected; adding a dummy `beta` locale in a test produces working pages with English fallbacks.
+
 ---
 
 # Appendix A — Permission matrix
+
+> **Superseded (2026-11-08):** use **Appendix A of `quick_implementation_fix_for_v2.md`** — effective role = max(project role, workspace role) (top-down; `NONE` removed), per-member **Comment** and **Ask** capabilities, Ask no longer requires Generate, suspended members are read-only, project owners act as Admin on all workspaces in their project. The table below is kept for history only.
 
 `✔` allowed · `—` denied. **Owner** can do everything (plus delete/transfer). Project role is inherited by the project's workspaces unless the workspace has its own member row (which overrides; `NONE` excludes).
 
@@ -2482,7 +2596,10 @@ Notes: annotation *replies* need Generate (they cost credits); a user can always
 | Workspaces | `GET/POST /workspaces` · `GET/PATCH/DELETE /workspaces/:id` · `POST …/restore` · `GET …/responses` · members/invitations/activity · `GET …/export` · `GET …/shares` |
 | Generation | `POST /workspaces/:id/generations` (SSE) · `GET /generations/:id` · `POST /generations/:id/cancel` · `POST /responses/:id/regenerate` (SSE) |
 | Responses | `GET /responses/:id/versions` · `PUT /responses/:id/active-version` · `POST/GET /response-versions/:id/edits` · `DELETE …/edits/latest` · `GET /responses/:id/export` · `POST /responses/:id/speech` |
-| Annotations | `GET /responses/:id/annotations` · `POST /response-versions/:id/annotations` · `PATCH/DELETE /annotations/:id` · `POST /annotations/:id/reply` (SSE) · `POST /annotations/:id/messages` (SSE) · `GET /workspaces/:id/questions` · `POST /workspaces/:id/questions/run` (SSE) · `POST /annotations/:id/promote` |
+| Annotations | `GET /responses/:id/annotations` · `POST /response-versions/:id/annotations` · `POST /annotation-messages/:id/annotations` · `POST /documents/:id/revisions/:rev/annotations` · `GET /annotations/:id/chain` · `PATCH/DELETE /annotations/:id` · `POST /annotations/:id/answer` (SSE) · `POST /annotations/:id/messages` (SSE) · `GET /workspaces/:id/questions` · `POST /workspaces/:id/questions/run` (SSE) · `POST /annotations/:id/promote` · `GET /workspaces/:id/mentionables` · notes `GET /workspaces/:id/notes`, `PATCH/DELETE /notes/:id` (the old `/annotations/:id/reply` is removed — interlude F2.5) |
+| Documents | `POST /workspaces/:id/documents` · `POST /response-versions/:id/review` (SSE) · `GET /documents/:id` · `GET/POST /documents/:id/revisions[/:rev]` · `GET /documents/:id/download` |
+| Ownership | `POST /workspaces/:id/transfer-ownership` · `POST /projects/:id/transfer-ownership` · `GET /me/ownership-transfers` · `POST /ownership-transfers/:id/accept\|decline` · `DELETE /ownership-transfers/:id` |
+| Voice | `POST /transcriptions` (multipart) |
 | Files | `POST /workspaces/:id/attachments/init` · `POST /attachments/:id/complete` · `GET /attachments/:id/url` · `POST /workspaces/:id/links` (ingest URL) |
 | Sharing | `POST /shares` · `DELETE /shares/:id` · public page `/s/:token` (not API) |
 | Invitations | `POST /invitations/accept` · page `/invite/:token` |
@@ -2501,6 +2618,8 @@ Notes: annotation *replies* need Generate (they cost credits); a user can always
 | `GITHUB_CLIENT_ID/SECRET`, `GOOGLE_CLIENT_ID/SECRET` | optional | 1.3 |
 | `UPSTASH_REDIS_REST_URL/TOKEN`, `TRUST_PROXY` | ✔ in prod | 1.4 |
 | `SUPPORT_EMAIL`, `ABUSE_EMAIL` | ✔ | 1.7 / 4.1 |
+| `PRIVACY_EMAIL`, `LEGAL_EMAIL`, `BILLING_EMAIL`, `COMPANY_LEGAL_NAME` (Vyraxity), `COMPANY_ADDRESS` (Lagos, Nigeria), `COMPANY_COUNTRY` (NG), `COMPANY_REG_NUMBER`, `COMPANY_WEBSITE`, `SOCIAL_*` | ✔ (first four) | interlude F0.2 |
+| `DEV_DEFAULT_PLAN` (dev only), `AI_TRANSCRIBE_MODEL`, `BILLING_ENABLED`, `STATUS_PAGE_URL`, `MARKETING_LOCALE_URLS` | optional | interlude F0.1 / F4.5 / F5.4 / F5.9 → 10.7 |
 | `GEMINI_TEXT_MODEL_ECONOMY`, `GEMINI_TEXT_MODEL_STANDARD`, `GEMINI_IMAGE_MODEL`, `GEMINI_TTS_MODEL` | ✔ | 2.1 / 9.4 |
 | `CLOUDINARY_CLOUD_NAME/API_KEY/API_SECRET`, `CLOUDINARY_UPLOAD_FOLDER`, `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` | ✔ | 5.1 |
 | `BILLING_PROVIDER`, `CREEM_API_KEY`, `CREEM_API_BASE`, `CREEM_WEBHOOK_SECRET`, six `CREEM_PRODUCT_*` ids | ✔ for payments | 8.2 |
@@ -2521,7 +2640,7 @@ Notes: annotation *replies* need Generate (they cost credits); a user can always
 | ID | Decision | Alternative you can still choose |
 |---|---|---|
 | D-01 | Migrate Auth.js → Better Auth now | Stay on Auth.js and build a session registry + username + bearer yourself (more code, library in maintenance mode) |
-| D-02 | Access = owner > explicit workspace role > project role > none (`NONE` excludes) | Max-of-roles (simpler, can't restrict inside a project) |
+| D-02 | ~~Access = owner > explicit workspace role > project role > none~~ → **changed 2026-11-08: top-down, effective role = max(project, workspace); `NONE` removed** (interlude F1.1) | Explicit workspace override (lets you restrict inside a project, contradicts top-down) |
 | D-03 | No Organization entity yet; credits live on `CreditAccount` | Add `Organization` later with `CreditAccount.orgId` |
 | D-04 | Stateless context built from your DB | Provider-side conversation state (breaks regenerate/branching/multi-provider) |
 | D-05 | Credits = cost-based (1 credit = $0.002), plan credits expire monthly, top-ups separate | Token-based credits (mis-prices output/images) |
@@ -2535,6 +2654,16 @@ Notes: annotation *replies* need Generate (they cost credits); a user can always
 | D-13 | AI language precedence: prompt > saved AI language > UI locale > en | — |
 | D-14 | `v2` integration branch, merge at Gate B | Feature flags on `main` |
 | D-15 | Text-first launch; images behind a flag until moderation + Creem approval | Launch images immediately |
+| D-16 | Annotation actions are **Comment** and **Ask** (Ask now / Add to queue); Reply + Add question merged | Three separate actions |
+| D-17 | **Unlimited** nesting depth (hidden safety ceiling 100); column stack with spines, max 3 full columns | Fixed depth limit |
+| D-18 | `@klecx` mentions create workspace **notes** injected into later prompts; no immediate AI call | Immediate AI acknowledgement (costs credits) |
+| D-19 | Web search is a model-called tool, on by default for all plans, +3 credits per executed search, daily cap; off switch in Settings | Opt-in toggle per message |
+| D-20 | Ownership transfer requires recipient acceptance and must fit the recipient's member limit | Instant transfer |
+| D-21 | Over member limit after downgrade: 14-day grace → most recently added members suspended (read-only); nothing deleted; auto-restore on upgrade | Block downgrade / delete memberships |
+| D-22 | Refund policy: 14-day first-purchase (< 20 % used), 7-day renewal (no usage), errors always (interlude §2.8) | Case-by-case only |
+| D-23 | Voice transcription billed to the speaker; audio never stored | Bill workspace owner / keep audio |
+| D-24 | Company: Klecx is a product of Vyraxity, Lagos, Nigeria; Nigerian law, Lagos courts; NDPA privacy | — |
+| D-25 | Marketing pages per-language URLs later (10.7); code prepared now (locale registry, next-intl navigation, alternates helper) | Cookie-only locale forever (English-only indexing) |
 
 # Appendix F — Things I could not fully verify (check before you rely on them)
 
@@ -2542,7 +2671,9 @@ Notes: annotation *replies* need Generate (they cost credits); a user can always
 2. **Gemini prices for your exact model IDs** (`gemini-3.8-flash`, your image and TTS models): I could not confirm published prices; the numbers in §4.3 are planning figures. Put the real values in `ModelRegistry`, then re-run the margin table in §4.4. Google has announced that the introductory price of some Flash-class models ends on **Dec 31, 2026**.
 3. **Exact SDK shapes** — thought-summary stream parts (`thought: true` on `generateContent` streaming), `usageMetadata` field names, grounding metadata, and Better Auth option/plugin names (`username`, `bearer`, `twoFactor`, password-reset session revocation) are written from the public docs as I found them; verify against the versions you install.
 4. **Competitor prices** come from third-party comparison pages dated mid-2026; re-check before publishing a pricing comparison.
-5. **Legal text** (Terms, Privacy, refund/expiry wording for credits, data retention) needs review by a lawyer in your jurisdiction.
+5. **Legal text** (Terms, Privacy, refund/expiry wording for credits, data retention) needs review by a lawyer in your jurisdiction (**Nigeria** — NDPA 2023; plus EU/UK consumer and GDPR rules for European visitors).
+6. **Creem and Nigeria** — confirm Nigeria is a supported payout country and what onboarding documents are required for an unregistered business vs. a CAC-registered one; register Vyraxity with the CAC before live payments if possible.
+7. ✅ **AI provider data use** — confirmed (2026-11-08) that the provider doesn't train on data from third-party apps; keep the evidence in `docs/compliance/ai-provider-data-use.md` and re-check yearly.
 
 # Appendix G — Fastest path to revenue (if you want to re-order)
 
