@@ -13,7 +13,8 @@ import { logActivity } from "./activity";
 import { notify, markNotificationReadByDedupeKey } from "./notify";
 import { sendEmail, maskEmail } from "@/server/email/send";
 import { env } from "@/server/env";
-import { PLANS, getUserPlanOverride, type PlanKey } from "@/server/billing/plans";
+import { PLANS, type PlanKey } from "@/server/billing/plans";
+import { getEntitlements } from "@/server/billing/entitlements";
 import type { WorkspaceRole, ProjectRole, Prisma } from "../db/generated/client";
 
 export type CreateInvitationOptions = {
@@ -148,26 +149,8 @@ async function assertMemberCapacity(
 }
 
 async function resolveOwnerPlan(ownerId: string): Promise<PlanKey> {
-  const override = getUserPlanOverride(ownerId);
-  if (override) return override;
-
-  const account = await db.creditAccount.findUnique({
-    where: { userId: ownerId },
-    select: { id: true, planBalance: true },
-  });
-
-  if (account) {
-    if (account.planBalance > 1800) return "PRO";
-    if (account.planBalance > 800) return "STANDARD";
-    if (account.planBalance > 100) return "LITE";
-  }
-
-  // In non-test environments or when dev flags are active, allow testing
-  if (process.env.NODE_ENV !== "test") {
-    return "PRO";
-  }
-
-  return "FREE";
+  const entitlements = await getEntitlements(ownerId);
+  return entitlements.plan;
 }
 
 export async function createInvitation(

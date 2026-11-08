@@ -31,6 +31,7 @@ export const envSchema = z
       .enum(["true", "false"])
       .default("false")
       .transform((v) => v === "true"),
+    DEV_DEFAULT_PLAN: z.enum(["FREE", "LITE", "STANDARD", "PRO"]).optional(),
   })
   .superRefine((data, ctx) => {
     const hasRedisUrl = Boolean(data.UPSTASH_REDIS_REST_URL);
@@ -125,6 +126,7 @@ export function validateEnv(input: Record<string, unknown> = process.env) {
         : typeof input.TRUST_PROXY === "boolean"
           ? String(input.TRUST_PROXY)
           : input.TRUST_PROXY,
+    DEV_DEFAULT_PLAN: input.DEV_DEFAULT_PLAN || undefined,
   };
 
   const parsed = envSchema.safeParse(rawEnv);

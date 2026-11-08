@@ -36,9 +36,9 @@ import {
 import {
   PLANS,
   PlanKey,
-  getUserPlanOverride,
   getDailyCapForPlan,
 } from "@/server/billing/plans";
+import { getEntitlements, entitlementsForPlan } from "@/server/billing/entitlements";
 import { buildContext, estimateTokens } from "@/server/ai/context-builder";
 import { PROMPT_VERSION } from "@/server/ai/prompts/system";
 import {
@@ -108,47 +108,15 @@ function broadcastEvent(active: ActiveGeneration, eventName: string, data: unkno
  */
 async function resolveEffectiveUserPlan(
   userId: string,
-  account: { id: string; planBalance: number; topupBalance: number },
+  _account: { id: string; planBalance: number; topupBalance: number },
   explicitPlan?: PlanTier
 ): Promise<PlanKey> {
   if (explicitPlan && explicitPlan in PLANS) {
     return explicitPlan as PlanKey;
   }
 
-  const override = getUserPlanOverride(userId);
-  if (override) {
-    return override;
-  }
-
-  if (account.planBalance > 1800) return "PRO";
-  if (account.planBalance > 800) return "STANDARD";
-  if (account.planBalance > 100) return "LITE";
-
-  try {
-    const latestGrant = await db.creditLedger.findFirst({
-      where: { accountId: account.id, type: "GRANT", planDelta: { gt: 0 } },
-      orderBy: { createdAt: "desc" },
-      select: { planDelta: true, reason: true },
-    });
-
-    if (latestGrant) {
-      const reason = (latestGrant.reason || "").toUpperCase();
-      if (reason.includes("PRO") || latestGrant.planDelta >= 3500) return "PRO";
-      if (reason.includes("STANDARD") || latestGrant.planDelta >= 1800) return "STANDARD";
-      if (reason.includes("LITE") || latestGrant.planDelta >= 800) return "LITE";
-    }
-  } catch {
-    // Fallback if ledger query fails in unit test mocks
-  }
-
-  // TEMPORARY (until Step 8.1 Subscription Billing is implemented):
-  // Unlock PRO plan features (image generation, web search grounding, standard/advanced models)
-  // in non-test environments so all capabilities can be tested without an active subscription.
-  if (process.env.NODE_ENV !== "test") {
-    return "PRO";
-  }
-
-  return "FREE";
+  const entitlements = await getEntitlements(userId);
+  return entitlements.plan;
 }
 
 /**
@@ -962,11 +930,13 @@ export async function createAndStreamGeneration(
     });
   }
 
-  const userPlan = await resolveEffectiveUserPlan(
+  const resolvedPlan = await resolveEffectiveUserPlan(
     wsOwnerId,
     ownerAccount,
     options.userPlan
   );
+  const ownerEntitlements = entitlementsForPlan(resolvedPlan);
+  const userPlan = ownerEntitlements.plan;
 
   let modelKey: ModelKey;
   if (kind === "IMAGE") {
@@ -996,7 +966,7 @@ export async function createAndStreamGeneration(
 
   const model = getModel(modelKey);
   try {
-    assertModelAccess(modelKey, userPlan);
+    assertModelAccess(modelKey, ownerEntitlements.plan);
   } catch (err: unknown) {
     throw Errors.forbidden(
       err instanceof Error ? err.message : `Model '${modelKey}' is not available on your current plan.`

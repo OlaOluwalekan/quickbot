@@ -1,14 +1,23 @@
+delete process.env.DEV_DEFAULT_PLAN;
 process.env.CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || 'test_cloudinary_cloud';
 process.env.CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY || 'test_cloudinary_key';
 process.env.CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET || 'test_cloudinary_secret';
 
 import '@testing-library/jest-dom'
 import { TextEncoder, TextDecoder } from 'util'
+import nodeCrypto from 'crypto'
 
 if (typeof global.TextEncoder === 'undefined') {
   global.TextEncoder = TextEncoder
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   global.TextDecoder = TextDecoder as any
+}
+
+if (typeof globalThis.crypto === 'undefined') {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(globalThis as any).crypto = nodeCrypto.webcrypto
+} else if (typeof globalThis.crypto.randomUUID !== 'function') {
+  globalThis.crypto.randomUUID = () => nodeCrypto.randomUUID()
 }
 
 if (typeof global.Request === 'undefined') {
@@ -31,6 +40,14 @@ if (typeof global.Request === 'undefined') {
     set(name: string, value: string) {
       this.map.set(name.toLowerCase(), value)
     }
+    append(name: string, value: string) {
+      const key = name.toLowerCase()
+      const existing = this.map.get(key)
+      this.map.set(key, existing ? `${existing}, ${value}` : value)
+    }
+    delete(name: string) {
+      this.map.delete(name.toLowerCase())
+    }
     has(name: string) {
       return this.map.has(name.toLowerCase())
     }
@@ -43,6 +60,12 @@ if (typeof global.Request === 'undefined') {
     }
     entries() {
       return this.map.entries()
+    }
+    keys() {
+      return this.map.keys()
+    }
+    values() {
+      return this.map.values()
     }
     [Symbol.iterator]() {
       return this.map.entries()
@@ -61,13 +84,30 @@ if (typeof global.Request === 'undefined') {
     }
   }
   class MockResponse {
+    body: any
     headers: MockHeaders
     status: number
     statusText: string
+    ok: boolean
     constructor(body?: any, init?: any) {
+      this.body = body
       this.status = init?.status ?? 200
       this.statusText = init?.statusText ?? 'OK'
+      this.ok = this.status >= 200 && this.status < 300
       this.headers = new MockHeaders(init?.headers)
+    }
+    async json() {
+      return typeof this.body === 'string' ? JSON.parse(this.body) : this.body
+    }
+    async text() {
+      return typeof this.body === 'string' ? this.body : JSON.stringify(this.body ?? '')
+    }
+    static json(data: any, init?: any) {
+      const headers = new MockHeaders(init?.headers)
+      if (!headers.has('content-type')) {
+        headers.set('content-type', 'application/json')
+      }
+      return new MockResponse(JSON.stringify(data), { ...init, headers })
     }
   }
 
