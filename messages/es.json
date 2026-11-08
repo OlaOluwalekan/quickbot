@@ -1,7 +1,8 @@
 {
   "Metadata": {
     "title": "Klecx | Tu espacio de trabajo y estudio de colaboración con IA",
-    "description": "Obtén respuestas de IA en tiempo real, genera imágenes de calidad de estudio y acelera tu flujo de trabajo con Klecx."
+    "description": "Obtén respuestas de IA en tiempo real, genera imágenes de calidad de estudio y acelera tu flujo de trabajo con Klecx.",
+    "ogImageAlt": "Vista previa del espacio de trabajo de {appName}"
   },
   "Common": {
     "appName": "Klecx",
@@ -384,7 +385,8 @@
     "upgradePlan": "Mejorar plan",
     "managePlan": "Gestionar",
     "retry": "Reintentar",
-    "errorLoadingHome": "No se pudo cargar el inicio del espacio."
+    "errorLoadingHome": "No se pudo cargar el inicio del espacio.",
+    "studioBadge": "{appName} Studio"
   },
   "Templates": {
     "catWrite": "Escribir",

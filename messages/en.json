@@ -1,7 +1,8 @@
 {
   "Metadata": {
     "title": "Klecx | Your AI Workspace & Collaboration Studio",
-    "description": "Stream real-time AI answers, generate studio-grade visuals, and accelerate your workflow with Klecx."
+    "description": "Stream real-time AI answers, generate studio-grade visuals, and accelerate your workflow with Klecx.",
+    "ogImageAlt": "{appName} workspace preview"
   },
   "Common": {
     "appName": "Klecx",
@@ -384,7 +385,8 @@
     "upgradePlan": "Upgrade",
     "managePlan": "Manage",
     "retry": "Retry",
-    "errorLoadingHome": "Unable to load workspace home."
+    "errorLoadingHome": "Unable to load workspace home.",
+    "studioBadge": "{appName} Studio"
   },
   "Templates": {
     "catWrite": "Write",

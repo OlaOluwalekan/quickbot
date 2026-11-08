@@ -10,7 +10,12 @@ import {
   resolveDnsAndValidate,
   isPathDisallowedByRobotsTxt,
   SsrfError,
+  getUserAgent,
 } from "../server/files/safe-fetch";
+import {
+  setSiteConfigForTesting,
+  clearSiteConfigForTesting,
+} from "../server/config/site";
 
 const mockGetActor = jest.fn();
 const mockRequireWorkspace = jest.fn();
@@ -470,5 +475,18 @@ Disallow: /
       expect(result.id).toBe("att-link-123");
       expect(result.kind).toBe("DOCUMENT");
     });
+  });
+});
+
+describe("F0.2 — Crawler user agent", () => {
+  it("points at the configured app URL, not a hard-coded domain", () => {
+    setSiteConfigForTesting({ appUrl: "https://app.example.test" });
+    try {
+      expect(getUserAgent()).toBe(
+        "KlecxBot/1.0 (+https://app.example.test/support)"
+      );
+    } finally {
+      clearSiteConfigForTesting();
+    }
   });
 });
