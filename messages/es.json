@@ -1067,6 +1067,14 @@
       "EDITOR": "Editor",
       "ADMIN": "Administrador"
     },
-    "manageOnProject": "El acceso proviene del proyecto. Cámbialo o quítalo allí."
+    "manageOnProject": "El acceso proviene del proyecto. Cámbialo o quítalo allí.",
+    "capabilities": {
+      "comment": "Puede comentar",
+      "ask": "Puede preguntar a Klecx",
+      "askHint": "Las preguntas secundarias las responde Klecx y se facturan al propietario",
+      "inheritedLocked": "Heredado del proyecto",
+      "updated": "Permisos del miembro actualizados",
+      "updateFailed": "No se pudieron actualizar los permisos del miembro"
+    }
   }
 }

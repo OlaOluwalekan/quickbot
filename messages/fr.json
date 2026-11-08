@@ -1067,6 +1067,14 @@
       "EDITOR": "Éditeur",
       "ADMIN": "Administrateur"
     },
-    "manageOnProject": "L'accès vient du projet. Modifiez-le ou retirez-le là-bas."
+    "manageOnProject": "L'accès vient du projet. Modifiez-le ou retirez-le là-bas.",
+    "capabilities": {
+      "comment": "Peut commenter",
+      "ask": "Peut demander à Klecx",
+      "askHint": "Les questions secondaires sont traitées par Klecx et facturées au propriétaire",
+      "inheritedLocked": "Hérité du projet",
+      "updated": "Autorisations du membre mises à jour",
+      "updateFailed": "Impossible de mettre à jour les autorisations du membre"
+    }
   }
 }

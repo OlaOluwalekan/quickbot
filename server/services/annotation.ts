@@ -179,7 +179,7 @@ export async function listWorkspaceQuestions(
 
 /**
  * Creates a new annotation and its initial USER message on a response version.
- * Requires `workspace.annotate` permission.
+ * Requires `workspace.comment` (COMMENT) or `workspace.ask` (QUESTION).
  * Validates that `anchor.exact` is a true substring of the version text.
  */
 export async function createAnnotation(
@@ -200,8 +200,12 @@ export async function createAnnotation(
     throw Errors.notFound("ResponseVersion");
   }
 
-  // Caller needs workspace.annotate (COMMENTER, EDITOR, ADMIN, OWNER)
-  await requireWorkspace(actor, version.response.workspaceId, "workspace.annotate");
+  // Caller needs workspace.comment for COMMENT, workspace.ask for QUESTION
+  await requireWorkspace(
+    actor,
+    version.response.workspaceId,
+    annotationKindPermission(input.kind)
+  );
 
   // Re-check anchor.exact substring on server against stored text
   let targetContent = version.content;
@@ -323,9 +327,14 @@ export async function getAnnotation(actor: Actor, annotationId: string) {
   return annot;
 }
 
+/** The capability needed to create or change an annotation of this kind. */
+function annotationKindPermission(kind: string) {
+  return kind === "COMMENT" ? "workspace.comment" : "workspace.ask";
+}
+
 /**
  * Updates an annotation (text, resolved status, or visibility).
- * Permissions: creator only (or workspace admin for WORKSPACE-visible annotations).
+ * Permissions: creator holding the kind's capability, or workspace admin.
  */
 export async function updateAnnotation(
   actor: Actor,
@@ -359,6 +368,12 @@ export async function updateAnnotation(
     throw Errors.forbidden(
       "Only the creator or workspace admin can update this annotation"
     );
+  }
+
+  // F1.2: a creator who lost the capability for this kind (toggle off,
+  // role lowered, or suspended) can no longer change it. Admins moderate.
+  if (!isAdmin && !access.capabilities.has(annotationKindPermission(annot.kind))) {
+    throw Errors.forbidden();
   }
 
   // Update text of creator's initial message if provided
@@ -412,7 +427,7 @@ export async function updateAnnotation(
 
 /**
  * Soft deletes an annotation (`deletedAt = now()`).
- * Permissions: creator or workspace admin.
+ * Permissions: creator holding the kind's capability, or workspace admin.
  */
 export async function deleteAnnotation(actor: Actor, annotationId: string) {
   const annot = await db.annotation.findUnique({
@@ -436,6 +451,12 @@ export async function deleteAnnotation(actor: Actor, annotationId: string) {
     throw Errors.forbidden(
       "Only the creator or workspace admin can delete this annotation"
     );
+  }
+
+  // F1.2: a creator who lost the capability for this kind (toggle off,
+  // role lowered, or suspended) can no longer change it. Admins moderate.
+  if (!isAdmin && !access.capabilities.has(annotationKindPermission(annot.kind))) {
+    throw Errors.forbidden();
   }
 
   await db.annotation.update({
@@ -462,7 +483,7 @@ export async function createAnnotationMessage(
     throw Errors.notFound("Annotation");
   }
 
-  await requireWorkspace(actor, annot.workspaceId, "workspace.annotate");
+  await requireWorkspace(actor, annot.workspaceId, annotationKindPermission(annot.kind));
 
   if (annot.visibility === "PRIVATE" && annot.createdById !== actor.userId) {
     throw Errors.notFound("Annotation");
@@ -533,8 +554,8 @@ export async function createAndStreamAnnotationReply(
 
     workspaceId = targetVersion.response.workspaceId;
 
-    // Enforce workspace.generate permission upfront
-    const access = await requireWorkspace(actor, workspaceId, "workspace.generate");
+    // Enforce workspace.ask permission upfront
+    const access = await requireWorkspace(actor, workspaceId, "workspace.ask");
 
     // Re-check substring
     let targetContent = targetVersion.content;
@@ -618,8 +639,8 @@ export async function createAndStreamAnnotationReply(
     workspaceId = targetAnnotation.workspaceId;
     targetVersion = targetAnnotation.version;
 
-    // Enforce workspace.generate
-    await requireWorkspace(actor, workspaceId, "workspace.generate");
+    // Enforce workspace.ask
+    await requireWorkspace(actor, workspaceId, "workspace.ask");
 
     if (
       targetAnnotation.visibility === "PRIVATE" &&
@@ -640,7 +661,7 @@ export async function createAndStreamAnnotationReply(
   }
 
   // Resolve billing account = workspace owner's credit account
-  const wsAccess = await requireWorkspace(actor, workspaceId, "workspace.generate");
+  const wsAccess = await requireWorkspace(actor, workspaceId, "workspace.ask");
   const { billedAccountId } = await resolveBilledAccount(wsAccess.ws);
 
   // Idempotency & Generation creation

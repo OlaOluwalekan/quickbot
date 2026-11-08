@@ -22,13 +22,23 @@ export const createInvitationSchema = z.object({
 export const updateMemberRoleSchema = z
   .object({
     role: z.string().min(1).optional(),
+    canComment: z.boolean().nullable().optional(),
+    canAsk: z.boolean().nullable().optional(),
     monthlyCreditCap: z.number().int().min(0).max(1_000_000).nullable().optional(),
   })
-  // Exactly one: the two updates have different permission rules, so a
-  // combined request could apply the role change and then fail on the cap.
-  .refine((d) => (d.role !== undefined) !== (d.monthlyCreditCap !== undefined), {
-    message: "Provide either role or monthlyCreditCap, not both",
-  });
+  // Exactly one focus: the two updates have different permission rules, so a
+  // combined request could apply the role/capability change and then fail on the cap.
+  .refine(
+    (d) => {
+      const hasCap = d.monthlyCreditCap !== undefined;
+      const hasRoleOrCaps =
+        d.role !== undefined || d.canComment !== undefined || d.canAsk !== undefined;
+      return (hasCap && !hasRoleOrCaps) || (!hasCap && hasRoleOrCaps);
+    },
+    {
+      message: "Provide either monthlyCreditCap, or role/capabilities, not both",
+    }
+  );
 
 export const transferOwnershipSchema = z.object({
   newOwnerId: z.string().min(1),

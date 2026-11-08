@@ -74,7 +74,7 @@ describe("Step 6.2 — Annotation API", () => {
       data: [
         { workspaceId, userId: adminId, role: "ADMIN", invitedById: ownerId },
         { workspaceId, userId: editorId, role: "EDITOR", invitedById: ownerId },
-        { workspaceId, userId: commenterId, role: "COMMENTER", invitedById: ownerId },
+        { workspaceId, userId: commenterId, role: "COMMENTER", canAsk: true, invitedById: ownerId },
         { workspaceId, userId: viewerId, role: "VIEWER", invitedById: ownerId },
       ],
     });
@@ -307,20 +307,25 @@ describe("Step 6.2 — Annotation API", () => {
       expect(questionJson.data.messages[0].content).toBe("What failure modes can block 2PC?");
     });
 
-    it("verifies role matrix: commenter has annotate but NOT generate (cannot reply)", () => {
-      expect(can("COMMENTER", "workspace.annotate")).toBe(true);
+    it("verifies role matrix: commenter has comment but NOT ask / generate", () => {
+      expect(can("COMMENTER", "workspace.comment")).toBe(true);
+      expect(can("COMMENTER", "workspace.ask")).toBe(false);
       expect(can("COMMENTER", "workspace.generate")).toBe(false);
 
-      expect(can("VIEWER", "workspace.annotate")).toBe(false);
+      expect(can("VIEWER", "workspace.comment")).toBe(false);
+      expect(can("VIEWER", "workspace.ask")).toBe(false);
       expect(can("VIEWER", "workspace.generate")).toBe(false);
 
-      expect(can("EDITOR", "workspace.annotate")).toBe(true);
+      expect(can("EDITOR", "workspace.comment")).toBe(true);
+      expect(can("EDITOR", "workspace.ask")).toBe(true);
       expect(can("EDITOR", "workspace.generate")).toBe(true);
 
-      expect(can("ADMIN", "workspace.annotate")).toBe(true);
+      expect(can("ADMIN", "workspace.comment")).toBe(true);
+      expect(can("ADMIN", "workspace.ask")).toBe(true);
       expect(can("ADMIN", "workspace.generate")).toBe(true);
 
-      expect(can("OWNER", "workspace.annotate")).toBe(true);
+      expect(can("OWNER", "workspace.comment")).toBe(true);
+      expect(can("OWNER", "workspace.ask")).toBe(true);
       expect(can("OWNER", "workspace.generate")).toBe(true);
     });
   });

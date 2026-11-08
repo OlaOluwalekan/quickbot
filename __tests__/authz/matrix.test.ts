@@ -62,10 +62,11 @@ describe("Authorization Service & Permission Matrix (Step 1.5)", () => {
     const expectedByRole: Record<RoleWithNone, readonly Permission[]> = {
       NONE: [],
       VIEWER: ["workspace.read"],
-      COMMENTER: ["workspace.read", "workspace.annotate"],
+      COMMENTER: ["workspace.read", "workspace.comment"],
       EDITOR: [
         "workspace.read",
-        "workspace.annotate",
+        "workspace.comment",
+        "workspace.ask",
         "workspace.generate",
         "workspace.regenerate",
         "workspace.edit_response",
@@ -74,7 +75,8 @@ describe("Authorization Service & Permission Matrix (Step 1.5)", () => {
       ],
       ADMIN: [
         "workspace.read",
-        "workspace.annotate",
+        "workspace.comment",
+        "workspace.ask",
         "workspace.generate",
         "workspace.regenerate",
         "workspace.edit_response",
@@ -122,7 +124,7 @@ describe("Authorization Service & Permission Matrix (Step 1.5)", () => {
       });
 
       const resolved = await resolveWorkspaceRole(userA.userId, wsId);
-      expect(resolved).toEqual({
+      expect(resolved).toMatchObject({
         ws: {
           id: wsId,
           ownerId: userA.userId,
