@@ -1037,5 +1037,13 @@
       "retryButton": "Réessayer la connexion",
       "dismiss": "Ignorer"
     }
+  },
+  "Gates": {
+    "requires_plan": "Disponible à partir du forfait {plan}",
+    "member_limit": "Votre forfait autorise jusqu'à {limit} collaborateurs",
+    "daily_cap": "Vous avez atteint votre limite quotidienne pour cette fonctionnalité",
+    "no_permission": "Vous n'avez pas la permission pour {capability}",
+    "max_depth": "Profondeur maximale de fil atteinte ({depth}). Promouvez cette réponse dans un nouvel espace pour continuer.",
+    "upgrade": "Mettre à niveau"
   }
 }

@@ -17,10 +17,12 @@ import {
   release,
 } from "@/server/services/credits";
 import {
+  assertModelAccess,
   getModel,
   creditsFor,
   ModelKey,
 } from "@/server/ai/registry";
+import { getEntitlements } from "@/server/billing/entitlements";
 import { getProvider, streamAi, type AiProvider } from "@/server/ai";
 import { getCustomProvider } from "@/server/services/generation";
 import {
@@ -642,8 +644,16 @@ export async function createAndStreamAnnotationReply(
   const { billedAccountId } = await resolveBilledAccount(wsAccess.ws);
 
   // Idempotency & Generation creation
+  const ownerEntitlements = await getEntitlements(wsAccess.ws.ownerId);
   const modelKey = (input.modelKey || "text-economy") as ModelKey;
   const model = getModel(modelKey);
+  try {
+    assertModelAccess(modelKey, ownerEntitlements.plan);
+  } catch (err: unknown) {
+    throw Errors.forbidden(
+      err instanceof Error ? err.message : `Model '${modelKey}' is not available on your current plan.`
+    );
+  }
   const generationId = crypto.randomUUID();
 
   const estimatedInputTokens = estimateTokens(effectivePrompt) + 500;
@@ -734,6 +744,7 @@ export async function createAndStreamAnnotationReply(
             thinking: { summaries: false },
           },
           {
+            userPlan: ownerEntitlements.plan,
             providerInstance: activeProvider,
           }
         );

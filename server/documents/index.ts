@@ -5,10 +5,10 @@ import { env } from "@/server/env";
 import type { Actor } from "@/server/auth/session";
 import { requireWorkspace } from "@/server/authz/access";
 import { ApiError, Errors } from "@/server/http/errors";
-import { PLANS, getUserPlanOverride, type PlanKey } from "@/server/billing/plans";
+import { PLANS, type PlanKey } from "@/server/billing/plans";
+import { getEntitlements } from "@/server/billing/entitlements";
 import type { ToolSpec } from "@/server/ai/types";
 import { getStorageProvider } from "@/server/storage";
-import { getAccountByUserId } from "@/server/services/credits";
 import {
   exportResponseToMarkdown,
   exportWorkspaceToMarkdown,
@@ -77,29 +77,8 @@ async function resolveExportPlanForUser(
     return explicitPlan;
   }
 
-  const override = getUserPlanOverride(userId);
-  if (override) {
-    return override;
-  }
-
-  try {
-    const account = await getAccountByUserId(userId);
-    if (account) {
-      if (account.planBalance > 1800) return "PRO";
-      if (account.planBalance > 800) return "STANDARD";
-      if (account.planBalance > 100) return "LITE";
-    }
-  } catch {
-    // ignore db lookup failure in isolated tests
-  }
-
-  // TEMPORARY (until Step 8.1 Subscription Billing is implemented):
-  // Unlock PRO export formats in non-test environments so all formats can be tested.
-  if (process.env.NODE_ENV !== "test") {
-    return "PRO";
-  }
-
-  return "FREE";
+  const entitlements = await getEntitlements(userId);
+  return entitlements.plan;
 }
 
 function checkAndIncrementDailyExportCap(userId: string, plan: PlanKey): void {

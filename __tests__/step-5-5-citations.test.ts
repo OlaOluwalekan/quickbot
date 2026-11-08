@@ -19,6 +19,7 @@ import {
   getAccountByUserId,
 } from "@/server/services/credits";
 import {
+  PLANS,
   setUserPlanOverride,
   clearUserPlanOverrides,
 } from "@/server/billing/plans";
@@ -267,23 +268,30 @@ describe("Step 5.5 — Citations and References", () => {
       expect(groundedCredits).toBe(baseCredits + 3);
     });
 
-    it("blocks FREE plan users from grounded search with 403 forbidden before reserving credits", async () => {
+    it("blocks grounded search with 403 forbidden before reserving credits when plan grounding is disabled", async () => {
       setUserPlanOverride(user.id, "FREE");
-      const beforeAccount = await getAccountByUserId(user.id);
+      const prevGrounding = PLANS.FREE.limits.grounding;
+      (PLANS.FREE.limits as { grounding: boolean }).grounding = false;
+      try {
+        const beforeAccount = await getAccountByUserId(user.id);
 
-      await expect(
-        createAndStreamGeneration(actor, workspace.id, {
-          idempotencyKey: `idem_free_ground_${Date.now()}`,
-          prompt: "Search the web for PostgreSQL news",
-          modelKey: "text-economy",
-          kind: "TEXT",
-          grounding: true,
-        })
-      ).rejects.toThrow(ApiError);
+        await expect(
+          createAndStreamGeneration(actor, workspace.id, {
+            idempotencyKey: `idem_free_ground_${Date.now()}`,
+            prompt: "Search the web for PostgreSQL news",
+            modelKey: "text-economy",
+            kind: "TEXT",
+            grounding: true,
+          })
+        ).rejects.toThrow(ApiError);
 
-      const afterAccount = await getAccountByUserId(user.id);
-      expect(afterAccount?.planBalance).toBe(beforeAccount?.planBalance);
-      expect(afterAccount?.topupBalance).toBe(beforeAccount?.topupBalance);
+        const afterAccount = await getAccountByUserId(user.id);
+        expect(afterAccount?.planBalance).toBe(beforeAccount?.planBalance);
+        expect(afterAccount?.topupBalance).toBe(beforeAccount?.topupBalance);
+      } finally {
+        (PLANS.FREE.limits as { grounding: boolean }).grounding = prevGrounding;
+        setUserPlanOverride(user.id, "LITE");
+      }
     });
   });
 

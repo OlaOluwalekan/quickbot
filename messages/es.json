@@ -1037,5 +1037,13 @@
       "retryButton": "Reintentar conexión",
       "dismiss": "Descartar"
     }
+  },
+  "Gates": {
+    "requires_plan": "Disponible en el plan {plan} y superiores",
+    "member_limit": "Tu plan permite hasta {limit} colaboradores",
+    "daily_cap": "Has alcanzado tu límite diario para esta función",
+    "no_permission": "No tienes permiso para {capability}",
+    "max_depth": "Se alcanzó la profundidad máxima de hilo ({depth}). Promueve esta respuesta a un nuevo espacio para continuar.",
+    "upgrade": "Mejorar plan"
   }
 }

@@ -1037,5 +1037,13 @@
       "retryButton": "Retry connection",
       "dismiss": "Dismiss"
     }
+  },
+  "Gates": {
+    "requires_plan": "Available on the {plan} plan and above",
+    "member_limit": "Your plan allows up to {limit} collaborators",
+    "daily_cap": "You have reached your daily limit for this feature",
+    "no_permission": "You do not have permission to {capability}",
+    "max_depth": "Maximum thread depth ({depth}) reached. Promote this answer to a new workspace to continue.",
+    "upgrade": "Upgrade"
   }
 }

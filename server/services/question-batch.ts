@@ -12,10 +12,12 @@ import {
   release,
 } from "@/server/services/credits";
 import {
+  assertModelAccess,
   getModel,
   creditsFor,
   ModelKey,
 } from "@/server/ai/registry";
+import { getEntitlements } from "@/server/billing/entitlements";
 import { streamAi, type AiProvider } from "@/server/ai";
 import { getCustomProvider } from "@/server/services/generation";
 import { estimateTokens } from "@/server/ai/context-builder";
@@ -168,8 +170,16 @@ export async function runQuestionBatch(
   const groups = Array.from(versionMap.values());
 
   // 6. Credit estimation & reservation
+  const ownerEntitlements = await getEntitlements(wsAccess.ws.ownerId);
   const modelKey = (input.modelKey || "text-economy") as ModelKey;
   const model = getModel(modelKey);
+  try {
+    assertModelAccess(modelKey, ownerEntitlements.plan);
+  } catch (err: unknown) {
+    throw Errors.forbidden(
+      err instanceof Error ? err.message : `Model '${modelKey}' is not available on your current plan.`
+    );
+  }
   const generationId = crypto.randomUUID();
 
   let estimatedInputTokens = 500;
@@ -277,6 +287,7 @@ export async function runQuestionBatch(
             thinking: { summaries: false },
           },
           {
+            userPlan: ownerEntitlements.plan,
             providerInstance: activeProvider,
           }
         );

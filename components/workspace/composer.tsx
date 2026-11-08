@@ -33,6 +33,7 @@ import { navigateWithTransition } from "@/lib/navigation/view-transition";
 import { CLIENT_MODELS, type ClientModelOption } from "@/lib/ai/client-models";
 import { AI_LANGUAGES, type AiLanguage } from "@/lib/locale";
 import type { WorkspaceDto } from "@/lib/api/hooks/workspaces";
+import { useEntitlements } from "@/lib/api/hooks/entitlements";
 import { QuestionQueuePopover } from "@/components/workspace/question-queue-popover";
 import {
   Popover,
@@ -207,10 +208,9 @@ export function Composer({
   const [isDragging, setIsDragging] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  // TEMPORARY (until Step 8.1 Subscription Billing is implemented): use Pro plan limits outside of unit tests
-  const isTestEnv = process.env.NODE_ENV === "test";
-  const MAX_ATTACHMENTS = isTestEnv ? 3 : 50;
-  const MAX_FILE_SIZE = (isTestEnv ? 5 : 50) * 1024 * 1024;
+  const { entitlements } = useEntitlements();
+  const MAX_ATTACHMENTS = entitlements.limits.attachmentsPerWorkspace;
+  const MAX_FILE_SIZE = entitlements.limits.maxFileMB * 1024 * 1024;
 
   const uploadItem = React.useCallback(async (item: ComposerAttachment) => {
     try {
@@ -284,7 +284,7 @@ export function Composer({
     for (const item of newItems) {
       uploadItem(item);
     }
-  }, [attachments.length, t, uploadItem]);
+  }, [attachments.length, MAX_ATTACHMENTS, MAX_FILE_SIZE, t, uploadItem]);
 
   const removeAttachment = React.useCallback((id: string) => {
     setAttachments((prev) => {

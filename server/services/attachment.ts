@@ -8,7 +8,8 @@ import { env } from "@/server/env";
 import type { Actor } from "@/server/auth/session";
 import { Errors } from "@/server/http/errors";
 import { requireWorkspace } from "@/server/authz/access";
-import { PLANS, PlanLimits } from "@/server/billing/plans";
+import { PlanLimits } from "@/server/billing/plans";
+import { getEntitlements } from "@/server/billing/entitlements";
 import { getStorageProvider } from "@/server/storage";
 import type {
   InitAttachmentInput,
@@ -69,14 +70,10 @@ export function sanitizeFilename(raw: string): string {
 }
 
 export async function getWorkspacePlanLimits(
-  _workspaceOwnerId: string
+  workspaceOwnerId: string
 ): Promise<PlanLimits> {
-  // TEMPORARY (until Step 8.1 Subscription Billing is implemented):
-  // Unlock PRO plan limits in non-test environments so all attachment features can be tested.
-  if (process.env.NODE_ENV !== "test") {
-    return PLANS.PRO.limits;
-  }
-  return PLANS.FREE.limits;
+  const entitlements = await getEntitlements(workspaceOwnerId);
+  return entitlements.limits;
 }
 
 /**

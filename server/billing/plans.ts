@@ -10,6 +10,8 @@ export interface PlanLimits {
   exportFormats: ("md" | "pdf" | "docx")[];
   grounding: boolean;
   images: boolean;
+  searchesPerDay: number;
+  voiceSecondsPerDay: number;
 }
 
 export interface PlanDefinition {
@@ -45,8 +47,10 @@ export const PLANS: Record<"FREE" | "LITE" | "STANDARD" | "PRO", PlanDefinition>
       maxFileMB: 5,
       members: 0,
       exportFormats: ["md"],
-      grounding: false,
+      grounding: true,
       images: false,
+      searchesPerDay: 10,
+      voiceSecondsPerDay: 120,
     },
     features: [
       "100 credits / month (no rollover)",
@@ -75,6 +79,8 @@ export const PLANS: Record<"FREE" | "LITE" | "STANDARD" | "PRO", PlanDefinition>
       exportFormats: ["md", "pdf", "docx"],
       grounding: true,
       images: true,
+      searchesPerDay: 50,
+      voiceSecondsPerDay: 600,
     },
     features: [
       "800 credits / month (no rollover)",
@@ -107,6 +113,8 @@ export const PLANS: Record<"FREE" | "LITE" | "STANDARD" | "PRO", PlanDefinition>
       exportFormats: ["md", "pdf", "docx"],
       grounding: true,
       images: true,
+      searchesPerDay: 100,
+      voiceSecondsPerDay: 1200,
     },
     features: [
       "1,800 credits / month (no rollover)",
@@ -138,6 +146,8 @@ export const PLANS: Record<"FREE" | "LITE" | "STANDARD" | "PRO", PlanDefinition>
       exportFormats: ["md", "pdf", "docx"],
       grounding: true,
       images: true,
+      searchesPerDay: 200,
+      voiceSecondsPerDay: 2400,
     },
     features: [
       "3,500 credits / month (no rollover)",

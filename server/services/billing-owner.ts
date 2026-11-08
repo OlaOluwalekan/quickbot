@@ -9,9 +9,9 @@ import {
 } from "@/server/services/credits";
 import {
   PLANS,
-  getUserPlanOverride,
   type PlanKey,
 } from "@/server/billing/plans";
+import { getEntitlements } from "@/server/billing/entitlements";
 import { env } from "@/server/env";
 import { logActivity } from "@/server/services/activity";
 import { notify } from "@/server/services/notify";
@@ -107,26 +107,10 @@ export async function resolveBilledAccount(workspaceOrId: WorkspaceBillingTarget
  */
 export async function resolveOwnerPlanKey(
   ownerId: string,
-  account?: { planBalance: number } | null
+  _account?: { planBalance: number } | null
 ): Promise<PlanKey> {
-  const override = getUserPlanOverride(ownerId);
-  if (override) return override;
-
-  const acc =
-    account !== undefined
-      ? account
-      : await db.creditAccount.findUnique({
-          where: { userId: ownerId },
-          select: { planBalance: true },
-        });
-
-  if (acc) {
-    if (acc.planBalance > 1800) return "PRO";
-    if (acc.planBalance > 800) return "STANDARD";
-    if (acc.planBalance > 100) return "LITE";
-  }
-
-  return "FREE";
+  const entitlements = await getEntitlements(ownerId);
+  return entitlements.plan;
 }
 
 /**
