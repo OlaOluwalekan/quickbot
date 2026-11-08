@@ -4,7 +4,6 @@
 const mockWorkspaceFindFirst = jest.fn();
 const mockProjectMemberFindUnique = jest.fn();
 const mockProjectFindFirst = jest.fn();
-const mockProjectFindUnique = jest.fn();
 
 jest.mock("../../server/db/client", () => ({
   db: {
@@ -16,7 +15,6 @@ jest.mock("../../server/db/client", () => ({
     },
     project: {
       findFirst: (...args: unknown[]) => mockProjectFindFirst(...args),
-      findUnique: (...args: unknown[]) => mockProjectFindUnique(...args),
     },
   },
 }));
@@ -58,8 +56,6 @@ describe("Authorization Service & Permission Matrix (Step 1.5)", () => {
     mockWorkspaceFindFirst.mockReset();
     mockProjectMemberFindUnique.mockReset();
     mockProjectFindFirst.mockReset();
-    mockProjectFindUnique.mockReset();
-    mockProjectFindUnique.mockResolvedValue({ ownerId: userA.userId, deletedAt: null });
   });
 
   describe("1. Appendix A Permission Matrix (role × permission)", () => {
@@ -115,7 +111,7 @@ describe("Authorization Service & Permission Matrix (Step 1.5)", () => {
     });
   });
 
-  describe("2. Role precedence & inheritance (D-02: owner > explicit workspace role > project role > none)", () => {
+  describe("2. Role precedence & inheritance (F1.1: owner > max(project role, workspace role) > none)", () => {
     it("resolves OWNER when userId matches ws.ownerId regardless of member rows", async () => {
       mockWorkspaceFindFirst.mockResolvedValue({
         id: wsId,
@@ -145,19 +141,26 @@ describe("Authorization Service & Permission Matrix (Step 1.5)", () => {
         projectId: projId,
         archivedAt: null,
         members: [],
-      });
-      mockProjectMemberFindUnique.mockResolvedValue({
-        role: "EDITOR",
+        project: { ownerId: userA.userId, deletedAt: null, members: [{ role: "EDITOR" }] },
       });
 
       const resolved = await resolveWorkspaceRole(userB.userId, wsId);
       expect(resolved?.role).toBe("EDITOR");
-      expect(mockProjectMemberFindUnique).toHaveBeenCalledWith({
-        where: {
-          projectId_userId: { projectId: projId, userId: userB.userId },
-        },
-        select: { role: true },
+      // Project role is loaded in the same query (include on `project`), no extra lookup.
+      expect(mockProjectMemberFindUnique).not.toHaveBeenCalled();
+    });
+
+    it("ignores the project role when the project is soft-deleted", async () => {
+      mockWorkspaceFindFirst.mockResolvedValue({
+        id: wsId,
+        ownerId: userA.userId,
+        projectId: projId,
+        archivedAt: null,
+        members: [],
+        project: { ownerId: userB.userId, deletedAt: new Date(), members: [] },
       });
+
+      expect(await resolveWorkspaceRole(userB.userId, wsId)).toBeNull();
     });
 
     it("top-down permissions: effective role is max(project role, workspace role)", async () => {
@@ -169,6 +172,7 @@ describe("Authorization Service & Permission Matrix (Step 1.5)", () => {
         members: [{ role: "COMMENTER" }],
         project: {
           ownerId: userA.userId,
+          deletedAt: null,
           members: [{ role: "ADMIN" }],
         },
       });
@@ -186,6 +190,7 @@ describe("Authorization Service & Permission Matrix (Step 1.5)", () => {
         members: [],
         project: {
           ownerId: userB.userId,
+          deletedAt: null,
           members: [],
         },
       });
@@ -201,9 +206,9 @@ describe("Authorization Service & Permission Matrix (Step 1.5)", () => {
         projectId: projId,
         archivedAt: null,
         members: [],
+        // Project membership removed -> no ProjectMember row
+        project: { ownerId: userA.userId, deletedAt: null, members: [] },
       });
-      // Project membership removed -> findUnique returns null
-      mockProjectMemberFindUnique.mockResolvedValue(null);
 
       const resolved = await resolveWorkspaceRole(userB.userId, wsId);
       expect(resolved).toBeNull();

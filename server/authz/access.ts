@@ -80,40 +80,15 @@ export async function resolveWorkspaceRole(
     return { ws: summary, role: "OWNER" };
   }
 
-  // Determine inherited project role
+  // Inherited project role (loaded in the same query). The project owner is
+  // ADMIN on every workspace in their project; a soft-deleted project grants nothing.
   let projectRole: EffectiveRole | null = null;
-  if (ws.project) {
-    if (!ws.project.deletedAt) {
-      if (ws.project.ownerId === userId) {
-        projectRole = "ADMIN";
-      } else if (ws.project.members?.[0]?.role) {
-        projectRole = ws.project.members[0].role as EffectiveRole;
-      }
-    }
-  } else if (ws.projectId) {
-    // Fallback for mocked queries in tests that don't include project relation
-    const project = await db.project.findUnique({
-      where: { id: ws.projectId },
-      select: { ownerId: true, deletedAt: true },
-    });
-    if (project && !project.deletedAt) {
-      if (project.ownerId === userId) {
-        projectRole = "ADMIN";
-      } else {
-        const pm = await db.projectMember.findUnique({
-          where: {
-            projectId_userId: { projectId: ws.projectId, userId },
-          },
-          select: { role: true },
-        });
-        if (pm) {
-          projectRole = pm.role as EffectiveRole;
-        }
-      }
-    }
+  if (ws.project && !ws.project.deletedAt) {
+    projectRole =
+      ws.project.ownerId === userId ? "ADMIN" : (ws.project.members?.[0]?.role ?? null);
   }
 
-  const workspaceRole = (ws.members?.[0]?.role as EffectiveRole) ?? null;
+  const workspaceRole = ws.members?.[0]?.role ?? null;
 
   const effective = maxRole(projectRole, workspaceRole);
   if (!effective) {

@@ -41,6 +41,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 
 const ROLE_RANK: Record<string, number> = {
   VIEWER: 1,
@@ -145,6 +146,11 @@ export function ShareAndPeopleDialog({
   initialResponsePrompt = null,
 }: ShareAndPeopleDialogProps) {
   const isProject = Boolean(projectId && !workspaceId);
+  const tMembers = useTranslations("Members");
+  const roleLabel = (role: string) =>
+    role in ROLE_RANK
+      ? tMembers(`roles.${role as "VIEWER" | "COMMENTER" | "EDITOR" | "ADMIN"}`)
+      : role;
   const resourceId = (isProject ? projectId : workspaceId) || "";
   const resourceTitle =
     (isProject ? projectName : workspaceTitle) ||
@@ -522,6 +528,9 @@ export function ShareAndPeopleDialog({
       });
       if (!res.ok) {
         const json = await res.json();
+        if (json?.error?.code === "role_below_inherited") {
+          throw new Error(tMembers("errors.belowInherited"));
+        }
         throw new Error(json?.error?.message || "Failed to update member role");
       }
       toast.success("Member role updated");
@@ -845,8 +854,10 @@ export function ShareAndPeopleDialog({
                                   className="text-[10px] px-1.5 py-0 text-muted"
                                 >
                                   {m.inheritedRole
-                                    ? `Inherited from project ? ${m.inheritedRole.charAt(0).toUpperCase() + m.inheritedRole.slice(1).toLowerCase()}`
-                                    : "Inherited from project"}
+                                    ? tMembers("inheritedBadge", {
+                                        role: roleLabel(m.inheritedRole),
+                                      })
+                                    : tMembers("inheritedBadgePlain")}
                                 </Badge>
                               )}
                             </div>
@@ -982,30 +993,29 @@ export function ShareAndPeopleDialog({
                                   className="h-8 text-xs w-28 bg-surface"
                                   title={
                                     m.inheritedRole
-                                      ? "Change this on the project to lower it"
+                                      ? tMembers("lowerOnProject")
                                       : undefined
                                   }
                                 >
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {[
-                                    { value: "VIEWER", label: "Viewer", rank: 1 },
-                                    { value: "COMMENTER", label: "Commenter", rank: 2 },
-                                    { value: "EDITOR", label: "Editor", rank: 3 },
-                                    ...(isOwner ? [{ value: "ADMIN", label: "Admin", rank: 4 }] : []),
-                                  ]
-                                    .filter((opt) => opt.rank >= (m.inheritedRole ? (ROLE_RANK[m.inheritedRole] ?? 1) : 1))
-                                    .map((opt) => (
-                                      <SelectItem key={opt.value} value={opt.value}>
-                                        {opt.label}
+                                  {["VIEWER", "COMMENTER", "EDITOR", ...(isOwner ? ["ADMIN"] : [])]
+                                    .filter(
+                                      (role) =>
+                                        ROLE_RANK[role]! >=
+                                        (m.inheritedRole ? (ROLE_RANK[m.inheritedRole] ?? 1) : 1)
+                                    )
+                                    .map((role) => (
+                                      <SelectItem key={role} value={role}>
+                                        {roleLabel(role)}
                                       </SelectItem>
                                     ))}
                                 </SelectContent>
                               </Select>
                               {m.inheritedRole && (
                                 <span className="text-[10px] text-muted">
-                                  Change this on the project to lower it
+                                  {tMembers("lowerOnProject")}
                                 </span>
                               )}
                             </div>
@@ -1019,7 +1029,7 @@ export function ShareAndPeopleDialog({
                               </Badge>
                               {m.inheritedRole && (
                                 <span className="text-[10px] text-muted">
-                                  Change this on the project to lower it
+                                  {tMembers("lowerOnProject")}
                                 </span>
                               )}
                             </div>
@@ -1042,7 +1052,9 @@ export function ShareAndPeopleDialog({
                             </Button>
                           )}
 
-                          {!isMemberOwner && (canEditThisMember || isSelf) && (
+                          {!isMemberOwner &&
+                            (canEditThisMember || isSelf) &&
+                            !(!isProject && m.source === "PROJECT") && (
                             <Button
                               variant="ghost"
                               size="sm"

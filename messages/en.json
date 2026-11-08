@@ -1056,6 +1056,15 @@
   "Members": {
     "errors": {
       "belowInherited": "Workspace role cannot be lower than the inherited project role"
+    },
+    "inheritedBadge": "Inherited from project · {role}",
+    "inheritedBadgePlain": "Inherited from project",
+    "lowerOnProject": "Change this on the project to lower it",
+    "roles": {
+      "VIEWER": "Viewer",
+      "COMMENTER": "Commenter",
+      "EDITOR": "Editor",
+      "ADMIN": "Admin"
     }
   }
 }

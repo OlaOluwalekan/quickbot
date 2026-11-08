@@ -1055,7 +1055,16 @@
   },
   "Members": {
     "errors": {
-      "belowInherited": "Le r?le dans l'espace de travail ne peut pas ?tre inf?rieur au r?le h?rit? du projet"
+      "belowInherited": "Le rôle dans l'espace de travail ne peut pas être inférieur au rôle hérité du projet"
+    },
+    "inheritedBadge": "Hérité du projet · {role}",
+    "inheritedBadgePlain": "Hérité du projet",
+    "lowerOnProject": "Modifiez-le dans le projet pour l'abaisser",
+    "roles": {
+      "VIEWER": "Lecteur",
+      "COMMENTER": "Commentateur",
+      "EDITOR": "Éditeur",
+      "ADMIN": "Administrateur"
     }
   }
 }

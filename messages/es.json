@@ -1056,6 +1056,15 @@
   "Members": {
     "errors": {
       "belowInherited": "El rol en el espacio de trabajo no puede ser inferior al rol heredado del proyecto"
+    },
+    "inheritedBadge": "Heredado del proyecto · {role}",
+    "inheritedBadgePlain": "Heredado del proyecto",
+    "lowerOnProject": "Cámbialo en el proyecto para reducirlo",
+    "roles": {
+      "VIEWER": "Lector",
+      "COMMENTER": "Comentarista",
+      "EDITOR": "Editor",
+      "ADMIN": "Administrador"
     }
   }
 }
