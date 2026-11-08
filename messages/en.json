@@ -1052,5 +1052,21 @@
     "no_permission": "You do not have permission to {capability}",
     "max_depth": "Maximum thread depth ({depth}) reached. Promote this answer to a new workspace to continue.",
     "upgrade": "Upgrade"
+  },
+  "Members": {
+    "errors": {
+      "belowInherited": "Workspace role cannot be lower than the inherited project role",
+      "inheritedMember": "This member's access comes from the project. Remove them from the project instead."
+    },
+    "inheritedBadge": "Inherited from project · {role}",
+    "inheritedBadgePlain": "Inherited from project",
+    "lowerOnProject": "Change this on the project to lower it",
+    "roles": {
+      "VIEWER": "Viewer",
+      "COMMENTER": "Commenter",
+      "EDITOR": "Editor",
+      "ADMIN": "Admin"
+    },
+    "manageOnProject": "Access comes from the project. Change or remove it there."
   }
 }

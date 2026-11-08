@@ -5,7 +5,6 @@ export const WorkspaceRoleEnum = z.enum([
   "COMMENTER",
   "EDITOR",
   "ADMIN",
-  "NONE",
 ]);
 
 export const ProjectRoleEnum = z.enum([

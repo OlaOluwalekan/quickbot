@@ -3,7 +3,7 @@ import { db } from "@/server/db/client";
 import type { Actor } from "@/server/auth/session";
 import { Errors } from "@/server/http/errors";
 import { requireWorkspace, requireProject, resolveWorkspaceRole } from "@/server/authz/access";
-import { can } from "@/server/authz/permissions";
+import { can, ROLE_RANK, maxRole } from "@/server/authz/permissions";
 import { logActivity } from "./activity";
 import { notify } from "./notify";
 import { getUserAvatar } from "./avatar";
@@ -79,12 +79,14 @@ export type MemberSummary = {
   invitedById: string | null;
   createdAt: Date;
   inherited?: boolean;
+  source?: "WORKSPACE" | "PROJECT" | "BOTH";
+  inheritedRole?: string | null;
   monthlyCreditCap?: number | null;
   monthlyCreditsUsed?: number;
 };
 
 export async function listWorkspaceMembers(actor: Actor, workspaceId: string) {
-  const { ws, role: actorRole } = await requireWorkspace(
+  const { role: actorRole } = await requireWorkspace(
     actor,
     workspaceId,
     "workspace.read"
@@ -119,6 +121,16 @@ export async function listWorkspaceMembers(actor: Actor, workspaceId: string) {
       },
       project: {
         include: {
+          owner: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              username: true,
+              displayUsername: true,
+              image: true,
+            },
+          },
           members: {
             include: {
               user: {
@@ -155,53 +167,85 @@ export async function listWorkspaceMembers(actor: Actor, workspaceId: string) {
     invitedById: null,
     createdAt: workspace.createdAt,
     inherited: false,
+    source: "WORKSPACE",
+    inheritedRole: null,
   };
 
   const membersMap = new Map<string, MemberSummary>();
 
   // 1. Inherited project members (if workspace belongs to a project)
-  if (workspace.project?.members) {
-    for (const pm of workspace.project.members) {
-      if (pm.userId === workspace.ownerId) continue;
-      membersMap.set(pm.userId, {
-        id: pm.id,
-        userId: pm.userId,
-        name: pm.user.name,
-        email: pm.user.email,
-        username: pm.user.username || pm.user.displayUsername,
-        image: pm.user.image,
-        avatarUrl: pm.user.image || null,
-        role: pm.role,
-        invitedById: pm.invitedById,
-        createdAt: pm.createdAt,
+  if (workspace.project) {
+    if (workspace.project.ownerId !== workspace.ownerId) {
+      const pOwner = workspace.project.owner;
+      membersMap.set(pOwner.id, {
+        id: `project-owner-${pOwner.id}`,
+        userId: pOwner.id,
+        name: pOwner.name,
+        email: pOwner.email,
+        username: pOwner.username || pOwner.displayUsername,
+        image: pOwner.image,
+        avatarUrl: pOwner.image || null,
+        role: "ADMIN",
+        invitedById: null,
+        createdAt: workspace.createdAt,
         inherited: true,
-        monthlyCreditCap: pm.monthlyCreditCap,
+        source: "PROJECT",
+        inheritedRole: "ADMIN",
       });
+    }
+
+    if (workspace.project.members) {
+      for (const pm of workspace.project.members) {
+        if (pm.userId === workspace.ownerId || pm.userId === workspace.project.ownerId) continue;
+        membersMap.set(pm.userId, {
+          id: pm.id,
+          userId: pm.userId,
+          name: pm.user.name,
+          email: pm.user.email,
+          username: pm.user.username || pm.user.displayUsername,
+          image: pm.user.image,
+          avatarUrl: pm.user.image || null,
+          role: pm.role,
+          invitedById: pm.invitedById,
+          createdAt: pm.createdAt,
+          inherited: true,
+          source: "PROJECT",
+          inheritedRole: pm.role,
+          monthlyCreditCap: pm.monthlyCreditCap,
+        });
+      }
     }
   }
 
-  // 2. Explicit workspace members (overrides inherited project role)
+  // 2. Explicit workspace members (adds rights or sets workspace role)
   for (const wm of workspace.members) {
     if (wm.userId === workspace.ownerId) continue;
-    if (wm.role === "NONE") {
-      // Explicit NONE excludes member
-      membersMap.delete(wm.userId);
-      continue;
+    const existing = membersMap.get(wm.userId);
+    if (existing) {
+      existing.source = "BOTH";
+      existing.role = maxRole(existing.inheritedRole, wm.role) ?? wm.role;
+      existing.id = wm.id;
+      if (wm.monthlyCreditCap !== undefined) {
+        existing.monthlyCreditCap = wm.monthlyCreditCap;
+      }
+    } else {
+      membersMap.set(wm.userId, {
+        id: wm.id,
+        userId: wm.userId,
+        name: wm.user.name,
+        email: wm.user.email,
+        username: wm.user.username || wm.user.displayUsername,
+        image: wm.user.image,
+        avatarUrl: wm.user.image || null,
+        role: wm.role,
+        invitedById: wm.invitedById,
+        createdAt: wm.createdAt,
+        inherited: false,
+        source: "WORKSPACE",
+        inheritedRole: null,
+        monthlyCreditCap: wm.monthlyCreditCap,
+      });
     }
-    membersMap.set(wm.userId, {
-      id: wm.id,
-      userId: wm.userId,
-      name: wm.user.name,
-      email: wm.user.email,
-      username: wm.user.username || wm.user.displayUsername,
-      image: wm.user.image,
-      avatarUrl: wm.user.image || null,
-      role: wm.role,
-      invitedById: wm.invitedById,
-      createdAt: wm.createdAt,
-      inherited: false,
-      monthlyCreditCap: wm.monthlyCreditCap,
-    });
   }
 
   // Populate avatars & monthly spend for members. Read-only: an owner without
@@ -228,7 +272,7 @@ export async function listWorkspaceMembers(actor: Actor, workspaceId: string) {
 }
 
 export async function listProjectMembers(actor: Actor, projectId: string) {
-  const { project, role: actorRole } = await requireProject(
+  const { role: actorRole } = await requireProject(
     actor,
     projectId,
     "workspace.read"
@@ -280,6 +324,8 @@ export async function listProjectMembers(actor: Actor, projectId: string) {
     invitedById: null,
     createdAt: proj.createdAt,
     inherited: false,
+    source: "PROJECT",
+    inheritedRole: null,
   };
 
   const memberList: MemberSummary[] = proj.members
@@ -296,6 +342,8 @@ export async function listProjectMembers(actor: Actor, projectId: string) {
       invitedById: m.invitedById,
       createdAt: m.createdAt,
       inherited: false,
+      source: "PROJECT" as const,
+      inheritedRole: null,
       monthlyCreditCap: m.monthlyCreditCap,
     }));
 
@@ -336,7 +384,6 @@ export async function updateWorkspaceMemberRole(
     "COMMENTER",
     "EDITOR",
     "ADMIN",
-    "NONE",
   ];
   if (!validRoles.includes(newRole as WorkspaceRole) || newRole === "OWNER") {
     throw Errors.badRequest("Invalid role for workspace member");
@@ -347,16 +394,28 @@ export async function updateWorkspaceMemberRole(
   const existingMember = await db.workspaceMember.findUnique({
     where: { workspaceId_userId: { workspaceId, userId: targetUserId } },
   });
-  const projectMember = ws.projectId
-    ? await db.projectMember.findUnique({
-        where: { projectId_userId: { projectId: ws.projectId, userId: targetUserId } },
-      })
-    : null;
 
-  // Role changes only apply to existing members (explicit or inherited from the
-  // project). Granting access to anyone else must go through an invitation.
-  const isExplicitMember = Boolean(existingMember && existingMember.role !== "NONE");
-  if (!isExplicitMember && !projectMember) {
+  let inheritedRole: WorkspaceRole | null = null;
+  if (ws.projectId) {
+    const project = await db.project.findUnique({
+      where: { id: ws.projectId },
+      select: { ownerId: true },
+    });
+    if (project?.ownerId === targetUserId) {
+      inheritedRole = "ADMIN";
+    } else {
+      const pm = await db.projectMember.findUnique({
+        where: { projectId_userId: { projectId: ws.projectId, userId: targetUserId } },
+      });
+      if (pm) {
+        inheritedRole = pm.role as WorkspaceRole;
+      }
+    }
+  }
+
+  // Role changes only apply to existing members (explicit or inherited from the project).
+  const isExplicitMember = Boolean(existingMember);
+  if (!isExplicitMember && !inheritedRole) {
     throw Errors.notFound("Member");
   }
 
@@ -364,12 +423,20 @@ export async function updateWorkspaceMemberRole(
     if (newRole === "ADMIN") {
       throw Errors.forbidden("Only the owner can assign the Admin role");
     }
-    if (existingMember?.role === "ADMIN" || projectMember?.role === "ADMIN") {
+    if (existingMember?.role === "ADMIN" || inheritedRole === "ADMIN") {
       throw Errors.forbidden("Only the owner can modify an Admin's role");
     }
   }
 
-  const oldRole = isExplicitMember ? existingMember!.role : projectMember?.role ?? "NONE";
+  // Workspace role cannot be lower than the inherited project role
+  if (inheritedRole && (ROLE_RANK[newRole as WorkspaceRole] ?? 0) < (ROLE_RANK[inheritedRole] ?? 0)) {
+    throw Errors.conflict(
+      "Workspace role cannot be lower than the inherited project role",
+      "role_below_inherited"
+    );
+  }
+
+  const oldRole = existingMember?.role ?? inheritedRole ?? "VIEWER";
 
   const updated = await db.workspaceMember.upsert({
     where: { workspaceId_userId: { workspaceId, userId: targetUserId } },
@@ -392,16 +459,12 @@ export async function updateWorkspaceMemberRole(
   });
 
   if (oldRole !== newRole) {
-    if (newRole === "NONE") {
-      await notifyMemberChange(targetUserId, "MEMBER_REMOVED", { workspaceId });
-    } else {
-      await notifyMemberChange(
-        targetUserId,
-        "ROLE_CHANGED",
-        { workspaceId },
-        { oldRole, newRole }
-      );
-    }
+    await notifyMemberChange(
+      targetUserId,
+      "ROLE_CHANGED",
+      { workspaceId },
+      { oldRole, newRole }
+    );
   }
 
   return { success: true, member: updated };
@@ -494,39 +557,50 @@ export async function removeWorkspaceMember(
   const existingWm = await db.workspaceMember.findUnique({
     where: { workspaceId_userId: { workspaceId, userId: targetUserId } },
   });
-  const pm = ws.projectId
-    ? await db.projectMember.findUnique({
-        where: { projectId_userId: { projectId: ws.projectId, userId: targetUserId } },
-      })
-    : null;
-  const inheritsFromProject = Boolean(pm);
 
-  const hasAccess = Boolean(existingWm && existingWm.role !== "NONE") || inheritsFromProject;
-  if (!hasAccess || existingWm?.role === "NONE") {
-    // Not a member, or already excluded
+  let inheritsFromProject = false;
+  let projectRole: WorkspaceRole | null = null;
+  if (ws.projectId) {
+    const project = await db.project.findUnique({
+      where: { id: ws.projectId },
+      select: { ownerId: true },
+    });
+    if (project?.ownerId === targetUserId) {
+      inheritsFromProject = true;
+      projectRole = "ADMIN";
+    } else {
+      const pm = await db.projectMember.findUnique({
+        where: { projectId_userId: { projectId: ws.projectId, userId: targetUserId } },
+      });
+      if (pm) {
+        inheritsFromProject = true;
+        projectRole = pm.role as WorkspaceRole;
+      }
+    }
+  }
+
+  if (!existingWm && !inheritsFromProject) {
+    // Not a member
     throw Errors.notFound("Member");
   }
 
   if (!isSelf && actor.userId !== ws.ownerId) {
     // Admins (explicit or inherited from the project) can only be removed by the owner
-    if (existingWm?.role === "ADMIN" || (!existingWm && pm?.role === "ADMIN")) {
+    if (existingWm?.role === "ADMIN" || projectRole === "ADMIN") {
       throw Errors.forbidden("Only the owner can remove an Admin");
     }
   }
 
-  if (inheritsFromProject) {
-    // To cleanly exclude a user who has inherited project access, set their workspace role to NONE
-    await db.workspaceMember.upsert({
-      where: { workspaceId_userId: { workspaceId, userId: targetUserId } },
-      update: { role: "NONE" },
-      create: {
-        workspaceId,
-        userId: targetUserId,
-        role: "NONE",
-        invitedById: actor.userId,
-      },
-    });
-  } else if (existingWm) {
+  if (!existingWm && inheritsFromProject) {
+    // Top-down rule: a workspace can't take away access that comes from the
+    // project. The only way to remove it is to remove them from the project.
+    throw Errors.conflict(
+      "This member's access comes from the project. Remove them from the project instead.",
+      "member_inherited"
+    );
+  }
+
+  if (existingWm) {
     await db.workspaceMember.delete({
       where: { id: existingWm.id },
     });
@@ -542,7 +616,16 @@ export async function removeWorkspaceMember(
   });
 
   if (!isSelf) {
-    await notifyMemberChange(targetUserId, "MEMBER_REMOVED", { workspaceId });
+    if (inheritsFromProject && projectRole) {
+      await notifyMemberChange(
+        targetUserId,
+        "ROLE_CHANGED",
+        { workspaceId },
+        { oldRole: existingWm!.role, newRole: projectRole }
+      );
+    } else {
+      await notifyMemberChange(targetUserId, "MEMBER_REMOVED", { workspaceId });
+    }
   }
 
   return { success: true };
@@ -758,7 +841,7 @@ export async function transferProjectOwnership(
 
 /**
  * Number of people with access to a workspace: the owner, plus explicit
- * members, plus project members inheriting access, minus `NONE` exclusions.
+ * members, plus project members inheriting access.
  */
 export async function countWorkspaceMembers(workspaceId: string): Promise<number> {
   const ws = await db.workspace.findUnique({
@@ -766,16 +849,21 @@ export async function countWorkspaceMembers(workspaceId: string): Promise<number
     select: {
       ownerId: true,
       members: { select: { userId: true, role: true } },
-      project: { select: { members: { select: { userId: true } } } },
+      project: {
+        select: {
+          ownerId: true,
+          members: { select: { userId: true } },
+        },
+      },
     },
   });
   if (!ws) return 0;
 
   const people = new Set<string>();
+  if (ws.project?.ownerId) people.add(ws.project.ownerId);
   for (const pm of ws.project?.members ?? []) people.add(pm.userId);
   for (const wm of ws.members ?? []) {
-    if (wm.role === "NONE") people.delete(wm.userId);
-    else people.add(wm.userId);
+    people.add(wm.userId);
   }
   people.delete(ws.ownerId);
   return people.size + 1;
@@ -802,13 +890,13 @@ export async function updateWorkspaceMemberCap(
   const existingMember = await db.workspaceMember.findUnique({
     where: { workspaceId_userId: { workspaceId, userId: targetUserId } },
   });
-  if (!existingMember || existingMember.role === "NONE") {
+  if (!existingMember) {
     // A member who only inherits access from the project has no WorkspaceMember
     // row. Creating one just to hold the cap would turn them into an explicit
     // member whose access survives removal from the project, so their cap is
     // managed on the project instead (resolveMemberMonthlyCreditCap reads it there).
     const projectMember =
-      ws.projectId && !existingMember
+      ws.projectId
         ? await db.projectMember.findUnique({
             where: { projectId_userId: { projectId: ws.projectId, userId: targetUserId } },
             select: { id: true },

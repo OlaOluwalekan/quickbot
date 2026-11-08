@@ -41,6 +41,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
+
+const ROLE_RANK: Record<string, number> = {
+  VIEWER: 1,
+  COMMENTER: 2,
+  EDITOR: 3,
+  ADMIN: 4,
+};
 
 interface MemberItem {
   id: string;
@@ -52,6 +60,8 @@ interface MemberItem {
   avatarUrl: string | null;
   role: string;
   inherited?: boolean;
+  source?: "WORKSPACE" | "PROJECT" | "BOTH";
+  inheritedRole?: string | null;
   monthlyCreditCap?: number | null;
   monthlyCreditsUsed?: number;
 }
@@ -136,6 +146,11 @@ export function ShareAndPeopleDialog({
   initialResponsePrompt = null,
 }: ShareAndPeopleDialogProps) {
   const isProject = Boolean(projectId && !workspaceId);
+  const tMembers = useTranslations("Members");
+  const roleLabel = (role: string) =>
+    role in ROLE_RANK
+      ? tMembers(`roles.${role as "VIEWER" | "COMMENTER" | "EDITOR" | "ADMIN"}`)
+      : role;
   const resourceId = (isProject ? projectId : workspaceId) || "";
   const resourceTitle =
     (isProject ? projectName : workspaceTitle) ||
@@ -513,6 +528,9 @@ export function ShareAndPeopleDialog({
       });
       if (!res.ok) {
         const json = await res.json();
+        if (json?.error?.code === "role_below_inherited") {
+          throw new Error(tMembers("errors.belowInherited"));
+        }
         throw new Error(json?.error?.message || "Failed to update member role");
       }
       toast.success("Member role updated");
@@ -536,6 +554,9 @@ export function ShareAndPeopleDialog({
       });
       if (!res.ok) {
         const json = await res.json();
+        if (json?.error?.code === "member_inherited") {
+          throw new Error(tMembers("errors.inheritedMember"));
+        }
         throw new Error(json?.error?.message || "Failed to remove member");
       }
       toast.success(
@@ -830,12 +851,16 @@ export function ShareAndPeopleDialog({
                                   <Crown className="h-3 w-3" /> Owner
                                 </span>
                               )}
-                              {m.inherited && (
+                              {(m.inherited || m.inheritedRole) && (
                                 <Badge
                                   variant="outline"
                                   className="text-[10px] px-1.5 py-0 text-muted"
                                 >
-                                  Inherited from project
+                                  {m.inheritedRole
+                                    ? tMembers("inheritedBadge", {
+                                        role: roleLabel(m.inheritedRole),
+                                      })
+                                    : tMembers("inheritedBadgePlain")}
                                 </Badge>
                               )}
                             </div>
@@ -960,33 +985,57 @@ export function ShareAndPeopleDialog({
                               Owner
                             </span>
                           ) : canEditThisMember ? (
-                            <Select
-                              value={m.role}
-                              onValueChange={(val) =>
-                                handleUpdateRole(m.userId, val)
-                              }
-                            >
-                              <SelectTrigger className="h-8 text-xs w-28 bg-surface">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="VIEWER">Viewer</SelectItem>
-                                <SelectItem value="COMMENTER">
-                                  Commenter
-                                </SelectItem>
-                                <SelectItem value="EDITOR">Editor</SelectItem>
-                                {isOwner && (
-                                  <SelectItem value="ADMIN">Admin</SelectItem>
-                                )}
-                              </SelectContent>
-                            </Select>
+                            <div className="flex flex-col items-end gap-0.5">
+                              <Select
+                                value={m.role}
+                                onValueChange={(val) =>
+                                  handleUpdateRole(m.userId, val)
+                                }
+                              >
+                                <SelectTrigger
+                                  className="h-8 text-xs w-28 bg-surface"
+                                  title={
+                                    m.inheritedRole
+                                      ? tMembers(m.source === "PROJECT" ? "manageOnProject" : "lowerOnProject")
+                                      : undefined
+                                  }
+                                >
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {["VIEWER", "COMMENTER", "EDITOR", ...(isOwner ? ["ADMIN"] : [])]
+                                    .filter(
+                                      (role) =>
+                                        ROLE_RANK[role]! >=
+                                        (m.inheritedRole ? (ROLE_RANK[m.inheritedRole] ?? 1) : 1)
+                                    )
+                                    .map((role) => (
+                                      <SelectItem key={role} value={role}>
+                                        {roleLabel(role)}
+                                      </SelectItem>
+                                    ))}
+                                </SelectContent>
+                              </Select>
+                              {m.inheritedRole && (
+                                <span className="text-[10px] text-muted">
+                                  {tMembers(m.source === "PROJECT" ? "manageOnProject" : "lowerOnProject")}
+                                </span>
+                              )}
+                            </div>
                           ) : (
-                            <Badge
-                              variant="outline"
-                              className="text-xs uppercase"
-                            >
-                              {m.role}
-                            </Badge>
+                            <div className="flex flex-col items-end gap-0.5">
+                              <Badge
+                                variant="outline"
+                                className="text-xs uppercase"
+                              >
+                                {m.role}
+                              </Badge>
+                              {m.inheritedRole && (
+                                <span className="text-[10px] text-muted">
+                                  {tMembers(m.source === "PROJECT" ? "manageOnProject" : "lowerOnProject")}
+                                </span>
+                              )}
+                            </div>
                           )}
 
                           {/* Member actions */}
@@ -1006,7 +1055,9 @@ export function ShareAndPeopleDialog({
                             </Button>
                           )}
 
-                          {!isMemberOwner && (canEditThisMember || isSelf) && (
+                          {!isMemberOwner &&
+                            (canEditThisMember || isSelf) &&
+                            !(!isProject && m.source === "PROJECT") && (
                             <Button
                               variant="ghost"
                               size="sm"

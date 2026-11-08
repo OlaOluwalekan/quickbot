@@ -185,21 +185,11 @@ export async function getProjectWorkspaces(
 ) {
   await requireProject(actor, projectId, "workspace.read");
 
-  // List non-deleted workspaces in this project where actor is owner OR
-  // has an explicit workspace role != NONE OR has no explicit workspace role (inherits project role)
+  // List all non-deleted workspaces in this project
   const rows = await db.workspace.findMany({
     where: {
       projectId,
       deletedAt: null,
-      OR: [
-        { ownerId: actor.userId },
-        { members: { some: { userId: actor.userId, role: { not: "NONE" } } } },
-        {
-          AND: [
-            { members: { none: { userId: actor.userId } } },
-          ],
-        },
-      ],
     },
     take: query.limit + 1,
     ...(query.cursor

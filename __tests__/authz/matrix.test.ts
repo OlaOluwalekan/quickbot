@@ -111,7 +111,7 @@ describe("Authorization Service & Permission Matrix (Step 1.5)", () => {
     });
   });
 
-  describe("2. Role precedence & inheritance (D-02: owner > explicit workspace role > project role > none)", () => {
+  describe("2. Role precedence & inheritance (F1.1: owner > max(project role, workspace role) > none)", () => {
     it("resolves OWNER when userId matches ws.ownerId regardless of member rows", async () => {
       mockWorkspaceFindFirst.mockResolvedValue({
         id: wsId,
@@ -141,59 +141,62 @@ describe("Authorization Service & Permission Matrix (Step 1.5)", () => {
         projectId: projId,
         archivedAt: null,
         members: [],
-      });
-      mockProjectMemberFindUnique.mockResolvedValue({
-        role: "EDITOR",
+        project: { ownerId: userA.userId, deletedAt: null, members: [{ role: "EDITOR" }] },
       });
 
       const resolved = await resolveWorkspaceRole(userB.userId, wsId);
       expect(resolved?.role).toBe("EDITOR");
-      expect(mockProjectMemberFindUnique).toHaveBeenCalledWith({
-        where: {
-          projectId_userId: { projectId: projId, userId: userB.userId },
-        },
-        select: { role: true },
-      });
+      // Project role is loaded in the same query (include on `project`), no extra lookup.
+      expect(mockProjectMemberFindUnique).not.toHaveBeenCalled();
     });
 
-    it("explicit workspace role overrides inherited project role (upgrade or downgrade)", async () => {
+    it("ignores the project role when the project is soft-deleted", async () => {
+      mockWorkspaceFindFirst.mockResolvedValue({
+        id: wsId,
+        ownerId: userA.userId,
+        projectId: projId,
+        archivedAt: null,
+        members: [],
+        project: { ownerId: userB.userId, deletedAt: new Date(), members: [] },
+      });
+
+      expect(await resolveWorkspaceRole(userB.userId, wsId)).toBeNull();
+    });
+
+    it("top-down permissions: effective role is max(project role, workspace role)", async () => {
       mockWorkspaceFindFirst.mockResolvedValue({
         id: wsId,
         ownerId: userA.userId,
         projectId: projId,
         archivedAt: null,
         members: [{ role: "COMMENTER" }],
-      });
-      mockProjectMemberFindUnique.mockResolvedValue({
-        role: "ADMIN",
+        project: {
+          ownerId: userA.userId,
+          deletedAt: null,
+          members: [{ role: "ADMIN" }],
+        },
       });
 
       const resolved = await resolveWorkspaceRole(userB.userId, wsId);
-      expect(resolved?.role).toBe("COMMENTER");
-      expect(mockProjectMemberFindUnique).not.toHaveBeenCalled();
+      expect(resolved?.role).toBe("ADMIN");
     });
 
-    it("explicit WorkspaceRole.NONE excludes a project member from that workspace (returns null / 404)", async () => {
+    it("project owner gets ADMIN on a workspace owned by someone else in their project", async () => {
       mockWorkspaceFindFirst.mockResolvedValue({
         id: wsId,
         ownerId: userA.userId,
         projectId: projId,
         archivedAt: null,
-        members: [{ role: "NONE" }],
-      });
-      mockProjectMemberFindUnique.mockResolvedValue({
-        role: "ADMIN",
+        members: [],
+        project: {
+          ownerId: userB.userId,
+          deletedAt: null,
+          members: [],
+        },
       });
 
       const resolved = await resolveWorkspaceRole(userB.userId, wsId);
-      expect(resolved).toBeNull();
-
-      await expect(
-        requireWorkspace(userB, wsId, "workspace.read")
-      ).rejects.toMatchObject({
-        status: 404,
-        code: "not_found",
-      });
+      expect(resolved?.role).toBe("ADMIN");
     });
 
     it("removing a user from a project removes inherited access unless they have an explicit workspace row", async () => {
@@ -203,9 +206,9 @@ describe("Authorization Service & Permission Matrix (Step 1.5)", () => {
         projectId: projId,
         archivedAt: null,
         members: [],
+        // Project membership removed -> no ProjectMember row
+        project: { ownerId: userA.userId, deletedAt: null, members: [] },
       });
-      // Project membership removed -> findUnique returns null
-      mockProjectMemberFindUnique.mockResolvedValue(null);
 
       const resolved = await resolveWorkspaceRole(userB.userId, wsId);
       expect(resolved).toBeNull();

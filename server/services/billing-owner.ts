@@ -116,7 +116,7 @@ export async function resolveOwnerPlanKey(
 /**
  * Resolves a collaborator's effective monthly credit cap for a workspace.
  * - Owner has no collaborator cap (`null`).
- * - Explicit `WorkspaceMember` row (if role != NONE) takes precedence over `ProjectMember`.
+ * - Explicit `WorkspaceMember` row takes precedence over `ProjectMember`.
  * - `null` means unlimited.
  */
 export async function resolveMemberMonthlyCreditCap(
@@ -138,7 +138,7 @@ export async function resolveMemberMonthlyCreditCap(
     select: { role: true, monthlyCreditCap: true },
   });
 
-  if (wm && wm.role !== "NONE") {
+  if (wm) {
     return wm.monthlyCreditCap;
   }
 

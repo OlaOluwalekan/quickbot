@@ -1052,5 +1052,21 @@
     "no_permission": "No tienes permiso para {capability}",
     "max_depth": "Se alcanzó la profundidad máxima de hilo ({depth}). Promueve esta respuesta a un nuevo espacio para continuar.",
     "upgrade": "Mejorar plan"
+  },
+  "Members": {
+    "errors": {
+      "belowInherited": "El rol en el espacio de trabajo no puede ser inferior al rol heredado del proyecto",
+      "inheritedMember": "El acceso de este miembro proviene del proyecto. Quítalo del proyecto."
+    },
+    "inheritedBadge": "Heredado del proyecto · {role}",
+    "inheritedBadgePlain": "Heredado del proyecto",
+    "lowerOnProject": "Cámbialo en el proyecto para reducirlo",
+    "roles": {
+      "VIEWER": "Lector",
+      "COMMENTER": "Comentarista",
+      "EDITOR": "Editor",
+      "ADMIN": "Administrador"
+    },
+    "manageOnProject": "El acceso proviene del proyecto. Cámbialo o quítalo allí."
   }
 }

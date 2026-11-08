@@ -79,8 +79,16 @@ export async function getHomeData(actor: Actor): Promise<HomeData> {
               members: {
                 some: {
                   userId: actor.userId,
-                  role: { not: "NONE" },
                 },
+              },
+            },
+            {
+              project: {
+                deletedAt: null,
+                OR: [
+                  { ownerId: actor.userId },
+                  { members: { some: { userId: actor.userId } } },
+                ],
               },
             },
           ],
@@ -148,14 +156,16 @@ export async function getHomeData(actor: Actor): Promise<HomeData> {
               members: {
                 some: {
                   userId: actor.userId,
-                  role: { not: "NONE" },
                 },
               },
             },
             {
               project: {
                 deletedAt: null,
-                members: { some: { userId: actor.userId } },
+                OR: [
+                  { ownerId: actor.userId },
+                  { members: { some: { userId: actor.userId } } },
+                ],
               },
             },
           ],

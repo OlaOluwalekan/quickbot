@@ -2,7 +2,12 @@ import "server-only";
 import type { Actor } from "@/server/auth/session";
 import { db } from "@/server/db/client";
 import { Errors } from "@/server/http/errors";
-import { can, type EffectiveRole, type Permission } from "./permissions";
+import {
+  can,
+  maxRole,
+  type EffectiveRole,
+  type Permission,
+} from "./permissions";
 
 export type ResolvedWorkspaceAccess = {
   ws: {
@@ -25,9 +30,19 @@ export type ResolvedProjectAccess = {
 
 /**
  * Resolves a user's effective role on a workspace.
- * Precedence (D-02): OWNER > explicit WorkspaceMember role > inherited ProjectMember role > none.
- * - Soft-deleted workspaces (`deletedAt != null`) return `null`.
- * - Explicit `WorkspaceRole.NONE` overrides any inherited project role and returns `null`.
+ *
+ * Top-down permission inheritance (F1.1):
+ * effectiveRole(user, workspace) =
+ *   OWNER                                  if workspace.ownerId == user
+ *   max(projectRole, workspaceRole)        by rank VIEWER < COMMENTER < EDITOR < ADMIN
+ *   where projectRole = OWNER->ADMIN* if user owns the workspace's project, else ProjectMember.role or none
+ *
+ * * The project owner gets ADMIN on every workspace in their project even if someone else
+ *   owns the workspace (owner of the container must be able to see/manage what's in it).
+ *   Keep billing with the workspace owner.
+ *
+ * A workspace row can add rights, never remove inherited ones.
+ * Soft-deleted workspaces (`deletedAt != null`) return `null`.
  */
 export async function resolveWorkspaceRole(
   userId: string,
@@ -41,6 +56,14 @@ export async function resolveWorkspaceRole(
       projectId: true,
       archivedAt: true,
       members: { where: { userId }, select: { role: true } },
+      project: {
+        select: {
+          id: true,
+          ownerId: true,
+          deletedAt: true,
+          members: { where: { userId }, select: { role: true } },
+        },
+      },
     },
   });
 
@@ -57,30 +80,28 @@ export async function resolveWorkspaceRole(
     return { ws: summary, role: "OWNER" };
   }
 
-  const explicit = ws.members?.[0]?.role; // workspace row overrides project row
-  if (explicit) {
-    return explicit === "NONE" ? null : { ws: summary, role: explicit };
+  // Inherited project role (loaded in the same query). The project owner is
+  // ADMIN on every workspace in their project; a soft-deleted project grants nothing.
+  let projectRole: EffectiveRole | null = null;
+  if (ws.project && !ws.project.deletedAt) {
+    projectRole =
+      ws.project.ownerId === userId ? "ADMIN" : (ws.project.members?.[0]?.role ?? null);
   }
 
-  if (ws.projectId) {
-    const pm = await db.projectMember.findUnique({
-      where: {
-        projectId_userId: { projectId: ws.projectId, userId },
-      },
-      select: { role: true },
-    });
-    if (pm) {
-      return { ws: summary, role: pm.role };
-    }
+  const workspaceRole = ws.members?.[0]?.role ?? null;
+
+  const effective = maxRole(projectRole, workspaceRole);
+  if (!effective) {
+    return null;
   }
 
-  return null;
+  return { ws: summary, role: effective };
 }
 
 /**
  * Enforces that `actor` holds `perm` on `workspaceId`.
  * - Throws `404 Not Found` when the workspace does not exist, is soft-deleted,
- *   or the actor has no role (`null` / `NONE`) — never leaking existence via `403`.
+ *   or the actor has no role (`null`) — never leaking existence via `403`.
  * - Throws `403 Forbidden` when the actor has access to the workspace (`VIEWER+`)
  *   but their role does not grant `perm`.
  * - Throws `409 Conflict` when the workspace is archived and `perm` is anything
