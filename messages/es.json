@@ -221,12 +221,7 @@
   },
   "Email": {
     "common": {
-      "appName": "Klecx",
-      "supportNotice": "¿Tienes preguntas o necesitas ayuda? Contacta a nuestro equipo en {supportEmail}",
-      "legalNotice": "Klecx es un producto de {companyLegalName} · {companyAddress} · © {year}",
-      "transactionalDisclaimer": "Este es un mensaje transaccional automatizado enviado a {email}. Lo recibes por un evento o acción de seguridad en tu cuenta.",
-      "copyUrlNotice": "Si el botón anterior no funciona, copia y pega este enlace en tu navegador web:",
-      "merchantOfRecordNotice": "Servicios de Merchant of Record proporcionados por Creem."
+      "appName": "Klecx"
     },
     "verifyEmail": {
       "subject": "Verifica tu dirección de correo electrónico de Klecx",
@@ -521,7 +516,8 @@
       "trustDisclosure": "Klecx es una interfaz independiente construida sobre modelos de IA de terceros (actualmente Google Gemini). Cobramos con transparencia según costos computacionales reales, sin patrones oscuros.",
       "allRightsReserved": "Todos los derechos reservados.",
       "help": "Centro de ayuda",
-      "support": "Contactar soporte"
+      "support": "Contactar soporte",
+      "productOf": "{appName} es un producto de {companyLegalName} · {companyAddress}."
     },
     "hero": {
       "badge": "Espacios de trabajo, no hilos",
@@ -1037,7 +1033,8 @@
       "description": "Klecx está experimentando un mantenimiento programado para mejorar el rendimiento y la estabilidad. Los servicios se reanudarán pronto.",
       "statusNotice": "Consulta la disponibilidad en tiempo real en nuestra página de estado.",
       "viewStatus": "Estado del sistema",
-      "supportNotice": "¿Consulta urgente? Contáctanos en"
+      "supportNotice": "¿Consulta urgente? Contáctanos en",
+      "monitored": "Todos los sistemas se supervisan las 24 horas, los 7 días de la semana."
     },
     "offline": {
       "message": "Actualmente estás sin conexión. Verifica tu conexión a internet.",

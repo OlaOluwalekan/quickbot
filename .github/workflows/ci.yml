@@ -40,6 +40,14 @@ jobs:
         env:
           UPSTASH_REDIS_REST_URL: https://ci-dummy-redis.upstash.io
           UPSTASH_REDIS_REST_TOKEN: ci-dummy-redis-token
+          # Public site identity (F0.2) — required when env validates as production.
+          # Placeholders only; real values are set on the hosting platform, not here.
+          SUPPORT_EMAIL: support@example.com
+          PRIVACY_EMAIL: privacy@example.com
+          ABUSE_EMAIL: abuse@example.com
+          COMPANY_LEGAL_NAME: Vyraxity
+          COMPANY_ADDRESS: Lagos, Nigeria
+          COMPANY_COUNTRY: NG
       - run: npm audit --omit=dev --audit-level=high
   secrets:
     runs-on: ubuntu-latest

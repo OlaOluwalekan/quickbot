@@ -221,12 +221,7 @@
   },
   "Email": {
     "common": {
-      "appName": "Klecx",
-      "supportNotice": "Questions or need help? Contact our support team at {supportEmail}",
-      "legalNotice": "Klecx is a product of {companyLegalName} · {companyAddress} · © {year}",
-      "transactionalDisclaimer": "This is an automated transactional message sent to {email}. You are receiving this because an account event or security action occurred.",
-      "copyUrlNotice": "If the button above does not work, copy and paste this link into your web browser:",
-      "merchantOfRecordNotice": "Merchant of Record services provided by Creem."
+      "appName": "Klecx"
     },
     "verifyEmail": {
       "subject": "Verify your Klecx email address",
@@ -521,7 +516,8 @@
       "trustDisclosure": "Klecx is an independent interface built on third-party AI models (currently Google Gemini). We charge transparently based on real computational costs with zero dark patterns.",
       "allRightsReserved": "All rights reserved.",
       "help": "Help Center",
-      "support": "Contact Support"
+      "support": "Contact Support",
+      "productOf": "{appName} is a product of {companyLegalName} · {companyAddress}."
     },
     "hero": {
       "badge": "Workspaces, not threads",
@@ -1037,7 +1033,8 @@
       "description": "Klecx is currently undergoing scheduled platform upgrades to improve performance and stability. Services will resume shortly.",
       "statusNotice": "Check real-time infrastructure availability on our status page.",
       "viewStatus": "System Status",
-      "supportNotice": "Urgent inquiry? Reach our team at"
+      "supportNotice": "Urgent inquiry? Reach our team at",
+      "monitored": "All systems monitored 24/7."
     },
     "offline": {
       "message": "You are currently offline. Check your internet connection.",

@@ -6,11 +6,9 @@ import {
   WebSiteJsonLd,
   SoftwareApplicationJsonLd,
 } from "@/components/seo/json-ld";
+import { getSiteConfig } from "@/server/config/site";
 
-const siteUrl =
-  process.env.NEXT_PUBLIC_APP_URL ||
-  process.env.APP_URL ||
-  "https://klecx.com";
+const siteUrl = getSiteConfig().appUrl;
 
 export default function MarketingLayout({
   children,

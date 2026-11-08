@@ -1,10 +1,8 @@
 import type { MetadataRoute } from "next";
+import { getSiteConfig } from "@/server/config/site";
 
 export default function robots(): MetadataRoute.Robots {
-  const siteUrl =
-    process.env.NEXT_PUBLIC_APP_URL ||
-    process.env.APP_URL ||
-    "https://klecx.com";
+  const siteUrl = getSiteConfig().appUrl;
   const baseUrl = siteUrl.replace(/\/$/, "");
 
   return {

@@ -7,6 +7,7 @@ import {
   setSiteConfigForTesting,
   clearSiteConfigForTesting,
 } from "@/server/config/site";
+import { env } from "@/server/env";
 import {
   SiteConfigProvider,
   useSiteConfig,
@@ -77,18 +78,12 @@ describe("Step F0.2 — Site configuration: emails, company identity, links from
       expect(cfg.billingEnabled).toBe(false);
     });
 
-    it("falls back legal and billing emails to SUPPORT_EMAIL when not explicitly set", () => {
-      const origSupport = process.env.SUPPORT_EMAIL;
-      try {
-        process.env.SUPPORT_EMAIL = "help@vyraxity.com";
-        const cfg = getSiteConfig();
-        expect(cfg.emails.support).toBe("help@vyraxity.com");
-        expect(cfg.emails.legal).toBe("help@vyraxity.com");
-        expect(cfg.emails.billing).toBe("help@vyraxity.com");
-      } finally {
-        if (origSupport === undefined) delete process.env.SUPPORT_EMAIL;
-        else process.env.SUPPORT_EMAIL = origSupport;
-      }
+    it("is a pure read of the validated env (fallbacks are tested in unit/env.test.ts)", () => {
+      const cfg = getSiteConfig();
+      expect(cfg.emails.support).toBe(env.SUPPORT_EMAIL);
+      expect(cfg.emails.legal).toBe(env.LEGAL_EMAIL);
+      expect(cfg.emails.billing).toBe(env.BILLING_EMAIL);
+      expect(cfg.company.legalName).toBe(env.COMPANY_LEGAL_NAME);
     });
   });
 

@@ -19,6 +19,7 @@ export const metadata: Metadata = {
 
 export default async function MaintenancePage() {
   const t = await getTranslations("Errors");
+  const tFooter = await getTranslations("Marketing.footer");
   const site = getSiteConfig();
 
   return (
@@ -80,8 +81,13 @@ export default async function MaintenancePage() {
       {/* Footer */}
       <footer className="w-full max-w-4xl text-center text-xs text-fg-subtle pt-6">
         <span>
-          © {new Date().getFullYear()} {site.appName} · {site.company.legalName} ·{" "}
-          {site.company.address}. All systems monitored 24/7.
+          © {new Date().getFullYear()}{" "}
+          {tFooter("productOf", {
+            appName: site.appName,
+            companyLegalName: site.company.legalName,
+            companyAddress: site.company.address,
+          })}{" "}
+          {t("maintenance.monitored")}
         </span>
       </footer>
     </div>

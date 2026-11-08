@@ -116,8 +116,13 @@ export function MarketingFooter() {
         {/* Bottom Bar */}
         <div className="mt-12 pt-6 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-fg-subtle">
           <p>
-            © {currentYear} {site.appName} is a product of {site.company.legalName} ·{" "}
-            {site.company.address}. {t("allRightsReserved")}
+            © {currentYear}{" "}
+            {t("productOf", {
+              appName: site.appName,
+              companyLegalName: site.company.legalName,
+              companyAddress: site.company.address,
+            })}{" "}
+            {t("allRightsReserved")}
           </p>
           <div className="flex items-center gap-4">
             <Link href="/terms" className="hover:underline">

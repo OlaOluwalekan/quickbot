@@ -36,65 +36,29 @@ export function clearSiteConfigForTesting(): void {
 }
 
 export function getSiteConfig(): SiteConfig {
-  const support = process.env.SUPPORT_EMAIL || env.SUPPORT_EMAIL;
-  const privacy = process.env.PRIVACY_EMAIL || env.PRIVACY_EMAIL;
-  const abuse = process.env.ABUSE_EMAIL || env.ABUSE_EMAIL;
-  const legal =
-    process.env.LEGAL_EMAIL ||
-    (process.env.SUPPORT_EMAIL ? process.env.SUPPORT_EMAIL : env.LEGAL_EMAIL);
-  const billing =
-    process.env.BILLING_EMAIL ||
-    (process.env.SUPPORT_EMAIL ? process.env.SUPPORT_EMAIL : env.BILLING_EMAIL);
-
-  const legalName = process.env.COMPANY_LEGAL_NAME || env.COMPANY_LEGAL_NAME;
-  const address = process.env.COMPANY_ADDRESS || env.COMPANY_ADDRESS;
-  const country = process.env.COMPANY_COUNTRY || env.COMPANY_COUNTRY;
-  const regNumber =
-    process.env.COMPANY_REG_NUMBER !== undefined
-      ? process.env.COMPANY_REG_NUMBER || undefined
-      : env.COMPANY_REG_NUMBER;
-  const website = process.env.COMPANY_WEBSITE || env.COMPANY_WEBSITE;
-
-  const x =
-    process.env.SOCIAL_X_URL !== undefined
-      ? process.env.SOCIAL_X_URL || undefined
-      : env.SOCIAL_X_URL;
-  const github =
-    process.env.SOCIAL_GITHUB_URL !== undefined
-      ? process.env.SOCIAL_GITHUB_URL || undefined
-      : env.SOCIAL_GITHUB_URL;
-
-  const billingEnabled =
-    process.env.BILLING_ENABLED !== undefined
-      ? process.env.BILLING_ENABLED === "true"
-      : env.BILLING_ENABLED;
-
-  const appUrl = (process.env.APP_URL || env.APP_URL).replace(/\/$/, "");
-
   const base: SiteConfig = {
     appName: "Klecx",
-    appUrl,
-    billingEnabled,
+    appUrl: env.APP_URL.replace(/\/$/, ""),
+    billingEnabled: env.BILLING_ENABLED,
     emails: {
-      support,
-      privacy,
-      abuse,
-      legal,
-      billing,
+      support: env.SUPPORT_EMAIL,
+      privacy: env.PRIVACY_EMAIL,
+      abuse: env.ABUSE_EMAIL,
+      legal: env.LEGAL_EMAIL,
+      billing: env.BILLING_EMAIL,
     },
     company: {
-      legalName,
-      address,
-      country,
-      ...(regNumber ? { regNumber } : {}),
-      website,
+      legalName: env.COMPANY_LEGAL_NAME,
+      address: env.COMPANY_ADDRESS,
+      country: env.COMPANY_COUNTRY,
+      ...(env.COMPANY_REG_NUMBER ? { regNumber: env.COMPANY_REG_NUMBER } : {}),
+      website: env.COMPANY_WEBSITE,
     },
     social: {
-      ...(x ? { x } : {}),
-      ...(github ? { github } : {}),
+      ...(env.SOCIAL_X_URL ? { x: env.SOCIAL_X_URL } : {}),
+      ...(env.SOCIAL_GITHUB_URL ? { github: env.SOCIAL_GITHUB_URL } : {}),
     },
   };
-
   if (!testOverride) {
     return base;
   }
