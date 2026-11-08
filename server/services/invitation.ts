@@ -127,7 +127,7 @@ async function assertMemberCapacity(
   const currentMembersCount =
     "workspaceId" in target
       ? await tx.workspaceMember.count({
-          where: { workspaceId: target.workspaceId, role: { not: "NONE" } },
+          where: { workspaceId: target.workspaceId },
         })
       : await tx.projectMember.count({ where: { projectId: target.projectId } });
 
@@ -180,7 +180,7 @@ export async function createInvitation(
     });
     resourceName = wsRow?.title || "Workspace";
 
-    // Validate role (NONE is an exclusion marker, never an invitable role)
+    // Validate role
     const validRoles: WorkspaceRole[] = ["VIEWER", "COMMENTER", "EDITOR", "ADMIN"];
     if (!validRoles.includes(role as WorkspaceRole)) {
       throw Errors.badRequest("Invalid role for workspace invitation");

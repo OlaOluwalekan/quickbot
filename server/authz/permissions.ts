@@ -38,6 +38,26 @@ export type EffectiveRole =
 
 export type RoleWithNone = EffectiveRole | "NONE";
 
+export const ROLE_RANK: Record<EffectiveRole, number> = {
+  VIEWER: 1,
+  COMMENTER: 2,
+  EDITOR: 3,
+  ADMIN: 4,
+  OWNER: 5,
+};
+
+export function maxRole<
+  T extends string | null | undefined,
+  U extends string | null | undefined
+>(a: T, b: U): EffectiveRole | null {
+  const roleA = a && a in ROLE_RANK ? (a as EffectiveRole) : null;
+  const roleB = b && b in ROLE_RANK ? (b as EffectiveRole) : null;
+  if (!roleA && !roleB) return null;
+  if (!roleA) return roleB;
+  if (!roleB) return roleA;
+  return (ROLE_RANK[roleA] ?? 0) >= (ROLE_RANK[roleB] ?? 0) ? roleA : roleB;
+}
+
 const base = {
   VIEWER: ["workspace.read"],
   COMMENTER: ["workspace.read", "workspace.annotate"],

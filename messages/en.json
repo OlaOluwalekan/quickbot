@@ -1052,5 +1052,10 @@
     "no_permission": "You do not have permission to {capability}",
     "max_depth": "Maximum thread depth ({depth}) reached. Promote this answer to a new workspace to continue.",
     "upgrade": "Upgrade"
+  },
+  "Members": {
+    "errors": {
+      "belowInherited": "Workspace role cannot be lower than the inherited project role"
+    }
   }
 }

@@ -20,7 +20,6 @@ enum ProjectRole {
 }
 
 enum WorkspaceRole {
-  NONE
   VIEWER
   COMMENTER
   EDITOR

@@ -4,6 +4,7 @@
 const mockWorkspaceFindFirst = jest.fn();
 const mockProjectMemberFindUnique = jest.fn();
 const mockProjectFindFirst = jest.fn();
+const mockProjectFindUnique = jest.fn();
 
 jest.mock("../../server/db/client", () => ({
   db: {
@@ -15,6 +16,7 @@ jest.mock("../../server/db/client", () => ({
     },
     project: {
       findFirst: (...args: unknown[]) => mockProjectFindFirst(...args),
+      findUnique: (...args: unknown[]) => mockProjectFindUnique(...args),
     },
   },
 }));
@@ -56,6 +58,8 @@ describe("Authorization Service & Permission Matrix (Step 1.5)", () => {
     mockWorkspaceFindFirst.mockReset();
     mockProjectMemberFindUnique.mockReset();
     mockProjectFindFirst.mockReset();
+    mockProjectFindUnique.mockReset();
+    mockProjectFindUnique.mockResolvedValue({ ownerId: userA.userId, deletedAt: null });
   });
 
   describe("1. Appendix A Permission Matrix (role × permission)", () => {
@@ -156,44 +160,38 @@ describe("Authorization Service & Permission Matrix (Step 1.5)", () => {
       });
     });
 
-    it("explicit workspace role overrides inherited project role (upgrade or downgrade)", async () => {
+    it("top-down permissions: effective role is max(project role, workspace role)", async () => {
       mockWorkspaceFindFirst.mockResolvedValue({
         id: wsId,
         ownerId: userA.userId,
         projectId: projId,
         archivedAt: null,
         members: [{ role: "COMMENTER" }],
-      });
-      mockProjectMemberFindUnique.mockResolvedValue({
-        role: "ADMIN",
+        project: {
+          ownerId: userA.userId,
+          members: [{ role: "ADMIN" }],
+        },
       });
 
       const resolved = await resolveWorkspaceRole(userB.userId, wsId);
-      expect(resolved?.role).toBe("COMMENTER");
-      expect(mockProjectMemberFindUnique).not.toHaveBeenCalled();
+      expect(resolved?.role).toBe("ADMIN");
     });
 
-    it("explicit WorkspaceRole.NONE excludes a project member from that workspace (returns null / 404)", async () => {
+    it("project owner gets ADMIN on a workspace owned by someone else in their project", async () => {
       mockWorkspaceFindFirst.mockResolvedValue({
         id: wsId,
         ownerId: userA.userId,
         projectId: projId,
         archivedAt: null,
-        members: [{ role: "NONE" }],
-      });
-      mockProjectMemberFindUnique.mockResolvedValue({
-        role: "ADMIN",
+        members: [],
+        project: {
+          ownerId: userB.userId,
+          members: [],
+        },
       });
 
       const resolved = await resolveWorkspaceRole(userB.userId, wsId);
-      expect(resolved).toBeNull();
-
-      await expect(
-        requireWorkspace(userB, wsId, "workspace.read")
-      ).rejects.toMatchObject({
-        status: 404,
-        code: "not_found",
-      });
+      expect(resolved?.role).toBe("ADMIN");
     });
 
     it("removing a user from a project removes inherited access unless they have an explicit workspace row", async () => {

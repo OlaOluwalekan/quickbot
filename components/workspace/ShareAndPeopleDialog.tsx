@@ -42,6 +42,13 @@ import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
 
+const ROLE_RANK: Record<string, number> = {
+  VIEWER: 1,
+  COMMENTER: 2,
+  EDITOR: 3,
+  ADMIN: 4,
+};
+
 interface MemberItem {
   id: string;
   userId: string;
@@ -52,6 +59,8 @@ interface MemberItem {
   avatarUrl: string | null;
   role: string;
   inherited?: boolean;
+  source?: "WORKSPACE" | "PROJECT" | "BOTH";
+  inheritedRole?: string | null;
   monthlyCreditCap?: number | null;
   monthlyCreditsUsed?: number;
 }
@@ -830,12 +839,14 @@ export function ShareAndPeopleDialog({
                                   <Crown className="h-3 w-3" /> Owner
                                 </span>
                               )}
-                              {m.inherited && (
+                              {(m.inherited || m.inheritedRole) && (
                                 <Badge
                                   variant="outline"
                                   className="text-[10px] px-1.5 py-0 text-muted"
                                 >
-                                  Inherited from project
+                                  {m.inheritedRole
+                                    ? `Inherited from project ? ${m.inheritedRole.charAt(0).toUpperCase() + m.inheritedRole.slice(1).toLowerCase()}`
+                                    : "Inherited from project"}
                                 </Badge>
                               )}
                             </div>
@@ -960,33 +971,58 @@ export function ShareAndPeopleDialog({
                               Owner
                             </span>
                           ) : canEditThisMember ? (
-                            <Select
-                              value={m.role}
-                              onValueChange={(val) =>
-                                handleUpdateRole(m.userId, val)
-                              }
-                            >
-                              <SelectTrigger className="h-8 text-xs w-28 bg-surface">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="VIEWER">Viewer</SelectItem>
-                                <SelectItem value="COMMENTER">
-                                  Commenter
-                                </SelectItem>
-                                <SelectItem value="EDITOR">Editor</SelectItem>
-                                {isOwner && (
-                                  <SelectItem value="ADMIN">Admin</SelectItem>
-                                )}
-                              </SelectContent>
-                            </Select>
+                            <div className="flex flex-col items-end gap-0.5">
+                              <Select
+                                value={m.role}
+                                onValueChange={(val) =>
+                                  handleUpdateRole(m.userId, val)
+                                }
+                              >
+                                <SelectTrigger
+                                  className="h-8 text-xs w-28 bg-surface"
+                                  title={
+                                    m.inheritedRole
+                                      ? "Change this on the project to lower it"
+                                      : undefined
+                                  }
+                                >
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {[
+                                    { value: "VIEWER", label: "Viewer", rank: 1 },
+                                    { value: "COMMENTER", label: "Commenter", rank: 2 },
+                                    { value: "EDITOR", label: "Editor", rank: 3 },
+                                    ...(isOwner ? [{ value: "ADMIN", label: "Admin", rank: 4 }] : []),
+                                  ]
+                                    .filter((opt) => opt.rank >= (m.inheritedRole ? (ROLE_RANK[m.inheritedRole] ?? 1) : 1))
+                                    .map((opt) => (
+                                      <SelectItem key={opt.value} value={opt.value}>
+                                        {opt.label}
+                                      </SelectItem>
+                                    ))}
+                                </SelectContent>
+                              </Select>
+                              {m.inheritedRole && (
+                                <span className="text-[10px] text-muted">
+                                  Change this on the project to lower it
+                                </span>
+                              )}
+                            </div>
                           ) : (
-                            <Badge
-                              variant="outline"
-                              className="text-xs uppercase"
-                            >
-                              {m.role}
-                            </Badge>
+                            <div className="flex flex-col items-end gap-0.5">
+                              <Badge
+                                variant="outline"
+                                className="text-xs uppercase"
+                              >
+                                {m.role}
+                              </Badge>
+                              {m.inheritedRole && (
+                                <span className="text-[10px] text-muted">
+                                  Change this on the project to lower it
+                                </span>
+                              )}
+                            </div>
                           )}
 
                           {/* Member actions */}

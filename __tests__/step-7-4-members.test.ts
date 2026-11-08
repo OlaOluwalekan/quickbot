@@ -341,14 +341,13 @@ describe("Step 7.4 — Members and invitations", () => {
       expect(await resolveWorkspaceRole(ids.editor, projectWorkspaceId)).toBeNull();
     });
 
-    it("removing an inherited member from a project workspace writes NONE", async () => {
+    it("attempting to remove an inherited member with no explicit workspace row rejects with 400", async () => {
       await db.projectMember.create({ data: { projectId, userId: ids.viewer, role: "VIEWER", invitedById: ids.owner } });
-      await removeWorkspaceMember(actorFor("owner"), projectWorkspaceId, ids.viewer);
-      expect(await resolveWorkspaceRole(ids.viewer, projectWorkspaceId)).toBeNull();
-      const row = await db.workspaceMember.findUnique({
-        where: { workspaceId_userId: { workspaceId: projectWorkspaceId, userId: ids.viewer } },
-      });
-      expect(row?.role).toBe("NONE");
+      await expect(
+        removeWorkspaceMember(actorFor("owner"), projectWorkspaceId, ids.viewer)
+      ).rejects.toMatchObject({ status: 400 });
+      // Access remains via project
+      expect(await resolveWorkspaceRole(ids.viewer, projectWorkspaceId)).not.toBeNull();
     });
   });
 
@@ -451,7 +450,7 @@ describe("Step 7.4 — Members and invitations", () => {
 
     it("non-owner admins cannot change or remove an Admin inherited from the project", async () => {
       await expect(
-        updateWorkspaceMemberRole(actorFor("admin"), hProjWs, ids.editor, "NONE")
+        updateWorkspaceMemberRole(actorFor("admin"), hProjWs, ids.editor, "VIEWER")
       ).rejects.toMatchObject({ status: 403 });
       await expect(removeWorkspaceMember(actorFor("admin"), hProjWs, ids.editor)).rejects.toMatchObject({
         status: 403,
@@ -516,7 +515,7 @@ describe("Step 7.4 — Members and invitations", () => {
 
     it("an expired invitation can be resent, but only within the plan limit", async () => {
       setUserPlanOverride(ids.owner, "LITE"); // 2 seats
-      const before = await db.workspaceMember.count({ where: { workspaceId: hWs, role: { not: "NONE" } } });
+      const before = await db.workspaceMember.count({ where: { workspaceId: hWs } });
       expect(before).toBe(2); // admin + viewer -> plan full
 
       await db.invitation.create({
@@ -588,13 +587,13 @@ describe("Step 7.4 — Members and invitations", () => {
       expect(JSON.stringify(log.meta)).not.toContain(email("viewer"));
     });
 
-    it("counts effective members (owner + explicit + inherited − NONE)", async () => {
+    it("counts effective members (owner + explicit + inherited)", async () => {
       // hProjWs: owner + project admin (editor was removed above)
       expect(await countWorkspaceMembers(hProjWs)).toBe(2);
       await db.workspaceMember.create({
-        data: { workspaceId: hProjWs, userId: ids.admin, role: "NONE", invitedById: ids.owner },
+        data: { workspaceId: hProjWs, userId: ids.viewer, role: "VIEWER", invitedById: ids.owner },
       });
-      expect(await countWorkspaceMembers(hProjWs)).toBe(1);
+      expect(await countWorkspaceMembers(hProjWs)).toBe(3);
     });
 
     it("logActivity failures inside a transaction roll the change back", async () => {

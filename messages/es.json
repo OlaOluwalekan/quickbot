@@ -1052,5 +1052,10 @@
     "no_permission": "No tienes permiso para {capability}",
     "max_depth": "Se alcanzó la profundidad máxima de hilo ({depth}). Promueve esta respuesta a un nuevo espacio para continuar.",
     "upgrade": "Mejorar plan"
+  },
+  "Members": {
+    "errors": {
+      "belowInherited": "El rol en el espacio de trabajo no puede ser inferior al rol heredado del proyecto"
+    }
   }
 }

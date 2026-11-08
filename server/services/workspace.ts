@@ -37,22 +37,17 @@ export async function listWorkspaces(
         members: {
           some: {
             userId: actor.userId,
-            role: { not: "NONE" as const },
           },
         },
       },
       {
-        AND: [
-          {
-            project: {
-              deletedAt: null,
-              members: { some: { userId: actor.userId } },
-            },
-          },
-          {
-            members: { none: { userId: actor.userId } },
-          },
-        ],
+        project: {
+          deletedAt: null,
+          OR: [
+            { ownerId: actor.userId },
+            { members: { some: { userId: actor.userId } } },
+          ],
+        },
       },
     ],
   };
@@ -156,8 +151,8 @@ export async function getWorkspace(actor: Actor, workspaceId: string) {
   return {
     ...workspace,
     role,
-    // Effective headcount (owner + explicit + inherited project members - NONE);
-    // `_count.members` would count NONE exclusions and miss inherited access.
+    // Effective headcount (owner + explicit + inherited project members);
+    // `_count.members` would miss inherited access.
     memberCount: await countWorkspaceMembers(workspaceId),
   };
 }
@@ -334,22 +329,17 @@ export async function searchWorkspaces(
         members: {
           some: {
             userId: actor.userId,
-            role: { not: "NONE" as const },
           },
         },
       },
       {
-        AND: [
-          {
-            project: {
-              deletedAt: null,
-              members: { some: { userId: actor.userId } },
-            },
-          },
-          {
-            members: { none: { userId: actor.userId } },
-          },
-        ],
+        project: {
+          deletedAt: null,
+          OR: [
+            { ownerId: actor.userId },
+            { members: { some: { userId: actor.userId } } },
+          ],
+        },
       },
     ],
   };
