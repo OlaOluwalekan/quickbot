@@ -308,44 +308,45 @@
       "transactionalDisclaimer": "Ceci est un message transactionnel automatisé envoyé à {email}. Vous le recevez suite à un événement de compte ou une action de sécurité."
     },
     "ownershipTransferRequested": {
-      "subject": "{fromUserName} wants to transfer ownership of \"{resourceName}\" to you",
-      "heading": "Ownership transfer request",
-      "greeting": "Hi,",
-      "body": "{fromUserName} has requested to transfer ownership of the workspace \"{resourceName}\" to you. Accepting this transfer means you will own this workspace and pay for all usage in it.",
-      "button": "Review & Accept Transfer",
-      "disclaimer": "This transfer request expires in 7 days. If you do not wish to become the owner, you can decline it in Klecx."
+      "subject": "{fromUserName} souhaite vous transférer la propriété de « {resourceName} »",
+      "heading": "Demande de transfert de propriété",
+      "greeting": "Bonjour,",
+      "body": "{fromUserName} a demandé à vous transférer la propriété de « {resourceName} ». Si vous acceptez, vous en devenez propriétaire et payez toute l'utilisation.",
+      "button": "Voir la demande",
+      "disclaimer": "Cette demande expire dans {days} jours. Si vous ne souhaitez pas devenir propriétaire, vous pouvez la refuser dans Klecx."
     },
     "ownershipTransferAccepted": {
-      "subject": "Ownership of \"{resourceName}\" has been transferred to {toUserName}",
-      "heading": "Ownership transfer completed",
-      "greeting": "Hi,",
-      "body": "Ownership of \"{resourceName}\" was accepted by {toUserName}. You are now an Administrator on this resource.",
-      "button": "Open Workspace",
-      "disclaimer": "You can view your updated role in your workspace settings."
+      "subject": "{toUserName} est désormais propriétaire de « {resourceName} »",
+      "heading": "Transfert de propriété terminé",
+      "greeting": "Bonjour,",
+      "body": "{toUserName} a accepté la propriété de « {resourceName} ». Vous restez administrateur.",
+      "bodyLeft": "{toUserName} a accepté la propriété de « {resourceName} ». Comme vous l'avez choisi, vous n'y avez plus accès.",
+      "button": "Ouvrir Klecx",
+      "disclaimer": "Vous recevez ce message car vous avez demandé ce transfert."
     },
     "memberLimitExceeded": {
-      "subject": "Action Required: Your plan collaborator limit has been exceeded",
-      "heading": "Collaborator limit exceeded",
-      "greeting": "Hi,",
-      "body": "Your account has more collaborators than your current plan allows (limit: {limit}). You have a 14-day grace period until {graceEndsAt} to choose who stays active or upgrade your plan.",
-      "button": "Manage Collaborators",
-      "disclaimer": "After the grace period, excess collaborators will be suspended automatically."
+      "subject": "Action requise : vous dépassez la limite de collaborateurs de votre forfait",
+      "heading": "Limite de collaborateurs dépassée",
+      "greeting": "Bonjour,",
+      "body": "Votre forfait autorise {limit} collaborateurs par espace de travail ou projet, et certains des vôtres en ont davantage. Jusqu'au {graceEndsAt}, choisissez qui reste actif dans Partage et personnes, retirez des membres ou changez de forfait.",
+      "button": "Gérer les collaborateurs",
+      "disclaimer": "Après cette date, les membres ajoutés le plus récemment au-delà de la limite passent en lecture seule. Rien n'est supprimé."
     },
     "memberSuspended": {
-      "subject": "Notice: Your access to \"{resourceName}\" has been suspended",
-      "heading": "Collaborator access suspended",
-      "greeting": "Hi,",
-      "body": "Your active access to \"{resourceName}\" has been suspended due to plan collaborator limits ({reason}). You still have read-only access.",
-      "button": "Open Workspace",
-      "disclaimer": "The owner of the workspace can restore full access by upgrading or adjusting active members."
+      "subject": "Votre accès à « {resourceName} » est désormais en lecture seule",
+      "heading": "Accès passé en lecture seule",
+      "greeting": "Bonjour,",
+      "body": "Le forfait du propriétaire ne couvre plus tous les collaborateurs : votre accès à « {resourceName} » est désormais en lecture seule. Vous pouvez toujours tout consulter, y compris vos propres contributions.",
+      "button": "Ouvrir",
+      "disclaimer": "L'accès complet revient automatiquement lorsque le forfait du propriétaire autorise davantage de collaborateurs."
     },
     "memberRestored": {
-      "subject": "Your active access to \"{resourceName}\" has been restored",
-      "heading": "Access restored",
-      "greeting": "Hi,",
-      "body": "Your active collaboration access to \"{resourceName}\" has been restored. You can now comment and prompt as normal.",
-      "button": "Open Workspace",
-      "disclaimer": "Welcome back to collaborating in this workspace."
+      "subject": "Votre accès complet à « {resourceName} » est rétabli",
+      "heading": "Accès rétabli",
+      "greeting": "Bonjour,",
+      "body": "Votre accès complet à « {resourceName} » a été rétabli. Vous pouvez de nouveau commenter, poser des questions et générer.",
+      "button": "Ouvrir",
+      "disclaimer": "Vous recevez ce message car votre accès a changé."
     }
   },
   "AppShell": {
@@ -1118,31 +1119,49 @@
     }
   },
   "Transfer": {
-    "title": "Transfer Ownership",
-    "request": "Request Ownership Transfer",
-    "pending": "Ownership transfer requested (pending acceptance)",
-    "pendingBanner": "Ownership transfer requested: The current owner wants to transfer this workspace to you. You will pay for all usage in this workspace.",
-    "pendingOwnerBanner": "Ownership transfer pending acceptance by {name}",
-    "accept": "Accept Transfer",
-    "decline": "Decline",
-    "cancel": "Cancel Transfer",
-    "stayAdmin": "Stay as an Administrator",
-    "leave": "Leave workspace upon transfer",
-    "recipientPlanFit": "Recipient plan check:",
-    "planFits": "Recipient's plan supports this workspace ({collaboratorsAfter} / {limit} collaborators)",
-    "planExceeded": "Recipient's plan allows {limit} collaborators, but {collaboratorsAfter} would remain. They must upgrade or you must choose 'Leave' / remove members.",
-    "confirmPrompt": "To confirm this transfer request, type TRANSFER or the resource name below:",
+    "buttonTitle": "Transférer la propriété",
+    "dialogTitle": "Transférer la propriété",
+    "dialogDescription": "Vous demandez à {name} de reprendre « {resourceName} ». Rien ne change tant que la demande n'est pas acceptée. Ensuite, cette personne paie toute l'utilisation.",
+    "yourRole": "Votre rôle après le transfert",
+    "stayAdmin": "Rester administrateur",
+    "leave": "Partir",
+    "checking": "Vérification du forfait du destinataire…",
+    "planFits": "Compatible avec le forfait du destinataire : {collaboratorsAfter} collaborateurs sur {limit}.",
+    "confirmPrompt": "Pour confirmer, saisissez TRANSFER ou le nom exact.",
+    "confirmPlaceholder": "TRANSFER",
+    "cancel": "Annuler",
+    "send": "Envoyer la demande",
+    "requestSent": "Demande envoyée. La propriété changera quand {name} acceptera.",
+    "incomingTitle": "Demande de transfert de propriété",
+    "incomingBody": "{name} souhaite vous transférer la propriété de {type, select, project {ce projet} other {cet espace de travail}}.",
+    "incomingPays": "Si vous acceptez, vous payez toute l'utilisation ici.",
+    "accept": "Accepter",
+    "decline": "Refuser",
+    "accepted": "Vous êtes désormais propriétaire.",
+    "declined": "Demande de transfert refusée.",
+    "outgoingPending": "En attente de l'acceptation du transfert par {name}.",
+    "cancelRequest": "Annuler la demande",
+    "cancelled": "Demande de transfert annulée.",
+    "someone": "Quelqu'un",
     "errors": {
-      "memberLimit": "Transfer would exceed recipient's collaborator limit ({collaboratorsAfter} collaborators vs limit of {limit})",
-      "busy": "A generation is currently running in this scope. Please wait for it to finish.",
-      "movedOutOfProject": "This workspace was detached from its previous project because the new owner is different."
+      "memberLimit": "Le forfait du destinataire autorise {limit} collaborateurs, mais il en resterait {collaboratorsAfter}. Choisissez Partir, retirez des membres ou demandez-lui de changer de forfait.",
+      "busy": "Une réponse est en cours de génération. Réessayez une fois terminée.",
+      "movedOutOfProject": "Vous êtes désormais propriétaire. L'espace de travail a quitté son projet, car ce projet ne vous appartient pas.",
+      "alreadyPending": "Une demande de transfert est déjà en attente.",
+      "expired": "Cette demande de transfert a expiré.",
+      "notPending": "Cette demande de transfert n'est plus en attente.",
+      "recipientNotMember": "Le destinataire doit être membre.",
+      "recipientSuspended": "L'accès du destinataire est suspendu.",
+      "emailNotVerified": "Le destinataire n'a pas encore vérifié son adresse e-mail.",
+      "generic": "Une erreur s'est produite. Veuillez réessayer."
     }
   },
   "MemberLimits": {
-    "graceBanner": "Your plan allows {limit} collaborators — choose who stays active ({daysRemaining} days left)",
-    "keepActive": "Keep active",
-    "keepActiveHint": "Protects this member from automatic suspension if plan limits are exceeded",
-    "suspended": "Suspended (Plan Limit)",
-    "suspendedNotice": "This member's write access is suspended due to plan limits (read-only)."
+    "graceTitle": "Limite de collaborateurs de votre forfait dépassée",
+    "graceBanner": "Votre forfait autorise {limit} collaborateurs : choisissez qui reste actif ({daysRemaining, plural, one {# jour restant} other {# jours restants}}). Ensuite, les membres ajoutés le plus récemment passent en lecture seule.",
+    "keepActive": "Garder actif",
+    "keepActiveHint": "Les membres que vous gardez actifs sont les derniers à passer en lecture seule.",
+    "keepActiveUpdated": "Enregistré.",
+    "keepActiveFailed": "Impossible de mettre à jour ce membre."
   }
 }

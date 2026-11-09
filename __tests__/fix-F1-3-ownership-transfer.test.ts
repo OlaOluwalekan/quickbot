@@ -2,15 +2,28 @@
  * @jest-environment node
  */
 
+const sentEmails: Array<{ template: string; to: string; data: Record<string, unknown> }> = [];
+
+jest.mock("../server/email/send", () => ({
+  sendEmail: jest.fn(
+    async (template: string, to: string, data: Record<string, unknown>) => {
+      sentEmails.push({ template, to, data });
+      return { success: true };
+    }
+  ),
+  maskEmail: (e: string) => e.replace(/^(.).*(@.*)$/, "$1***$2"),
+}));
+
 import { db } from "@/server/db/client";
 import type { Actor } from "@/server/auth/session";
 import { resolveWorkspaceRole } from "@/server/authz/access";
-import { computeCapabilities } from "@/server/authz/permissions";
 import { setUserPlanOverride, clearUserPlanOverrides } from "@/server/billing/plans";
 import {
   checkTransferFits,
+  checkTransferFitsForOwner,
   requestOwnershipTransfer,
   acceptOwnershipTransfer,
+  declineOwnershipTransfer,
   cancelOwnershipTransfer,
   listMyPendingTransfers,
 } from "@/server/services/ownership-transfer";
@@ -19,6 +32,7 @@ import {
   enforceMemberLimit,
   restoreWithinLimit,
   isOwnerInGrace,
+  setMemberKeepActive,
 } from "@/server/services/member-limits";
 import { createInvitation } from "@/server/services/invitation";
 
@@ -248,6 +262,36 @@ describe("Step F1.3 — Ownership transfer, member-limit checks, and suspension 
       expect(transfer.toUserId).toBe(ids.recipientFree);
       expect(transfer.fromUserId).toBe(ids.ownerA);
 
+      // Recipient gets the request email (F1.3: notification + email)
+      expect(
+        sentEmails.some(
+          (e) => e.template === "ownership-transfer-requested" && e.to === email("recipientFree")
+        )
+      ).toBe(true);
+
+      // A second request while one is pending is refused
+      await expect(
+        requestOwnershipTransfer(
+          actorFor("ownerA"),
+          { workspaceId: soloWorkspaceId },
+          { toUserId: ids.recipientFree, previousOwnerAction: "LEAVE", confirm: "TRANSFER" }
+        )
+      ).rejects.toMatchObject({ status: 409, code: "transfer_already_pending" });
+
+      // Only participants can see a transfer: a stranger gets 404, the sender can't accept
+      await expect(
+        acceptOwnershipTransfer(actorFor("collaborator3"), transfer.id)
+      ).rejects.toMatchObject({ status: 404 });
+      await expect(
+        declineOwnershipTransfer(actorFor("collaborator3"), transfer.id)
+      ).rejects.toMatchObject({ status: 404 });
+      await expect(
+        cancelOwnershipTransfer(actorFor("collaborator3"), transfer.id)
+      ).rejects.toMatchObject({ status: 404 });
+      await expect(
+        acceptOwnershipTransfer(actorFor("ownerA"), transfer.id)
+      ).rejects.toMatchObject({ status: 403 });
+
       // Verify listed under recipient's pending transfers
       const pendingList = await listMyPendingTransfers(ids.recipientFree, "PENDING");
       expect(pendingList.some((t) => t.id === transfer.id)).toBe(true);
@@ -256,6 +300,44 @@ describe("Step F1.3 — Ownership transfer, member-limit checks, and suspension 
       await cancelOwnershipTransfer(actorFor("ownerA"), transfer.id);
       const afterCancel = await db.ownershipTransfer.findUnique({ where: { id: transfer.id } });
       expect(afterCancel?.status).toBe("CANCELLED");
+    });
+  });
+
+  describe("1b. Authorization", () => {
+    it("plan-fit preview: stranger gets 404, a non-owner member gets 403, owner gets the result", async () => {
+      const input = { toUserId: ids.recipientPaid, previousOwnerAction: "LEAVE" as const };
+      await expect(
+        checkTransferFitsForOwner(actorFor("collaborator3"), { workspaceId: multiWorkspaceId }, input)
+      ).rejects.toMatchObject({ status: 404 });
+      await expect(
+        checkTransferFitsForOwner(actorFor("collaborator1"), { workspaceId: multiWorkspaceId }, input)
+      ).rejects.toMatchObject({ status: 403 });
+      const fit = await checkTransferFitsForOwner(
+        actorFor("ownerA"),
+        { workspaceId: multiWorkspaceId },
+        input
+      );
+      expect(fit).toMatchObject({ ok: true, limit: 5, collaboratorsAfter: 3 });
+    });
+
+    it("transfer request: stranger gets 404, a non-owner member gets 403", async () => {
+      const input = { toUserId: ids.recipientPaid, previousOwnerAction: "LEAVE" as const, confirm: "TRANSFER" };
+      await expect(
+        requestOwnershipTransfer(actorFor("collaborator3"), { workspaceId: multiWorkspaceId }, input)
+      ).rejects.toMatchObject({ status: 404 });
+      await expect(
+        requestOwnershipTransfer(actorFor("collaborator1"), { workspaceId: multiWorkspaceId }, input)
+      ).rejects.toMatchObject({ status: 403 });
+    });
+
+    it("refuses a recipient who is not a member", async () => {
+      await expect(
+        requestOwnershipTransfer(
+          actorFor("ownerA"),
+          { workspaceId: multiWorkspaceId },
+          { toUserId: ids.collaborator3, previousOwnerAction: "LEAVE", confirm: "TRANSFER" }
+        )
+      ).rejects.toMatchObject({ status: 400, code: "recipient_not_member" });
     });
   });
 
@@ -434,7 +516,43 @@ describe("Step F1.3 — Ownership transfer, member-limit checks, and suspension 
       });
     });
 
+    it("only the owner can set Keep active", async () => {
+      await expect(
+        setMemberKeepActive(actorFor("collaborator1"), {
+          workspaceId: testOwnerWsId,
+          targetUserId: ids.collaborator3,
+          keepActive: true,
+        })
+      ).rejects.toMatchObject({ status: 403 });
+      await expect(
+        setMemberKeepActive(actorFor("ownerA"), {
+          workspaceId: testOwnerWsId,
+          targetUserId: ids.collaborator3,
+          keepActive: true,
+        })
+      ).rejects.toMatchObject({ status: 404 });
+      const m3 = await db.workspaceMember.findUnique({
+        where: { workspaceId_userId: { workspaceId: testOwnerWsId, userId: ids.collaborator3 } },
+      });
+      expect(m3?.keepActive).toBe(false);
+    });
+
+    it("enforceMemberLimit does nothing while the grace period is running", async () => {
+      const res = await enforceMemberLimit(ids.ownerB);
+      expect(res).toEqual({ suspendedCount: 0, inGrace: true });
+      const suspended = await db.workspaceMember.count({
+        where: { workspaceId: testOwnerWsId, suspendedAt: { not: null } },
+      });
+      expect(suspended).toBe(0);
+    });
+
     it("enforceMemberLimit suspends members beyond the limit, respecting keepActive", async () => {
+      // Grace has ended.
+      await db.memberLimitGrace.update({
+        where: { ownerId: ids.ownerB },
+        data: { graceEndsAt: new Date(Date.now() - 1000) },
+      });
+
       // Limit is 1. There are 3 collaborators:
       // c1: createdAt Jan 1, keepActive false
       // c2: createdAt Jan 2, keepActive TRUE (protected!)
@@ -442,7 +560,7 @@ describe("Step F1.3 — Ownership transfer, member-limit checks, and suspension 
       // We need 1 active. c2 is keepActive so stays active.
       // Between c1 and c3, c3 is newer so it gets suspended first, and c1 also suspended because limit = 1 and c2 took it!
       const enforced = await enforceMemberLimit(ids.ownerB);
-      expect(enforced.suspendedCount).toBeGreaterThanOrEqual(1);
+      expect(enforced.suspendedCount).toBe(2);
 
       const m2 = await db.workspaceMember.findUnique({
         where: { workspaceId_userId: { workspaceId: testOwnerWsId, userId: ids.collaborator2 } },

@@ -5,8 +5,8 @@ import { Errors } from "@/server/http/errors";
 import { requireWorkspace, requireProject, resolveWorkspaceRole } from "@/server/authz/access";
 import { can, ROLE_RANK, maxRole, computeCapabilities, type EffectiveRole } from "@/server/authz/permissions";
 import { logActivity } from "./activity";
-import { requestOwnershipTransfer } from "./ownership-transfer";
 import { getOwnerGraceInfo } from "./member-limits";
+import { getPendingOutgoingTransfer } from "./ownership-transfer";
 import { notify } from "./notify";
 import { getUserAvatar } from "./avatar";
 import { getMonthlySpendByActor } from "./billing-owner";
@@ -237,7 +237,7 @@ export async function listWorkspaceMembers(actor: Actor, workspaceId: string) {
           effectiveCanAsk: inheritedCaps.ask,
           suspendedAt: pm.suspendedAt,
           suspendedReason: pm.suspendedReason,
-      keepActive: pm.keepActive ?? false,
+          keepActive: pm.keepActive,
           monthlyCreditCap: pm.monthlyCreditCap,
         });
       }
@@ -285,7 +285,7 @@ export async function listWorkspaceMembers(actor: Actor, workspaceId: string) {
         effectiveCanAsk: wsCaps.ask,
         suspendedAt: wm.suspendedAt,
         suspendedReason: wm.suspendedReason,
-      keepActive: wm.keepActive ?? false,
+        keepActive: wm.keepActive,
         monthlyCreditCap: wm.monthlyCreditCap,
       });
     }
@@ -311,6 +311,7 @@ export async function listWorkspaceMembers(actor: Actor, workspaceId: string) {
     totalCount: memberList.length + 1, // members + owner
     canManage: can(actorRole, "workspace.manage_members"),
     isOwner: actor.userId === workspace.ownerId,
+    ...(await ownerOnlyExtras(actor, workspace.ownerId, { workspaceId })),
   };
 }
 
@@ -413,7 +414,25 @@ export async function listProjectMembers(actor: Actor, projectId: string) {
     totalCount: memberList.length + 1,
     canManage: can(actorRole, "workspace.manage_members"),
     isOwner: actor.userId === proj.ownerId,
+    ...(await ownerOnlyExtras(actor, proj.ownerId, { projectId })),
   };
+}
+
+/**
+ * Owner-only data for the Share & people dialog (F1.3): the over-limit grace
+ * banner and the owner's own pending outgoing transfer (so it can be cancelled).
+ */
+async function ownerOnlyExtras(
+  actor: Actor,
+  ownerId: string,
+  scope: { workspaceId?: string; projectId?: string }
+) {
+  if (actor.userId !== ownerId) return {};
+  const [grace, outgoingTransfer] = await Promise.all([
+    getOwnerGraceInfo(ownerId),
+    getPendingOutgoingTransfer(actor.userId, scope),
+  ]);
+  return { grace, outgoingTransfer };
 }
 
 function rowCapabilities(row: {
@@ -436,7 +455,6 @@ export type UpdateMemberRoleInput =
       role?: string;
       canComment?: boolean | null;
       canAsk?: boolean | null;
-      keepActive?: boolean;
     };
 
 export async function updateWorkspaceMemberRole(
@@ -447,7 +465,7 @@ export async function updateWorkspaceMemberRole(
 ) {
   const inputObj =
     typeof roleOrInput === "string" ? { role: roleOrInput } : roleOrInput;
-  const { role: newRole, canComment, canAsk, keepActive } = inputObj as any;
+  const { role: newRole, canComment, canAsk } = inputObj;
 
   const { ws } = await requireWorkspace(actor, workspaceId, "workspace.manage_members");
 
@@ -536,7 +554,6 @@ export async function updateWorkspaceMemberRole(
   if (newRole !== undefined) updateData.role = newRole as WorkspaceRole;
   if (canComment !== undefined) updateData.canComment = canComment;
   if (canAsk !== undefined) updateData.canAsk = canAsk;
-  if (keepActive !== undefined) (updateData as any).keepActive = keepActive;
 
   const createData = {
     workspaceId,

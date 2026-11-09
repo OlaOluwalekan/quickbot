@@ -5,20 +5,28 @@ import {
   updateProjectMemberCap,
   removeProjectMember,
 } from "@/server/services/members";
+import { setMemberKeepActive } from "@/server/services/member-limits";
 
 export const PATCH = route({
   body: updateMemberRoleSchema,
   handler: async ({ actor, params, body }) => {
+    // The schema guarantees exactly one of role/capabilities, monthlyCreditCap or keepActive.
     const projectId = params.id as string;
     const targetUserId = params.userId as string;
     if (body.monthlyCreditCap !== undefined) {
       return updateProjectMemberCap(actor, projectId, targetUserId, body.monthlyCreditCap);
     }
+    if (body.keepActive !== undefined) {
+      return setMemberKeepActive(actor, {
+        projectId: projectId,
+        targetUserId,
+        keepActive: body.keepActive,
+      });
+    }
     return updateProjectMemberRole(actor, projectId, targetUserId, {
       role: body.role,
       canComment: body.canComment,
       canAsk: body.canAsk,
-      keepActive: body.keepActive,
     });
   },
 });

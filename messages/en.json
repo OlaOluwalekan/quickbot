@@ -311,41 +311,42 @@
       "subject": "{fromUserName} wants to transfer ownership of \"{resourceName}\" to you",
       "heading": "Ownership transfer request",
       "greeting": "Hi,",
-      "body": "{fromUserName} has requested to transfer ownership of the workspace \"{resourceName}\" to you. Accepting this transfer means you will own this workspace and pay for all usage in it.",
-      "button": "Review & Accept Transfer",
-      "disclaimer": "This transfer request expires in 7 days. If you do not wish to become the owner, you can decline it in Klecx."
+      "body": "{fromUserName} asked to transfer ownership of \"{resourceName}\" to you. If you accept, you become the owner and pay for all usage in it.",
+      "button": "Review the request",
+      "disclaimer": "This request expires in {days} days. If you don't want to become the owner, you can decline it in Klecx."
     },
     "ownershipTransferAccepted": {
-      "subject": "Ownership of \"{resourceName}\" has been transferred to {toUserName}",
+      "subject": "{toUserName} is now the owner of \"{resourceName}\"",
       "heading": "Ownership transfer completed",
       "greeting": "Hi,",
-      "body": "Ownership of \"{resourceName}\" was accepted by {toUserName}. You are now an Administrator on this resource.",
-      "button": "Open Workspace",
-      "disclaimer": "You can view your updated role in your workspace settings."
+      "body": "{toUserName} accepted ownership of \"{resourceName}\". You stay on as an administrator.",
+      "bodyLeft": "{toUserName} accepted ownership of \"{resourceName}\". As you chose, you no longer have access to it.",
+      "button": "Open Klecx",
+      "disclaimer": "You received this because you requested the transfer."
     },
     "memberLimitExceeded": {
-      "subject": "Action Required: Your plan collaborator limit has been exceeded",
+      "subject": "Action needed: you're over your plan's collaborator limit",
       "heading": "Collaborator limit exceeded",
       "greeting": "Hi,",
-      "body": "Your account has more collaborators than your current plan allows (limit: {limit}). You have a 14-day grace period until {graceEndsAt} to choose who stays active or upgrade your plan.",
-      "button": "Manage Collaborators",
-      "disclaimer": "After the grace period, excess collaborators will be suspended automatically."
+      "body": "Your plan allows {limit} collaborators per workspace or project, and some of yours have more. Until {graceEndsAt}, choose who stays active in Share & people, remove members or change your plan.",
+      "button": "Manage collaborators",
+      "disclaimer": "After that date, the most recently added members beyond the limit become read-only. Nothing is deleted."
     },
     "memberSuspended": {
-      "subject": "Notice: Your access to \"{resourceName}\" has been suspended",
-      "heading": "Collaborator access suspended",
+      "subject": "Your access to \"{resourceName}\" is now read-only",
+      "heading": "Access changed to read-only",
       "greeting": "Hi,",
-      "body": "Your active access to \"{resourceName}\" has been suspended due to plan collaborator limits ({reason}). You still have read-only access.",
-      "button": "Open Workspace",
-      "disclaimer": "The owner of the workspace can restore full access by upgrading or adjusting active members."
+      "body": "The owner's plan no longer covers all collaborators, so your access to \"{resourceName}\" is now read-only. You can still see everything, including your own contributions.",
+      "button": "Open",
+      "disclaimer": "Full access comes back automatically when the owner's plan allows more collaborators."
     },
     "memberRestored": {
-      "subject": "Your active access to \"{resourceName}\" has been restored",
+      "subject": "Your full access to \"{resourceName}\" is back",
       "heading": "Access restored",
       "greeting": "Hi,",
-      "body": "Your active collaboration access to \"{resourceName}\" has been restored. You can now comment and prompt as normal.",
-      "button": "Open Workspace",
-      "disclaimer": "Welcome back to collaborating in this workspace."
+      "body": "Your full access to \"{resourceName}\" has been restored. You can comment, ask and generate again.",
+      "button": "Open",
+      "disclaimer": "You received this because your access changed."
     }
   },
   "AppShell": {
@@ -1118,31 +1119,49 @@
     }
   },
   "Transfer": {
-    "title": "Transfer Ownership",
-    "request": "Request Ownership Transfer",
-    "pending": "Ownership transfer requested (pending acceptance)",
-    "pendingBanner": "Ownership transfer requested: The current owner wants to transfer this workspace to you. You will pay for all usage in this workspace.",
-    "pendingOwnerBanner": "Ownership transfer pending acceptance by {name}",
-    "accept": "Accept Transfer",
+    "buttonTitle": "Transfer ownership",
+    "dialogTitle": "Transfer ownership",
+    "dialogDescription": "You're asking {name} to take over \"{resourceName}\". Nothing changes until they accept. From then on, they pay for all usage.",
+    "yourRole": "Your role after the transfer",
+    "stayAdmin": "Stay as administrator",
+    "leave": "Leave",
+    "checking": "Checking the recipient's plan…",
+    "planFits": "Fits the recipient's plan: {collaboratorsAfter} of {limit} collaborators.",
+    "confirmPrompt": "To confirm, type TRANSFER or the exact name.",
+    "confirmPlaceholder": "TRANSFER",
+    "cancel": "Cancel",
+    "send": "Send request",
+    "requestSent": "Request sent. Ownership moves when {name} accepts.",
+    "incomingTitle": "Ownership transfer request",
+    "incomingBody": "{name} wants to transfer ownership of this {type, select, project {project} other {workspace}} to you.",
+    "incomingPays": "If you accept, you pay for all usage here.",
+    "accept": "Accept",
     "decline": "Decline",
-    "cancel": "Cancel Transfer",
-    "stayAdmin": "Stay as an Administrator",
-    "leave": "Leave workspace upon transfer",
-    "recipientPlanFit": "Recipient plan check:",
-    "planFits": "Recipient's plan supports this workspace ({collaboratorsAfter} / {limit} collaborators)",
-    "planExceeded": "Recipient's plan allows {limit} collaborators, but {collaboratorsAfter} would remain. They must upgrade or you must choose 'Leave' / remove members.",
-    "confirmPrompt": "To confirm this transfer request, type TRANSFER or the resource name below:",
+    "accepted": "You're now the owner.",
+    "declined": "Transfer request declined.",
+    "outgoingPending": "Waiting for {name} to accept the ownership transfer.",
+    "cancelRequest": "Cancel request",
+    "cancelled": "Transfer request cancelled.",
+    "someone": "Someone",
     "errors": {
-      "memberLimit": "Transfer would exceed recipient's collaborator limit ({collaboratorsAfter} collaborators vs limit of {limit})",
-      "busy": "A generation is currently running in this scope. Please wait for it to finish.",
-      "movedOutOfProject": "This workspace was detached from its previous project because the new owner is different."
+      "memberLimit": "The recipient's plan allows {limit} collaborators, but {collaboratorsAfter} would remain. Choose Leave, remove members, or ask them to change plan.",
+      "busy": "A response is being generated. Try again when it's finished.",
+      "movedOutOfProject": "You're now the owner. The workspace left its project because you don't own that project.",
+      "alreadyPending": "A transfer request is already pending.",
+      "expired": "This transfer request has expired.",
+      "notPending": "This transfer request is no longer pending.",
+      "recipientNotMember": "The recipient must be a member.",
+      "recipientSuspended": "The recipient's access is suspended.",
+      "emailNotVerified": "The recipient hasn't verified their email address yet.",
+      "generic": "Something went wrong. Please try again."
     }
   },
   "MemberLimits": {
-    "graceBanner": "Your plan allows {limit} collaborators — choose who stays active ({daysRemaining} days left)",
+    "graceTitle": "Over your plan's collaborator limit",
+    "graceBanner": "Your plan allows {limit} collaborators — choose who stays active ({daysRemaining, plural, one {# day} other {# days}} left). After that, the most recently added members become read-only.",
     "keepActive": "Keep active",
-    "keepActiveHint": "Protects this member from automatic suspension if plan limits are exceeded",
-    "suspended": "Suspended (Plan Limit)",
-    "suspendedNotice": "This member's write access is suspended due to plan limits (read-only)."
+    "keepActiveHint": "Members you keep active are the last to become read-only.",
+    "keepActiveUpdated": "Saved.",
+    "keepActiveFailed": "Couldn't update this member."
   }
 }

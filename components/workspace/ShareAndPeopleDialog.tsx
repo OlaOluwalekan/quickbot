@@ -83,6 +83,69 @@ interface MemberItem {
   keepActive?: boolean;
 }
 
+interface IncomingTransfer {
+  id: string;
+  workspaceId: string | null;
+  projectId: string | null;
+  fromUser?: { id: string; name: string | null } | null;
+}
+
+interface OutgoingTransfer {
+  id: string;
+  toUser?: { id: string; name: string | null } | null;
+}
+
+type TransferFit =
+  | { ok: true; limit: number; collaboratorsAfter: number }
+  | { ok: false; code: string; limit?: number; collaboratorsAfter?: number };
+
+/** Maps an API error code from the transfer endpoints to translated text. */
+function transferErrorText(
+  t: ReturnType<typeof useTranslations>,
+  code: string | undefined,
+  details?: { limit?: number; collaboratorsAfter?: number }
+): string {
+  switch (code) {
+    case "transfer_member_limit":
+      return t("errors.memberLimit", {
+        limit: details?.limit ?? 0,
+        collaboratorsAfter: details?.collaboratorsAfter ?? 0,
+      });
+    case "transfer_busy":
+      return t("errors.busy");
+    case "transfer_already_pending":
+      return t("errors.alreadyPending");
+    case "transfer_expired":
+      return t("errors.expired");
+    case "transfer_not_pending":
+      return t("errors.notPending");
+    case "recipient_not_member":
+      return t("errors.recipientNotMember");
+    case "recipient_suspended":
+      return t("errors.recipientSuspended");
+    case "email_not_verified":
+      return t("errors.emailNotVerified");
+    default:
+      return t("errors.generic");
+  }
+}
+
+class TransferApiError extends Error {
+  constructor(
+    public code: string | undefined,
+    public details?: { limit?: number; collaboratorsAfter?: number }
+  ) {
+    super(code ?? "error");
+  }
+}
+
+async function transferFetch(url: string, init?: RequestInit) {
+  const res = await fetch(url, init);
+  const json = await res.json().catch(() => null);
+  if (!res.ok) throw new TransferApiError(json?.error?.code, json?.error?.details);
+  return json?.data ?? json;
+}
+
 interface PendingInvite {
   id: string;
   email: string;
@@ -164,6 +227,8 @@ export function ShareAndPeopleDialog({
 }: ShareAndPeopleDialogProps) {
   const isProject = Boolean(projectId && !workspaceId);
   const tMembers = useTranslations("Members");
+  const tTransfer = useTranslations("Transfer");
+  const tLimits = useTranslations("MemberLimits");
   const roleLabel = (role: string) =>
     role in ROLE_RANK
       ? tMembers(`roles.${role as "VIEWER" | "COMMENTER" | "EDITOR" | "ADMIN"}`)
@@ -229,19 +294,14 @@ export function ShareAndPeopleDialog({
   const [transferConfirmText, setTransferConfirmText] = React.useState("");
   const [transferring, setTransferring] = React.useState(false);
   const [previousOwnerAction, setPreviousOwnerAction] = React.useState<"STAY_ADMIN" | "LEAVE">("STAY_ADMIN");
-  const [pendingTransfer, setPendingTransfer] = React.useState<any | null>(null);
+  const [pendingTransfer, setPendingTransfer] = React.useState<IncomingTransfer | null>(null);
+  const [outgoingTransfer, setOutgoingTransfer] = React.useState<OutgoingTransfer | null>(null);
   const [checkingFit, setCheckingFit] = React.useState(false);
-  const [fitResult, setFitResult] = React.useState<{
-    ok: boolean;
-    limit?: number;
-    collaboratorsAfter?: number;
-    error?: string;
-  } | null>(null);
+  const [fitResult, setFitResult] = React.useState<TransferFit | null>(null);
   const [graceInfo, setGraceInfo] = React.useState<{
     inGrace: boolean;
-    limit?: number;
-    excess?: number;
-    graceEndsAt?: string;
+    limit: number;
+    daysRemaining: number;
   } | null>(null);
 
   // Copy link state
@@ -276,6 +336,8 @@ export function ShareAndPeopleDialog({
         setMembers(Array.isArray(data?.members) ? data.members : []);
         setCanManage(Boolean(data?.canManage));
         setIsOwner(Boolean(data?.isOwner));
+        setGraceInfo(data?.grace ?? null);
+        setOutgoingTransfer(data?.outgoingTransfer ?? null);
       }
     } catch {
       toast.error("Failed to load members");
@@ -633,50 +695,49 @@ export function ShareAndPeopleDialog({
 
   const fetchPendingTransfer = React.useCallback(async () => {
     try {
-      const res = await fetch("/api/v1/me/ownership-transfers?status=PENDING");
-      if (res.ok) {
-        const json = await res.json();
-        const list = json?.data?.transfers ?? json?.transfers ?? [];
-        const match = list.find((t: any) =>
-          isProject ? t.projectId === resourceId : t.workspaceId === resourceId
-        );
-        setPendingTransfer(match ?? null);
-      }
+      const data = await transferFetch("/api/v1/me/ownership-transfers?status=PENDING");
+      const list: IncomingTransfer[] = data?.transfers ?? [];
+      const match = list.find((tr) =>
+        isProject ? tr.projectId === resourceId : tr.workspaceId === resourceId
+      );
+      setPendingTransfer(match ?? null);
     } catch {
-      // ignore
+      // Banner is optional; ignore.
     }
   }, [resourceId, isProject]);
 
   React.useEffect(() => {
-    if (open) {
-      void fetchPendingTransfer();
-    }
+    if (!open) return;
+    // Async fetch; state is set after the request resolves.
+    const timer = setTimeout(() => void fetchPendingTransfer(), 0);
+    return () => clearTimeout(timer);
   }, [open, fetchPendingTransfer]);
+
+  const transferErr = React.useCallback(
+    (err: unknown) =>
+      err instanceof TransferApiError
+        ? transferErrorText(tTransfer, err.code, err.details)
+        : tTransfer("errors.generic"),
+    [tTransfer]
+  );
 
   const checkFit = React.useCallback(
     async (targetUserId: string, action: "STAY_ADMIN" | "LEAVE") => {
       setCheckingFit(true);
       setFitResult(null);
       try {
-        const res = await fetch(`${baseApiPath}/transfer-check`, {
+        const data = await transferFetch(`${baseApiPath}/transfer-check`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ toUserId: targetUserId, previousOwnerAction: action }),
         });
-        const json = await res.json();
-        if (res.ok) {
-          const data = json?.data ?? json;
-          setFitResult({ ok: true, limit: data.limit, collaboratorsAfter: data.collaboratorsAfter });
-        } else {
-          setFitResult({
-            ok: false,
-            limit: json.error?.details?.limit ?? 0,
-            collaboratorsAfter: json.error?.details?.collaboratorsAfter ?? 0,
-            error: json.error?.message,
-          });
-        }
-      } catch {
-        setFitResult(null);
+        setFitResult({ ok: true, limit: data.limit, collaboratorsAfter: data.collaboratorsAfter });
+      } catch (err) {
+        setFitResult(
+          err instanceof TransferApiError
+            ? { ok: false, code: err.code ?? "", ...err.details }
+            : null
+        );
       } finally {
         setCheckingFit(false);
       }
@@ -684,71 +745,66 @@ export function ShareAndPeopleDialog({
     [baseApiPath]
   );
 
+  const openTransferDialog = (m: MemberItem) => {
+    setTransferTarget(m);
+    setTransferConfirmText("");
+    setPreviousOwnerAction("STAY_ADMIN");
+    setTransferOpen(true);
+    void checkFit(m.userId, "STAY_ADMIN");
+  };
+
   const handleAcceptTransfer = async (transferId: string) => {
     try {
-      const res = await fetch(`/api/v1/ownership-transfers/${transferId}/accept`, {
+      const data = await transferFetch(`/api/v1/ownership-transfers/${transferId}/accept`, {
         method: "POST",
       });
-      if (!res.ok) {
-        const json = await res.json();
-        throw new Error(json?.error?.message || "Failed to accept transfer");
-      }
-      toast.success("Ownership transfer accepted! You are now the owner.");
+      toast.success(
+        data?.detachedFromProject ? tTransfer("errors.movedOutOfProject") : tTransfer("accepted")
+      );
       fetchMembers();
       fetchPendingTransfer();
       fetchActivity();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to accept transfer");
+      toast.error(transferErr(err));
+      fetchPendingTransfer();
     }
   };
 
   const handleDeclineTransfer = async (transferId: string) => {
     try {
-      const res = await fetch(`/api/v1/ownership-transfers/${transferId}/decline`, {
+      await transferFetch(`/api/v1/ownership-transfers/${transferId}/decline`, {
         method: "POST",
       });
-      if (!res.ok) {
-        const json = await res.json();
-        throw new Error(json?.error?.message || "Failed to decline transfer");
-      }
-      toast.success("Ownership transfer declined");
-      fetchPendingTransfer();
+      toast.success(tTransfer("declined"));
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to decline transfer");
+      toast.error(transferErr(err));
+    } finally {
+      fetchPendingTransfer();
     }
   };
 
   const handleCancelTransfer = async (transferId: string) => {
     try {
-      const res = await fetch(`/api/v1/ownership-transfers/${transferId}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) {
-        const json = await res.json();
-        throw new Error(json?.error?.message || "Failed to cancel transfer");
-      }
-      toast.success("Ownership transfer request cancelled");
-      fetchPendingTransfer();
+      await transferFetch(`/api/v1/ownership-transfers/${transferId}`, { method: "DELETE" });
+      toast.success(tTransfer("cancelled"));
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to cancel transfer");
+      toast.error(transferErr(err));
+    } finally {
+      fetchMembers();
     }
   };
 
   const handleToggleKeepActive = async (targetUserId: string, keepActive: boolean) => {
     try {
-      const res = await fetch(`${baseApiPath}/members/${targetUserId}`, {
+      await transferFetch(`${baseApiPath}/members/${targetUserId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ keepActive }),
       });
-      if (!res.ok) {
-        const json = await res.json();
-        throw new Error(json?.error?.message || "Failed to update keep-active status");
-      }
-      toast.success("Collaborator keep-active status updated");
+      toast.success(tLimits("keepActiveUpdated"));
       fetchMembers();
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to update keep-active status");
+    } catch {
+      toast.error(tLimits("keepActiveFailed"));
     }
   };
 
@@ -756,31 +812,23 @@ export function ShareAndPeopleDialog({
     if (!transferTarget || transferring) return;
     setTransferring(true);
     try {
-      const res = await fetch(`${baseApiPath}/transfer-ownership`, {
+      await transferFetch(`${baseApiPath}/transfer-ownership`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           toUserId: transferTarget.userId,
-          newOwnerId: transferTarget.userId,
           previousOwnerAction,
           confirm: transferConfirmText.trim(),
-          confirmation: transferConfirmText.trim(),
         }),
       });
-      const json = await res.json();
-      if (!res.ok) {
-        throw new Error(json?.error?.message || "Failed to transfer ownership");
-      }
-      toast.success("Ownership transferred successfully");
+      toast.success(tTransfer("requestSent", { name: transferTarget.name }));
       setTransferOpen(false);
       setTransferTarget(null);
       setTransferConfirmText("");
       fetchMembers();
       fetchActivity();
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : "Failed to transfer ownership";
-      toast.error(msg);
+      toast.error(transferErr(err));
     } finally {
       setTransferring(false);
     }
@@ -974,11 +1022,16 @@ export function ShareAndPeopleDialog({
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 font-semibold text-sm text-fg">
                       <Crown className="h-4 w-4 text-accent" />
-                      <span>Ownership Transfer Request</span>
+                      <span>{tTransfer("incomingTitle")}</span>
                     </div>
                     <p className="text-xs text-fg-muted">
-                      {pendingTransfer.fromUser?.name || "The current owner"} has requested to transfer ownership of this {resourceLabel} to you.
-                      <span className="block mt-0.5 font-medium text-fg">You will pay for all usage in this workspace.</span>
+                      {tTransfer("incomingBody", {
+                        name: pendingTransfer.fromUser?.name || tTransfer("someone"),
+                        type: isProject ? "project" : "workspace",
+                      })}
+                      <span className="block mt-0.5 font-medium text-fg">
+                        {tTransfer("incomingPays")}
+                      </span>
                     </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
@@ -987,28 +1040,52 @@ export function ShareAndPeopleDialog({
                       variant="default"
                       onClick={() => handleAcceptTransfer(pendingTransfer.id)}
                     >
-                      Accept
+                      {tTransfer("accept")}
                     </Button>
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => handleDeclineTransfer(pendingTransfer.id)}
                     >
-                      Decline
+                      {tTransfer("decline")}
                     </Button>
                   </div>
                 </div>
               )}
 
-              {graceInfo?.inGrace && (
+              {isOwner && outgoingTransfer && (
+                <div className="rounded-xl border border-border bg-surface-2/40 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 text-xs text-fg-muted">
+                    <Crown className="h-4 w-4 text-accent shrink-0" />
+                    <span>
+                      {tTransfer("outgoingPending", {
+                        name: outgoingTransfer.toUser?.name || tTransfer("someone"),
+                      })}
+                    </span>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="shrink-0"
+                    onClick={() => handleCancelTransfer(outgoingTransfer.id)}
+                  >
+                    {tTransfer("cancelRequest")}
+                  </Button>
+                </div>
+              )}
+
+              {isOwner && graceInfo?.inGrace && (
                 <div className="rounded-xl border border-warning/40 bg-warning/10 p-4 flex items-center justify-between gap-3">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 font-semibold text-sm text-warning">
                       <AlertCircle className="h-4 w-4" />
-                      <span>Plan Collaborator Limit Exceeded</span>
+                      <span>{tLimits("graceTitle")}</span>
                     </div>
                     <p className="text-xs text-fg-muted">
-                      Your plan allows {graceInfo.limit} collaborators. Choose who stays active before grace period ends.
+                      {tLimits("graceBanner", {
+                        limit: graceInfo.limit,
+                        daysRemaining: graceInfo.daysRemaining,
+                      })}
                     </p>
                   </div>
                 </div>
@@ -1268,12 +1345,10 @@ export function ShareAndPeopleDialog({
                               variant="ghost"
                               size="sm"
                               className="text-xs h-8 px-2 text-muted hover:text-accent"
-                              title="Transfer Ownership"
-                              onClick={() => {
-                                setTransferTarget(m);
-                                setTransferConfirmText("");
-                                setTransferOpen(true);
-                              }}
+                              title={tTransfer("buttonTitle")}
+                              aria-label={tTransfer("buttonTitle")}
+                              disabled={Boolean(outgoingTransfer)}
+                              onClick={() => openTransferDialog(m)}
                             >
                               <Crown className="h-3.5 w-3.5" />
                             </Button>
@@ -1317,23 +1392,23 @@ export function ShareAndPeopleDialog({
 
                             return (
                               <div className="flex items-center gap-5 sm:gap-6 flex-wrap">
-                                  {graceInfo?.inGrace && (
+                                  {isOwner && graceInfo?.inGrace && (
                                     <Tooltip>
                                       <TooltipTrigger asChild>
                                         <label className="flex items-center gap-2 cursor-pointer select-none">
                                           <Switch
                                             size="sm"
                                             checked={Boolean(m.keepActive)}
-                                            disabled={!canEditThisMember}
+                                            aria-label={tLimits("keepActive")}
                                             onCheckedChange={(val) => handleToggleKeepActive(m.userId, val)}
                                           />
                                           <span className="text-xs text-fg-muted font-medium whitespace-nowrap">
-                                            Keep active
+                                            {tLimits("keepActive")}
                                           </span>
                                         </label>
                                       </TooltipTrigger>
                                       <TooltipContent>
-                                        Protects this member from automatic suspension if plan limits are exceeded
+                                        {tLimits("keepActiveHint")}
                                       </TooltipContent>
                                     </Tooltip>
                                   )}
@@ -1856,65 +1931,67 @@ export function ShareAndPeopleDialog({
             <DialogHeader>
               <DialogTitle className="text-lg font-bold flex items-center gap-2 text-danger">
                 <AlertCircle className="h-5 w-5" />
-                <span>Transfer Ownership</span>
+                <span>{tTransfer("dialogTitle")}</span>
               </DialogTitle>
               <DialogDescription className="text-xs text-muted">
-                You are about to transfer ownership of &ldquo;{resourceTitle}
-                &rdquo; to{" "}
-                <span className="font-semibold text-fg">
-                  {transferTarget.name}
-                </span>
-                . You will become an Administrator and will lose exclusive
-                ownership privileges.
+                {tTransfer("dialogDescription", {
+                  name: transferTarget.name,
+                  resourceName: resourceTitle,
+                })}
               </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-3 py-2 text-xs">
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-fg">Your role after transfer</label>
+                <label className="text-xs font-semibold text-fg">{tTransfer("yourRole")}</label>
                 <Select
                   value={previousOwnerAction}
                   onValueChange={(val: "STAY_ADMIN" | "LEAVE") => {
                     setPreviousOwnerAction(val);
-                    if (transferTarget) {
-                      void checkFit(transferTarget.userId, val);
-                    }
+                    void checkFit(transferTarget.userId, val);
                   }}
                 >
-                  <SelectTrigger className="h-9 bg-surface text-xs">
+                  <SelectTrigger className="h-9 bg-surface text-xs" aria-label={tTransfer("yourRole")}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="STAY_ADMIN">Stay as Administrator</SelectItem>
-                    <SelectItem value="LEAVE">Leave {resourceLabel}</SelectItem>
+                    <SelectItem value="STAY_ADMIN">{tTransfer("stayAdmin")}</SelectItem>
+                    <SelectItem value="LEAVE">{tTransfer("leave")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               {checkingFit && (
-                <div className="flex items-center gap-2 text-xs text-muted">
+                <div className="flex items-center gap-2 text-xs text-muted" role="status">
                   <Spinner className="h-3 w-3" />
-                  <span>Checking recipient's plan limit...</span>
+                  <span>{tTransfer("checking")}</span>
                 </div>
               )}
 
-              {fitResult && !fitResult.ok && (
-                <div className="p-2.5 rounded-lg border border-danger/40 bg-danger/10 text-xs text-danger flex items-start gap-2">
+              {!checkingFit && fitResult?.ok && (
+                <p className="text-xs text-muted">
+                  {tTransfer("planFits", {
+                    limit: fitResult.limit,
+                    collaboratorsAfter: fitResult.collaboratorsAfter,
+                  })}
+                </p>
+              )}
+
+              {!checkingFit && fitResult && !fitResult.ok && (
+                <div
+                  className="p-2.5 rounded-lg border border-danger/40 bg-danger/10 text-xs text-danger flex items-start gap-2"
+                  role="alert"
+                >
                   <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-                  <span>
-                    {fitResult.error || `Recipient's plan limit (${fitResult.limit}) cannot fit this workspace (${fitResult.collaboratorsAfter} collaborators).`}
-                  </span>
+                  <span>{transferErrorText(tTransfer, fitResult.code, fitResult)}</span>
                 </div>
               )}
 
-              <p className="text-muted">
-                To confirm this transfer, please type{" "}
-                <span className="font-bold font-mono text-fg">TRANSFER</span> or
-                the {resourceLabel} name below:
-              </p>
+              <p className="text-muted">{tTransfer("confirmPrompt")}</p>
               <Input
                 type="text"
-                placeholder={`Type TRANSFER or ${resourceLabel} name`}
+                placeholder={tTransfer("confirmPlaceholder")}
+                aria-label={tTransfer("confirmPrompt")}
                 className="h-9 bg-surface font-mono text-xs"
                 value={transferConfirmText}
                 onChange={(e) => setTransferConfirmText(e.target.value)}
@@ -1928,23 +2005,21 @@ export function ShareAndPeopleDialog({
                 onClick={() => setTransferOpen(false)}
                 disabled={transferring}
               >
-                Cancel
+                {tTransfer("cancel")}
               </Button>
               <Button
                 variant="destructive"
                 size="sm"
                 disabled={
                   transferring ||
+                  checkingFit ||
+                  (fitResult !== null && !fitResult.ok) ||
                   (transferConfirmText.trim() !== "TRANSFER" &&
                     transferConfirmText.trim() !== resourceTitle.trim())
                 }
                 onClick={handleExecuteTransfer}
               >
-                {transferring ? (
-                  <Spinner className="h-4 w-4" />
-                ) : (
-                  "Confirm Transfer"
-                )}
+                {transferring ? <Spinner className="h-4 w-4" /> : tTransfer("send")}
               </Button>
             </div>
           </DialogContent>

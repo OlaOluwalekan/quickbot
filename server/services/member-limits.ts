@@ -3,9 +3,20 @@ import { db } from "@/server/db/client";
 import { getEntitlements } from "@/server/billing/entitlements";
 import { notify } from "@/server/services/notify";
 import { Errors } from "@/server/http/errors";
+import { requireWorkspace, requireProject } from "@/server/authz/access";
 import type { Actor } from "@/server/auth/session";
 
-// TODO(8.3/8.4): Triggered by billing subscription downgrades/cancellations (see quick_implementation_fix_for_v2.md Step 8.3/8.4)
+// Over-limit suspension service (quick_implementation_fix_for_v2.md §2.5, Step F1.3).
+// Built now, triggered later:
+// TODO(8.3/8.4): call startOverLimitGrace on downgrade/expiry, enforceMemberLimit
+// when the grace period ends, and restoreWithinLimit on (re-)subscription.
+//
+// The member limit is per resource (as `assertMemberCapacity` in invitation.ts
+// and `checkTransferFits` count it): each of the owner's workspaces and projects
+// may have at most `limit` active members.
+
+const GRACE_MS = 14 * 24 * 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 export interface GracePeriodInfo {
   inGrace: boolean;
@@ -14,345 +25,220 @@ export interface GracePeriodInfo {
   daysRemaining: number;
 }
 
-/**
- * Check if the owner is currently in an over-limit grace period.
- */
 export async function isOwnerInGrace(ownerId: string): Promise<boolean> {
   const grace = await db.memberLimitGrace.findUnique({
     where: { ownerId },
     select: { graceEndsAt: true },
   });
-  if (!grace) return false;
-  return grace.graceEndsAt > new Date();
+  return Boolean(grace && grace.graceEndsAt > new Date());
 }
 
-/**
- * Get active grace period info for an owner (used by Share & People dialog banner).
- */
+/** Active grace period for the Share & people banner. */
 export async function getOwnerGraceInfo(ownerId: string): Promise<GracePeriodInfo> {
-  const grace = await db.memberLimitGrace.findUnique({
-    where: { ownerId },
-  });
+  const grace = await db.memberLimitGrace.findUnique({ where: { ownerId } });
   if (!grace || grace.graceEndsAt <= new Date()) {
-    return {
-      inGrace: false,
-      limit: 0,
-      graceEndsAt: null,
-      daysRemaining: 0,
-    };
+    return { inGrace: false, limit: 0, graceEndsAt: null, daysRemaining: 0 };
   }
-
-  const msRemaining = grace.graceEndsAt.getTime() - Date.now();
-  const daysRemaining = Math.max(0, Math.ceil(msRemaining / (1000 * 60 * 60 * 24)));
-
   return {
     inGrace: true,
     limit: grace.limit,
     graceEndsAt: grace.graceEndsAt,
-    daysRemaining,
+    daysRemaining: Math.max(0, Math.ceil((grace.graceEndsAt.getTime() - Date.now()) / DAY_MS)),
   };
 }
 
-/**
- * Start 14-day over-limit grace period when owner downgrades or exceeds member limits.
- * Notifies owner and collaborator members, blocks new invitations.
- */
-export async function startOverLimitGrace(ownerId: string, newLimit: number) {
-  const graceEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000); // 14 days
+type MembershipRow = {
+  kind: "workspace" | "project";
+  id: string;
+  userId: string;
+  createdAt: Date;
+  keepActive: boolean;
+  resourceId: string;
+  resourceName: string;
+};
 
-  const grace = await db.memberLimitGrace.upsert({
-    where: { ownerId },
-    update: {
-      limit: newLimit,
-      graceEndsAt,
-    },
-    create: {
-      ownerId,
-      limit: newLimit,
-      graceEndsAt,
-    },
-  });
-
-  // Notify owner
-  await notify(ownerId, "MEMBER_LIMIT_EXCEEDED", {
-    limit: newLimit,
-    graceEndsAt: graceEndsAt.toISOString(),
-  });
-
-  // Collect all distinct collaborator userIds across owner's workspaces and projects
-  const [workspaces, projects] = await Promise.all([
-    db.workspace.findMany({
-      where: { ownerId, deletedAt: null },
+async function ownerMemberships(ownerId: string, suspended: boolean): Promise<MembershipRow[]> {
+  const suspendedFilter = suspended ? { not: null } : null;
+  const [ws, proj] = await Promise.all([
+    db.workspaceMember.findMany({
+      where: {
+        workspace: { ownerId, deletedAt: null },
+        userId: { not: ownerId },
+        suspendedAt: suspendedFilter,
+      },
       select: {
         id: true,
-        members: {
-          where: { suspendedAt: null, userId: { not: ownerId } },
-          select: { userId: true },
-        },
+        userId: true,
+        createdAt: true,
+        keepActive: true,
+        workspaceId: true,
+        workspace: { select: { title: true } },
       },
     }),
-    db.project.findMany({
-      where: { ownerId, deletedAt: null },
+    db.projectMember.findMany({
+      where: {
+        project: { ownerId, deletedAt: null },
+        userId: { not: ownerId },
+        suspendedAt: suspendedFilter,
+      },
       select: {
         id: true,
-        members: {
-          where: { suspendedAt: null, userId: { not: ownerId } },
-          select: { userId: true },
-        },
+        userId: true,
+        createdAt: true,
+        keepActive: true,
+        projectId: true,
+        project: { select: { name: true } },
       },
     }),
   ]);
+  return [
+    ...ws.map((m) => ({
+      kind: "workspace" as const,
+      id: m.id,
+      userId: m.userId,
+      createdAt: m.createdAt,
+      keepActive: m.keepActive,
+      resourceId: m.workspaceId,
+      resourceName: m.workspace.title,
+    })),
+    ...proj.map((m) => ({
+      kind: "project" as const,
+      id: m.id,
+      userId: m.userId,
+      createdAt: m.createdAt,
+      keepActive: m.keepActive,
+      resourceId: m.projectId,
+      resourceName: m.project.name,
+    })),
+  ];
+}
 
-  const memberUserIds = new Set<string>();
-  for (const ws of workspaces) {
-    for (const m of ws.members) memberUserIds.add(m.userId);
+function groupByResource(rows: MembershipRow[]) {
+  const map = new Map<string, MembershipRow[]>();
+  for (const r of rows) {
+    const key = `${r.kind}:${r.resourceId}`;
+    const list = map.get(key) ?? [];
+    list.push(r);
+    map.set(key, list);
   }
-  for (const p of projects) {
-    for (const m of p.members) memberUserIds.add(m.userId);
-  }
+  return map;
+}
 
-  for (const memberUserId of memberUserIds) {
-    await notify(memberUserId, "MEMBER_LIMIT_EXCEEDED", {
-      limit: newLimit,
-      graceEndsAt: graceEndsAt.toISOString(),
-    });
+async function setSuspended(row: MembershipRow, suspendedAt: Date | null) {
+  const data = { suspendedAt, suspendedReason: suspendedAt ? "PLAN_LIMIT" : null };
+  if (row.kind === "workspace") {
+    await db.workspaceMember.update({ where: { id: row.id }, data });
+  } else {
+    await db.projectMember.update({ where: { id: row.id }, data });
+  }
+}
+
+function hrefFor(row: MembershipRow) {
+  return row.kind === "workspace" ? `/workspaces/${row.resourceId}` : `/projects/${row.resourceId}`;
+}
+
+/**
+ * Starts the 14-day grace period. Notifies the owner and every active member;
+ * new invitations are blocked while it runs (invitation.ts).
+ */
+export async function startOverLimitGrace(ownerId: string, newLimit: number) {
+  const graceEndsAt = new Date(Date.now() + GRACE_MS);
+
+  const grace = await db.memberLimitGrace.upsert({
+    where: { ownerId },
+    update: { limit: newLimit, graceEndsAt },
+    create: { ownerId, limit: newLimit, graceEndsAt },
+  });
+
+  const payload = { limit: newLimit, graceEndsAt: graceEndsAt.toISOString() };
+  await notify(ownerId, "MEMBER_LIMIT_EXCEEDED", { ...payload, isOwner: true });
+
+  const memberUserIds = new Set((await ownerMemberships(ownerId, false)).map((m) => m.userId));
+  for (const userId of memberUserIds) {
+    await notify(userId, "MEMBER_LIMIT_EXCEEDED", { ...payload, isOwner: false });
   }
 
   return grace;
 }
 
 /**
- * Enforce member limit after grace period has expired.
- * Suspends the most recently added members beyond the limit across all the owner's workspaces/projects
- * (suspendedAt = now, suspendedReason = "PLAN_LIMIT"), respecting explicit keepActive flags.
- * Notifies each suspended member.
+ * After the grace period: in each of the owner's workspaces/projects, suspends
+ * the most recently added active members beyond the limit (read-only, nothing
+ * is deleted). Members the owner marked "Keep active" are suspended last.
+ * Does nothing while the grace period is still running.
  */
 export async function enforceMemberLimit(ownerId: string) {
-  const grace = await db.memberLimitGrace.findUnique({
-    where: { ownerId },
-  });
+  const grace = await db.memberLimitGrace.findUnique({ where: { ownerId } });
+  if (grace && grace.graceEndsAt > new Date()) {
+    return { suspendedCount: 0, inGrace: true };
+  }
   const limit = grace ? grace.limit : (await getEntitlements(ownerId)).limits.members;
 
-  // Find all active (non-suspended) members in owner's workspaces and projects
-  const [wsMembers, projMembers] = await Promise.all([
-    db.workspaceMember.findMany({
-      where: {
-        workspace: { ownerId, deletedAt: null },
-        userId: { not: ownerId },
-        suspendedAt: null,
-      },
-      include: {
-        workspace: { select: { title: true } },
-      },
-      orderBy: { createdAt: "desc" }, // Most recently added first
-    }),
-    db.projectMember.findMany({
-      where: {
-        project: { ownerId, deletedAt: null },
-        userId: { not: ownerId },
-        suspendedAt: null,
-      },
-      include: {
-        project: { select: { name: true } },
-      },
-      orderBy: { createdAt: "desc" }, // Most recently added first
-    }),
-  ]);
-
-  // Total active memberships
-  const totalActive = wsMembers.length + projMembers.length;
-  if (totalActive <= limit) {
-    return { suspendedCount: 0 };
+  const now = new Date();
+  const suspended: MembershipRow[] = [];
+  for (const rows of groupByResource(await ownerMemberships(ownerId, false)).values()) {
+    if (rows.length <= limit) continue;
+    // Keep: keepActive first, then oldest. Everything after `limit` is suspended.
+    const ordered = [...rows].sort(
+      (a, b) =>
+        Number(b.keepActive) - Number(a.keepActive) ||
+        a.createdAt.getTime() - b.createdAt.getTime()
+    );
+    for (const row of ordered.slice(limit)) {
+      await setSuspended(row, now);
+      suspended.push(row);
+    }
   }
 
-  const excess = totalActive - limit;
-
-  // Candidates for suspension: those without keepActive === true
-  const candidates: Array<{
-    type: "workspace" | "project";
-    id: string;
-    userId: string;
-    createdAt: Date;
-    resourceName: string;
-    keepActive: boolean;
-  }> = [
-    ...wsMembers.map((m) => ({
-      type: "workspace" as const,
-      id: m.id,
-      userId: m.userId,
-      createdAt: m.createdAt,
-      resourceName: m.workspace.title,
-      keepActive: m.keepActive,
-    })),
-    ...projMembers.map((m) => ({
-      type: "project" as const,
-      id: m.id,
-      userId: m.userId,
-      createdAt: m.createdAt,
-      resourceName: m.project.name,
-      keepActive: m.keepActive,
-    })),
-  ];
-
-  // Put non-keepActive items first, sorted by createdAt desc (most recent first)
-  const toSuspend = candidates
-    .filter((c) => !c.keepActive)
-    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-    .slice(0, excess);
-
-  const now = new Date();
-  for (const item of toSuspend) {
-    if (item.type === "workspace") {
-      await db.workspaceMember.update({
-        where: { id: item.id },
-        data: {
-          suspendedAt: now,
-          suspendedReason: "PLAN_LIMIT",
-        },
-      });
-    } else {
-      await db.projectMember.update({
-        where: { id: item.id },
-        data: {
-          suspendedAt: now,
-          suspendedReason: "PLAN_LIMIT",
-        },
-      });
-    }
-
-    await notify(item.userId, "MEMBER_SUSPENDED", {
-      resourceName: item.resourceName,
+  for (const row of suspended) {
+    await notify(row.userId, "MEMBER_SUSPENDED", {
+      resourceName: row.resourceName,
       reason: "PLAN_LIMIT",
+      href: hrefFor(row),
     });
   }
 
-  return { suspendedCount: toSuspend.length };
+  return { suspendedCount: suspended.length, inGrace: false };
 }
 
 /**
- * Un-suspends oldest-first up to the current limit across all owner's workspaces/projects.
- * Notifies each restored member.
+ * Un-suspends plan-limit suspensions oldest-first, up to the owner's current
+ * plan limit in each resource. Clears the grace record.
  */
 export async function restoreWithinLimit(ownerId: string, limitOverride?: number) {
-  const grace = await db.memberLimitGrace.findUnique({ where: { ownerId } });
-  const entitlements = await getEntitlements(ownerId);
-  const limit = limitOverride ?? (grace ? grace.limit : entitlements.limits.members);
+  const limit = limitOverride ?? (await getEntitlements(ownerId)).limits.members;
 
-  // Count currently active (non-suspended) members
-  const [activeWsCount, activeProjCount] = await Promise.all([
-    db.workspaceMember.count({
-      where: {
-        workspace: { ownerId, deletedAt: null },
-        userId: { not: ownerId },
-        suspendedAt: null,
-      },
-    }),
-    db.projectMember.count({
-      where: {
-        project: { ownerId, deletedAt: null },
-        userId: { not: ownerId },
-        suspendedAt: null,
-      },
-    }),
+  const [active, suspended] = await Promise.all([
+    ownerMemberships(ownerId, false),
+    ownerMemberships(ownerId, true),
   ]);
+  const activeByResource = groupByResource(active);
 
-  const currentActive = activeWsCount + activeProjCount;
-  const availableSlots = Math.max(0, limit - currentActive);
-
-  if (availableSlots <= 0) {
-    return { restoredCount: 0 };
-  }
-
-  // Find suspended members, oldest-first
-  const [suspendedWs, suspendedProj] = await Promise.all([
-    db.workspaceMember.findMany({
-      where: {
-        workspace: { ownerId, deletedAt: null },
-        userId: { not: ownerId },
-        suspendedAt: { not: null },
-      },
-      include: {
-        workspace: { select: { title: true } },
-      },
-      orderBy: { createdAt: "asc" },
-    }),
-    db.projectMember.findMany({
-      where: {
-        project: { ownerId, deletedAt: null },
-        userId: { not: ownerId },
-        suspendedAt: { not: null },
-      },
-      include: {
-        project: { select: { name: true } },
-      },
-      orderBy: { createdAt: "asc" },
-    }),
-  ]);
-
-  const candidates: Array<{
-    type: "workspace" | "project";
-    id: string;
-    userId: string;
-    createdAt: Date;
-    resourceName: string;
-  }> = [
-    ...suspendedWs.map((m) => ({
-      type: "workspace" as const,
-      id: m.id,
-      userId: m.userId,
-      createdAt: m.createdAt,
-      resourceName: m.workspace.title,
-    })),
-    ...suspendedProj.map((m) => ({
-      type: "project" as const,
-      id: m.id,
-      userId: m.userId,
-      createdAt: m.createdAt,
-      resourceName: m.project.name,
-    })),
-  ];
-
-  // Oldest first
-  const toRestore = candidates
-    .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
-    .slice(0, availableSlots);
-
-  for (const item of toRestore) {
-    if (item.type === "workspace") {
-      await db.workspaceMember.update({
-        where: { id: item.id },
-        data: {
-          suspendedAt: null,
-          suspendedReason: null,
-        },
-      });
-    } else {
-      await db.projectMember.update({
-        where: { id: item.id },
-        data: {
-          suspendedAt: null,
-          suspendedReason: null,
-        },
-      });
+  const restored: MembershipRow[] = [];
+  for (const [key, rows] of groupByResource(suspended)) {
+    const slots = Math.max(0, limit - (activeByResource.get(key)?.length ?? 0));
+    const ordered = [...rows].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+    for (const row of ordered.slice(0, slots)) {
+      await setSuspended(row, null);
+      restored.push(row);
     }
+  }
 
-    await notify(item.userId, "MEMBER_RESTORED", {
-      resourceName: item.resourceName,
+  for (const row of restored) {
+    await notify(row.userId, "MEMBER_RESTORED", {
+      resourceName: row.resourceName,
+      href: hrefFor(row),
     });
   }
 
-  // Clean up grace record if within limit
-  if (currentActive + toRestore.length <= limit) {
-    await db.memberLimitGrace.deleteMany({
-      where: { ownerId },
-    });
-  }
+  await db.memberLimitGrace.deleteMany({ where: { ownerId } });
 
-  return { restoredCount: toRestore.length };
+  return { restoredCount: restored.length };
 }
 
 /**
- * Toggle keepActive flag for a member.
+ * Owner-only "Keep active" toggle. On a workspace, a member inherited from the
+ * project is stored on the project row (when the same person owns both).
  */
 export async function setMemberKeepActive(
   actor: Actor,
@@ -361,34 +247,38 @@ export async function setMemberKeepActive(
   const { workspaceId, projectId, targetUserId, keepActive } = target;
 
   if (workspaceId) {
-    const ws = await db.workspace.findUnique({
-      where: { id: workspaceId },
-      select: { ownerId: true },
-    });
-    if (!ws) throw Errors.notFound("Workspace");
+    const { ws } = await requireWorkspace(actor, workspaceId, "workspace.read");
     if (ws.ownerId !== actor.userId) {
-      throw Errors.forbidden("Only the owner can set member keep-active status");
+      throw Errors.forbidden("Only the owner can choose who stays active");
     }
-
-    await db.workspaceMember.update({
-      where: { workspaceId_userId: { workspaceId, userId: targetUserId } },
+    const updated = await db.workspaceMember.updateMany({
+      where: { workspaceId, userId: targetUserId },
       data: { keepActive },
     });
-  } else if (projectId) {
-    const p = await db.project.findUnique({
-      where: { id: projectId },
-      select: { ownerId: true },
-    });
-    if (!p) throw Errors.notFound("Project");
-    if (p.ownerId !== actor.userId) {
-      throw Errors.forbidden("Only the owner can set member keep-active status");
-    }
+    if (updated.count > 0) return { success: true };
 
-    await db.projectMember.update({
-      where: { projectId_userId: { projectId, userId: targetUserId } },
-      data: { keepActive },
-    });
+    if (ws.projectId) {
+      const inherited = await db.projectMember.updateMany({
+        where: { projectId: ws.projectId, userId: targetUserId, project: { ownerId: actor.userId } },
+        data: { keepActive },
+      });
+      if (inherited.count > 0) return { success: true };
+    }
+    throw Errors.notFound("Member");
   }
 
-  return { success: true };
+  if (projectId) {
+    const { project } = await requireProject(actor, projectId, "workspace.read");
+    if (project.ownerId !== actor.userId) {
+      throw Errors.forbidden("Only the owner can choose who stays active");
+    }
+    const updated = await db.projectMember.updateMany({
+      where: { projectId, userId: targetUserId },
+      data: { keepActive },
+    });
+    if (updated.count === 0) throw Errors.notFound("Member");
+    return { success: true };
+  }
+
+  throw Errors.badRequest("Either workspaceId or projectId must be provided");
 }

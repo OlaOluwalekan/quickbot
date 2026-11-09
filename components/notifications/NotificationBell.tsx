@@ -18,6 +18,7 @@ import {
   FileDown,
   MessageSquare,
   Settings,
+  Crown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -140,6 +141,52 @@ export function formatNotificationPresentation(item: NotificationItemDto): {
         description: `${typeof p.answeredCount === "number" ? p.answeredCount : "Your"} queued question${p.answeredCount === 1 ? " was" : "s were"} answered.`,
         href: href || "/workspaces",
         icon: <MessageSquare className="h-4 w-4 text-accent" />,
+      };
+    // F1.3 — English like the rest of this file; moved to next-intl with it in F5.1.
+    case "OWNERSHIP_TRANSFER_REQUESTED":
+      return {
+        title: "Ownership transfer request",
+        description: `${(p.fromUserName as string) || "Someone"} wants to transfer ownership of ${(p.resourceName as string) || "a workspace"} to you. If you accept, you pay for all usage there.`,
+        href: href || "/workspaces",
+        icon: <Crown className="h-4 w-4 text-accent" />,
+      };
+    case "OWNERSHIP_TRANSFER_ACCEPTED":
+      return {
+        title: "Ownership transfer accepted",
+        description: `${(p.toUserName as string) || "The recipient"} is now the owner of ${(p.resourceName as string) || "your workspace"}.`,
+        href: p.previousOwnerAction === "LEAVE" ? null : href,
+        icon: <Crown className="h-4 w-4 text-accent" />,
+      };
+    case "OWNERSHIP_TRANSFER_DECLINED":
+      return {
+        title: "Ownership transfer declined",
+        description: `${(p.toUserName as string) || "The recipient"} declined to take over ${(p.resourceName as string) || "your workspace"}.`,
+        href,
+        icon: <Crown className="h-4 w-4 text-muted" />,
+      };
+    case "MEMBER_LIMIT_EXCEEDED":
+      return {
+        title: "Collaborator limit exceeded",
+        description:
+          p.isOwner === true
+            ? `Your plan allows ${typeof p.limit === "number" ? p.limit : "fewer"} collaborators. Choose who stays active in Share & people.`
+            : "The owner's plan no longer covers all collaborators. Some members may become read-only soon.",
+        href: href || "/workspaces",
+        icon: <AlertTriangle className="h-4 w-4 text-warning" />,
+      };
+    case "MEMBER_SUSPENDED":
+      return {
+        title: "Access changed to read-only",
+        description: `Your access to ${(p.resourceName as string) || "a workspace"} is read-only because the owner's plan no longer covers all collaborators.`,
+        href: href || "/workspaces",
+        icon: <UserMinus className="h-4 w-4 text-warning" />,
+      };
+    case "MEMBER_RESTORED":
+      return {
+        title: "Access restored",
+        description: `Your full access to ${(p.resourceName as string) || "a workspace"} is back.`,
+        href: href || "/workspaces",
+        icon: <UserCheck className="h-4 w-4 text-accent" />,
       };
     default:
       return {

@@ -80,6 +80,8 @@ export interface OwnershipTransferRequestedData {
 export interface OwnershipTransferAcceptedData {
   toUserName: string;
   resourceName: string;
+  actionUrl?: string;
+  previousOwnerAction?: "STAY_ADMIN" | "LEAVE";
 }
 
 export interface MemberLimitExceededData {
@@ -91,10 +93,12 @@ export interface MemberLimitExceededData {
 export interface MemberSuspendedData {
   resourceName: string;
   reason?: string;
+  actionUrl?: string;
 }
 
 export interface MemberRestoredData {
   resourceName: string;
+  actionUrl?: string;
 }
 
 export interface EmailTemplateMap {

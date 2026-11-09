@@ -1,7 +1,6 @@
 import "server-only";
-import { getSiteConfig } from "@/server/config/site";
-import { renderEmailLayout } from "./layout";
-import {
+import { renderSimpleEmail, appUrl } from "./simple";
+import type {
   EmailTemplateResult,
   EmailTranslator,
   MemberLimitExceededData,
@@ -14,51 +13,20 @@ export function renderMemberLimitExceeded(
   t: EmailTranslator,
   toEmail: string
 ): EmailTemplateResult {
-  const site = getSiteConfig();
-  const subject = t("memberLimitExceeded.subject");
-  const heading = t("memberLimitExceeded.heading");
-  const greeting = t("memberLimitExceeded.greeting");
-  const bodyText = t("memberLimitExceeded.body", {
-    limit: data.limit,
-    graceEndsAt: data.graceEndsAt,
-  });
-  const actionLabel = t("memberLimitExceeded.button");
-  const disclaimerText = t("memberLimitExceeded.disclaimer");
-
-  const rendered = renderEmailLayout({
-    title: subject,
-    heading,
-    greeting,
-    bodyHtml: `<p style="margin: 0;">${bodyText}</p>`,
-    bodyText,
-    actionUrl: data.manageUrl,
-    actionLabel,
-    disclaimerHtml: disclaimerText,
-    disclaimerText,
+  return renderSimpleEmail({
+    t,
     toEmail,
-    supportEmail: site.emails.support,
-    copyUrlNotice: t("layout.copyUrlNotice"),
-    supportNotice: t("layout.supportNotice", {
-      supportEmail: site.emails.support,
+    subject: t("memberLimitExceeded.subject"),
+    heading: t("memberLimitExceeded.heading"),
+    greeting: t("memberLimitExceeded.greeting"),
+    body: t("memberLimitExceeded.body", {
+      limit: data.limit,
+      graceEndsAt: data.graceEndsAt.slice(0, 10),
     }),
-    legalNotice: t("layout.legalNotice", {
-      companyLegalName: site.company.legalName,
-      companyAddress: site.company.address,
-      year: new Date().getFullYear().toString(),
-    }),
-    merchantOfRecordNotice: site.billingEnabled
-      ? t("layout.merchantOfRecordNotice")
-      : undefined,
-    transactionalDisclaimer: t("layout.transactionalDisclaimer", {
-      email: toEmail,
-    }),
+    actionUrl: data.manageUrl,
+    actionLabel: t("memberLimitExceeded.button"),
+    disclaimer: t("memberLimitExceeded.disclaimer"),
   });
-
-  return {
-    subject,
-    html: rendered.html,
-    text: rendered.text,
-  };
 }
 
 export function renderMemberSuspended(
@@ -66,51 +34,18 @@ export function renderMemberSuspended(
   t: EmailTranslator,
   toEmail: string
 ): EmailTemplateResult {
-  const site = getSiteConfig();
-  const subject = t("memberSuspended.subject", { resourceName: data.resourceName });
-  const heading = t("memberSuspended.heading");
-  const greeting = t("memberSuspended.greeting");
-  const bodyText = t("memberSuspended.body", {
-    resourceName: data.resourceName,
-    reason: data.reason || "plan limit",
-  });
-  const actionLabel = t("memberSuspended.button");
-  const disclaimerText = t("memberSuspended.disclaimer");
-
-  const rendered = renderEmailLayout({
-    title: subject,
-    heading,
-    greeting,
-    bodyHtml: `<p style="margin: 0;">${bodyText}</p>`,
-    bodyText,
-    actionUrl: `${site.appUrl}/workspaces`,
-    actionLabel,
-    disclaimerHtml: disclaimerText,
-    disclaimerText,
+  const values = { resourceName: data.resourceName };
+  return renderSimpleEmail({
+    t,
     toEmail,
-    supportEmail: site.emails.support,
-    copyUrlNotice: t("layout.copyUrlNotice"),
-    supportNotice: t("layout.supportNotice", {
-      supportEmail: site.emails.support,
-    }),
-    legalNotice: t("layout.legalNotice", {
-      companyLegalName: site.company.legalName,
-      companyAddress: site.company.address,
-      year: new Date().getFullYear().toString(),
-    }),
-    merchantOfRecordNotice: site.billingEnabled
-      ? t("layout.merchantOfRecordNotice")
-      : undefined,
-    transactionalDisclaimer: t("layout.transactionalDisclaimer", {
-      email: toEmail,
-    }),
+    subject: t("memberSuspended.subject", values),
+    heading: t("memberSuspended.heading"),
+    greeting: t("memberSuspended.greeting"),
+    body: t("memberSuspended.body", values),
+    actionUrl: data.actionUrl ?? appUrl("/workspaces"),
+    actionLabel: t("memberSuspended.button"),
+    disclaimer: t("memberSuspended.disclaimer"),
   });
-
-  return {
-    subject,
-    html: rendered.html,
-    text: rendered.text,
-  };
 }
 
 export function renderMemberRestored(
@@ -118,46 +53,16 @@ export function renderMemberRestored(
   t: EmailTranslator,
   toEmail: string
 ): EmailTemplateResult {
-  const site = getSiteConfig();
-  const subject = t("memberRestored.subject", { resourceName: data.resourceName });
-  const heading = t("memberRestored.heading");
-  const greeting = t("memberRestored.greeting");
-  const bodyText = t("memberRestored.body", { resourceName: data.resourceName });
-  const actionLabel = t("memberRestored.button");
-  const disclaimerText = t("memberRestored.disclaimer");
-
-  const rendered = renderEmailLayout({
-    title: subject,
-    heading,
-    greeting,
-    bodyHtml: `<p style="margin: 0;">${bodyText}</p>`,
-    bodyText,
-    actionUrl: `${site.appUrl}/workspaces`,
-    actionLabel,
-    disclaimerHtml: disclaimerText,
-    disclaimerText,
+  const values = { resourceName: data.resourceName };
+  return renderSimpleEmail({
+    t,
     toEmail,
-    supportEmail: site.emails.support,
-    copyUrlNotice: t("layout.copyUrlNotice"),
-    supportNotice: t("layout.supportNotice", {
-      supportEmail: site.emails.support,
-    }),
-    legalNotice: t("layout.legalNotice", {
-      companyLegalName: site.company.legalName,
-      companyAddress: site.company.address,
-      year: new Date().getFullYear().toString(),
-    }),
-    merchantOfRecordNotice: site.billingEnabled
-      ? t("layout.merchantOfRecordNotice")
-      : undefined,
-    transactionalDisclaimer: t("layout.transactionalDisclaimer", {
-      email: toEmail,
-    }),
+    subject: t("memberRestored.subject", values),
+    heading: t("memberRestored.heading"),
+    greeting: t("memberRestored.greeting"),
+    body: t("memberRestored.body", values),
+    actionUrl: data.actionUrl ?? appUrl("/workspaces"),
+    actionLabel: t("memberRestored.button"),
+    disclaimer: t("memberRestored.disclaimer"),
   });
-
-  return {
-    subject,
-    html: rendered.html,
-    text: rendered.text,
-  };
 }
