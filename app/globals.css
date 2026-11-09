@@ -190,10 +190,7 @@
 ::highlight(annot-comment) {
   background-color: var(--mark-comment);
 }
-::highlight(annot-question) {
-  background-color: var(--mark-question);
-}
-::highlight(annot-reply) {
+::highlight(annot-ask) {
   background-color: var(--mark-reply);
 }
 ::highlight(annot-hover) {

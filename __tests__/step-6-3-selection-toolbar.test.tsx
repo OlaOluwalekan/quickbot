@@ -329,7 +329,7 @@ describe("Step 6.3 — Selection popover (Comment · Reply · Add question)", ()
     it("submits question and closes toolbar when clicking Add", async () => {
       (api as jest.Mock).mockResolvedValueOnce({
         id: "annot_q1",
-        kind: "QUESTION",
+        kind: "ASK",
       });
 
       const onQuestionCreated = jest.fn();

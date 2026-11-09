@@ -87,7 +87,7 @@ describe("Step 6.6 — Indicators and Hover/Tap Previews in Workspace", () => {
       workspaceId: "ws_123",
       responseId: "resp_1",
       versionId: "ver_1",
-      kind: "QUESTION",
+      kind: "ASK",
       questionState: "QUEUED",
       visibility: "PRIVATE",
       anchorExact: "Raft is one such example.",

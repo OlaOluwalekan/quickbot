@@ -15,6 +15,16 @@ export interface Anchor {
 }
 
 export type AnnotationKind = "COMMENT" | "ASK";
+
+/**
+ * F2.1: REPLY and QUESTION were merged into ASK. An Ask that went through the
+ * queue (or was migrated from a REPLY) carries a questionState other than
+ * NONE; an "Ask now" keeps NONE. The Phase-6 UI still shows the two in
+ * separate places until F2.4 replaces the right panel.
+ */
+export function isQueuedAsk(a: { kind: string; questionState?: string | null }): boolean {
+  return a.kind === "ASK" && !!a.questionState && a.questionState !== "NONE";
+}
 export type QuestionState =
   | "NONE"
   | "QUEUED"
