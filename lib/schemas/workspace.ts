@@ -61,3 +61,20 @@ export type SearchWorkspacesQuery = z.infer<typeof searchWorkspacesQuerySchema>;
 export type CreateProjectInput = z.infer<typeof createProjectSchema>;
 export type UpdateProjectInput = z.infer<typeof updateProjectSchema>;
 export type ListProjectsQuery = z.infer<typeof listProjectsQuerySchema>;
+
+
+export const listProjectWorkspacesQuerySchema = pageQuery.extend({
+  q: z.string().trim().min(1).max(100).optional(),
+  sort: z.enum(["lastActivity", "name", "createdAt"]).default("lastActivity"),
+});
+export type ListProjectWorkspacesQuery = z.infer<
+  typeof listProjectWorkspacesQuerySchema
+>;
+
+export const MOVABLE_WORKSPACES_LIMIT = 10;
+export const listMovableWorkspacesQuerySchema = z.object({
+  q: z.string().trim().min(1).max(100).optional(),
+});
+export type ListMovableWorkspacesQuery = z.infer<
+  typeof listMovableWorkspacesQuerySchema
+>;

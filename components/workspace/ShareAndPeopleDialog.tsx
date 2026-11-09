@@ -248,6 +248,7 @@ export function ShareAndPeopleDialog({
 
   // Members state
   const [loadingMembers, setLoadingMembers] = React.useState(false);
+  const [membersError, setMembersError] = React.useState(false);
   const [owner, setOwner] = React.useState<MemberItem | null>(null);
   const [members, setMembers] = React.useState<MemberItem[]>([]);
   const [canManage, setCanManage] = React.useState(false);
@@ -327,9 +328,14 @@ export function ShareAndPeopleDialog({
   const fetchMembers = React.useCallback(async () => {
     if (!resourceId) return;
     setLoadingMembers(true);
+    setMembersError(false);
     try {
       const res = await fetch(`${baseApiPath}/members`);
-      if (res.ok) {
+      if (!res.ok) {
+        // Don't fall back to an empty, read-only dialog: that hides the
+        // invite form and looks like "no one can be invited".
+        setMembersError(true);
+      } else {
         const json = await res.json();
         const data = json?.data ?? json;
         setOwner(data?.owner ?? null);
@@ -340,7 +346,7 @@ export function ShareAndPeopleDialog({
         setOutgoingTransfer(data?.outgoingTransfer ?? null);
       }
     } catch {
-      toast.error("Failed to load members");
+      setMembersError(true);
     } finally {
       setLoadingMembers(false);
     }
@@ -1099,6 +1105,23 @@ export function ShareAndPeopleDialog({
               {loadingMembers ? (
                 <div className="flex items-center justify-center py-12">
                   <Spinner className="h-6 w-6 text-accent" />
+                </div>
+              ) : membersError ? (
+                <div
+                  role="alert"
+                  className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border py-10 text-center"
+                >
+                  <p className="text-sm text-fg-muted">
+                    {tMembers("loadFailed")}
+                  </p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => void fetchMembers()}
+                  >
+                    {tMembers("retry")}
+                  </Button>
                 </div>
               ) : (
                 <div className="space-y-3">

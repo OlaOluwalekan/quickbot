@@ -5,6 +5,7 @@ import {
   useQuery,
   useQueryClient,
   type UseQueryOptions,
+  useInfiniteQuery,
 } from "@tanstack/react-query";
 import { api } from "@/lib/api/client";
 import { queryKeys } from "./query-keys";
@@ -13,19 +14,57 @@ import type {
   UpdateProjectInput,
 } from "@/lib/schemas/workspace";
 
+export interface ProjectPersonDto {
+  id: string;
+  name: string;
+  image?: string | null;
+  username?: string | null;
+}
+
 export interface ProjectDto {
   id: string;
   name: string;
   description?: string | null;
-  createdBy: string;
+  createdBy?: string;
+  ownerId?: string;
   archivedAt?: string | null;
   deletedAt?: string | null;
+  /** Caller's effective role on the project (server-computed). */
+  role?: string;
+  /** Caller's capabilities on the project (server-computed). */
+  capabilities?: string[];
+  owner?: ProjectPersonDto;
+  members?: Array<{ id: string; role: string; user: ProjectPersonDto }>;
+  _count?: {
+    workspaces?: number;
+    members?: number;
+  };
   createdAt: string;
   updatedAt: string;
 }
 
 export interface PaginatedProjects {
   items: ProjectDto[];
+  nextCursor: string | null;
+}
+
+export interface ProjectWorkspaceDto {
+  id: string;
+  title: string;
+  ownerId: string;
+  projectId?: string | null;
+  archivedAt?: string | null;
+  lastActivityAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  owner?: ProjectPersonDto;
+  _count?: { responses?: number };
+  /** Caller's capabilities on this workspace (server-computed). */
+  capabilities: string[];
+}
+
+export interface PaginatedProjectWorkspaces {
+  items: ProjectWorkspaceDto[];
   nextCursor: string | null;
 }
 
@@ -68,6 +107,48 @@ export function useProject(
     queryFn: ({ signal }) =>
       api<ProjectDto>(`/api/v1/projects/${projectId}`, { signal }),
     ...options,
+  });
+}
+
+export type ProjectWorkspaceSort = "lastActivity" | "name" | "createdAt";
+
+/**
+ * Cursor-paginated workspaces of a project (infinite scroll).
+ * `q` is matched server-side against the workspace title.
+ */
+export function useProjectWorkspaces(
+  userId: string,
+  projectId: string | null | undefined,
+  filters: { q?: string; sort?: ProjectWorkspaceSort; limit?: number } = {},
+  options?: { initialPage?: PaginatedProjectWorkspaces },
+) {
+  const { q, sort = "lastActivity", limit = 30 } = filters;
+  return useInfiniteQuery({
+    queryKey: queryKeys.projects.workspaces(userId, projectId ?? "", {
+      q,
+      sort,
+    }),
+    enabled: Boolean(userId && projectId),
+    initialPageParam: null as string | null,
+    queryFn: ({ pageParam, signal }) => {
+      const params = new URLSearchParams();
+      if (q) params.set("q", q);
+      params.set("sort", sort);
+      params.set("limit", String(limit));
+      if (pageParam) params.set("cursor", pageParam);
+      return api<PaginatedProjectWorkspaces>(
+        `/api/v1/projects/${projectId}/workspaces?${params.toString()}`,
+        { signal },
+      );
+    },
+    getNextPageParam: (last) => last.nextCursor,
+    ...(options?.initialPage
+      ? {
+          initialData: { pages: [options.initialPage], pageParams: [null] },
+          // Server-rendered first page is fresh; refetch only on change.
+          staleTime: 30_000,
+        }
+      : {}),
   });
 }
 
@@ -221,6 +302,32 @@ export function useDeleteProject(userId: string) {
       queryClient.invalidateQueries({
         queryKey: queryKeys.projects.all(userId),
       });
+    },
+  });
+}
+
+export interface MovableWorkspaceDto {
+  id: string;
+  title: string;
+  project: { id: string; name: string } | null;
+}
+
+/** Workspaces the caller may move into `projectId` (server-filtered, max 10). */
+export function useMovableWorkspaces(
+  userId: string,
+  projectId: string,
+  q: string,
+  options?: { enabled?: boolean },
+) {
+  return useQuery({
+    queryKey: queryKeys.projects.movableWorkspaces(userId, projectId, q),
+    enabled: Boolean(userId && projectId) && options?.enabled !== false,
+    queryFn: ({ signal }) => {
+      const qs = q ? `?q=${encodeURIComponent(q)}` : "";
+      return api<{ items: MovableWorkspaceDto[] }>(
+        `/api/v1/projects/${projectId}/movable-workspaces${qs}`,
+        { signal },
+      );
     },
   });
 }

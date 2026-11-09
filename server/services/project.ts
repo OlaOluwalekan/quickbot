@@ -6,12 +6,30 @@ import { toPage } from "@/server/http/pagination";
 import {
   requireProject,
 } from "@/server/authz/access";
+import {
+  ALL_PERMISSIONS,
+  computeCapabilities,
+  type EffectiveRole,
+  type Permission,
+} from "@/server/authz/permissions";
 import { logActivity } from "./activity";
 import type {
   CreateProjectInput,
   UpdateProjectInput,
+  ListProjectWorkspacesQuery,
+  ListMovableWorkspacesQuery,
 } from "@/lib/schemas/workspace";
+import { MOVABLE_WORKSPACES_LIMIT } from "@/lib/schemas/workspace";
+import type { Prisma } from "@/server/db/generated/client";
 import type { PageQuery } from "@/server/http/pagination";
+
+// Public profile fields only — no email addresses on the project page.
+const personSelect = {
+  id: true,
+  name: true,
+  image: true,
+  username: true,
+} as const;
 
 export type ListProjectsOptions = {
   cursor?: string;
@@ -81,11 +99,23 @@ export async function createProject(actor: Actor, input: CreateProjectInput) {
 }
 
 export async function getProject(actor: Actor, projectId: string) {
-  const { role } = await requireProject(actor, projectId, "workspace.read");
+  const { role, capabilities } = await requireProject(
+    actor,
+    projectId,
+    "workspace.read"
+  );
 
   const project = await db.project.findFirst({
     where: { id: projectId, deletedAt: null },
     include: {
+      owner: { select: personSelect },
+      // A few members for the header avatar stack; the full list lives in
+      // the Share & people dialog.
+      members: {
+        orderBy: { createdAt: "asc" },
+        take: 5,
+        select: { id: true, role: true, user: { select: personSelect } },
+      },
       _count: {
         select: {
           workspaces: { where: { deletedAt: null } },
@@ -100,6 +130,7 @@ export async function getProject(actor: Actor, projectId: string) {
   return {
     ...project,
     role,
+    capabilities: Array.from(capabilities),
   };
 }
 
@@ -181,16 +212,33 @@ export async function deleteProject(actor: Actor, projectId: string) {
 export async function getProjectWorkspaces(
   actor: Actor,
   projectId: string,
-  query: PageQuery
+  query: PageQuery & Partial<Pick<ListProjectWorkspacesQuery, "q" | "sort">>
 ) {
-  await requireProject(actor, projectId, "workspace.read");
+  const access = await requireProject(actor, projectId, "workspace.read");
 
-  // List all non-deleted workspaces in this project
+  // What the project role contributes on each child workspace. Mirrors
+  // resolveWorkspaceRole: the project owner acts as ADMIN on workspaces.
+  const inherited: ReadonlySet<Permission> =
+    access.role === "OWNER" ? computeCapabilities("ADMIN") : access.capabilities;
+
+  const where: Prisma.WorkspaceWhereInput = {
+    projectId,
+    deletedAt: null,
+    ...(query.q
+      ? { title: { contains: query.q, mode: "insensitive" as const } }
+      : {}),
+  };
+
+  const sort = query.sort ?? "lastActivity";
+  const orderBy: Prisma.WorkspaceOrderByWithRelationInput[] =
+    sort === "name"
+      ? [{ title: "asc" }, { id: "asc" }]
+      : sort === "createdAt"
+        ? [{ createdAt: "desc" }, { id: "desc" }]
+        : [{ lastActivityAt: "desc" }, { id: "desc" }];
+
   const rows = await db.workspace.findMany({
-    where: {
-      projectId,
-      deletedAt: null,
-    },
+    where,
     take: query.limit + 1,
     ...(query.cursor
       ? {
@@ -198,8 +246,106 @@ export async function getProjectWorkspaces(
           skip: 1,
         }
       : {}),
-    orderBy: [{ lastActivityAt: "desc" }, { id: "desc" }],
+    orderBy,
+    select: {
+      id: true,
+      title: true,
+      ownerId: true,
+      projectId: true,
+      archivedAt: true,
+      lastActivityAt: true,
+      createdAt: true,
+      updatedAt: true,
+      owner: { select: personSelect },
+      _count: { select: { responses: true } },
+      members: {
+        where: { userId: actor.userId },
+        select: {
+          role: true,
+          canComment: true,
+          canAsk: true,
+          suspendedAt: true,
+        },
+      },
+    },
   });
 
-  return toPage(rows, query.limit);
+  const page = toPage(rows, query.limit);
+  return {
+    nextCursor: page.nextCursor,
+    items: page.items.map(({ members, ...ws }) => {
+      let caps: Set<Permission>;
+      if (ws.ownerId === actor.userId) {
+        caps = new Set<Permission>(ALL_PERMISSIONS);
+      } else {
+        caps = new Set<Permission>(inherited);
+        const wm = members?.[0];
+        if (wm) {
+          for (const p of computeCapabilities(wm.role as EffectiveRole, {
+            canComment: wm.canComment,
+            canAsk: wm.canAsk,
+            suspended: Boolean(wm.suspendedAt),
+          })) {
+            caps.add(p);
+          }
+        }
+      }
+      return { ...ws, capabilities: Array.from(caps) };
+    }),
+  };
+}
+
+/**
+ * Workspaces the actor may move INTO this project: not already in it, not
+ * archived/deleted, and where the actor holds "workspace.rename" (what
+ * updateWorkspace requires). Rename is granted to the workspace owner and to
+ * unsuspended ADMINs — directly on the workspace, or via its current project
+ * (the project owner counts as ADMIN there). Small, searchable result set.
+ */
+export async function listMovableWorkspaces(
+  actor: Actor,
+  projectId: string,
+  query: ListMovableWorkspacesQuery
+) {
+  // Moving in needs "workspace.generate" on the target project.
+  await requireProject(actor, projectId, "workspace.generate");
+
+  const adminRow = { userId: actor.userId, role: "ADMIN" as const, suspendedAt: null };
+
+  const items = await db.workspace.findMany({
+    where: {
+      deletedAt: null,
+      archivedAt: null,
+      OR: [{ projectId: null }, { projectId: { not: projectId } }],
+      ...(query.q
+        ? { title: { contains: query.q, mode: "insensitive" as const } }
+        : {}),
+      AND: [
+        {
+          OR: [
+            { ownerId: actor.userId },
+            { members: { some: adminRow } },
+            {
+              project: {
+                deletedAt: null,
+                OR: [
+                  { ownerId: actor.userId },
+                  { members: { some: adminRow } },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    },
+    orderBy: [{ lastActivityAt: "desc" }, { id: "desc" }],
+    take: MOVABLE_WORKSPACES_LIMIT,
+    select: {
+      id: true,
+      title: true,
+      project: { select: { id: true, name: true } },
+    },
+  });
+
+  return { items };
 }

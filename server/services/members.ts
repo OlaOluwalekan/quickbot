@@ -428,9 +428,18 @@ async function ownerOnlyExtras(
   scope: { workspaceId?: string; projectId?: string }
 ) {
   if (actor.userId !== ownerId) return {};
+  // These only drive owner banners. If they fail (e.g. a database missing the
+  // F1.3 migration) the member list must still load — otherwise the owner gets
+  // an empty, read-only dialog with no way to invite anyone.
   const [grace, outgoingTransfer] = await Promise.all([
-    getOwnerGraceInfo(ownerId),
-    getPendingOutgoingTransfer(actor.userId, scope),
+    getOwnerGraceInfo(ownerId).catch((err: unknown) => {
+      console.error("[Members] grace lookup failed:", (err as Error)?.name);
+      return null;
+    }),
+    getPendingOutgoingTransfer(actor.userId, scope).catch((err: unknown) => {
+      console.error("[Members] transfer lookup failed:", (err as Error)?.name);
+      return null;
+    }),
   ]);
   return { grace, outgoingTransfer };
 }

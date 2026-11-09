@@ -246,14 +246,27 @@ describe("Step 3.4 — AppShell, Sidebar, Topbar, Mobile Drawer & Command Palett
       screen.getByRole("button", { name: /^Share: Analytical Engine$/i })
     ).toBeInTheDocument();
 
-    // Expand project tree node to see nested workspace with aria-current="page"
-    // (anchored so it doesn't also match the "Share: Analytical Engine" button)
+    // F1.4: the project name links to the project page — in the sidebar and
+    // in the topbar breadcrumb (the active workspace belongs to this project)...
+    const projectLinks = screen.getAllByRole("link", {
+      name: "Analytical Engine",
+    });
+    expect(projectLinks).toHaveLength(2);
+    for (const link of projectLinks) {
+      expect(link).toHaveAttribute("href", "/projects/proj-1");
+    }
+
+    // ...and the chevron alone expands the tree to show the nested workspace
+    // with aria-current="page".
     const projectBtn = screen.getByRole("button", {
-      name: /^Analytical Engine/i,
+      name: "Show workspaces in Analytical Engine",
     });
     expect(projectBtn).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(projectBtn);
     expect(projectBtn).toHaveAttribute("aria-expanded", "true");
+    expect(projectBtn).toHaveAccessibleName(
+      "Hide workspaces in Analytical Engine"
+    );
 
     const activeLink = screen.getByRole("link", { name: "Bernoulli Numbers" });
     expect(activeLink).toHaveAttribute("aria-current", "page");

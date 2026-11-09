@@ -201,7 +201,7 @@ export function CommandPalette({
                   value={`project-${project.name}-${project.id}`}
                   onSelect={() =>
                     runAction(() =>
-                      router.push(`/workspaces?projectId=${project.id}`),
+                      router.push(`/projects/${project.id}`),
                     )
                   }
                 >
