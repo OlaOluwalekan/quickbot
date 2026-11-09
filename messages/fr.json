@@ -1118,7 +1118,9 @@
       "inheritedLocked": "Hérité du projet",
       "updated": "Autorisations du membre mises à jour",
       "updateFailed": "Impossible de mettre à jour les autorisations du membre"
-    }
+    },
+    "loadFailed": "Impossible de charger les personnes de cet élément.",
+    "retry": "Réessayer"
   },
   "Transfer": {
     "buttonTitle": "Transférer la propriété",

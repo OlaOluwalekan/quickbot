@@ -1118,7 +1118,9 @@
       "inheritedLocked": "Inherited from project",
       "updated": "Member permissions updated",
       "updateFailed": "Couldn't update member permissions"
-    }
+    },
+    "loadFailed": "Couldn't load the people for this item.",
+    "retry": "Try again"
   },
   "Transfer": {
     "buttonTitle": "Transfer ownership",
