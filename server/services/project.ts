@@ -10,8 +10,9 @@ import { logActivity } from "./activity";
 import type {
   CreateProjectInput,
   UpdateProjectInput,
+  ListProjectWorkspacesQuery,
 } from "@/lib/schemas/workspace";
-import type { PageQuery } from "@/server/http/pagination";
+import type { Prisma } from "@/server/db/generated/client";
 
 export type ListProjectsOptions = {
   cursor?: string;
@@ -28,11 +29,29 @@ export async function listProjects(
 
   const where = {
     deletedAt: null,
-    archivedAt: query.archived ? { not: null } : null,
-    ...(query.q ? { name: { contains: query.q, mode: "insensitive" as const } } : {}),
+    ...(query.archived !== undefined
+      ? query.archived
+        ? { archivedAt: { not: null } }
+        : { archivedAt: null }
+      : { archivedAt: null }),
+    ...(query.q
+      ? {
+          name: {
+            contains: query.q,
+            mode: "insensitive" as const,
+          },
+        }
+      : {}),
     OR: [
       { ownerId: actor.userId },
-      { members: { some: { userId: actor.userId } } },
+      {
+        members: {
+          some: {
+            userId: actor.userId,
+            suspendedAt: null,
+          },
+        },
+      },
     ],
   };
 
@@ -45,7 +64,7 @@ export async function listProjects(
           skip: 1,
         }
       : {}),
-    orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     include: {
       _count: {
         select: {
@@ -62,9 +81,9 @@ export async function listProjects(
 export async function createProject(actor: Actor, input: CreateProjectInput) {
   const p = await db.project.create({
     data: {
+      name: input.name,
+      description: input.description,
       ownerId: actor.userId,
-      name: input.name.trim(),
-      description: input.description?.trim() || null,
     },
   });
 
@@ -81,15 +100,39 @@ export async function createProject(actor: Actor, input: CreateProjectInput) {
 }
 
 export async function getProject(actor: Actor, projectId: string) {
-  const { role } = await requireProject(actor, projectId, "workspace.read");
+  const { role, capabilities } = await requireProject(actor, projectId, "workspace.read");
 
   const project = await db.project.findFirst({
     where: { id: projectId, deletedAt: null },
     include: {
+      owner: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          image: true,
+          username: true,
+        },
+      },
+      members: {
+        where: { suspendedAt: null },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              image: true,
+              username: true,
+            },
+          },
+        },
+        take: 5,
+      },
       _count: {
         select: {
           workspaces: { where: { deletedAt: null } },
-          members: true,
+          members: { where: { suspendedAt: null } },
         },
       },
     },
@@ -100,6 +143,7 @@ export async function getProject(actor: Actor, projectId: string) {
   return {
     ...project,
     role,
+    capabilities: Array.from(capabilities),
   };
 }
 
@@ -124,9 +168,9 @@ export async function updateProject(
   const updated = await db.project.update({
     where: { id: projectId },
     data: {
-      ...(input.name !== undefined ? { name: input.name.trim() } : {}),
+      ...(input.name !== undefined ? { name: input.name } : {}),
       ...(input.description !== undefined
-        ? { description: input.description?.trim() || null }
+        ? { description: input.description }
         : {}),
       ...(input.archived !== undefined
         ? { archivedAt: input.archived ? new Date() : null }
@@ -134,24 +178,19 @@ export async function updateProject(
     },
   });
 
-  if (input.name !== undefined) {
+  const actions = [];
+  if (input.name !== undefined) actions.push("project.renamed");
+  if (input.archived === true) actions.push("project.archived");
+  if (input.archived === false) actions.push("project.unarchived");
+
+  for (const action of actions) {
     await logActivity(db, {
       projectId,
       actorId: actor.userId,
-      action: "project.renamed",
+      action: action as any,
       targetType: "project",
       targetId: projectId,
       meta: { name: updated.name },
-    });
-  }
-
-  if (input.archived !== undefined) {
-    await logActivity(db, {
-      projectId,
-      actorId: actor.userId,
-      action: input.archived ? "project.archived" : "project.unarchived",
-      targetType: "project",
-      targetId: projectId,
     });
   }
 
@@ -159,13 +198,25 @@ export async function updateProject(
 }
 
 export async function deleteProject(actor: Actor, projectId: string) {
-  await requireProject(actor, projectId, "workspace.delete");
+  // Hierarchy enforcement: Only owner can delete project
+  const { project } = await requireProject(actor, projectId, "workspace.delete");
 
-  // Soft delete the project (workspaces remain intact)
+  if (project.ownerId !== actor.userId) {
+    throw Errors.forbidden("Only the owner can delete a project");
+  }
+
   const deleted = await db.project.update({
     where: { id: projectId },
     data: { deletedAt: new Date() },
   });
+
+  // Soft-delete unlinks child workspaces (§2.4: workspaces become standalone)
+  if (typeof db.workspace.updateMany === "function") {
+    await db.workspace.updateMany({
+      where: { projectId },
+      data: { projectId: null },
+    });
+  }
 
   await logActivity(db, {
     projectId,
@@ -181,16 +232,37 @@ export async function deleteProject(actor: Actor, projectId: string) {
 export async function getProjectWorkspaces(
   actor: Actor,
   projectId: string,
-  query: PageQuery
+  query: ListProjectWorkspacesQuery
 ) {
   await requireProject(actor, projectId, "workspace.read");
 
+  const where: Prisma.WorkspaceWhereInput = {
+    projectId,
+    deletedAt: null,
+    ...(query.q
+      ? {
+          title: {
+            contains: query.q,
+            mode: "insensitive",
+          },
+        }
+      : {}),
+  };
+
+  const sort = query.sort ?? "lastActivity";
+  let orderBy: Prisma.WorkspaceOrderByWithRelationInput[];
+  if (sort === "name") {
+    orderBy = [{ title: "asc" }, { id: "desc" }];
+  } else if (sort === "createdAt") {
+    orderBy = [{ createdAt: "desc" }, { id: "desc" }];
+  } else {
+    // "lastActivity"
+    orderBy = [{ lastActivityAt: "desc" }, { id: "desc" }];
+  }
+
   // List all non-deleted workspaces in this project
   const rows = await db.workspace.findMany({
-    where: {
-      projectId,
-      deletedAt: null,
-    },
+    where,
     take: query.limit + 1,
     ...(query.cursor
       ? {
@@ -198,7 +270,23 @@ export async function getProjectWorkspaces(
           skip: 1,
         }
       : {}),
-    orderBy: [{ lastActivityAt: "desc" }, { id: "desc" }],
+    orderBy,
+    include: {
+      owner: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          image: true,
+          username: true,
+        },
+      },
+      _count: {
+        select: {
+          responses: true,
+        },
+      },
+    },
   });
 
   return toPage(rows, query.limit);

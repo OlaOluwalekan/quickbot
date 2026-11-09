@@ -59,6 +59,11 @@ export const queryKeys = {
       userQueryKey(userId, "projects", "list", filters ?? {}),
     detail: (userId: string, projectId: string) =>
       userQueryKey(userId, "projects", "detail", projectId),
+    workspaces: (
+      userId: string,
+      projectId: string,
+      filters?: { q?: string; sort?: string }
+    ) => userQueryKey(userId, "projects", projectId, "workspaces", filters ?? {}),
   },
   me: {
     profile: (userId: string) => userQueryKey(userId, "me", "profile"),

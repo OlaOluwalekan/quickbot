@@ -20,6 +20,7 @@ const mockWorkspaceFindFirst = jest.fn();
 const mockWorkspaceFindUnique = jest.fn();
 const mockWorkspaceCreate = jest.fn();
 const mockWorkspaceUpdate = jest.fn();
+const mockWorkspaceUpdateMany = jest.fn().mockResolvedValue({ count: 0 });
 
 const mockProjectFindMany = jest.fn();
 const mockProjectFindFirst = jest.fn();
@@ -38,6 +39,7 @@ jest.mock("../../server/db/client", () => ({
       findUnique: (...args: unknown[]) => mockWorkspaceFindUnique(...args),
       create: (...args: unknown[]) => mockWorkspaceCreate(...args),
       update: (...args: unknown[]) => mockWorkspaceUpdate(...args),
+      updateMany: (...args: unknown[]) => mockWorkspaceUpdateMany(...args),
     },
     project: {
       findMany: (...args: unknown[]) => mockProjectFindMany(...args),

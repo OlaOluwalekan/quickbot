@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
   Archive,
@@ -56,6 +58,7 @@ export function Topbar({
 }: TopbarProps) {
   const t = useTranslations("AppShell");
   const tChat = useTranslations("Chat");
+  const pathname = usePathname();
   const mobileNavIsOpen = useUiStore((s) => s.mobileNavIsOpen);
   const toggleMobileNavOpen = useUiStore((s) => s.toggleMobileNavOpen);
   const rightPanelOpen = useUiStore((s) => s.rightPanelOpen);
@@ -152,20 +155,40 @@ export function Topbar({
           aria-label="Breadcrumb"
           className="flex min-w-0 flex-1 items-center gap-1.5 text-sm"
         >
-          {projectName && (
-            <>
-              <span className="inline-flex max-w-36 sm:max-w-48 items-center gap-1.5 truncate rounded-md bg-surface-2 px-2 py-0.5 text-xs font-medium text-muted">
-                <FolderKanban
-                  className="h-3.5 w-3.5 shrink-0 text-accent"
-                  strokeWidth={1.5}
-                />
-                <span className="truncate">{projectName}</span>
+          {pathname?.startsWith("/projects/") ? (
+            <div className="flex items-center gap-1.5 min-w-0">
+              <Link
+                href="/workspaces"
+                className="text-muted hover:text-fg text-xs sm:text-sm font-medium transition-colors"
+              >
+                Projects
+              </Link>
+              <ChevronRight className="h-3.5 w-3.5 shrink-0 text-subtle" strokeWidth={1.5} />
+              <span className="truncate font-semibold text-fg text-sm sm:text-base">
+                {displayedTitle}
               </span>
-              <ChevronRight
-                className="h-3.5 w-3.5 shrink-0 text-subtle"
-                strokeWidth={1.5}
-                aria-hidden="true"
-              />
+            </div>
+          ) : (
+            <>
+              {projectName && (
+                <>
+                  <Link
+                    href={activeWorkspace?.projectId ? `/projects/${activeWorkspace.projectId}` : "#"}
+                    className="inline-flex max-w-36 sm:max-w-48 items-center gap-1.5 truncate rounded-md bg-surface-2 px-2 py-0.5 text-xs font-medium text-muted hover:text-fg hover:bg-surface-3 transition-colors"
+                  >
+                    <FolderKanban
+                      className="h-3.5 w-3.5 shrink-0 text-accent"
+                      strokeWidth={1.5}
+                    />
+                    <span className="truncate">{projectName}</span>
+                  </Link>
+                  <ChevronRight
+                    className="h-3.5 w-3.5 shrink-0 text-subtle"
+                    strokeWidth={1.5}
+                    aria-hidden="true"
+                  />
+                </>
+              )}
             </>
           )}
 

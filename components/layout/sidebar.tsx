@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
@@ -123,6 +123,7 @@ export function Sidebar({
 }: SidebarProps) {
   const t = useTranslations("AppShell");
   const router = useRouter();
+  const pathname = usePathname();
   const queryClient = useQueryClient();
   const { setTheme } = useTheme();
 
@@ -525,38 +526,57 @@ export function Sidebar({
                           projectWorkspacesMap[project.id] ?? [];
 
                         return (
-                          <div key={project.id} className="space-y-0.5">
+                          <div
+                            key={project.id}
+                            className={cn(
+                              "space-y-0.5 rounded-lg transition-colors",
+                              pathname === `/projects/${project.id}` && "bg-surface-2/80"
+                            )}
+                          >
                             <div className="group flex items-center justify-between gap-1 rounded-lg px-2 py-1.5 text-xs hover:bg-surface-2 sm:text-sm">
+                              {/* Chevron button alone expands/collapses tree */}
                               <button
                                 type="button"
                                 aria-expanded={isExpanded}
-                                onClick={() => toggleProjectNode(project.id)}
-                                className="text-muted hover:text-fg focus-visible:ring-ring flex min-w-0 flex-1 cursor-pointer items-center justify-between gap-2 rounded-sm text-left focus-visible:ring-2 focus-visible:outline-none"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleProjectNode(project.id);
+                                }}
+                                className="text-subtle hover:text-fg p-0.5 rounded cursor-pointer shrink-0"
+                                title={isExpanded ? "Collapse" : "Expand"}
                               >
-                                <span className="flex min-w-0 items-center gap-2 truncate">
-                                  {isExpanded ? (
-                                    <ChevronDown
-                                      className="text-subtle h-3.5 w-3.5 shrink-0"
-                                      strokeWidth={1.5}
-                                    />
-                                  ) : (
-                                    <ChevronRight
-                                      className="text-subtle h-3.5 w-3.5 shrink-0"
-                                      strokeWidth={1.5}
-                                    />
-                                  )}
-                                  <FolderKanban
-                                    className="text-accent h-3.5 w-3.5 shrink-0"
-                                    strokeWidth={1.5}
-                                  />
-                                  <span className="truncate font-medium">
-                                    {project.name}
-                                  </span>
-                                </span>
-                                <span className="text-subtle text-[11px]">
-                                  {childWorkspaces.length}
-                                </span>
+                                {isExpanded ? (
+                                  <ChevronDown className="h-3.5 w-3.5" strokeWidth={1.5} />
+                                ) : (
+                                  <ChevronRight className="h-3.5 w-3.5" strokeWidth={1.5} />
+                                )}
                               </button>
+
+                              {/* Project name link navigates to /projects/[id] */}
+                              <Link
+                                href={`/projects/${project.id}`}
+                                className={cn(
+                                  "flex min-w-0 flex-1 items-center gap-2 truncate text-left",
+                                  pathname === `/projects/${project.id}`
+                                    ? "text-accent font-semibold"
+                                    : "text-muted hover:text-fg"
+                                )}
+                              >
+                                <FolderKanban
+                                  className={cn(
+                                    "h-3.5 w-3.5 shrink-0",
+                                    pathname === `/projects/${project.id}`
+                                      ? "text-accent"
+                                      : "text-accent/80"
+                                  )}
+                                  strokeWidth={1.5}
+                                />
+                                <span className="truncate font-medium">{project.name}</span>
+                              </Link>
+
+                              <span className="text-subtle text-[11px] px-1">
+                                {childWorkspaces.length}
+                              </span>
                               <button
                                 type="button"
                                 title={t("share")}

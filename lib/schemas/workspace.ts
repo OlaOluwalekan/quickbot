@@ -61,3 +61,10 @@ export type SearchWorkspacesQuery = z.infer<typeof searchWorkspacesQuerySchema>;
 export type CreateProjectInput = z.infer<typeof createProjectSchema>;
 export type UpdateProjectInput = z.infer<typeof updateProjectSchema>;
 export type ListProjectsQuery = z.infer<typeof listProjectsQuerySchema>;
+
+
+export const listProjectWorkspacesQuerySchema = pageQuery.extend({
+  q: z.string().trim().optional(),
+  sort: z.enum(["lastActivity", "name", "createdAt"]).default("lastActivity").optional(),
+});
+export type ListProjectWorkspacesQuery = z.infer<typeof listProjectWorkspacesQuerySchema>;
