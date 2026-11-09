@@ -17,7 +17,6 @@ export const createAnnotationSchema = z
     contentSource: z.enum(["ORIGINAL", "EDIT"]).optional().default("ORIGINAL"),
     editRevision: z.number().int().positive().optional(),
     text: z.string().min(1, "Annotation text cannot be empty"),
-    visibility: z.enum(["PRIVATE", "WORKSPACE"]).optional(),
   })
   .superRefine((data, ctx) => {
     if (data.kind === "COMMENT") {
