@@ -29,7 +29,7 @@ describe("Step 6.7 — Promotion UI & Response Card Display", () => {
     workspaceId: "ws_test_123",
     responseId: "resp_1",
     versionId: "ver_1",
-    kind: "REPLY" as const,
+    kind: "ASK" as const,
     visibility: "WORKSPACE" as const,
     anchorExact: "Distributed consensus requires quorum agreement across nodes.",
     createdAt: new Date().toISOString(),

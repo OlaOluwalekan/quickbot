@@ -1,24 +1,49 @@
 import { z } from "zod";
 
-export const createAnnotationSchema = z.object({
-  kind: z.enum(["COMMENT", "QUESTION"]),
-  anchor: z.object({
-    exact: z
-      .string()
-      .min(3, "Selected text must be at least 3 characters")
-      .max(1000, "Selected text cannot exceed 1000 characters"),
-    prefix: z.string().default(""),
-    suffix: z.string().default(""),
-    start: z.number().int().nonnegative().optional(),
-    end: z.number().int().nonnegative().optional(),
-  }),
-  contentSource: z.enum(["ORIGINAL", "EDIT"]).optional().default("ORIGINAL"),
-  editRevision: z.number().int().positive().optional(),
-  text: z
-    .string()
-    .min(1, "Annotation text cannot be empty")
-    .max(2000, "Annotation text cannot exceed 2000 characters"),
-});
+export const createAnnotationSchema = z
+  .object({
+    kind: z.enum(["COMMENT", "ASK"]),
+    mode: z.enum(["now", "queue"]).optional(),
+    anchor: z.object({
+      exact: z
+        .string()
+        .min(3, "Selected text must be at least 3 characters")
+        .max(1000, "Selected text cannot exceed 1000 characters"),
+      prefix: z.string().default(""),
+      suffix: z.string().default(""),
+      start: z.number().int().nonnegative().optional(),
+      end: z.number().int().nonnegative().optional(),
+    }),
+    contentSource: z.enum(["ORIGINAL", "EDIT"]).optional().default("ORIGINAL"),
+    editRevision: z.number().int().positive().optional(),
+    text: z.string().min(1, "Annotation text cannot be empty"),
+  })
+  .superRefine((data, ctx) => {
+    if (data.kind === "COMMENT") {
+      if (data.text.length > 2000) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Comment text cannot exceed 2000 characters",
+          path: ["text"],
+        });
+      }
+      if (data.mode !== undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Mode is only allowed for ASK annotations",
+          path: ["mode"],
+        });
+      }
+    } else if (data.kind === "ASK") {
+      if (data.text.length > 500) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Ask question cannot exceed 500 characters",
+          path: ["text"],
+        });
+      }
+    }
+  });
 
 export type CreateAnnotationInput = z.infer<typeof createAnnotationSchema>;
 

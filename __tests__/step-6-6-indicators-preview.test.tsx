@@ -58,7 +58,7 @@ describe("Step 6.6 — Indicators and Hover/Tap Previews in Workspace", () => {
       workspaceId: "ws_123",
       responseId: "resp_1",
       versionId: "ver_1",
-      kind: "REPLY",
+      kind: "ASK",
       visibility: "WORKSPACE",
       anchorExact: "Distributed consensus algorithms ensure data consistency across replicas.",
       anchorPrefix: "In modern architecture, ",
@@ -87,7 +87,7 @@ describe("Step 6.6 — Indicators and Hover/Tap Previews in Workspace", () => {
       workspaceId: "ws_123",
       responseId: "resp_1",
       versionId: "ver_1",
-      kind: "QUESTION",
+      kind: "ASK",
       questionState: "QUEUED",
       visibility: "PRIVATE",
       anchorExact: "Raft is one such example.",
@@ -169,21 +169,18 @@ describe("Step 6.6 — Indicators and Hover/Tap Previews in Workspace", () => {
   });
 
   describe("1. CSS Custom Highlights & Priority Stacking", () => {
-    it("assigns priority: reply (3) > question (2) > comment (1)", () => {
+    it("assigns priority: ask (2) > comment (1)", () => {
       const dummyRange = document.createRange();
       const success = applyCustomHighlights([
         { kind: "COMMENT", ranges: [dummyRange] },
-        { kind: "QUESTION", ranges: [dummyRange] },
-        { kind: "REPLY", ranges: [dummyRange] },
+        { kind: "ASK", ranges: [dummyRange] },
       ]);
 
       expect(success).toBe(true);
-      expect(highlightsMap.has("annot-reply")).toBe(true);
-      expect(highlightsMap.has("annot-question")).toBe(true);
+      expect(highlightsMap.has("annot-ask")).toBe(true);
       expect(highlightsMap.has("annot-comment")).toBe(true);
 
-      expect(highlightsMap.get("annot-reply")?.priority).toBe(3);
-      expect(highlightsMap.get("annot-question")?.priority).toBe(2);
+      expect(highlightsMap.get("annot-ask")?.priority).toBe(2);
       expect(highlightsMap.get("annot-comment")?.priority).toBe(1);
     });
 
@@ -273,8 +270,8 @@ describe("Step 6.6 — Indicators and Hover/Tap Previews in Workspace", () => {
       expect(dot.getAttribute("aria-label")).toMatch(/annotation/i);
 
       // Custom highlights registered
-      expect(highlightsMap.has("annot-reply")).toBe(true);
-      expect(highlightsMap.has("annot-question")).toBe(true);
+      expect(highlightsMap.has("annot-ask")).toBe(true);
+      expect(highlightsMap.has("annot-comment")).toBe(true);
     });
 
     it("opens preview popover when clicking a gutter dot", () => {

@@ -69,6 +69,7 @@ model User {
   sentTransfers        OwnershipTransfer[] @relation("TransfersSent")
   receivedTransfers    OwnershipTransfer[] @relation("TransfersReceived")
   memberLimitGrace     MemberLimitGrace?
+  annotationMentions   AnnotationMention[]
 
   @@map("users")
 }
@@ -166,6 +167,7 @@ model Workspace {
   activityLogs   ActivityLog[]
   shareLinks     ShareLink[]
   ownershipTransfers   OwnershipTransfer[]
+  notes          WorkspaceNote[]
 
   @@index([ownerId, deletedAt, lastActivityAt(sort: Desc)])
   @@index([projectId, deletedAt])
@@ -491,8 +493,25 @@ model Citation {
 
 enum AnnotationKind {
   COMMENT
-  REPLY
-  QUESTION
+  ASK
+}
+
+enum AnnotationTarget {
+  RESPONSE_VERSION
+  ANNOTATION_MESSAGE
+  DOCUMENT_REVISION
+}
+
+enum AuthorType {
+  USER
+  AI
+}
+
+enum SuggestionState {
+  PENDING
+  ACCEPTED
+  REJECTED
+  STALE
 }
 
 enum QuestionState {
@@ -520,54 +539,113 @@ enum MsgRole {
 }
 
 model Annotation {
-  id            String          @id @default(uuid(7))
-  workspaceId   String          @map("workspace_id")
-  responseId    String          @map("response_id")
-  versionId     String          @map("version_id")
-  contentSource ContentSource   @default(ORIGINAL) @map("content_source")
-  editRevision  Int?            @map("edit_revision")
-  createdById   String          @map("created_by_id")
-  kind          AnnotationKind
-  questionState QuestionState   @default(NONE) @map("question_state")
-  visibility    Visibility      @default(PRIVATE)
-  resolvedAt    DateTime?       @map("resolved_at")
-  deletedAt     DateTime?       @map("deleted_at")
-  anchorExact   String          @map("anchor_exact") @db.Text
-  anchorPrefix  String          @map("anchor_prefix")
-  anchorSuffix  String          @map("anchor_suffix")
-  anchorStart   Int?            @map("anchor_start")
-  anchorEnd     Int?            @map("anchor_end")
-  createdAt     DateTime        @default(now()) @map("created_at")
-  updatedAt     DateTime        @updatedAt @map("updated_at")
+  id                 String              @id @default(uuid(7))
+  workspaceId        String              @map("workspace_id")
+  responseId         String?             @map("response_id")
+  versionId          String?             @map("version_id")
+  targetType         AnnotationTarget    @default(RESPONSE_VERSION) @map("target_type")
+  targetMessageId    String?             @map("target_message_id")
+  documentId         String?             @map("document_id")
+  documentRevision   Int?                @map("document_revision")
+  parentAnnotationId String?             @map("parent_annotation_id")
+  rootAnnotationId   String?             @map("root_annotation_id")
+  depth              Int                 @default(0)
+  authorType         AuthorType          @default(USER) @map("author_type")
+  suggestion         Json?
+  suggestionState    SuggestionState?    @map("suggestion_state")
+  contentSource      ContentSource       @default(ORIGINAL) @map("content_source")
+  editRevision       Int?                @map("edit_revision")
+  createdById        String              @map("created_by_id")
+  kind               AnnotationKind
+  questionState      QuestionState       @default(NONE) @map("question_state")
+  visibility         Visibility          @default(PRIVATE)
+  resolvedAt         DateTime?           @map("resolved_at")
+  deletedAt          DateTime?           @map("deleted_at")
+  anchorExact        String              @map("anchor_exact") @db.Text
+  anchorPrefix       String              @map("anchor_prefix")
+  anchorSuffix       String              @map("anchor_suffix")
+  anchorStart        Int?                @map("anchor_start")
+  anchorEnd          Int?                @map("anchor_end")
+  createdAt          DateTime            @default(now()) @map("created_at")
+  updatedAt          DateTime            @updatedAt @map("updated_at")
 
-  workspace     Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  response      Response        @relation(fields: [responseId], references: [id], onDelete: Cascade)
-  version       ResponseVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
-  createdBy     User            @relation("AnnotationCreator", fields: [createdById], references: [id], onDelete: Cascade)
-  messages      AnnotationMessage[]
-  promotions    Promotion[]
+  workspace          Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  response           Response?           @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  version            ResponseVersion?    @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  createdBy          User                @relation("AnnotationCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  targetMessage      AnnotationMessage?  @relation("AnnotationsOnMessage", fields: [targetMessageId], references: [id], onDelete: Cascade)
+  parent             Annotation?         @relation("AnnotationChildren", fields: [parentAnnotationId], references: [id], onDelete: Cascade)
+  children           Annotation[]        @relation("AnnotationChildren")
+  messages           AnnotationMessage[] @relation("AnnotationThreadMessages")
+  promotions         Promotion[]
+  note               WorkspaceNote?
 
   @@index([versionId, deletedAt])
   @@index([workspaceId, createdById, questionState])
   @@index([responseId])
+  @@index([targetMessageId, deletedAt])
+  @@index([rootAnnotationId])
   @@map("annotations")
 }
 
 model AnnotationMessage {
-  id           String      @id @default(uuid(7))
-  annotationId String      @map("annotation_id")
-  role         MsgRole
-  content      String      @db.Text
-  authorId     String?     @map("author_id")
-  generationId String?     @unique @map("generation_id")
-  createdAt    DateTime    @default(now()) @map("created_at")
+  id             String              @id @default(uuid(7))
+  annotationId   String              @map("annotation_id")
+  role           MsgRole
+  content        String              @db.Text
+  authorId       String?             @map("author_id")
+  generationId   String?             @unique @map("generation_id")
+  thoughtSummary String?             @map("thought_summary") @db.Text
+  citations      Json?
+  status         String              @default("COMPLETE")
+  modelKey       String?             @map("model_key")
+  createdAt      DateTime            @default(now()) @map("created_at")
 
-  annotation   Annotation  @relation(fields: [annotationId], references: [id], onDelete: Cascade)
-  author       User?       @relation("AnnotationMessageAuthor", fields: [authorId], references: [id], onDelete: SetNull)
-  promotions   Promotion[]
+  annotation     Annotation          @relation("AnnotationThreadMessages", fields: [annotationId], references: [id], onDelete: Cascade)
+  author         User?               @relation("AnnotationMessageAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  promotions     Promotion[]
+  annotationsOn  Annotation[]        @relation("AnnotationsOnMessage")
+  mentions       AnnotationMention[]
 
   @@index([annotationId, createdAt])
   @@map("annotation_messages")
+}
+
+model AnnotationMention {
+  id        String            @id @default(uuid(7))
+  messageId String            @map("message_id")
+  userId    String?           @map("user_id")
+  isKlecx   Boolean           @default(false) @map("is_klecx")
+  createdAt DateTime          @default(now()) @map("created_at")
+  message   AnnotationMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User?             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@index([userId, createdAt])
+  @@map("annotation_mentions")
+}
+
+enum NoteStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+model WorkspaceNote {
+  id           String     @id @default(uuid(7))
+  workspaceId  String     @map("workspace_id")
+  annotationId String     @unique @map("annotation_id")
+  messageId    String     @unique @map("message_id")
+  createdById  String     @map("created_by_id")
+  quote        String     @db.Text
+  instruction  String     @db.Text
+  status       NoteStatus @default(ACTIVE)
+  createdAt    DateTime   @default(now()) @map("created_at")
+  archivedAt   DateTime?  @map("archived_at")
+  workspace    Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  annotation   Annotation @relation(fields: [annotationId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, status, createdAt])
+  @@map("workspace_notes")
 }
 
 enum PromotionTarget {

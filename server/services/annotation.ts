@@ -149,7 +149,7 @@ export async function listWorkspaceQuestions(
     where: {
       workspaceId,
       createdById: actor.userId,
-      kind: "QUESTION",
+      kind: "ASK",
       deletedAt: null,
       ...(options?.state ? { questionState: options.state } : {}),
     },
@@ -249,7 +249,7 @@ export async function createAnnotation(
       editRevision: input.editRevision ?? null,
       createdById: actor.userId,
       kind: input.kind,
-      questionState: input.kind === "QUESTION" ? "QUEUED" : "NONE",
+      questionState: input.kind === "ASK" ? (input.mode === "now" ? "NONE" : "QUEUED") : "NONE",
       visibility: "PRIVATE",
       anchorExact: input.anchor.exact,
       anchorPrefix: input.anchor.prefix ?? "",
@@ -506,7 +506,7 @@ export async function createAnnotationMessage(
 
 /**
  * Streams an AI reply for an annotation thread (Step 6.4):
- * - Creates annotation (kind REPLY) if called for a new passage selection.
+ * - Creates annotation (kind ASK, asked now) if called for a new passage selection.
  * - Adds user prompt as USER AnnotationMessage.
  * - Streams assistant completion via SSE without modifying main response timeline.
  * - Saves completed assistant message as ASSISTANT AnnotationMessage with generationId.
@@ -585,7 +585,7 @@ export async function createAndStreamAnnotationReply(
       );
     }
 
-    // Create Annotation (kind REPLY) + initial USER message
+    // Create Annotation (kind ASK, asked now) + initial USER message
     targetAnnotation = await db.annotation.create({
       data: {
         workspaceId,
@@ -594,7 +594,7 @@ export async function createAndStreamAnnotationReply(
         contentSource: input.contentSource ?? "ORIGINAL",
         editRevision: input.editRevision ?? null,
         createdById: actor.userId,
-        kind: "REPLY",
+        kind: "ASK",
         questionState: "NONE",
         visibility: "PRIVATE",
         anchorExact: input.anchor.exact,

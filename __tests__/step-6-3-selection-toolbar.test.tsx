@@ -329,7 +329,7 @@ describe("Step 6.3 — Selection popover (Comment · Reply · Add question)", ()
     it("submits question and closes toolbar when clicking Add", async () => {
       (api as jest.Mock).mockResolvedValueOnce({
         id: "annot_q1",
-        kind: "QUESTION",
+        kind: "ASK",
       });
 
       const onQuestionCreated = jest.fn();
@@ -357,7 +357,7 @@ describe("Step 6.3 — Selection popover (Comment · Reply · Add question)", ()
           expect.objectContaining({
             method: "POST",
             json: expect.objectContaining({
-              kind: "QUESTION",
+              kind: "ASK",
               text: "Why is 2PC a blocking protocol?",
             }),
           })
@@ -370,7 +370,7 @@ describe("Step 6.3 — Selection popover (Comment · Reply · Add question)", ()
     it("submits question and keeps form open for another when clicking 'Add & another'", async () => {
       (api as jest.Mock).mockResolvedValue({
         id: "annot_q2",
-        kind: "QUESTION",
+        kind: "ASK",
       });
 
       render(<SelectionToolbar />);

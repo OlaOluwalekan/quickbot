@@ -67,7 +67,7 @@ describe("Step 6.4 — RightPanel UI Component", () => {
                 workspaceId: "ws_test_123",
                 responseId: "resp_1",
                 versionId: "ver_1",
-                kind: "REPLY",
+                kind: "ASK",
                 visibility: "WORKSPACE",
                 anchorExact: "Leader election in Raft.",
                 createdAt: new Date().toISOString(),

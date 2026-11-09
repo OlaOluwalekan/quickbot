@@ -19,7 +19,7 @@ export interface QueuedQuestion {
   workspaceId: string;
   responseId: string;
   versionId: string;
-  kind: "QUESTION";
+  kind: "ASK";
   questionState: "NONE" | "QUEUED" | "ANSWERING" | "ANSWERED" | "CANCELLED" | "FAILED";
   anchorExact: string;
   createdAt: string;

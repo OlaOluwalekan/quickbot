@@ -42,6 +42,12 @@ npm run verify
 
 **Known migration drift (found 2026-11-09):** the `SupportTicket` model (`support_tickets` table, `TicketStatus` enum) is in `prisma/schema.prisma` but no migration creates it. `prisma migrate deploy` doesn't notice, but `prisma migrate dev` will report drift and propose a migration for it. Fix it in its own PR with a new migration; don't fold it into an unrelated step's migration.
 
+**Open review items carried forward from F2.1 (PR #110, 2026-11-09).** When reviewing the step named in each item, check whether it's fixed; if not, fix it in that step's PR. Once that step's review is done and the item is fixed, **delete the item from this file** (and delete this whole block when it's empty).
+
+- **Check in F2.2 — unanswered "Ask now".** `POST /api/v1/response-versions/[id]/annotations` with `kind: "ASK", mode: "now"` saves the annotation with `questionState = NONE` but never starts an answer (`createAnnotation` in `server/services/annotation.ts`). "Ask now" must go through the streaming endpoint, or the create endpoint must reject `mode: "now"`.
+- **Check in F2.4 — migrated replies in the wrong tab.** The F2.1 migration turned old REPLY rows into ASK with `questionState` ANSWERED/FAILED, so in the right panel (`isQueuedAsk()` split) they show under Questions, not with the asked-now Asks. The F2.4 panel must show them with the asked-now Asks, as answered threads (e.g. treat ASK rows with an ASSISTANT message and no queue history the same as asked-now, or backfill a marker).
+- **Check in F2.6 — missing foreign keys.** `WorkspaceNote.messageId` (→ `annotation_messages`), `WorkspaceNote.createdById` (→ `users`) and `Annotation.rootAnnotationId` (→ `annotations`) have no FK, so deleting the message/user/root leaves dangling ids. Add the relations + FKs in a new migration (with the right `onDelete`).
+
 ## Code layout
 
 - `app/` — routes: `(marketing)` public pages, `(app)` signed-in app, `api/v1/*` JSON/SSE endpoints, `s/[token]` public share pages.

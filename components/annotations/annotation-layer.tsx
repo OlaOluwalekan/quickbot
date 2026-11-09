@@ -17,7 +17,7 @@ import {
   PopoverAnchor,
 } from "@/components/ui/popover";
 import { useUiStore } from "@/lib/stores/ui";
-import { anchorToRange } from "@/lib/annotations/anchor";
+import { anchorToRange, isQueuedAsk } from "@/lib/annotations/anchor";
 import {
   applyCustomHighlights,
   clearCustomHighlights,
@@ -31,6 +31,17 @@ import {
 } from "@/lib/annotations/highlight";
 import type { AnnotationItem } from "./right-panel";
 import { cn } from "@/lib/utils";
+
+/**
+ * How an annotation is drawn. F2.1 merged REPLY and QUESTION into ASK; until
+ * F2.4 redesigns the panel, an "Ask now" keeps the reply styling and a queued
+ * Ask keeps the question styling.
+ */
+type DisplayKind = "COMMENT" | "REPLY" | "QUESTION";
+function displayKind(a: Pick<AnnotationItem, "kind" | "questionState">): DisplayKind {
+  if (a.kind === "COMMENT") return "COMMENT";
+  return isQueuedAsk(a) ? "QUESTION" : "REPLY";
+}
 
 export interface AnnotationLayerProps {
   responseId: string;
@@ -219,9 +230,10 @@ export function AnnotationLayer({
       const item: ActiveAnnotationItem = { annot, range, blockEl };
       activeItems.push(item);
 
-      if (annot.kind === "REPLY") {
+      const dk = displayKind(annot);
+      if (dk === "REPLY") {
         replyRanges.push(range);
-      } else if (annot.kind === "QUESTION") {
+      } else if (dk === "QUESTION") {
         questionRanges.push(range);
       } else {
         commentRanges.push(range);
@@ -237,7 +249,7 @@ export function AnnotationLayer({
       if (!isCustomHighlightSupported()) {
         const rects = getFallbackHighlightRects(range, rootEl);
         for (const r of rects) {
-          fallbackList.push({ ...r, kind: annot.kind });
+          fallbackList.push({ ...r, kind: dk });
         }
       }
     }
@@ -245,11 +257,10 @@ export function AnnotationLayer({
     activeRangeItemsRef.current = activeItems;
     setFallbackRects(fallbackList);
 
-    // Apply CSS Custom Highlights with stacking priority: reply > question > comment
+    // Apply CSS Custom Highlights with stacking priority: ask > comment
     applyCustomHighlights([
       { kind: "COMMENT", ranges: commentRanges },
-      { kind: "QUESTION", ranges: questionRanges },
-      { kind: "REPLY", ranges: replyRanges },
+      { kind: "ASK", ranges: [...questionRanges, ...replyRanges] },
     ]);
 
     // Compute gutter dot positions
@@ -269,8 +280,10 @@ export function AnnotationLayer({
 
       // Sort items by priority: reply (3) > question (2) > comment (1)
       const sortedItems = [...group.items].sort((a, b) => {
-        const pA = a.annot.kind === "REPLY" ? 3 : a.annot.kind === "QUESTION" ? 2 : 1;
-        const pB = b.annot.kind === "REPLY" ? 3 : b.annot.kind === "QUESTION" ? 2 : 1;
+        const kA = displayKind(a.annot);
+        const kB = displayKind(b.annot);
+        const pA = kA === "REPLY" ? 3 : kA === "QUESTION" ? 2 : 1;
+        const pB = kB === "REPLY" ? 3 : kB === "QUESTION" ? 2 : 1;
         return pB - pA;
       });
 
@@ -281,7 +294,7 @@ export function AnnotationLayer({
         id: `gutter-dot-${dotIdx++}`,
         top,
         count: annotsInBlock.length,
-        primaryKind: topItem.annot.kind,
+        primaryKind: displayKind(topItem.annot),
         annotations: annotsInBlock,
         firstRange: topItem.range,
       });
@@ -339,7 +352,7 @@ export function AnnotationLayer({
           QUESTION: 2,
           COMMENT: 1,
         };
-        matches.sort((a, b) => (PRIORITY[b.annot.kind] ?? 0) - (PRIORITY[a.annot.kind] ?? 0));
+        matches.sort((a, b) => (PRIORITY[displayKind(b.annot)] ?? 0) - (PRIORITY[displayKind(a.annot)] ?? 0));
         const topMatch = matches[0]!;
 
         if (pendingHoverIdRef.current === topMatch.annot.id) {
@@ -432,7 +445,7 @@ export function AnnotationLayer({
       annotationId: annot.id,
       responseId: annot.responseId,
       versionId: annot.versionId,
-      tab: tabMap[annot.kind] || "comments",
+      tab: tabMap[displayKind(annot)] || "comments",
     });
     setRightPanelOpen(true);
     setActivePreview(null);
@@ -463,7 +476,7 @@ export function AnnotationLayer({
   };
 
   const targetAnnot = activePreview?.annotation;
-  const kind = targetAnnot?.kind;
+  const kind = targetAnnot ? displayKind(targetAnnot) : undefined;
 
   // Prepare display contents for preview card
   const commentMessage =
@@ -486,7 +499,7 @@ export function AnnotationLayer({
   const replyPromptText = replyUserMsg?.content || targetAnnot?.anchorExact || "";
 
   const allQuestions =
-    activePreview?.allMatching?.filter((a) => a.kind === "QUESTION") || [];
+    activePreview?.allMatching?.filter((a) => isQueuedAsk(a)) || [];
   const hasMultipleQuestions = allQuestions.length > 1;
 
   return (
