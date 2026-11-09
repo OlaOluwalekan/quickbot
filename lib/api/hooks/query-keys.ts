@@ -59,11 +59,16 @@ export const queryKeys = {
       userQueryKey(userId, "projects", "list", filters ?? {}),
     detail: (userId: string, projectId: string) =>
       userQueryKey(userId, "projects", "detail", projectId),
+    // Kept outside the "projects" prefix so project list/detail cache
+    // updaters (which expect `{ items }`) never touch this infinite query.
+    workspacesAll: (userId: string, projectId: string) =>
+      userQueryKey(userId, "project-workspaces", projectId),
     workspaces: (
       userId: string,
       projectId: string,
       filters?: { q?: string; sort?: string }
-    ) => userQueryKey(userId, "projects", projectId, "workspaces", filters ?? {}),
+    ) =>
+      userQueryKey(userId, "project-workspaces", projectId, filters ?? {}),
   },
   me: {
     profile: (userId: string) => userQueryKey(userId, "me", "profile"),

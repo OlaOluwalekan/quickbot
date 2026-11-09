@@ -3,28 +3,29 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useFormatter, useNow, useTranslations } from "next-intl";
+import { useQueryClient } from "@tanstack/react-query";
 import {
-  FolderKanban,
-  Plus,
-  Search,
-  LayoutGrid,
-  List,
-  MoreVertical,
-  Share2,
-  Users,
   Archive,
   ArchiveRestore,
-  Trash2,
-  Crown,
-  Pencil,
   ArrowRightLeft,
-  MessageSquare,
-  Clock,
   ArrowUpDown,
-  ExternalLink,
+  Clock,
+  Crown,
+  FolderInput,
+  FolderKanban,
+  FolderMinus,
+  LayoutGrid,
+  List,
+  MessageSquare,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+  Users,
 } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -51,32 +52,61 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Gated } from "@/components/ui/gated";
 import { Spinner } from "@/components/ui/spinner";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { ShareAndPeopleDialog } from "@/components/workspace/ShareAndPeopleDialog";
 import {
+  useDeleteProject,
   useProject,
+  useProjects,
   useProjectWorkspaces,
   useUpdateProject,
-  useDeleteProject,
-  type ProjectDto,
-  type ProjectWorkspaceDto,
   type PaginatedProjectWorkspaces,
+  type ProjectDto,
+  type ProjectPersonDto,
+  type ProjectWorkspaceDto,
+  type ProjectWorkspaceSort,
 } from "@/lib/api/hooks/projects";
-import { useWorkspaces } from "@/lib/api/hooks/workspaces";
-import { api } from "@/lib/api/client";
-import { toast } from "sonner";
+import {
+  useCreateWorkspace,
+  useDeleteWorkspace,
+  useUpdateWorkspace,
+  useWorkspaces,
+} from "@/lib/api/hooks/workspaces";
+import { queryKeys } from "@/lib/api/hooks/query-keys";
+import type { GateReason } from "@/lib/entitlements/shared";
+import { useUiStore } from "@/lib/stores/ui";
+import { cn } from "@/lib/utils";
+import {
+  PROJECT_VIEW_MODE_KEY,
+  PROJECT_WORKSPACES_PAGE_SIZE,
+} from "./constants";
 
 export interface ProjectViewProps {
   project: ProjectDto;
   initialWorkspaces: PaginatedProjectWorkspaces;
   currentUserId: string;
+}
+
+type ViewMode = "grid" | "list";
+type ProjectT = ReturnType<typeof useTranslations<"Project">>;
+
+/** Disabled-with-tooltip reason when `caps` lacks `perm`, else null. */
+function gate(
+  caps: readonly string[] | undefined,
+  perm: string,
+  action: string,
+): GateReason | null {
+  return caps?.includes(perm)
+    ? null
+    : { code: "no_permission", capability: action };
+}
+
+function initial(person?: ProjectPersonDto) {
+  return (person?.name || person?.username || "?").charAt(0).toUpperCase();
 }
 
 export function ProjectView({
@@ -85,447 +115,588 @@ export function ProjectView({
   currentUserId,
 }: ProjectViewProps) {
   const t = useTranslations("Project");
-  const tApp = useTranslations("AppShell");
+  const tCommon = useTranslations("Common");
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const setCurrentPageTitle = useUiStore((s) => s.setCurrentPageTitle);
 
-  // Queries & Mutations
-  const { data: project = initialProject, refetch: refetchProject } = useProject(
+  const { data: project = initialProject } = useProject(
     currentUserId,
     initialProject.id,
-    { initialData: initialProject }
+    { initialData: initialProject, staleTime: 30_000 },
   );
 
+  React.useEffect(() => {
+    setCurrentPageTitle(project.name);
+  }, [project.name, setCurrentPageTitle]);
+
+  // ── Permissions (server-computed; the server re-checks every action) ──
+  const caps = project.capabilities;
+  const isArchived = Boolean(project.archivedAt);
+  const isOwner = project.role === "OWNER";
+  const renameGate = gate(caps, "workspace.rename", t("caps.renameProject"));
+  const archiveGate = gate(caps, "workspace.archive", t("caps.archiveProject"));
+  const deleteGate = gate(caps, "workspace.delete", t("caps.deleteProject"));
+  const transferGate: GateReason | null = isOwner
+    ? null
+    : { code: "no_permission", capability: t("caps.transferProject") };
+  const createGate: GateReason | null = isArchived
+    ? { code: "no_permission", capability: t("caps.createInArchived") }
+    : gate(caps, "workspace.generate", t("caps.createWorkspace"));
+
+  // ── Toolbar state ──
   const [searchQuery, setSearchQuery] = React.useState("");
   const [debouncedSearch, setDebouncedSearch] = React.useState("");
-  const [sortBy, setSortBy] = React.useState<"lastActivity" | "name" | "createdAt">(
-    "lastActivity"
-  );
-  const [viewMode, setViewMode] = React.useState<"grid" | "list">("grid");
+  const [sortBy, setSortBy] =
+    React.useState<ProjectWorkspaceSort>("lastActivity");
+  const [viewMode, setViewMode] = React.useState<ViewMode>("grid");
 
-  // Load viewMode preference from localStorage
   React.useEffect(() => {
     try {
-      const saved = localStorage.getItem("project_view_mode");
-      if (saved === "grid" || saved === "list") {
-        setViewMode(saved);
-      }
+      const saved = localStorage.getItem(PROJECT_VIEW_MODE_KEY);
+      // Read after mount (not in the initializer) to avoid a hydration mismatch.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (saved === "grid" || saved === "list") setViewMode(saved);
     } catch {
-      // ignore
+      // storage unavailable — keep default
     }
   }, []);
 
-  const handleToggleViewMode = (mode: "grid" | "list") => {
+  const changeViewMode = (mode: ViewMode) => {
     setViewMode(mode);
     try {
-      localStorage.setItem("project_view_mode", mode);
+      localStorage.setItem(PROJECT_VIEW_MODE_KEY, mode);
     } catch {
-      // ignore
+      // storage unavailable — not remembered
     }
   };
 
-  // Debounce search input
   React.useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(searchQuery);
-    }, 250);
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 250);
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  const {
-    data: workspacesData = initialWorkspaces,
-    isLoading: loadingWorkspaces,
-    refetch: refetchWorkspaces,
-  } = useProjectWorkspaces(
+  // Server-rendered first page only matches the default filters.
+  const isDefaultFilters = !debouncedSearch && sortBy === "lastActivity";
+  const workspacesQuery = useProjectWorkspaces(
     currentUserId,
     project.id,
     {
-      q: debouncedSearch.trim() || undefined,
+      q: debouncedSearch || undefined,
       sort: sortBy,
-      limit: 100,
+      limit: PROJECT_WORKSPACES_PAGE_SIZE,
     },
-    { initialData: initialWorkspaces }
+    { initialPage: isDefaultFilters ? initialWorkspaces : undefined },
   );
+  const workspaces = React.useMemo(
+    () => workspacesQuery.data?.pages.flatMap((p) => p.items) ?? [],
+    [workspacesQuery.data],
+  );
+  const { hasNextPage, isFetchingNextPage, fetchNextPage } = workspacesQuery;
 
-  const workspaces = workspacesData?.items ?? [];
+  // Infinite scroll
+  const sentinelRef = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el || !hasNextPage || typeof IntersectionObserver === "undefined") {
+      return;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && !isFetchingNextPage) {
+          void fetchNextPage();
+        }
+      },
+      { rootMargin: "200px" },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  // Permissions
-  const isOwner = project.role === "OWNER" || project.ownerId === currentUserId;
-  const isAdmin = project.role === "ADMIN" || isOwner;
-  const canRename =
-    isAdmin || (project.capabilities?.includes("workspace.rename") ?? false);
-  const canArchive =
-    isAdmin || (project.capabilities?.includes("workspace.archive") ?? false);
-  const canDelete = isOwner;
-  const canManageMembers =
-    isAdmin || (project.capabilities?.includes("workspace.manage_members") ?? false);
-  const canCreateWorkspace = project.role !== "VIEWER";
+  const refreshAfterWorkspaceChange = React.useCallback(() => {
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.projects.workspacesAll(currentUserId, project.id),
+    });
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.projects.detail(currentUserId, project.id),
+    });
+    // The sidebar tree is server-rendered by the (app) layout.
+    router.refresh();
+  }, [queryClient, currentUserId, project.id, router]);
 
-  // Mutations
-  const updateProjectMutation = useUpdateProject(currentUserId);
-  const deleteProjectMutation = useDeleteProject(currentUserId);
+  // ── Mutations ──
+  const updateProject = useUpdateProject(currentUserId);
+  const deleteProject = useDeleteProject(currentUserId);
+  const createWorkspace = useCreateWorkspace(currentUserId);
+  const updateWorkspace = useUpdateWorkspace(currentUserId);
+  const deleteWorkspace = useDeleteWorkspace(currentUserId);
 
-  // Rename Project State
+  // Inline project rename
   const [isEditingTitle, setIsEditingTitle] = React.useState(false);
   const [draftTitle, setDraftTitle] = React.useState(project.name);
-  const titleInputRef = React.useRef<HTMLInputElement>(null);
 
-  React.useEffect(() => {
-    setDraftTitle(project.name);
-  }, [project.name]);
-
-  const handleStartRename = () => {
-    if (!canRename) return;
+  const startRename = () => {
+    if (renameGate) return;
     setDraftTitle(project.name);
     setIsEditingTitle(true);
-    setTimeout(() => {
-      titleInputRef.current?.focus();
-      titleInputRef.current?.select();
-    }, 50);
   };
 
-  const handleCommitRename = async () => {
+  const commitRename = async () => {
     setIsEditingTitle(false);
     const trimmed = draftTitle.trim();
     if (!trimmed || trimmed === project.name) return;
-
     try {
-      await updateProjectMutation.mutateAsync({
+      await updateProject.mutateAsync({
         projectId: project.id,
         input: { name: trimmed },
       });
-      toast.success(tApp("projectRenamed") || "Project renamed");
-      void refetchProject();
+      toast.success(t("toasts.projectRenamed"));
+      router.refresh();
     } catch {
-      toast.error(tApp("projectRenameFailed") || "Failed to rename project");
+      toast.error(t("toasts.projectRenameFailed"));
     }
   };
 
-  // Delete Project Dialog
-  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
-  const [deleting, setDeleting] = React.useState(false);
-
-  const handleDeleteProject = async () => {
-    setDeleting(true);
+  const toggleArchiveProject = async () => {
     try {
-      await deleteProjectMutation.mutateAsync(project.id);
-      toast.success(tApp("projectDeleted") || "Project deleted");
-      router.push("/workspaces");
-    } catch {
-      toast.error(tApp("projectDeleteFailed") || "Failed to delete project");
-      setDeleting(false);
-    }
-  };
-
-  // Archive Project
-  const handleToggleArchive = async () => {
-    try {
-      const isArchived = Boolean(project.archivedAt);
-      await updateProjectMutation.mutateAsync({
+      await updateProject.mutateAsync({
         projectId: project.id,
         input: { archived: !isArchived },
       });
       toast.success(
-        isArchived ? t("unarchiveSuccess") || "Project restored" : t("archiveSuccess") || "Project archived"
+        isArchived ? t("toasts.projectRestored") : t("toasts.projectArchived"),
       );
-      void refetchProject();
+      router.refresh();
     } catch {
-      toast.error("Failed to update project status");
+      toast.error(t("toasts.projectUpdateFailed"));
     }
   };
 
-  // Share & People Dialog
+  const [deleteProjectOpen, setDeleteProjectOpen] = React.useState(false);
+  const confirmDeleteProject = async () => {
+    try {
+      await deleteProject.mutateAsync(project.id);
+      toast.success(t("toasts.projectDeleted"));
+      setDeleteProjectOpen(false);
+      router.push("/workspaces");
+      router.refresh();
+    } catch {
+      toast.error(t("toasts.projectDeleteFailed"));
+    }
+  };
+
   const [shareOpen, setShareOpen] = React.useState(false);
 
-  // New Workspace Creation
-  const [creatingWs, setCreatingWs] = React.useState(false);
-
   const handleCreateWorkspace = async () => {
-    if (!canCreateWorkspace || creatingWs) return;
-    setCreatingWs(true);
+    if (createGate || createWorkspace.isPending) return;
     try {
-      const res = await api<{ id: string }>("/api/v1/workspaces", {
-        method: "POST",
-        body: {
-          title: "Untitled",
-          projectId: project.id,
-        },
+      const created = await createWorkspace.mutateAsync({
+        projectId: project.id,
       });
-      toast.success("Workspace created");
-      router.push(`/workspaces/${res.id}`);
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to create workspace");
-      setCreatingWs(false);
+      router.push(`/workspaces/${created.id}`);
+      router.refresh();
+    } catch {
+      toast.error(t("toasts.workspaceCreateFailed"));
     }
   };
 
-  // Move Existing Workspace Dialog
-  const [moveModalOpen, setMoveModalOpen] = React.useState(false);
-  const [selectedWsIdToMove, setSelectedWsIdToMove] = React.useState<string>("");
-  const [movingWs, setMovingWs] = React.useState(false);
+  // Move an existing workspace into this project
+  const [moveInOpen, setMoveInOpen] = React.useState(false);
+  const [moveInId, setMoveInId] = React.useState("");
+  const { data: myWorkspaces } = useWorkspaces(
+    currentUserId,
+    { limit: 50 },
+    { enabled: moveInOpen },
+  );
+  const movable = React.useMemo(
+    () =>
+      (myWorkspaces?.items ?? []).filter(
+        (w) => w.projectId !== project.id && !w.archivedAt,
+      ),
+    [myWorkspaces, project.id],
+  );
 
-  const { data: userWorkspacesData } = useWorkspaces(currentUserId, {
-    limit: 100,
+  const confirmMoveIn = async () => {
+    if (!moveInId) return;
+    try {
+      await updateWorkspace.mutateAsync({
+        workspaceId: moveInId,
+        input: { projectId: project.id },
+      });
+      toast.success(t("toasts.workspaceMovedIn"));
+      setMoveInOpen(false);
+      setMoveInId("");
+      refreshAfterWorkspaceChange();
+    } catch {
+      toast.error(t("toasts.workspaceMoveFailed"));
+    }
+  };
+
+  // Per-workspace actions
+  const [renameWs, setRenameWs] = React.useState<ProjectWorkspaceDto | null>(
+    null,
+  );
+  const [renameWsTitle, setRenameWsTitle] = React.useState("");
+  const [moveWs, setMoveWs] = React.useState<ProjectWorkspaceDto | null>(null);
+  const [moveWsTarget, setMoveWsTarget] = React.useState("");
+  const [deleteWs, setDeleteWs] = React.useState<ProjectWorkspaceDto | null>(
+    null,
+  );
+
+  const { data: projectsData } = useProjects(currentUserId, undefined, {
+    enabled: Boolean(moveWs),
   });
+  const otherProjects = React.useMemo(
+    () => (projectsData?.items ?? []).filter((p) => p.id !== project.id),
+    [projectsData, project.id],
+  );
 
-  const availableToMove = React.useMemo(() => {
-    const list = userWorkspacesData?.items ?? [];
-    return list.filter((w) => w.projectId !== project.id && !w.deletedAt);
-  }, [userWorkspacesData, project.id]);
-
-  const handleExecuteMove = async () => {
-    if (!selectedWsIdToMove || movingWs) return;
-    setMovingWs(true);
+  const runWorkspaceUpdate = async (
+    workspaceId: string,
+    input: { title?: string; projectId?: string | null; archived?: boolean },
+    success: string,
+    failure: string,
+  ) => {
     try {
-      await api(`/api/v1/workspaces/${selectedWsIdToMove}`, {
-        method: "PATCH",
-        body: { projectId: project.id },
-      });
-      toast.success("Workspace moved to project");
-      setMoveModalOpen(false);
-      setSelectedWsIdToMove("");
-      void refetchWorkspaces();
-      void refetchProject();
+      await updateWorkspace.mutateAsync({ workspaceId, input });
+      toast.success(success);
+      refreshAfterWorkspaceChange();
+      return true;
     } catch {
-      toast.error("Failed to move workspace");
-    } finally {
-      setMovingWs(false);
+      toast.error(failure);
+      return false;
     }
   };
 
-  // Single Workspace Actions (rename / remove from project / archive / delete)
-  const [actionWs, setActionWs] = React.useState<ProjectWorkspaceDto | null>(null);
-  const [wsRenameOpen, setWsRenameOpen] = React.useState(false);
-  const [wsRenameTitle, setWsRenameTitle] = React.useState("");
+  const confirmRenameWs = async () => {
+    const title = renameWsTitle.trim();
+    if (!renameWs || !title) return;
+    const ok = await runWorkspaceUpdate(
+      renameWs.id,
+      { title },
+      t("toasts.workspaceRenamed"),
+      t("toasts.workspaceRenameFailed"),
+    );
+    if (ok) setRenameWs(null);
+  };
 
-  const handleRenameWorkspace = async () => {
-    if (!actionWs || !wsRenameTitle.trim()) return;
-    try {
-      await api(`/api/v1/workspaces/${actionWs.id}`, {
-        method: "PATCH",
-        body: { title: wsRenameTitle.trim() },
-      });
-      toast.success("Workspace renamed");
-      setWsRenameOpen(false);
-      setActionWs(null);
-      void refetchWorkspaces();
-    } catch {
-      toast.error("Failed to rename workspace");
+  const confirmMoveWs = async () => {
+    if (!moveWs || !moveWsTarget) return;
+    const ok = await runWorkspaceUpdate(
+      moveWs.id,
+      { projectId: moveWsTarget === "none" ? null : moveWsTarget },
+      t("toasts.workspaceMoved"),
+      t("toasts.workspaceMoveFailed"),
+    );
+    if (ok) {
+      setMoveWs(null);
+      setMoveWsTarget("");
     }
   };
 
-  const handleRemoveWsFromProject = async (wsId: string) => {
+  const confirmDeleteWs = async () => {
+    if (!deleteWs) return;
     try {
-      await api(`/api/v1/workspaces/${wsId}`, {
-        method: "PATCH",
-        body: { projectId: null },
-      });
-      toast.success("Workspace removed from project");
-      void refetchWorkspaces();
-      void refetchProject();
+      await deleteWorkspace.mutateAsync(deleteWs.id);
+      toast.success(t("toasts.workspaceDeleted"));
+      setDeleteWs(null);
+      refreshAfterWorkspaceChange();
     } catch {
-      toast.error("Failed to remove workspace from project");
+      toast.error(t("toasts.workspaceDeleteFailed"));
     }
   };
 
-  const handleToggleArchiveWs = async (ws: ProjectWorkspaceDto) => {
-    try {
-      const isArchived = Boolean(ws.archivedAt);
-      await api(`/api/v1/workspaces/${ws.id}`, {
-        method: "PATCH",
-        body: { archived: !isArchived },
-      });
-      toast.success(isArchived ? "Workspace restored" : "Workspace archived");
-      void refetchWorkspaces();
-    } catch {
-      toast.error("Failed to update workspace status");
-    }
+  const workspaceMenu = (ws: ProjectWorkspaceDto) => {
+    const wsRename = gate(ws.capabilities, "workspace.rename", t("caps.renameWorkspace"));
+    const wsArchive = gate(ws.capabilities, "workspace.archive", t("caps.archiveWorkspace"));
+    const wsDelete = gate(ws.capabilities, "workspace.delete", t("caps.deleteWorkspace"));
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-subtle hover:text-fg h-7 w-7 shrink-0"
+            aria-label={t("workspaceOptions", { title: ws.title })}
+          >
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-52">
+          <GatedMenuItem
+            reason={wsRename}
+            onSelect={() => {
+              setRenameWs(ws);
+              setRenameWsTitle(ws.title);
+            }}
+            icon={<Pencil className="mr-2 h-4 w-4" />}
+            label={t("actions.rename")}
+          />
+          <GatedMenuItem
+            reason={wsRename}
+            onSelect={() => setMoveWs(ws)}
+            icon={<FolderInput className="mr-2 h-4 w-4" />}
+            label={t("actions.moveToProject")}
+          />
+          <GatedMenuItem
+            reason={wsRename}
+            onSelect={() =>
+              void runWorkspaceUpdate(
+                ws.id,
+                { projectId: null },
+                t("toasts.workspaceRemoved"),
+                t("toasts.workspaceMoveFailed"),
+              )
+            }
+            icon={<FolderMinus className="mr-2 h-4 w-4" />}
+            label={t("actions.removeFromProject")}
+          />
+          <GatedMenuItem
+            reason={wsArchive}
+            onSelect={() =>
+              void runWorkspaceUpdate(
+                ws.id,
+                { archived: !ws.archivedAt },
+                ws.archivedAt
+                  ? t("toasts.workspaceRestored")
+                  : t("toasts.workspaceArchived"),
+                t("toasts.workspaceUpdateFailed"),
+              )
+            }
+            icon={
+              ws.archivedAt ? (
+                <ArchiveRestore className="mr-2 h-4 w-4" />
+              ) : (
+                <Archive className="mr-2 h-4 w-4" />
+              )
+            }
+            label={ws.archivedAt ? t("actions.unarchive") : t("actions.archive")}
+          />
+          <DropdownMenuSeparator />
+          <GatedMenuItem
+            reason={wsDelete}
+            destructive
+            onSelect={() => setDeleteWs(ws)}
+            icon={<Trash2 className="mr-2 h-4 w-4" />}
+            label={t("actions.delete")}
+          />
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
   };
 
-  const handleDeleteWs = async (wsId: string) => {
-    try {
-      await api(`/api/v1/workspaces/${wsId}`, {
-        method: "DELETE",
-      });
-      toast.success("Workspace deleted");
-      void refetchWorkspaces();
-      void refetchProject();
-    } catch {
-      toast.error("Failed to delete workspace");
-    }
-  };
+  const headerPeople: ProjectPersonDto[] = [
+    ...(project.owner ? [project.owner] : []),
+    ...(project.members ?? []).map((m) => m.user),
+  ].slice(0, 4);
+  const totalPeople = (project._count?.members ?? 0) + 1; // + owner
+
+  const createButton = (
+    <Gated reason={createGate}>
+      <Button
+        size="sm"
+        className="h-9 gap-1.5 text-xs font-semibold"
+        onClick={handleCreateWorkspace}
+        disabled={createWorkspace.isPending}
+      >
+        {createWorkspace.isPending ? (
+          <Spinner className="h-3.5 w-3.5" />
+        ) : (
+          <Plus className="h-4 w-4" aria-hidden="true" />
+        )}
+        <span>{t("newWorkspace")}</span>
+      </Button>
+    </Gated>
+  );
 
   return (
     <TooltipProvider delayDuration={150}>
-      <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-8 sm:py-8 space-y-6 max-w-7xl mx-auto w-full">
-        {/* Header Section */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-border">
-          <div className="space-y-1.5 min-w-0 flex-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <FolderKanban className="h-6 w-6 text-accent shrink-0" strokeWidth={1.75} />
+      <div className="mx-auto w-full max-w-7xl flex-1 space-y-6 overflow-y-auto px-4 py-6 sm:px-8 sm:py-8">
+        {/* Header */}
+        <div className="border-border flex flex-col items-start justify-between gap-4 border-b pb-4 sm:flex-row sm:items-center">
+          <div className="min-w-0 flex-1 space-y-1.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <FolderKanban
+                className="text-accent h-6 w-6 shrink-0"
+                strokeWidth={1.75}
+                aria-hidden="true"
+              />
               {isEditingTitle ? (
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();
-                    void handleCommitRename();
+                    void commitRename();
                   }}
-                  className="flex items-center gap-2"
                 >
                   <Input
-                    ref={titleInputRef}
+                    autoFocus
                     value={draftTitle}
+                    aria-label={t("renameProjectLabel")}
                     onChange={(e) => setDraftTitle(e.target.value)}
-                    onBlur={handleCommitRename}
-                    className="h-9 text-lg font-bold bg-surface"
-                    maxLength={100}
+                    onBlur={() => void commitRename()}
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") {
+                        e.preventDefault();
+                        setIsEditingTitle(false);
+                      }
+                    }}
+                    className="bg-surface h-9 text-lg font-bold"
+                    maxLength={120}
                   />
-                  <Button type="submit" size="sm" className="h-8 text-xs">
-                    Save
-                  </Button>
                 </form>
               ) : (
-                <div className="flex items-center gap-2 min-w-0">
-                  <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-fg truncate">
+                <div className="flex min-w-0 items-center gap-2">
+                  <h1 className="text-fg truncate text-xl font-bold tracking-tight sm:text-2xl">
                     {project.name}
                   </h1>
-                  {canRename && (
+                  {!renameGate && (
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7 text-subtle hover:text-fg"
-                      onClick={handleStartRename}
-                      title="Rename project"
+                      className="text-subtle hover:text-fg h-7 w-7"
+                      onClick={startRename}
+                      aria-label={t("renameProjectLabel")}
                     >
                       <Pencil className="h-3.5 w-3.5" />
                     </Button>
                   )}
-                  {project.archivedAt && (
-                    <Badge variant="outline" className="text-xs text-muted">
-                      Archived
+                  {isArchived && (
+                    <Badge variant="outline" className="text-muted text-xs">
+                      {t("archivedBadge")}
                     </Badge>
                   )}
                 </div>
               )}
             </div>
-
             {project.description && (
-              <p className="text-sm text-fg-muted max-w-2xl">{project.description}</p>
+              <p className="text-fg-muted max-w-2xl text-sm">
+                {project.description}
+              </p>
             )}
           </div>
 
-          {/* Right Header Actions: Members Avatars + Share + Menu */}
-          <div className="flex items-center gap-2.5 shrink-0">
-            {/* Member avatar stack */}
-            <div
-              className="flex items-center -space-x-2 overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
+          <div className="flex shrink-0 items-center gap-2.5">
+            <button
+              type="button"
               onClick={() => setShareOpen(true)}
-              title={t("shareAndPeople")}
+              aria-label={t("peopleCount", { count: totalPeople })}
+              className="focus-visible:ring-ring flex cursor-pointer items-center -space-x-2 rounded-full transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:outline-none"
             >
-              {project.members?.slice(0, 4).map((m) => (
+              {headerPeople.map((person) => (
                 <Avatar
-                  key={m.id}
-                  className="inline-block h-8 w-8 rounded-full ring-2 ring-surface border border-border"
+                  key={person.id}
+                  className="ring-surface border-border h-8 w-8 border ring-2"
                 >
-                  {m.user.image && <AvatarImage src={m.user.image} alt={m.user.name} />}
-                  <AvatarFallback className="text-[10px] font-semibold bg-surface-2 text-fg">
-                    {m.user.name?.charAt(0) || "U"}
+                  {person.image && <AvatarImage src={person.image} alt="" />}
+                  <AvatarFallback className="bg-surface-2 text-fg text-[10px] font-semibold">
+                    {initial(person)}
                   </AvatarFallback>
                 </Avatar>
               ))}
-              {(project._count?.members ?? 0) > 4 && (
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-2 ring-2 ring-surface text-[10px] font-semibold text-fg">
-                  +{(project._count?.members ?? 0) - 4}
+              {totalPeople > headerPeople.length && (
+                <span className="bg-surface-2 ring-surface text-fg flex h-8 w-8 items-center justify-center rounded-full text-[10px] font-semibold ring-2">
+                  +{totalPeople - headerPeople.length}
                 </span>
               )}
-            </div>
+            </button>
 
             <Button
               variant="outline"
               size="sm"
-              className="gap-1.5 h-9 text-xs"
+              className="h-9 gap-1.5 text-xs"
               onClick={() => setShareOpen(true)}
             >
-              <Users className="h-3.5 w-3.5 text-accent" />
+              <Users className="text-accent h-3.5 w-3.5" aria-hidden="true" />
               <span>{t("shareAndPeople")}</span>
             </Button>
 
-            {/* Project Context Menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-9 w-9 text-subtle hover:text-fg">
-                  <MoreVertical className="h-4 w-4" />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-subtle hover:text-fg h-9 w-9"
+                  aria-label={t("projectOptions")}
+                >
+                  <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48 bg-surface">
-                {canRename && (
-                  <DropdownMenuItem onClick={handleStartRename}>
-                    <Pencil className="h-4 w-4 mr-2" />
-                    <span>Rename</span>
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuItem onClick={() => setShareOpen(true)}>
-                  <Share2 className="h-4 w-4 mr-2" />
-                  <span>{t("shareAndPeople")}</span>
-                </DropdownMenuItem>
-                {canArchive && (
-                  <DropdownMenuItem onClick={handleToggleArchive}>
-                    {project.archivedAt ? (
-                      <>
-                        <ArchiveRestore className="h-4 w-4 mr-2" />
-                        <span>{t("unarchiveProject")}</span>
-                      </>
+              <DropdownMenuContent align="end" className="w-56">
+                <GatedMenuItem
+                  reason={renameGate}
+                  onSelect={startRename}
+                  icon={<Pencil className="mr-2 h-4 w-4" />}
+                  label={t("actions.rename")}
+                />
+                <GatedMenuItem
+                  reason={archiveGate}
+                  onSelect={() => void toggleArchiveProject()}
+                  icon={
+                    isArchived ? (
+                      <ArchiveRestore className="mr-2 h-4 w-4" />
                     ) : (
-                      <>
-                        <Archive className="h-4 w-4 mr-2" />
-                        <span>{t("archiveProject")}</span>
-                      </>
-                    )}
-                  </DropdownMenuItem>
-                )}
-                {isOwner && (
-                  <DropdownMenuItem onClick={() => setShareOpen(true)}>
-                    <Crown className="h-4 w-4 mr-2 text-accent" />
-                    <span>{t("transferProject")}</span>
-                  </DropdownMenuItem>
-                )}
-                {canDelete && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={() => setDeleteDialogOpen(true)}
-                      className="text-danger focus:text-danger focus:bg-danger/10"
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      <span>{t("deleteProject")}</span>
-                    </DropdownMenuItem>
-                  </>
-                )}
+                      <Archive className="mr-2 h-4 w-4" />
+                    )
+                  }
+                  label={
+                    isArchived ? t("unarchiveProject") : t("archiveProject")
+                  }
+                />
+                <GatedMenuItem
+                  reason={transferGate}
+                  onSelect={() => setShareOpen(true)}
+                  icon={<Crown className="mr-2 h-4 w-4" />}
+                  label={t("transferProject")}
+                />
+                <DropdownMenuSeparator />
+                <GatedMenuItem
+                  reason={deleteGate}
+                  destructive
+                  onSelect={() => setDeleteProjectOpen(true)}
+                  icon={<Trash2 className="mr-2 h-4 w-4" />}
+                  label={t("deleteProject")}
+                />
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         </div>
 
-        {/* Toolbar: Search, Sort, View Toggle, Create Button */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2 flex-1 max-w-md">
+        {/* Toolbar */}
+        <div className="flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-center">
+          <div className="flex max-w-md flex-1 items-center gap-2">
             <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted" />
+              <Search
+                className="text-muted absolute top-2.5 left-2.5 h-4 w-4"
+                aria-hidden="true"
+              />
               <Input
+                type="search"
                 placeholder={t("searchWorkspaces")}
+                aria-label={t("searchWorkspaces")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8 h-9 text-xs bg-surface"
+                maxLength={100}
+                className="bg-surface h-9 pl-8 text-xs"
               />
             </div>
             <Select
               value={sortBy}
-              onValueChange={(val: "lastActivity" | "name" | "createdAt") => setSortBy(val)}
+              onValueChange={(v) => setSortBy(v as ProjectWorkspaceSort)}
             >
-              <SelectTrigger className="h-9 w-36 text-xs bg-surface shrink-0">
-                <ArrowUpDown className="h-3.5 w-3.5 mr-1 text-muted" />
+              <SelectTrigger
+                className="bg-surface h-9 w-40 shrink-0 text-xs"
+                aria-label={t("sortBy")}
+              >
+                <ArrowUpDown
+                  className="text-muted mr-1 h-3.5 w-3.5"
+                  aria-hidden="true"
+                />
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="lastActivity">{t("sortLastActivity")}</SelectItem>
+                <SelectItem value="lastActivity">
+                  {t("sortLastActivity")}
+                </SelectItem>
                 <SelectItem value="name">{t("sortName")}</SelectItem>
                 <SelectItem value="createdAt">{t("sortCreatedAt")}</SelectItem>
               </SelectContent>
@@ -533,14 +704,18 @@ export function ProjectView({
           </div>
 
           <div className="flex items-center gap-2 self-end sm:self-auto">
-            {/* View Mode Toggle */}
-            <div className="flex items-center rounded-lg border border-border p-0.5 bg-surface-2/40">
+            <div
+              role="group"
+              aria-label={t("viewMode")}
+              className="border-border bg-surface-2/40 flex items-center rounded-lg border p-0.5"
+            >
               <Button
                 variant={viewMode === "grid" ? "secondary" : "ghost"}
                 size="sm"
                 className="h-7 w-7 p-0"
-                onClick={() => handleToggleViewMode("grid")}
-                title={t("viewGrid")}
+                onClick={() => changeViewMode("grid")}
+                aria-label={t("viewGrid")}
+                aria-pressed={viewMode === "grid"}
               >
                 <LayoutGrid className="h-3.5 w-3.5" />
               </Button>
@@ -548,292 +723,96 @@ export function ProjectView({
                 variant={viewMode === "list" ? "secondary" : "ghost"}
                 size="sm"
                 className="h-7 w-7 p-0"
-                onClick={() => handleToggleViewMode("list")}
-                title={t("viewList")}
+                onClick={() => changeViewMode("list")}
+                aria-label={t("viewList")}
+                aria-pressed={viewMode === "list"}
               >
                 <List className="h-3.5 w-3.5" />
               </Button>
             </div>
-
-            {/* Create Workspace Button (gated if VIEWER) */}
-            {canCreateWorkspace ? (
-              <Button
-                size="sm"
-                className="h-9 gap-1.5 text-xs font-semibold"
-                onClick={handleCreateWorkspace}
-                disabled={creatingWs}
-              >
-                {creatingWs ? (
-                  <Spinner className="h-3.5 w-3.5" />
-                ) : (
-                  <>
-                    <Plus className="h-4 w-4" />
-                    <span>{t("newWorkspace")}</span>
-                  </>
-                )}
-              </Button>
-            ) : (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span>
-                    <Button size="sm" className="h-9 gap-1.5 text-xs opacity-50 cursor-not-allowed" disabled>
-                      <Plus className="h-4 w-4" />
-                      <span>{t("newWorkspace")}</span>
-                    </Button>
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>{t("newWorkspaceDisabledTooltip")}</TooltipContent>
-              </Tooltip>
-            )}
+            {createButton}
           </div>
         </div>
 
-        {/* Content: Workspaces List / Grid or Empty State */}
-        {loadingWorkspaces ? (
+        {/* Content */}
+        {workspacesQuery.isPending ? (
           <div className="flex items-center justify-center py-20">
-            <Spinner className="h-7 w-7 text-accent" />
+            <Spinner className="text-accent h-7 w-7" />
           </div>
-        ) : workspaces.length === 0 ? (
+        ) : workspacesQuery.isError ? (
           <EmptyState
-            title={debouncedSearch ? "No matching workspaces" : t("emptyTitle")}
-            description={
-              debouncedSearch
-                ? `No workspaces in this project matched "${debouncedSearch}".`
-                : t("emptyDescription")
-            }
+            title={t("loadErrorTitle")}
+            description={t("loadErrorDescription")}
             action={
-              !debouncedSearch && (
-                <div className="flex flex-col sm:flex-row items-center gap-2">
-                  {canCreateWorkspace ? (
-                    <Button size="sm" onClick={handleCreateWorkspace} disabled={creatingWs} className="gap-1.5">
-                      <Plus className="h-4 w-4" />
-                      <span>{t("newWorkspace")}</span>
-                    </Button>
-                  ) : (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span>
-                          <Button size="sm" disabled className="gap-1.5 opacity-50 cursor-not-allowed">
-                            <Plus className="h-4 w-4" />
-                            <span>{t("newWorkspace")}</span>
-                          </Button>
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent>{t("newWorkspaceDisabledTooltip")}</TooltipContent>
-                    </Tooltip>
-                  )}
-                  {canManageMembers && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => void workspacesQuery.refetch()}
+              >
+                {t("retry")}
+              </Button>
+            }
+          />
+        ) : workspaces.length === 0 ? (
+          debouncedSearch ? (
+            <EmptyState
+              title={t("noMatchesTitle")}
+              description={t("noMatchesDescription", { q: debouncedSearch })}
+            />
+          ) : (
+            <EmptyState
+              title={t("emptyTitle")}
+              description={t("emptyDescription")}
+              action={
+                <div className="flex flex-col items-center gap-2 sm:flex-row">
+                  {createButton}
+                  <Gated reason={createGate}>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setMoveModalOpen(true)}
-                      className="gap-1.5"
+                      className="h-9 gap-1.5 text-xs"
+                      onClick={() => setMoveInOpen(true)}
                     >
-                      <ArrowRightLeft className="h-3.5 w-3.5" />
+                      <ArrowRightLeft
+                        className="h-3.5 w-3.5"
+                        aria-hidden="true"
+                      />
                       <span>{t("moveWorkspace")}</span>
                     </Button>
-                  )}
+                  </Gated>
                 </div>
-              )
-            }
-          />
-        ) : viewMode === "grid" ? (
-          /* Grid View */
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {workspaces.map((ws) => {
-              const isMine = ws.ownerId === currentUserId;
-              const responsesCount = ws._count?.responses ?? 0;
-              const relativeTime = ws.lastActivityAt
-                ? formatDistanceToNow(new Date(ws.lastActivityAt), { addSuffix: true })
-                : formatDistanceToNow(new Date(ws.createdAt), { addSuffix: true });
-
-              return (
-                <div
-                  key={ws.id}
-                  className="group relative flex flex-col justify-between p-4 rounded-xl border border-border bg-surface hover:border-accent/40 hover:shadow-md transition-all space-y-3"
-                >
-                  <div className="space-y-1.5 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <Link
-                        href={`/workspaces/${ws.id}`}
-                        className="font-semibold text-sm text-fg hover:text-accent truncate flex-1 block"
-                      >
-                        {ws.title}
-                      </Link>
-
-                      {/* Workspace context menu */}
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-subtle hover:text-fg opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                          >
-                            <MoreVertical className="h-3.5 w-3.5" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-44 bg-surface">
-                          <DropdownMenuItem asChild>
-                            <Link href={`/workspaces/${ws.id}`}>
-                              <ExternalLink className="h-4 w-4 mr-2" />
-                              <span>Open</span>
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setActionWs(ws);
-                              setWsRenameTitle(ws.title);
-                              setWsRenameOpen(true);
-                            }}
-                          >
-                            <Pencil className="h-4 w-4 mr-2" />
-                            <span>Rename</span>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleRemoveWsFromProject(ws.id)}>
-                            <ArrowRightLeft className="h-4 w-4 mr-2" />
-                            <span>Remove from project</span>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleToggleArchiveWs(ws)}>
-                            <Archive className="h-4 w-4 mr-2" />
-                            <span>{ws.archivedAt ? "Restore" : "Archive"}</span>
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() => handleDeleteWs(ws.id)}
-                            className="text-danger focus:text-danger focus:bg-danger/10"
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            <span>Delete</span>
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-
-                    <div className="flex items-center gap-2 text-xs text-muted">
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        <span>{relativeTime}</span>
-                      </span>
-                      <span>•</span>
-                      <span className="flex items-center gap-1">
-                        <MessageSquare className="h-3 w-3" />
-                        <span>
-                          {responsesCount} {responsesCount === 1 ? "response" : "responses"}
-                        </span>
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Card Footer: Owner avatar if not me */}
-                  {!isMine && ws.owner && (
-                    <div className="flex items-center gap-1.5 pt-2 border-t border-border/40 text-xs text-muted">
-                      <Avatar className="h-5 w-5 rounded-full border border-border">
-                        {ws.owner.image && <AvatarImage src={ws.owner.image} alt={ws.owner.name} />}
-                        <AvatarFallback className="text-[9px] bg-surface-2">
-                          {ws.owner.name?.charAt(0) || "U"}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="truncate">{ws.owner.name}</span>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+              }
+            />
+          )
         ) : (
-          /* List View */
-          <div className="rounded-xl border border-border bg-surface divide-y divide-border overflow-hidden">
-            {workspaces.map((ws) => {
-              const isMine = ws.ownerId === currentUserId;
-              const responsesCount = ws._count?.responses ?? 0;
-              const relativeTime = ws.lastActivityAt
-                ? formatDistanceToNow(new Date(ws.lastActivityAt), { addSuffix: true })
-                : formatDistanceToNow(new Date(ws.createdAt), { addSuffix: true });
-
-              return (
-                <div
+          <>
+            <ul
+              className={cn(
+                viewMode === "grid"
+                  ? "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+                  : "border-border bg-surface divide-border divide-y overflow-hidden rounded-xl border",
+              )}
+            >
+              {workspaces.map((ws) => (
+                <WorkspaceItem
                   key={ws.id}
-                  className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-surface-2/40 transition-colors"
-                >
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <Link
-                      href={`/workspaces/${ws.id}`}
-                      className="font-medium text-sm text-fg hover:text-accent truncate"
-                    >
-                      {ws.title}
-                    </Link>
-                  </div>
-
-                  <div className="flex items-center gap-4 text-xs text-muted shrink-0">
-                    <span className="hidden sm:inline-flex items-center gap-1">
-                      <MessageSquare className="h-3 w-3" />
-                      <span>
-                        {responsesCount} {responsesCount === 1 ? "response" : "responses"}
-                      </span>
-                    </span>
-
-                    <span className="hidden sm:inline-block w-28 text-right truncate">
-                      {relativeTime}
-                    </span>
-
-                    {!isMine && ws.owner && (
-                      <Avatar className="h-6 w-6 rounded-full border border-border" title={ws.owner.name}>
-                        {ws.owner.image && <AvatarImage src={ws.owner.image} alt={ws.owner.name} />}
-                        <AvatarFallback className="text-[9px] bg-surface-2">
-                          {ws.owner.name?.charAt(0) || "U"}
-                        </AvatarFallback>
-                      </Avatar>
-                    )}
-
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-subtle hover:text-fg">
-                          <MoreVertical className="h-3.5 w-3.5" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-44 bg-surface">
-                        <DropdownMenuItem asChild>
-                          <Link href={`/workspaces/${ws.id}`}>
-                            <ExternalLink className="h-4 w-4 mr-2" />
-                            <span>Open</span>
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => {
-                            setActionWs(ws);
-                            setWsRenameTitle(ws.title);
-                            setWsRenameOpen(true);
-                          }}
-                        >
-                          <Pencil className="h-4 w-4 mr-2" />
-                          <span>Rename</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleRemoveWsFromProject(ws.id)}>
-                          <ArrowRightLeft className="h-4 w-4 mr-2" />
-                          <span>Remove from project</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleToggleArchiveWs(ws)}>
-                          <Archive className="h-4 w-4 mr-2" />
-                          <span>{ws.archivedAt ? "Restore" : "Archive"}</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={() => handleDeleteWs(ws.id)}
-                          className="text-danger focus:text-danger focus:bg-danger/10"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          <span>Delete</span>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                  ws={ws}
+                  mode={viewMode}
+                  currentUserId={currentUserId}
+                  menu={workspaceMenu(ws)}
+                  t={t}
+                />
+              ))}
+            </ul>
+            <div ref={sentinelRef} aria-hidden="true" />
+            {isFetchingNextPage && (
+              <div className="flex justify-center py-4">
+                <Spinner className="text-accent h-5 w-5" />
+              </div>
+            )}
+          </>
         )}
 
-        {/* Share & People Dialog for Project */}
         {shareOpen && (
           <ShareAndPeopleDialog
             open={shareOpen}
@@ -844,121 +823,311 @@ export function ProjectView({
           />
         )}
 
-        {/* Delete Project Dialog */}
-        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <DialogContent className="max-w-md bg-surface border-border">
-            <DialogHeader>
-              <DialogTitle className="text-danger flex items-center gap-2">
-                <Trash2 className="h-5 w-5" />
-                <span>{t("deleteProject")}</span>
-              </DialogTitle>
-              <DialogDescription className="text-xs text-muted">
-                {t("deleteProjectConfirm")}
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter className="gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setDeleteDialogOpen(false)}
-                disabled={deleting}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={handleDeleteProject}
-                disabled={deleting}
-              >
-                {deleting ? <Spinner className="h-3.5 w-3.5" /> : t("deleteProject")}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <ConfirmDialog
+          open={deleteProjectOpen}
+          onOpenChange={setDeleteProjectOpen}
+          title={t("deleteProject")}
+          description={t("deleteProjectConfirm")}
+          confirmLabel={t("actions.delete")}
+          cancelLabel={tCommon("cancel")}
+          loading={deleteProject.isPending}
+          onConfirm={confirmDeleteProject}
+        />
 
-        {/* Move Workspace into Project Modal */}
-        <Dialog open={moveModalOpen} onOpenChange={setMoveModalOpen}>
-          <DialogContent className="max-w-md bg-surface border-border">
+        <ConfirmDialog
+          open={Boolean(deleteWs)}
+          onOpenChange={(open) => !open && setDeleteWs(null)}
+          title={t("deleteWorkspaceTitle")}
+          description={t("deleteWorkspaceConfirm", {
+            title: deleteWs?.title ?? "",
+          })}
+          confirmLabel={t("actions.delete")}
+          cancelLabel={tCommon("cancel")}
+          loading={deleteWorkspace.isPending}
+          onConfirm={confirmDeleteWs}
+        />
+
+        {/* Move an existing workspace into this project */}
+        <Dialog open={moveInOpen} onOpenChange={setMoveInOpen}>
+          <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-fg">
-                <ArrowRightLeft className="h-5 w-5 text-accent" />
-                <span>{t("moveWorkspaceTitle")}</span>
-              </DialogTitle>
-              <DialogDescription className="text-xs text-muted">
+              <DialogTitle>{t("moveWorkspaceTitle")}</DialogTitle>
+              <DialogDescription>
                 {t("moveWorkspaceDescription")}
               </DialogDescription>
             </DialogHeader>
-
-            <div className="space-y-3 py-2">
-              {availableToMove.length === 0 ? (
-                <p className="text-xs text-muted py-2">{t("noWorkspacesToMove")}</p>
-              ) : (
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-fg">{t("selectWorkspace")}</label>
-                  <Select value={selectedWsIdToMove} onValueChange={setSelectedWsIdToMove}>
-                    <SelectTrigger className="h-9 bg-surface text-xs">
-                      <SelectValue placeholder={t("selectWorkspace")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableToMove.map((w) => (
-                        <SelectItem key={w.id} value={w.id}>
-                          {w.title}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-            </div>
-
+            {movable.length === 0 ? (
+              <p className="text-muted py-2 text-xs">
+                {t("noWorkspacesToMove")}
+              </p>
+            ) : (
+              <Select value={moveInId} onValueChange={setMoveInId}>
+                <SelectTrigger
+                  className="h-9 text-xs"
+                  aria-label={t("selectWorkspace")}
+                >
+                  <SelectValue placeholder={t("selectWorkspace")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {movable.map((w) => (
+                    <SelectItem key={w.id} value={w.id}>
+                      {w.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             <DialogFooter className="gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setMoveModalOpen(false)}
-                disabled={movingWs}
+                onClick={() => setMoveInOpen(false)}
               >
-                Cancel
+                {tCommon("cancel")}
               </Button>
               <Button
                 size="sm"
-                disabled={!selectedWsIdToMove || movingWs}
-                onClick={handleExecuteMove}
+                disabled={!moveInId || updateWorkspace.isPending}
+                onClick={() => void confirmMoveIn()}
               >
-                {movingWs ? <Spinner className="h-3.5 w-3.5" /> : t("move")}
+                {updateWorkspace.isPending ? (
+                  <Spinner className="h-3.5 w-3.5" />
+                ) : (
+                  t("move")
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
-        {/* Rename Workspace Modal */}
-        <Dialog open={wsRenameOpen} onOpenChange={setWsRenameOpen}>
-          <DialogContent className="max-w-md bg-surface border-border">
+        {/* Move a workspace to another project */}
+        <Dialog
+          open={Boolean(moveWs)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setMoveWs(null);
+              setMoveWsTarget("");
+            }
+          }}
+        >
+          <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>Rename Workspace</DialogTitle>
+              <DialogTitle>{t("moveToProjectTitle")}</DialogTitle>
+              <DialogDescription>
+                {t("moveToProjectDescription", { title: moveWs?.title ?? "" })}
+              </DialogDescription>
             </DialogHeader>
-            <div className="py-2">
-              <Input
-                value={wsRenameTitle}
-                onChange={(e) => setWsRenameTitle(e.target.value)}
-                placeholder="Workspace name"
-                className="h-9 text-sm bg-surface"
-                maxLength={100}
-                autoFocus
-              />
-            </div>
+            <Select value={moveWsTarget} onValueChange={setMoveWsTarget}>
+              <SelectTrigger
+                className="h-9 text-xs"
+                aria-label={t("selectProject")}
+              >
+                <SelectValue placeholder={t("selectProject")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">{t("noProject")}</SelectItem>
+                {otherProjects.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <DialogFooter className="gap-2">
-              <Button variant="outline" size="sm" onClick={() => setWsRenameOpen(false)}>
-                Cancel
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setMoveWs(null)}
+              >
+                {tCommon("cancel")}
               </Button>
-              <Button size="sm" onClick={handleRenameWorkspace}>
-                Save
+              <Button
+                size="sm"
+                disabled={!moveWsTarget || updateWorkspace.isPending}
+                onClick={() => void confirmMoveWs()}
+              >
+                {t("move")}
               </Button>
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Rename a workspace */}
+        <Dialog
+          open={Boolean(renameWs)}
+          onOpenChange={(open) => !open && setRenameWs(null)}
+        >
+          <DialogContent className="max-w-md">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                void confirmRenameWs();
+              }}
+              className="space-y-4"
+            >
+              <DialogHeader>
+                <DialogTitle>{t("renameWorkspaceTitle")}</DialogTitle>
+              </DialogHeader>
+              <Input
+                autoFocus
+                value={renameWsTitle}
+                onChange={(e) => setRenameWsTitle(e.target.value)}
+                aria-label={t("workspaceName")}
+                placeholder={t("workspaceName")}
+                className="h-9 text-sm"
+                maxLength={120}
+              />
+              <DialogFooter className="gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setRenameWs(null)}
+                >
+                  {tCommon("cancel")}
+                </Button>
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={!renameWsTitle.trim() || updateWorkspace.isPending}
+                >
+                  {tCommon("save")}
+                </Button>
+              </DialogFooter>
+            </form>
           </DialogContent>
         </Dialog>
       </div>
     </TooltipProvider>
+  );
+}
+
+function GatedMenuItem({
+  reason,
+  onSelect,
+  icon,
+  label,
+  destructive,
+}: {
+  reason: GateReason | null;
+  onSelect: () => void;
+  icon: React.ReactNode;
+  label: string;
+  destructive?: boolean;
+}) {
+  return (
+    <Gated reason={reason} className="flex w-full" side="left">
+      <DropdownMenuItem
+        disabled={Boolean(reason)}
+        onSelect={onSelect}
+        className={cn(
+          "w-full",
+          destructive && "text-danger focus:bg-danger/10 focus:text-danger",
+        )}
+      >
+        {icon}
+        <span>{label}</span>
+      </DropdownMenuItem>
+    </Gated>
+  );
+}
+
+function WorkspaceItem({
+  ws,
+  mode,
+  currentUserId,
+  menu,
+  t,
+}: {
+  ws: ProjectWorkspaceDto;
+  mode: ViewMode;
+  currentUserId: string;
+  menu: React.ReactNode;
+  t: ProjectT;
+}) {
+  const format = useFormatter();
+  const now = useNow({ updateInterval: 60_000 });
+  const showOwner = ws.ownerId !== currentUserId && ws.owner;
+  const lastActivity = format.relativeTime(
+    new Date(ws.lastActivityAt ?? ws.createdAt),
+    now,
+  );
+  const responses = t("responseCount", { count: ws._count?.responses ?? 0 });
+  const ownerAvatar = showOwner ? (
+    <Avatar
+      className="border-border h-5 w-5 border"
+      title={t("ownedBy", { name: ws.owner!.name })}
+    >
+      {ws.owner!.image && <AvatarImage src={ws.owner!.image} alt="" />}
+      <AvatarFallback className="bg-surface-2 text-[9px]">
+        {initial(ws.owner)}
+      </AvatarFallback>
+    </Avatar>
+  ) : null;
+  const archivedBadge = ws.archivedAt ? (
+    <Badge variant="outline" className="text-muted shrink-0 text-[10px]">
+      {t("archivedBadge")}
+    </Badge>
+  ) : null;
+
+  if (mode === "list") {
+    return (
+      <li className="hover:bg-surface-2/40 flex items-center justify-between gap-3 px-4 py-3 transition-colors">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <Link
+            href={`/workspaces/${ws.id}`}
+            className="text-fg hover:text-accent truncate text-sm font-medium"
+          >
+            {ws.title}
+          </Link>
+          {archivedBadge}
+        </div>
+        <div className="text-muted flex shrink-0 items-center gap-4 text-xs">
+          <span className="hidden items-center gap-1 sm:inline-flex">
+            <MessageSquare className="h-3 w-3" aria-hidden="true" />
+            {responses}
+          </span>
+          <span className="hidden w-28 truncate text-right sm:inline-block">
+            {lastActivity}
+          </span>
+          {ownerAvatar}
+          {menu}
+        </div>
+      </li>
+    );
+  }
+
+  return (
+    <li className="group border-border bg-surface hover:border-accent/40 flex flex-col justify-between space-y-3 rounded-xl border p-4 transition-all hover:shadow-md">
+      <div className="min-w-0 space-y-1.5">
+        <div className="flex items-start justify-between gap-2">
+          <Link
+            href={`/workspaces/${ws.id}`}
+            className="text-fg hover:text-accent block flex-1 truncate text-sm font-semibold"
+          >
+            {ws.title}
+          </Link>
+          {archivedBadge}
+          {menu}
+        </div>
+        <div className="text-muted flex items-center gap-2 text-xs">
+          <span className="flex items-center gap-1">
+            <Clock className="h-3 w-3" aria-hidden="true" />
+            {lastActivity}
+          </span>
+          <span aria-hidden="true">•</span>
+          <span className="flex items-center gap-1">
+            <MessageSquare className="h-3 w-3" aria-hidden="true" />
+            {responses}
+          </span>
+        </div>
+      </div>
+      {showOwner && (
+        <div className="border-border/40 text-muted flex items-center gap-1.5 border-t pt-2 text-xs">
+          {ownerAvatar}
+          <span className="truncate">{ws.owner!.name}</span>
+        </div>
+      )}
+    </li>
   );
 }

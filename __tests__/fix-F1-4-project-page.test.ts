@@ -160,6 +160,99 @@ describe("Step F1.4 — Project page (/projects/[id])", () => {
     });
   });
 
+  describe("1b. Workspace list authorization and per-row capabilities", () => {
+    it("a stranger gets 404 on the project's workspace list", async () => {
+      await expect(
+        getProjectWorkspaces(actorFor("stranger"), populatedProjectId, {
+          limit: 10,
+        })
+      ).rejects.toMatchObject({ status: 404 });
+    });
+
+    it("does not expose member email addresses", async () => {
+      const project = await getProject(actorFor("viewer"), populatedProjectId);
+      expect(project.owner).not.toHaveProperty("email");
+      for (const m of project.members) {
+        expect(m.user).not.toHaveProperty("email");
+      }
+      const page = await getProjectWorkspaces(
+        actorFor("viewer"),
+        populatedProjectId,
+        { limit: 10 }
+      );
+      for (const w of page.items) {
+        expect(w.owner).not.toHaveProperty("email");
+        expect(w).not.toHaveProperty("members");
+      }
+    });
+
+    it("VIEWER rows are read-only; workspace owner rows have every capability", async () => {
+      const asViewer = await getProjectWorkspaces(
+        actorFor("viewer"),
+        populatedProjectId,
+        { limit: 10 }
+      );
+      for (const w of asViewer.items) {
+        expect(w.capabilities).toEqual(["workspace.read"]);
+      }
+
+      const asOwner = await getProjectWorkspaces(
+        actorFor("owner"),
+        populatedProjectId,
+        { limit: 10 }
+      );
+      for (const w of asOwner.items) {
+        expect(w.capabilities).toContain("workspace.delete");
+      }
+    });
+
+    it("a workspace-level role adds rights on that row only (top-down)", async () => {
+      await db.workspaceMember.create({
+        data: {
+          workspaceId: wsBetaId,
+          userId: ids.editor,
+          role: "ADMIN",
+          invitedById: ids.owner,
+        },
+      });
+      try {
+        const page = await getProjectWorkspaces(
+          actorFor("editor"),
+          populatedProjectId,
+          { limit: 10 }
+        );
+        const beta = page.items.find((w) => w.id === wsBetaId)!;
+        const alpha = page.items.find((w) => w.id === wsAlphaId)!;
+        expect(beta.capabilities).toContain("workspace.rename");
+        expect(alpha.capabilities).toContain("workspace.generate");
+        expect(alpha.capabilities).not.toContain("workspace.rename");
+        expect(alpha.capabilities).not.toContain("workspace.delete");
+      } finally {
+        await db.workspaceMember.deleteMany({
+          where: { workspaceId: wsBetaId, userId: ids.editor },
+        });
+      }
+    });
+
+    it("paginates with a cursor without repeating rows", async () => {
+      const first = await getProjectWorkspaces(
+        actorFor("owner"),
+        populatedProjectId,
+        { limit: 1, sort: "name" }
+      );
+      expect(first.items).toHaveLength(1);
+      expect(first.nextCursor).toBe(first.items[0]!.id);
+      const second = await getProjectWorkspaces(
+        actorFor("owner"),
+        populatedProjectId,
+        { limit: 1, sort: "name", cursor: first.nextCursor! }
+      );
+      expect(second.items).toHaveLength(1);
+      expect(second.items[0]!.id).not.toBe(first.items[0]!.id);
+      expect(second.nextCursor).toBeNull();
+    });
+  });
+
   describe("2. Populated and empty states", () => {
     it("returns empty workspace list for empty project", async () => {
       const page = await getProjectWorkspaces(actorFor("owner"), emptyProjectId, {

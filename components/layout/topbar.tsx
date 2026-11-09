@@ -70,8 +70,20 @@ export function Topbar({
   const [draftTitle, setDraftTitle] = React.useState("");
   const inputRef = React.useRef<HTMLInputElement>(null);
 
+  // On /projects/[id] the breadcrumb is "Projects › {project name}".
+  const projectPageId = React.useMemo(() => {
+    const match = pathname?.match(/^\/projects\/([^/]+)\/?$/);
+    return match ? match[1] : null;
+  }, [pathname]);
+  const projectPageName = projectPageId
+    ? (projects.find((p) => p.id === projectPageId)?.name ?? "")
+    : null;
+
   const displayedTitle =
-    activeWorkspace?.title || currentPageTitle || tChat("newChat");
+    projectPageName ||
+    activeWorkspace?.title ||
+    currentPageTitle ||
+    tChat("newChat");
   const projectName = React.useMemo(() => {
     if (!activeWorkspace?.projectId) return null;
     if (activeWorkspace.projectName) return activeWorkspace.projectName;
@@ -155,41 +167,39 @@ export function Topbar({
           aria-label="Breadcrumb"
           className="flex min-w-0 flex-1 items-center gap-1.5 text-sm"
         >
-          {pathname?.startsWith("/projects/") ? (
-            <div className="flex items-center gap-1.5 min-w-0">
-              <Link
-                href="/workspaces"
-                className="text-muted hover:text-fg text-xs sm:text-sm font-medium transition-colors"
-              >
-                Projects
-              </Link>
-              <ChevronRight className="h-3.5 w-3.5 shrink-0 text-subtle" strokeWidth={1.5} />
-              <span className="truncate font-semibold text-fg text-sm sm:text-base">
-                {displayedTitle}
-              </span>
-            </div>
-          ) : (
+          {projectPageName !== null ? (
             <>
-              {projectName && (
-                <>
-                  <Link
-                    href={activeWorkspace?.projectId ? `/projects/${activeWorkspace.projectId}` : "#"}
-                    className="inline-flex max-w-36 sm:max-w-48 items-center gap-1.5 truncate rounded-md bg-surface-2 px-2 py-0.5 text-xs font-medium text-muted hover:text-fg hover:bg-surface-3 transition-colors"
-                  >
-                    <FolderKanban
-                      className="h-3.5 w-3.5 shrink-0 text-accent"
-                      strokeWidth={1.5}
-                    />
-                    <span className="truncate">{projectName}</span>
-                  </Link>
-                  <ChevronRight
-                    className="h-3.5 w-3.5 shrink-0 text-subtle"
+              <span className="text-xs font-medium text-muted sm:text-sm">
+                {t("projects")}
+              </span>
+              <ChevronRight
+                className="h-3.5 w-3.5 shrink-0 text-subtle"
+                strokeWidth={1.5}
+                aria-hidden="true"
+              />
+            </>
+          ) : (
+            projectName &&
+            activeWorkspace?.projectId && (
+              <>
+                <Link
+                  href={`/projects/${activeWorkspace.projectId}`}
+                  className="inline-flex max-w-36 sm:max-w-48 items-center gap-1.5 truncate rounded-md bg-surface-2 px-2 py-0.5 text-xs font-medium text-muted transition-colors hover:bg-surface-3 hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <FolderKanban
+                    className="h-3.5 w-3.5 shrink-0 text-accent"
                     strokeWidth={1.5}
                     aria-hidden="true"
                   />
-                </>
-              )}
-            </>
+                  <span className="truncate">{projectName}</span>
+                </Link>
+                <ChevronRight
+                  className="h-3.5 w-3.5 shrink-0 text-subtle"
+                  strokeWidth={1.5}
+                  aria-hidden="true"
+                />
+              </>
+            )
           )}
 
           {isEditingTitle && activeWorkspace ? (

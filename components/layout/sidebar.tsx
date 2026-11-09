@@ -525,53 +525,63 @@ export function Sidebar({
                         const childWorkspaces =
                           projectWorkspacesMap[project.id] ?? [];
 
+                        const isActiveProject =
+                          pathname === `/projects/${project.id}`;
+
                         return (
-                          <div
-                            key={project.id}
-                            className={cn(
-                              "space-y-0.5 rounded-lg transition-colors",
-                              pathname === `/projects/${project.id}` && "bg-surface-2/80"
-                            )}
-                          >
-                            <div className="group flex items-center justify-between gap-1 rounded-lg px-2 py-1.5 text-xs hover:bg-surface-2 sm:text-sm">
-                              {/* Chevron button alone expands/collapses tree */}
+                          <div key={project.id} className="space-y-0.5">
+                            <div
+                              className={cn(
+                                "group flex items-center justify-between gap-1 rounded-lg px-2 py-1.5 text-xs hover:bg-surface-2 sm:text-sm",
+                                isActiveProject && "bg-surface-2"
+                              )}
+                            >
+                              {/* Chevron alone expands/collapses the tree */}
                               <button
                                 type="button"
                                 aria-expanded={isExpanded}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  toggleProjectNode(project.id);
-                                }}
-                                className="text-subtle hover:text-fg p-0.5 rounded cursor-pointer shrink-0"
-                                title={isExpanded ? "Collapse" : "Expand"}
+                                aria-label={t(
+                                  isExpanded
+                                    ? "collapseProject"
+                                    : "expandProject",
+                                  { name: project.name }
+                                )}
+                                onClick={() => toggleProjectNode(project.id)}
+                                className="text-subtle hover:text-fg focus-visible:ring-ring shrink-0 cursor-pointer rounded-sm p-0.5 focus-visible:ring-2 focus-visible:outline-none"
                               >
                                 {isExpanded ? (
-                                  <ChevronDown className="h-3.5 w-3.5" strokeWidth={1.5} />
+                                  <ChevronDown
+                                    className="h-3.5 w-3.5"
+                                    strokeWidth={1.5}
+                                  />
                                 ) : (
-                                  <ChevronRight className="h-3.5 w-3.5" strokeWidth={1.5} />
+                                  <ChevronRight
+                                    className="h-3.5 w-3.5"
+                                    strokeWidth={1.5}
+                                  />
                                 )}
                               </button>
 
-                              {/* Project name link navigates to /projects/[id] */}
+                              {/* Project name navigates to the project page */}
                               <Link
                                 href={`/projects/${project.id}`}
+                                aria-current={
+                                  isActiveProject ? "page" : undefined
+                                }
                                 className={cn(
-                                  "flex min-w-0 flex-1 items-center gap-2 truncate text-left",
-                                  pathname === `/projects/${project.id}`
-                                    ? "text-accent font-semibold"
+                                  "focus-visible:ring-ring flex min-w-0 flex-1 items-center gap-2 truncate rounded-sm text-left focus-visible:ring-2 focus-visible:outline-none",
+                                  isActiveProject
+                                    ? "text-fg font-semibold"
                                     : "text-muted hover:text-fg"
                                 )}
                               >
                                 <FolderKanban
-                                  className={cn(
-                                    "h-3.5 w-3.5 shrink-0",
-                                    pathname === `/projects/${project.id}`
-                                      ? "text-accent"
-                                      : "text-accent/80"
-                                  )}
+                                  className="text-accent h-3.5 w-3.5 shrink-0"
                                   strokeWidth={1.5}
                                 />
-                                <span className="truncate font-medium">{project.name}</span>
+                                <span className="truncate font-medium">
+                                  {project.name}
+                                </span>
                               </Link>
 
                               <span className="text-subtle text-[11px] px-1">

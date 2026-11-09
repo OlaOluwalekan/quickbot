@@ -5,15 +5,21 @@ import {
   useQuery,
   useQueryClient,
   type UseQueryOptions,
-  type UseQueryResult,
+  useInfiniteQuery,
 } from "@tanstack/react-query";
 import { api } from "@/lib/api/client";
-import { authClient } from "@/lib/auth-client";
 import { queryKeys } from "./query-keys";
 import type {
   CreateProjectInput,
   UpdateProjectInput,
 } from "@/lib/schemas/workspace";
+
+export interface ProjectPersonDto {
+  id: string;
+  name: string;
+  image?: string | null;
+  username?: string | null;
+}
 
 export interface ProjectDto {
   id: string;
@@ -23,26 +29,12 @@ export interface ProjectDto {
   ownerId?: string;
   archivedAt?: string | null;
   deletedAt?: string | null;
+  /** Caller's effective role on the project (server-computed). */
   role?: string;
+  /** Caller's capabilities on the project (server-computed). */
   capabilities?: string[];
-  owner?: {
-    id: string;
-    name: string;
-    email: string;
-    image?: string | null;
-    username?: string | null;
-  };
-  members?: Array<{
-    id: string;
-    role: string;
-    user: {
-      id: string;
-      name: string;
-      email: string;
-      image?: string | null;
-      username?: string | null;
-    };
-  }>;
+  owner?: ProjectPersonDto;
+  members?: Array<{ id: string; role: string; user: ProjectPersonDto }>;
   _count?: {
     workspaces?: number;
     members?: number;
@@ -62,20 +54,13 @@ export interface ProjectWorkspaceDto {
   ownerId: string;
   projectId?: string | null;
   archivedAt?: string | null;
-  deletedAt?: string | null;
   lastActivityAt?: string | null;
   createdAt: string;
   updatedAt: string;
-  owner?: {
-    id: string;
-    name: string;
-    email: string;
-    image?: string | null;
-    username?: string | null;
-  };
-  _count?: {
-    responses?: number;
-  };
+  owner?: ProjectPersonDto;
+  _count?: { responses?: number };
+  /** Caller's capabilities on this workspace (server-computed). */
+  capabilities: string[];
 }
 
 export interface PaginatedProjectWorkspaces {
@@ -115,149 +100,55 @@ export function useProject(
   userId: string,
   projectId: string | null | undefined,
   options?: Omit<UseQueryOptions<ProjectDto, Error>, "queryKey" | "queryFn">,
-): UseQueryResult<ProjectDto, Error>;
-export function useProject(
-  projectId: string | null | undefined,
-  options?: Omit<UseQueryOptions<ProjectDto, Error>, "queryKey" | "queryFn">,
-): UseQueryResult<ProjectDto, Error>;
-export function useProject(
-  idOrUserId: string | null | undefined,
-  idOrOptions?: string | null | Omit<UseQueryOptions<ProjectDto, Error>, "queryKey" | "queryFn">,
-  options?: Omit<UseQueryOptions<ProjectDto, Error>, "queryKey" | "queryFn">,
 ) {
-  const { data: session } = authClient.useSession();
-  let explicitUserId = "";
-  let projectId: string | null | undefined = "";
-  let opts = options;
-
-  if (typeof idOrOptions === "string" || idOrOptions === null) {
-    explicitUserId = idOrUserId ?? "";
-    projectId = idOrOptions;
-  } else {
-    projectId = idOrUserId;
-    opts = idOrOptions;
-  }
-
-  const effectiveUserId = explicitUserId || session?.user?.id || "";
-
   return useQuery({
-    queryKey: effectiveUserId
-      ? queryKeys.projects.detail(effectiveUserId, projectId ?? "")
-      : (["projects", "detail", projectId ?? ""] as const),
-    enabled: Boolean(effectiveUserId && projectId) && (opts?.enabled !== false),
+    queryKey: queryKeys.projects.detail(userId, projectId ?? ""),
+    enabled: Boolean(userId && projectId),
     queryFn: ({ signal }) =>
       api<ProjectDto>(`/api/v1/projects/${projectId}`, { signal }),
-    ...opts,
+    ...options,
   });
 }
 
+export type ProjectWorkspaceSort = "lastActivity" | "name" | "createdAt";
+
+/**
+ * Cursor-paginated workspaces of a project (infinite scroll).
+ * `q` is matched server-side against the workspace title.
+ */
 export function useProjectWorkspaces(
   userId: string,
   projectId: string | null | undefined,
-  filters?: {
-    q?: string;
-    sort?: "lastActivity" | "name" | "createdAt";
-    limit?: number;
-    cursor?: string;
-  },
-  options?: Omit<
-    UseQueryOptions<PaginatedProjectWorkspaces, Error>,
-    "queryKey" | "queryFn"
-  >,
-): UseQueryResult<PaginatedProjectWorkspaces, Error>;
-export function useProjectWorkspaces(
-  projectId: string | null | undefined,
-  filters?: {
-    q?: string;
-    sort?: "lastActivity" | "name" | "createdAt";
-    limit?: number;
-    cursor?: string;
-  },
-  options?: Omit<
-    UseQueryOptions<PaginatedProjectWorkspaces, Error>,
-    "queryKey" | "queryFn"
-  >,
-): UseQueryResult<PaginatedProjectWorkspaces, Error>;
-export function useProjectWorkspaces(
-  firstArg: string | null | undefined,
-  secondArg?:
-    | string
-    | null
-    | {
-        q?: string;
-        sort?: "lastActivity" | "name" | "createdAt";
-        limit?: number;
-        cursor?: string;
-      },
-  thirdArg?:
-    | {
-        q?: string;
-        sort?: "lastActivity" | "name" | "createdAt";
-        limit?: number;
-        cursor?: string;
-      }
-    | Omit<
-        UseQueryOptions<PaginatedProjectWorkspaces, Error>,
-        "queryKey" | "queryFn"
-      >,
-  fourthArg?: Omit<
-    UseQueryOptions<PaginatedProjectWorkspaces, Error>,
-    "queryKey" | "queryFn"
-  >,
+  filters: { q?: string; sort?: ProjectWorkspaceSort; limit?: number } = {},
+  options?: { initialPage?: PaginatedProjectWorkspaces },
 ) {
-  const { data: session } = authClient.useSession();
-  let explicitUserId = "";
-  let projectId: string | null | undefined = "";
-  let filters:
-    | {
-        q?: string;
-        sort?: "lastActivity" | "name" | "createdAt";
-        limit?: number;
-        cursor?: string;
-      }
-    | undefined;
-  let options:
-    | Omit<
-        UseQueryOptions<PaginatedProjectWorkspaces, Error>,
-        "queryKey" | "queryFn"
-      >
-    | undefined;
-
-  if (typeof secondArg === "string" || secondArg === null) {
-    explicitUserId = firstArg ?? "";
-    projectId = secondArg;
-    filters = thirdArg as typeof filters;
-    options = fourthArg;
-  } else {
-    projectId = firstArg;
-    filters = secondArg;
-    options = thirdArg as typeof options;
-  }
-
-  const effectiveUserId = explicitUserId || session?.user?.id || "";
-
-  return useQuery({
-    queryKey: effectiveUserId
-      ? queryKeys.projects.workspaces(
-          effectiveUserId,
-          projectId ?? "",
-          filters ? { q: filters.q, sort: filters.sort } : undefined
-        )
-      : (["projects", projectId ?? "", "workspaces", filters ?? {}] as const),
-    enabled: Boolean(effectiveUserId && projectId) && (options?.enabled !== false),
-    queryFn: ({ signal }) => {
+  const { q, sort = "lastActivity", limit = 30 } = filters;
+  return useInfiniteQuery({
+    queryKey: queryKeys.projects.workspaces(userId, projectId ?? "", {
+      q,
+      sort,
+    }),
+    enabled: Boolean(userId && projectId),
+    initialPageParam: null as string | null,
+    queryFn: ({ pageParam, signal }) => {
       const params = new URLSearchParams();
-      if (filters?.q) params.set("q", filters.q);
-      if (filters?.sort) params.set("sort", filters.sort);
-      if (filters?.limit) params.set("limit", String(filters.limit));
-      if (filters?.cursor) params.set("cursor", filters.cursor);
-      const qs = params.toString();
+      if (q) params.set("q", q);
+      params.set("sort", sort);
+      params.set("limit", String(limit));
+      if (pageParam) params.set("cursor", pageParam);
       return api<PaginatedProjectWorkspaces>(
-        `/api/v1/projects/${projectId}/workspaces${qs ? `?${qs}` : ""}`,
-        { signal }
+        `/api/v1/projects/${projectId}/workspaces?${params.toString()}`,
+        { signal },
       );
     },
-    ...options,
+    getNextPageParam: (last) => last.nextCursor,
+    ...(options?.initialPage
+      ? {
+          initialData: { pages: [options.initialPage], pageParams: [null] },
+          // Server-rendered first page is fresh; refetch only on change.
+          staleTime: 30_000,
+        }
+      : {}),
   });
 }
 
