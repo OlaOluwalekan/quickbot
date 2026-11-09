@@ -330,6 +330,16 @@ describe("Step F1.3 — Ownership transfer, member-limit checks, and suspension 
       ).rejects.toMatchObject({ status: 403 });
     });
 
+    it("requires the typed confirmation (TRANSFER or the exact name)", async () => {
+      await expect(
+        requestOwnershipTransfer(
+          actorFor("ownerA"),
+          { workspaceId: multiWorkspaceId },
+          { toUserId: ids.recipientPaid, previousOwnerAction: "LEAVE", confirm: "yes" }
+        )
+      ).rejects.toMatchObject({ status: 400, code: "invalid_confirmation" });
+    });
+
     it("refuses a recipient who is not a member", async () => {
       await expect(
         requestOwnershipTransfer(

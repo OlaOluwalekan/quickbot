@@ -1,6 +1,7 @@
 import "server-only";
 import { getSiteConfig } from "@/server/config/site";
 import { renderEmailLayout } from "./layout";
+import { escapeHtml } from "./escape";
 import { EmailTemplateResult, EmailTranslator, PaymentFailedData } from "./types";
 
 export function renderPaymentFailed(
@@ -22,11 +23,11 @@ export function renderPaymentFailed(
     title: subject,
     heading,
     greeting,
-    bodyHtml: `<p style="margin: 0;">${bodyText}</p>`,
+    bodyHtml: `<p style="margin: 0;">${escapeHtml(bodyText)}</p>`,
     bodyText,
     actionUrl: data.retryUrl,
     actionLabel,
-    disclaimerHtml: disclaimerText,
+    disclaimerHtml: escapeHtml(disclaimerText),
     disclaimerText,
     toEmail,
     supportEmail: site.emails.support,

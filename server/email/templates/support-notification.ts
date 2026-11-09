@@ -1,6 +1,7 @@
 import "server-only";
 import { getSiteConfig } from "@/server/config/site";
 import { renderEmailLayout } from "./layout";
+import { escapeHtml } from "./escape";
 import { EmailTemplateResult, EmailTranslator, SupportNotificationData } from "./types";
 
 export function renderSupportNotification(
@@ -18,9 +19,9 @@ export function renderSupportNotification(
   const bodyHtml = `
     <p style="margin: 0 0 12px 0;">A new support request has been submitted.</p>
     <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 13px;">
-      <tr><td style="padding: 4px 8px; font-weight: 600; width: 120px;">Ticket ID:</td><td style="padding: 4px 8px; font-family: monospace;">${data.ticketId}</td></tr>
-      <tr><td style="padding: 4px 8px; font-weight: 600;">From:</td><td style="padding: 4px 8px;">${data.senderEmail}</td></tr>
-      <tr><td style="padding: 4px 8px; font-weight: 600;">User ID:</td><td style="padding: 4px 8px; font-family: monospace;">${data.userId ?? "Anonymous"}</td></tr>
+      <tr><td style="padding: 4px 8px; font-weight: 600; width: 120px;">Ticket ID:</td><td style="padding: 4px 8px; font-family: monospace;">${escapeHtml(data.ticketId)}</td></tr>
+      <tr><td style="padding: 4px 8px; font-weight: 600;">From:</td><td style="padding: 4px 8px;">${escapeHtml(data.senderEmail)}</td></tr>
+      <tr><td style="padding: 4px 8px; font-weight: 600;">User ID:</td><td style="padding: 4px 8px; font-family: monospace;">${escapeHtml(data.userId ?? "Anonymous")}</td></tr>
       <tr><td style="padding: 4px 8px; font-weight: 600;">Topic:</td><td style="padding: 4px 8px;">${escapeHtml(data.topic)}</td></tr>
     </table>
     <div style="background-color: #f4f4f5; border-left: 3px solid #6366f1; padding: 12px 16px; margin: 16px 0; border-radius: 4px; font-size: 13px; color: #27272a;">
@@ -68,13 +69,4 @@ export function renderSupportNotification(
     html: rendered.html,
     text: rendered.text,
   };
-}
-
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
 }

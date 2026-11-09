@@ -40,6 +40,8 @@ npm run verify
 ```
 `verify` runs everything (it needs Docker for Postgres). Use `npm run db:migrate` to create migrations (`--create-only` when hand-editing SQL). Never edit a migration that's already merged. `check:i18n` exists once interlude F5.1 is merged.
 
+**Known migration drift (found 2026-11-09):** the `SupportTicket` model (`support_tickets` table, `TicketStatus` enum) is in `prisma/schema.prisma` but no migration creates it. `prisma migrate deploy` doesn't notice, but `prisma migrate dev` will report drift and propose a migration for it. Fix it in its own PR with a new migration; don't fold it into an unrelated step's migration.
+
 ## Code layout
 
 - `app/` — routes: `(marketing)` public pages, `(app)` signed-in app, `api/v1/*` JSON/SSE endpoints, `s/[token]` public share pages.

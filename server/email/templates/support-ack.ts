@@ -1,6 +1,7 @@
 import "server-only";
 import { getSiteConfig } from "@/server/config/site";
 import { renderEmailLayout } from "./layout";
+import { escapeHtml } from "./escape";
 import { EmailTemplateResult, EmailTranslator, SupportAckData } from "./types";
 
 export function renderSupportAck(
@@ -23,12 +24,12 @@ export function renderSupportAck(
   const responseTimeNotice = t("supportAck.responseTimeNotice");
 
   const bodyHtml = `
-    <p style="margin: 0 0 16px 0;">${bodyText}</p>
+    <p style="margin: 0 0 16px 0;">${escapeHtml(bodyText)}</p>
     <div style="background-color: #f4f4f5; border-left: 3px solid #6366f1; padding: 12px 16px; margin: 16px 0; border-radius: 4px; font-size: 13px; color: #3f3f46;">
-      <p style="margin: 0 0 6px 0; font-weight: 600;">${quoteNotice}</p>
+      <p style="margin: 0 0 6px 0; font-weight: 600;">${escapeHtml(quoteNotice)}</p>
       <p style="margin: 0; white-space: pre-wrap;">${escapeHtml(data.message)}</p>
     </div>
-    <p style="margin: 16px 0 0 0; font-size: 13px; color: #71717a;">${responseTimeNotice}</p>
+    <p style="margin: 16px 0 0 0; font-size: 13px; color: #71717a;">${escapeHtml(responseTimeNotice)}</p>
   `;
 
   const rendered = renderEmailLayout({
@@ -61,13 +62,4 @@ export function renderSupportAck(
     html: rendered.html,
     text: rendered.text,
   };
-}
-
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
 }

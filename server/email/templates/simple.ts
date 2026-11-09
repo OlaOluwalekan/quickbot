@@ -1,16 +1,8 @@
 import "server-only";
 import { getSiteConfig } from "@/server/config/site";
 import { renderEmailLayout } from "./layout";
+import { escapeHtml } from "./escape";
 import type { EmailTemplateResult, EmailTranslator } from "./types";
-
-export function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
 
 /**
  * One-paragraph transactional email. Translated strings may contain
@@ -30,9 +22,9 @@ export function renderSimpleEmail(opts: {
   const { t, toEmail } = opts;
   const site = getSiteConfig();
   const rendered = renderEmailLayout({
-    title: escapeHtml(opts.subject),
-    heading: escapeHtml(opts.heading),
-    greeting: escapeHtml(opts.greeting),
+    title: opts.subject,
+    heading: opts.heading,
+    greeting: opts.greeting,
     bodyHtml: `<p style="margin: 0;">${escapeHtml(opts.body)}</p>`,
     bodyText: opts.body,
     actionUrl: opts.actionUrl,
