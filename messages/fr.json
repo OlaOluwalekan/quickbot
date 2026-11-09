@@ -1174,7 +1174,7 @@
     "newWorkspace": "Nouvel espace de travail dans ce projet",
     "moveWorkspace": "Déplacer ici un espace de travail existant",
     "moveWorkspaceTitle": "Déplacer un espace de travail dans ce projet",
-    "moveWorkspaceDescription": "Choisissez l'un de vos espaces de travail à déplacer dans ce projet.",
+    "moveWorkspaceDescription": "Choisissez un espace de travail que vous gérez à déplacer dans ce projet.",
     "selectWorkspace": "Sélectionnez un espace de travail",
     "noWorkspacesToMove": "Vous n'avez aucun autre espace de travail à déplacer ici.",
     "move": "Déplacer",
@@ -1254,6 +1254,8 @@
       "workspaceUpdateFailed": "Impossible de mettre à jour l'espace de travail",
       "workspaceDeleted": "Espace de travail supprimé",
       "workspaceDeleteFailed": "Impossible de supprimer l'espace de travail"
-    }
+    },
+    "currentlyIn": "Actuellement dans {name}",
+    "moveSearchHint": "Vos espaces de travail les plus récents sont affichés. Recherchez pour en trouver d'autres."
   }
 }

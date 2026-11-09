@@ -17,7 +17,9 @@ import type {
   CreateProjectInput,
   UpdateProjectInput,
   ListProjectWorkspacesQuery,
+  ListMovableWorkspacesQuery,
 } from "@/lib/schemas/workspace";
+import { MOVABLE_WORKSPACES_LIMIT } from "@/lib/schemas/workspace";
 import type { Prisma } from "@/server/db/generated/client";
 import type { PageQuery } from "@/server/http/pagination";
 
@@ -291,4 +293,59 @@ export async function getProjectWorkspaces(
       return { ...ws, capabilities: Array.from(caps) };
     }),
   };
+}
+
+/**
+ * Workspaces the actor may move INTO this project: not already in it, not
+ * archived/deleted, and where the actor holds "workspace.rename" (what
+ * updateWorkspace requires). Rename is granted to the workspace owner and to
+ * unsuspended ADMINs — directly on the workspace, or via its current project
+ * (the project owner counts as ADMIN there). Small, searchable result set.
+ */
+export async function listMovableWorkspaces(
+  actor: Actor,
+  projectId: string,
+  query: ListMovableWorkspacesQuery
+) {
+  // Moving in needs "workspace.generate" on the target project.
+  await requireProject(actor, projectId, "workspace.generate");
+
+  const adminRow = { userId: actor.userId, role: "ADMIN" as const, suspendedAt: null };
+
+  const items = await db.workspace.findMany({
+    where: {
+      deletedAt: null,
+      archivedAt: null,
+      OR: [{ projectId: null }, { projectId: { not: projectId } }],
+      ...(query.q
+        ? { title: { contains: query.q, mode: "insensitive" as const } }
+        : {}),
+      AND: [
+        {
+          OR: [
+            { ownerId: actor.userId },
+            { members: { some: adminRow } },
+            {
+              project: {
+                deletedAt: null,
+                OR: [
+                  { ownerId: actor.userId },
+                  { members: { some: adminRow } },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    },
+    orderBy: [{ lastActivityAt: "desc" }, { id: "desc" }],
+    take: MOVABLE_WORKSPACES_LIMIT,
+    select: {
+      id: true,
+      title: true,
+      project: { select: { id: true, name: true } },
+    },
+  });
+
+  return { items };
 }

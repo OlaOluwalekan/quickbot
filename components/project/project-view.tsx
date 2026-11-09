@@ -60,6 +60,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ShareAndPeopleDialog } from "@/components/workspace/ShareAndPeopleDialog";
 import {
   useDeleteProject,
+  useMovableWorkspaces,
   useProject,
   useProjects,
   useProjectWorkspaces,
@@ -74,7 +75,6 @@ import {
   useCreateWorkspace,
   useDeleteWorkspace,
   useUpdateWorkspace,
-  useWorkspaces,
 } from "@/lib/api/hooks/workspaces";
 import { queryKeys } from "@/lib/api/hooks/query-keys";
 import type { GateReason } from "@/lib/entitlements/shared";
@@ -303,18 +303,25 @@ export function ProjectView({
   // Move an existing workspace into this project
   const [moveInOpen, setMoveInOpen] = React.useState(false);
   const [moveInId, setMoveInId] = React.useState("");
-  const { data: myWorkspaces } = useWorkspaces(
+  const [moveInSearch, setMoveInSearch] = React.useState("");
+  const [moveInQuery, setMoveInQuery] = React.useState("");
+  React.useEffect(() => {
+    const timer = setTimeout(() => setMoveInQuery(moveInSearch.trim()), 250);
+    return () => clearTimeout(timer);
+  }, [moveInSearch]);
+  const movableQuery = useMovableWorkspaces(
     currentUserId,
-    { limit: 50 },
+    project.id,
+    moveInQuery,
     { enabled: moveInOpen },
   );
-  const movable = React.useMemo(
-    () =>
-      (myWorkspaces?.items ?? []).filter(
-        (w) => w.projectId !== project.id && !w.archivedAt,
-      ),
-    [myWorkspaces, project.id],
-  );
+  const movable = movableQuery.data?.items ?? [];
+
+  const closeMoveIn = () => {
+    setMoveInOpen(false);
+    setMoveInId("");
+    setMoveInSearch("");
+  };
 
   const confirmMoveIn = async () => {
     if (!moveInId) return;
@@ -324,8 +331,7 @@ export function ProjectView({
         input: { projectId: project.id },
       });
       toast.success(t("toasts.workspaceMovedIn"));
-      setMoveInOpen(false);
-      setMoveInId("");
+      closeMoveIn();
       refreshAfterWorkspaceChange();
     } catch {
       toast.error(t("toasts.workspaceMoveFailed"));
@@ -848,7 +854,10 @@ export function ProjectView({
         />
 
         {/* Move an existing workspace into this project */}
-        <Dialog open={moveInOpen} onOpenChange={setMoveInOpen}>
+        <Dialog
+          open={moveInOpen}
+          onOpenChange={(open) => (open ? setMoveInOpen(true) : closeMoveIn())}
+        >
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>{t("moveWorkspaceTitle")}</DialogTitle>
@@ -856,33 +865,66 @@ export function ProjectView({
                 {t("moveWorkspaceDescription")}
               </DialogDescription>
             </DialogHeader>
-            {movable.length === 0 ? (
+            <div className="relative">
+              <Search
+                className="text-muted absolute top-2.5 left-2.5 h-4 w-4"
+                aria-hidden="true"
+              />
+              <Input
+                type="search"
+                value={moveInSearch}
+                onChange={(e) => setMoveInSearch(e.target.value)}
+                placeholder={t("searchWorkspaces")}
+                aria-label={t("searchWorkspaces")}
+                maxLength={100}
+                className="h-9 pl-8 text-xs"
+              />
+            </div>
+            {movableQuery.isPending ? (
+              <div className="flex justify-center py-4">
+                <Spinner className="text-accent h-5 w-5" />
+              </div>
+            ) : movable.length === 0 ? (
               <p className="text-muted py-2 text-xs">
-                {t("noWorkspacesToMove")}
+                {moveInQuery
+                  ? t("noMatchesDescription", { q: moveInQuery })
+                  : t("noWorkspacesToMove")}
               </p>
             ) : (
-              <Select value={moveInId} onValueChange={setMoveInId}>
-                <SelectTrigger
-                  className="h-9 text-xs"
-                  aria-label={t("selectWorkspace")}
-                >
-                  <SelectValue placeholder={t("selectWorkspace")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {movable.map((w) => (
-                    <SelectItem key={w.id} value={w.id}>
+              <div
+                role="radiogroup"
+                aria-label={t("selectWorkspace")}
+                className="border-border divide-border max-h-64 divide-y overflow-y-auto rounded-lg border"
+              >
+                {movable.map((w) => (
+                  <button
+                    key={w.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={moveInId === w.id}
+                    onClick={() => setMoveInId(w.id)}
+                    className={cn(
+                      "hover:bg-surface-2 focus-visible:ring-ring flex w-full flex-col items-start px-3 py-2 text-left focus-visible:ring-2 focus-visible:outline-none",
+                      moveInId === w.id && "bg-surface-2",
+                    )}
+                  >
+                    <span className="text-fg w-full truncate text-sm font-medium">
                       {w.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                    </span>
+                    <span className="text-muted w-full truncate text-xs">
+                      {w.project
+                        ? t("currentlyIn", { name: w.project.name })
+                        : t("noProject")}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+            {movable.length > 0 && !moveInQuery && (
+              <p className="text-subtle text-xs">{t("moveSearchHint")}</p>
             )}
             <DialogFooter className="gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setMoveInOpen(false)}
-              >
+              <Button variant="outline" size="sm" onClick={closeMoveIn}>
                 {tCommon("cancel")}
               </Button>
               <Button

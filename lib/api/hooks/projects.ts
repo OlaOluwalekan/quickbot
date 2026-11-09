@@ -305,3 +305,29 @@ export function useDeleteProject(userId: string) {
     },
   });
 }
+
+export interface MovableWorkspaceDto {
+  id: string;
+  title: string;
+  project: { id: string; name: string } | null;
+}
+
+/** Workspaces the caller may move into `projectId` (server-filtered, max 10). */
+export function useMovableWorkspaces(
+  userId: string,
+  projectId: string,
+  q: string,
+  options?: { enabled?: boolean },
+) {
+  return useQuery({
+    queryKey: queryKeys.projects.movableWorkspaces(userId, projectId, q),
+    enabled: Boolean(userId && projectId) && options?.enabled !== false,
+    queryFn: ({ signal }) => {
+      const qs = q ? `?q=${encodeURIComponent(q)}` : "";
+      return api<{ items: MovableWorkspaceDto[] }>(
+        `/api/v1/projects/${projectId}/movable-workspaces${qs}`,
+        { signal },
+      );
+    },
+  });
+}

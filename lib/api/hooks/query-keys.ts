@@ -63,6 +63,8 @@ export const queryKeys = {
     // updaters (which expect `{ items }`) never touch this infinite query.
     workspacesAll: (userId: string, projectId: string) =>
       userQueryKey(userId, "project-workspaces", projectId),
+    movableWorkspaces: (userId: string, projectId: string, q: string) =>
+      userQueryKey(userId, "project-workspaces", projectId, "movable", q),
     workspaces: (
       userId: string,
       projectId: string,

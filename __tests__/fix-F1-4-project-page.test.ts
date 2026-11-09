@@ -8,6 +8,7 @@ import { requireProject } from "@/server/authz/access";
 import {
   getProject,
   getProjectWorkspaces,
+  listMovableWorkspaces,
 } from "@/server/services/project";
 import { createWorkspace } from "@/server/services/workspace";
 
@@ -331,6 +332,81 @@ describe("Step F1.4 — Project page (/projects/[id])", () => {
         limit: 10,
       });
       expect(page.items.some((w) => w.id === created.id)).toBe(true);
+    });
+  });
+
+  describe("5. Moving an existing workspace in (only ones the user may move)", () => {
+    let soloId = "";
+    let editorOnlyId = "";
+    let adminOnId = "";
+
+    beforeAll(async () => {
+      soloId = (
+        await db.workspace.create({
+          data: { title: `Editor Solo ${sfx}`, ownerId: ids.editor },
+        })
+      ).id;
+      editorOnlyId = (
+        await db.workspace.create({
+          data: { title: `Shared As Editor ${sfx}`, ownerId: ids.owner },
+        })
+      ).id;
+      adminOnId = (
+        await db.workspace.create({
+          data: { title: `Shared As Admin ${sfx}`, ownerId: ids.owner },
+        })
+      ).id;
+      await db.workspaceMember.createMany({
+        data: [
+          { workspaceId: editorOnlyId, userId: ids.editor, role: "EDITOR", invitedById: ids.owner },
+          { workspaceId: adminOnId, userId: ids.editor, role: "ADMIN", invitedById: ids.owner },
+        ],
+      });
+    });
+
+    it("lists only workspaces the user can rename, outside this project", async () => {
+      const { items } = await listMovableWorkspaces(
+        actorFor("editor"),
+        populatedProjectId,
+        {}
+      );
+      const got = items.map((w) => w.id);
+      expect(got).toContain(soloId);
+      expect(got).toContain(adminOnId);
+      expect(got).not.toContain(editorOnlyId); // EDITOR can't rename
+      expect(got).not.toContain(wsAlphaId); // already in this project
+      expect(items.length).toBeLessThanOrEqual(10);
+    });
+
+    it("filters by q", async () => {
+      const { items } = await listMovableWorkspaces(
+        actorFor("editor"),
+        populatedProjectId,
+        { q: "editor solo" }
+      );
+      expect(items.map((w) => w.id)).toEqual([soloId]);
+    });
+
+    it("project workspaces the owner manages are offered for another project", async () => {
+      const { items } = await listMovableWorkspaces(
+        actorFor("owner"),
+        emptyProjectId,
+        {}
+      );
+      const got = items.map((w) => w.id);
+      expect(got).toEqual(expect.arrayContaining([wsAlphaId, wsBetaId]));
+      expect(items.find((w) => w.id === wsAlphaId)?.project?.id).toBe(
+        populatedProjectId
+      );
+    });
+
+    it("VIEWER gets 403 and a stranger 404", async () => {
+      await expect(
+        listMovableWorkspaces(actorFor("viewer"), populatedProjectId, {})
+      ).rejects.toMatchObject({ status: 403 });
+      await expect(
+        listMovableWorkspaces(actorFor("stranger"), populatedProjectId, {})
+      ).rejects.toMatchObject({ status: 404 });
     });
   });
 });

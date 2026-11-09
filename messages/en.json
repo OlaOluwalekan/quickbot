@@ -1174,7 +1174,7 @@
     "newWorkspace": "New workspace in this project",
     "moveWorkspace": "Move an existing workspace here",
     "moveWorkspaceTitle": "Move a workspace into this project",
-    "moveWorkspaceDescription": "Choose one of your workspaces to move into this project.",
+    "moveWorkspaceDescription": "Choose a workspace you manage to move into this project.",
     "selectWorkspace": "Select a workspace",
     "noWorkspacesToMove": "You have no other workspaces to move here.",
     "move": "Move",
@@ -1254,6 +1254,8 @@
       "workspaceUpdateFailed": "Couldn't update the workspace",
       "workspaceDeleted": "Workspace deleted",
       "workspaceDeleteFailed": "Couldn't delete the workspace"
-    }
+    },
+    "currentlyIn": "Currently in {name}",
+    "moveSearchHint": "Showing your most recent workspaces. Search to find others."
   }
 }

@@ -70,3 +70,11 @@ export const listProjectWorkspacesQuerySchema = pageQuery.extend({
 export type ListProjectWorkspacesQuery = z.infer<
   typeof listProjectWorkspacesQuerySchema
 >;
+
+export const MOVABLE_WORKSPACES_LIMIT = 10;
+export const listMovableWorkspacesQuerySchema = z.object({
+  q: z.string().trim().min(1).max(100).optional(),
+});
+export type ListMovableWorkspacesQuery = z.infer<
+  typeof listMovableWorkspacesQuerySchema
+>;
