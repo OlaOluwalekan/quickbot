@@ -374,7 +374,7 @@ export function SelectionToolbar({
         {
           method: "POST",
           json: {
-            kind: "QUESTION",
+            kind: "ASK",
             anchor: activeAnchor,
             contentSource: metadata.contentSource,
             editRevision: metadata.editRevision,

@@ -51,7 +51,7 @@ interface GutterDot {
   id: string;
   top: number;
   count: number;
-  primaryKind: "COMMENT" | "REPLY" | "QUESTION";
+  primaryKind: "COMMENT" | "ASK" | "REPLY" | "QUESTION";
   annotations: AnnotationItem[];
   firstRange: Range;
 }
@@ -114,7 +114,7 @@ export function AnnotationLayer({
   const rootRef = React.useRef<HTMLDivElement>(null);
   const [internalAnnotations, setInternalAnnotations] = React.useState<AnnotationItem[]>([]);
   const [fallbackRects, setFallbackRects] = React.useState<
-    Array<HighlightRect & { kind: "COMMENT" | "REPLY" | "QUESTION" }>
+    Array<HighlightRect & { kind: "COMMENT" | "ASK" | "REPLY" | "QUESTION" }>
   >([]);
   const [gutterDots, setGutterDots] = React.useState<GutterDot[]>([]);
 
@@ -193,7 +193,7 @@ export function AnnotationLayer({
     const commentRanges: Range[] = [];
     const questionRanges: Range[] = [];
     const replyRanges: Range[] = [];
-    const fallbackList: Array<HighlightRect & { kind: "COMMENT" | "REPLY" | "QUESTION" }> = [];
+    const fallbackList: Array<HighlightRect & { kind: "COMMENT" | "ASK" | "REPLY" | "QUESTION" }> = [];
 
     // Map block elements for accessible gutter indicators
     const blockGroups = new Map<HTMLElement, { items: ActiveAnnotationItem[] }>();
@@ -219,7 +219,7 @@ export function AnnotationLayer({
       const item: ActiveAnnotationItem = { annot, range, blockEl };
       activeItems.push(item);
 
-      if (annot.kind === "REPLY") {
+      if (annot.kind === "ASK" || annot.kind === "REPLY") {
         replyRanges.push(range);
       } else if (annot.kind === "QUESTION") {
         questionRanges.push(range);
@@ -245,11 +245,10 @@ export function AnnotationLayer({
     activeRangeItemsRef.current = activeItems;
     setFallbackRects(fallbackList);
 
-    // Apply CSS Custom Highlights with stacking priority: reply > question > comment
+    // Apply CSS Custom Highlights with stacking priority: ask/reply > question > comment
     applyCustomHighlights([
       { kind: "COMMENT", ranges: commentRanges },
-      { kind: "QUESTION", ranges: questionRanges },
-      { kind: "REPLY", ranges: replyRanges },
+      { kind: "ASK", ranges: [...replyRanges, ...questionRanges] },
     ]);
 
     // Compute gutter dot positions
@@ -267,10 +266,10 @@ export function AnnotationLayer({
           : { top: 0, left: 0, bottom: 0, right: 0, width: 0, height: 0 };
       const top = Math.max(8, blockRect.top - rootRect.top + 10);
 
-      // Sort items by priority: reply (3) > question (2) > comment (1)
+      // Sort items by priority: ask/reply (2/3) > question (2) > comment (1)
       const sortedItems = [...group.items].sort((a, b) => {
-        const pA = a.annot.kind === "REPLY" ? 3 : a.annot.kind === "QUESTION" ? 2 : 1;
-        const pB = b.annot.kind === "REPLY" ? 3 : b.annot.kind === "QUESTION" ? 2 : 1;
+        const pA = a.annot.kind === "ASK" || a.annot.kind === "REPLY" ? 3 : a.annot.kind === "QUESTION" ? 2 : 1;
+        const pB = b.annot.kind === "ASK" || b.annot.kind === "REPLY" ? 3 : b.annot.kind === "QUESTION" ? 2 : 1;
         return pB - pA;
       });
 
@@ -333,8 +332,9 @@ export function AnnotationLayer({
       }
 
       if (matches.length > 0) {
-        // Stacking priority: reply (3) > question (2) > comment (1)
+        // Stacking priority: ask/reply (3) > question (2) > comment (1)
         const PRIORITY: Record<string, number> = {
+          ASK: 3,
           REPLY: 3,
           QUESTION: 2,
           COMMENT: 1,
@@ -425,6 +425,7 @@ export function AnnotationLayer({
   const handleViewMore = (annot: AnnotationItem) => {
     const tabMap: Record<string, "comments" | "replies" | "questions"> = {
       COMMENT: "comments",
+      ASK: "replies",
       REPLY: "replies",
       QUESTION: "questions",
     };
@@ -511,7 +512,7 @@ export function AnnotationLayer({
               key={i}
               className={cn(
                 "absolute rounded-sm pointer-events-none transition-colors",
-                r.kind === "REPLY"
+                r.kind === "ASK" || r.kind === "REPLY"
                   ? "bg-[var(--mark-reply)]"
                   : r.kind === "QUESTION"
                   ? "bg-[var(--mark-question)]"
@@ -556,7 +557,7 @@ export function AnnotationLayer({
               <span
                 className={cn(
                   "h-2 w-2 rounded-full",
-                  dot.primaryKind === "REPLY"
+                  dot.primaryKind === "ASK" || dot.primaryKind === "REPLY"
                     ? "bg-accent"
                     : dot.primaryKind === "QUESTION"
                     ? "bg-info"
@@ -624,7 +625,7 @@ export function AnnotationLayer({
                       <span className="truncate max-w-[120px]">{authorName}</span>
                     </>
                   )}
-                  {kind === "REPLY" && (
+                  {(kind === "ASK" || kind === "REPLY") && (
                     <>
                       <CornerDownRight className="h-3.5 w-3.5 text-accent" />
                       <span className="truncate max-w-[110px]">{authorName}</span>
@@ -660,7 +661,7 @@ export function AnnotationLayer({
                 </div>
               )}
 
-              {kind === "REPLY" && (
+              {(kind === "ASK" || kind === "REPLY") && (
                 <div className="space-y-1.5 leading-relaxed">
                   <p className="text-fg-muted line-clamp-2 select-text">
                     {truncateText(replyPromptText, 140)}

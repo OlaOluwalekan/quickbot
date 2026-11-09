@@ -286,7 +286,7 @@ describe("Step 6.2 — Annotation API", () => {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
-            kind: "QUESTION",
+            kind: "ASK",
             anchor: {
               exact: "atomic commitment protocol",
               prefix: "is an ",
@@ -302,7 +302,7 @@ describe("Step 6.2 — Annotation API", () => {
       });
       expect(questionRes.status).toBe(200);
       const questionJson = await questionRes.json();
-      expect(questionJson.data.kind).toBe("QUESTION");
+      expect(questionJson.data.kind).toBe("ASK");
       expect(questionJson.data.questionState).toBe("QUEUED");
       expect(questionJson.data.messages[0].content).toBe("What failure modes can block 2PC?");
     });
@@ -381,7 +381,7 @@ describe("Step 6.2 — Annotation API", () => {
           responseId,
           versionId: version2Id,
           createdById: editorId,
-          kind: "QUESTION",
+          kind: "ASK",
           visibility: "WORKSPACE",
           anchorExact: "consensus algorithm",
           anchorPrefix: "Raft is a ",

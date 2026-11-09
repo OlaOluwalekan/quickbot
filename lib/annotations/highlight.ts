@@ -10,13 +10,11 @@ import type { AnnotationKind } from "./anchor";
 
 export const HIGHLIGHT_NAME_MAP: Record<AnnotationKind, string> = {
   COMMENT: "annot-comment",
-  QUESTION: "annot-question",
-  REPLY: "annot-reply",
+  ASK: "annot-ask",
 };
 
 export const HIGHLIGHT_PRIORITY_MAP: Record<AnnotationKind, number> = {
-  REPLY: 3,
-  QUESTION: 2,
+  ASK: 2,
   COMMENT: 1,
 };
 
@@ -69,7 +67,7 @@ export function applyCustomHighlights(
   }
 
   // Set or delete each highlight category with appropriate stacking priority
-  for (const kind of ["COMMENT", "QUESTION", "REPLY"] as AnnotationKind[]) {
+  for (const kind of ["COMMENT", "ASK"] as AnnotationKind[]) {
     const name = HIGHLIGHT_NAME_MAP[kind];
     const ranges = byName.get(name) ?? [];
 

@@ -67,7 +67,7 @@ export async function runQuestionBatch(
     where: {
       workspaceId,
       createdById: actor.userId,
-      kind: "QUESTION",
+      kind: "ASK",
       questionState: "QUEUED",
       deletedAt: null,
       ...(input.annotationIds && input.annotationIds.length > 0
@@ -150,6 +150,7 @@ export async function runQuestionBatch(
   const versionMap = new Map<string, VersionQuestionsGroup>();
   for (const annot of claimedAnnotations) {
     const vId = annot.versionId;
+    if (!vId || !annot.version) continue;
     if (!versionMap.has(vId)) {
       versionMap.set(vId, {
         versionId: vId,

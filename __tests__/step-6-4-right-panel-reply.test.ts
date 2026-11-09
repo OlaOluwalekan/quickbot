@@ -203,7 +203,7 @@ describe("Step 6.4 — Right panel and reply flow", () => {
       include: { messages: { orderBy: { createdAt: "asc" } } },
     });
     expect(annot).not.toBeNull();
-    expect(annot?.kind).toBe("REPLY");
+    expect(annot?.kind).toBe("ASK");
     expect(annot?.messages).toHaveLength(2);
     expect(annot!.messages[0]!.role).toBe("USER");
     expect(annot!.messages[0]!.content).toBe("Why can it block on coordinator failure?");
@@ -276,7 +276,7 @@ describe("Step 6.4 — Right panel and reply flow", () => {
 
     // First find the existing reply annotation
     const existing = await db.annotation.findFirst({
-      where: { workspaceId, kind: "REPLY", createdById: ownerId },
+      where: { workspaceId, kind: "ASK", createdById: ownerId },
       orderBy: { createdAt: "asc" },
     });
     expect(existing).not.toBeNull();

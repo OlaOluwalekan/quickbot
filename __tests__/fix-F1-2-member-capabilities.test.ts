@@ -158,7 +158,7 @@ describe("Fix F1.2 — Member capabilities (Comment and Ask)", () => {
     // Can create an Ask question
     await expect(
       createAnnotation(actorFor("commenterWithAsk"), versionId, {
-        kind: "QUESTION",
+        kind: "ASK",
         text: "How does leader election work?",
         anchor: {
           exact: "Raft and Paxos",
@@ -168,7 +168,7 @@ describe("Fix F1.2 — Member capabilities (Comment and Ask)", () => {
         contentSource: "ORIGINAL",
       })
     ).resolves.toMatchObject({
-      kind: "QUESTION",
+      kind: "ASK",
     });
 
     // But gets 403 on workspace.generate
@@ -207,7 +207,7 @@ describe("Fix F1.2 — Member capabilities (Comment and Ask)", () => {
     // Cannot Ask (gets 403)
     await expect(
       createAnnotation(actorFor("editorWithoutAsk"), versionId, {
-        kind: "QUESTION",
+        kind: "ASK",
         text: "Can I ask a question?",
         anchor: {
           exact: "Raft and Paxos",

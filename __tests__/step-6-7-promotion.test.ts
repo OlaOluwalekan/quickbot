@@ -117,7 +117,7 @@ describe("Step 6.7 — Promotion with provenance (add to history / new workspace
         workspaceId,
         responseId: responseAId,
         versionId: versionAId,
-        kind: "REPLY",
+        kind: "ASK",
         visibility: "WORKSPACE",
         anchorExact: "ACID transactions to guarantee data consistency",
         anchorPrefix: "Relational databases use ",

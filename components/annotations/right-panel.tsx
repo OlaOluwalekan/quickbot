@@ -56,7 +56,7 @@ export interface AnnotationItem {
   workspaceId: string;
   responseId: string;
   versionId: string;
-  kind: "COMMENT" | "REPLY" | "QUESTION";
+  kind: "COMMENT" | "ASK" | "REPLY" | "QUESTION";
   questionState?: "NONE" | "QUEUED" | "ANSWERING" | "ANSWERED" | "FAILED" | "CANCELLED";
   visibility: "PRIVATE" | "WORKSPACE";
   resolvedAt?: string | Date | null;
@@ -242,11 +242,11 @@ export function RightPanel({
     [scopedAnnotations]
   );
   const replies = React.useMemo(
-    () => scopedAnnotations.filter((a) => a.kind === "REPLY"),
+    () => scopedAnnotations.filter((a) => a.kind === "REPLY" || a.kind === "ASK"),
     [scopedAnnotations]
   );
   const questions = React.useMemo(
-    () => scopedAnnotations.filter((a) => a.kind === "QUESTION"),
+    () => scopedAnnotations.filter((a) => a.kind === "QUESTION" || a.kind === "ASK"),
     [scopedAnnotations]
   );
 
@@ -435,7 +435,7 @@ export function RightPanel({
             Detached
           </span>
         )}
-        {item.kind === "QUESTION" && item.questionState && (
+        {(item.kind === "QUESTION" || item.kind === "ASK") && item.questionState && (
           <span
             className={cn(
               "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium",
@@ -448,7 +448,7 @@ export function RightPanel({
             {item.questionState.charAt(0) + item.questionState.slice(1).toLowerCase()}
           </span>
         )}
-        {item.kind === "REPLY" && (
+        {(item.kind === "REPLY" || (item.kind === "ASK" && !item.questionState)) && (
           <span className="bg-subtle text-subtle inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium">
             {replyLoading[item.id] ? "Answering" : "Answered"}
           </span>
@@ -719,7 +719,7 @@ export function RightPanel({
 
         
         {/* Failed Question Retry Action */}
-        {item.kind === "QUESTION" && item.questionState === "FAILED" && (
+        {(item.kind === "QUESTION" || item.kind === "ASK") && item.questionState === "FAILED" && (
           <div className="border-border/60 mt-3 flex items-center justify-between border-t pt-2">
             <span className="text-danger text-[11px]">Failed to generate answer</span>
             <Button
@@ -735,7 +735,7 @@ export function RightPanel({
         )}
 
         {/* Inline Follow-up prompt for Reply threads */}
-        {item.kind === "REPLY" && (
+        {(item.kind === "REPLY" || item.kind === "ASK") && (
           <div className="border-border/60 mt-3 flex items-center gap-1.5 border-t pt-2">
             <input
               type="text"

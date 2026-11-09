@@ -14,7 +14,7 @@ export interface Anchor {
   end: number;
 }
 
-export type AnnotationKind = "COMMENT" | "REPLY" | "QUESTION";
+export type AnnotationKind = "COMMENT" | "ASK";
 export type QuestionState =
   | "NONE"
   | "QUEUED"
