@@ -18,6 +18,7 @@
   --accent-hover: oklch(0.45 0.18 270);
   --accent-fg: oklch(0.99 0 0);
   --accent-soft: oklch(0.95 0.03 270);
+  --switch-thumb: oklch(1 0 0);
   /* status */
   --success: oklch(0.62 0.15 150);
   --warning: oklch(0.75 0.15 75);
@@ -80,6 +81,7 @@
   --accent-hover: oklch(0.73 0.15 270);
   --accent-fg: oklch(0.15 0.02 270);
   --accent-soft: oklch(0.28 0.06 270);
+  --switch-thumb: oklch(0.98 0.005 260);
   --ring: oklch(0.72 0.15 270 / 0.6);
   --overlay: oklch(0 0 0 / 0.6);
 }
@@ -98,6 +100,7 @@
   --color-accent-hover: var(--accent-hover);
   --color-accent-fg: var(--accent-fg);
   --color-accent-soft: var(--accent-soft);
+  --color-switch-thumb: var(--switch-thumb);
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-danger: var(--danger);

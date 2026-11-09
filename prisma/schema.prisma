@@ -66,6 +66,9 @@ model User {
   activityLogs         ActivityLog[]       @relation("ActorActivityLogs")
   createdShareLinks    ShareLink[]         @relation("CreatedShareLinks")
   notifications        Notification[]
+  sentTransfers        OwnershipTransfer[] @relation("TransfersSent")
+  receivedTransfers    OwnershipTransfer[] @relation("TransfersReceived")
+  memberLimitGrace     MemberLimitGrace?
 
   @@map("users")
 }
@@ -135,6 +138,7 @@ model Project {
   members     ProjectMember[]
   invitations Invitation[]
   activityLogs ActivityLog[]
+  ownershipTransfers   OwnershipTransfer[]
 
   @@index([ownerId, deletedAt, updatedAt(sort: Desc)])
   @@map("projects")
@@ -161,6 +165,7 @@ model Workspace {
   invitations    Invitation[]
   activityLogs   ActivityLog[]
   shareLinks     ShareLink[]
+  ownershipTransfers   OwnershipTransfer[]
 
   @@index([ownerId, deletedAt, lastActivityAt(sort: Desc)])
   @@index([projectId, deletedAt])
@@ -177,6 +182,7 @@ model ProjectMember {
   canAsk           Boolean?    @map("can_ask")
   suspendedAt      DateTime?   @map("suspended_at")
   suspendedReason  String?     @map("suspended_reason")
+  keepActive       Boolean     @default(false) @map("keep_active")
   invitedById      String
   createdAt        DateTime    @default(now())
   project     Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
@@ -197,6 +203,7 @@ model WorkspaceMember {
   canAsk           Boolean?      @map("can_ask")
   suspendedAt      DateTime?     @map("suspended_at")
   suspendedReason  String?       @map("suspended_reason")
+  keepActive       Boolean     @default(false) @map("keep_active")
   invitedById      String
   createdAt        DateTime      @default(now())
   workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
@@ -715,4 +722,48 @@ model Notification {
   @@unique([userId, dedupeKey])
   @@index([userId, status, createdAt(sort: Desc)])
   @@map("notifications")
+}
+
+enum TransferStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  CANCELLED
+  EXPIRED
+}
+
+model OwnershipTransfer {
+  id                  String         @id @default(uuid(7))
+  workspaceId         String?        @map("workspace_id")
+  projectId           String?        @map("project_id")
+  fromUserId          String         @map("from_user_id")
+  toUserId            String         @map("to_user_id")
+  previousOwnerAction String         @default("STAY_ADMIN") @map("previous_owner_action")
+  status              TransferStatus @default(PENDING)
+  expiresAt           DateTime       @map("expires_at")
+  respondedAt         DateTime?      @map("responded_at")
+  createdAt           DateTime       @default(now()) @map("created_at")
+
+  workspace           Workspace?     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  project             Project?       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  fromUser            User           @relation("TransfersSent", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUser              User           @relation("TransfersReceived", fields: [toUserId], references: [id], onDelete: Cascade)
+
+  @@index([toUserId, status])
+  @@index([workspaceId])
+  @@index([projectId])
+  @@map("ownership_transfers")
+}
+
+model MemberLimitGrace {
+  id          String   @id @default(uuid(7))
+  ownerId     String   @unique @map("owner_id")
+  limit       Int
+  graceEndsAt DateTime @map("grace_ends_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@map("member_limit_grace")
 }

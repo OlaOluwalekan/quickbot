@@ -29,7 +29,7 @@ const Switch = React.forwardRef<
     >
       <SwitchPrimitives.Thumb
         className={cn(
-          "pointer-events-none block rounded-full bg-surface shadow-sm transition-transform",
+          "pointer-events-none block rounded-full bg-switch-thumb shadow-sm transition-transform",
           isXs
             ? "h-3 w-3 data-[state=checked]:translate-x-3 data-[state=unchecked]:translate-x-0"
             : isSm

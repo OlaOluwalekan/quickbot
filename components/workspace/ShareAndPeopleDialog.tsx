@@ -80,6 +80,7 @@ interface MemberItem {
   suspendedReason?: string | null;
   monthlyCreditCap?: number | null;
   monthlyCreditsUsed?: number;
+  keepActive?: boolean;
 }
 
 interface PendingInvite {
@@ -227,6 +228,21 @@ export function ShareAndPeopleDialog({
   );
   const [transferConfirmText, setTransferConfirmText] = React.useState("");
   const [transferring, setTransferring] = React.useState(false);
+  const [previousOwnerAction, setPreviousOwnerAction] = React.useState<"STAY_ADMIN" | "LEAVE">("STAY_ADMIN");
+  const [pendingTransfer, setPendingTransfer] = React.useState<any | null>(null);
+  const [checkingFit, setCheckingFit] = React.useState(false);
+  const [fitResult, setFitResult] = React.useState<{
+    ok: boolean;
+    limit?: number;
+    collaboratorsAfter?: number;
+    error?: string;
+  } | null>(null);
+  const [graceInfo, setGraceInfo] = React.useState<{
+    inGrace: boolean;
+    limit?: number;
+    excess?: number;
+    graceEndsAt?: string;
+  } | null>(null);
 
   // Copy link state
   const [copiedLink, setCopiedLink] = React.useState(false);
@@ -615,6 +631,127 @@ export function ShareAndPeopleDialog({
     }
   };
 
+  const fetchPendingTransfer = React.useCallback(async () => {
+    try {
+      const res = await fetch("/api/v1/me/ownership-transfers?status=PENDING");
+      if (res.ok) {
+        const json = await res.json();
+        const list = json?.data?.transfers ?? json?.transfers ?? [];
+        const match = list.find((t: any) =>
+          isProject ? t.projectId === resourceId : t.workspaceId === resourceId
+        );
+        setPendingTransfer(match ?? null);
+      }
+    } catch {
+      // ignore
+    }
+  }, [resourceId, isProject]);
+
+  React.useEffect(() => {
+    if (open) {
+      void fetchPendingTransfer();
+    }
+  }, [open, fetchPendingTransfer]);
+
+  const checkFit = React.useCallback(
+    async (targetUserId: string, action: "STAY_ADMIN" | "LEAVE") => {
+      setCheckingFit(true);
+      setFitResult(null);
+      try {
+        const res = await fetch(`${baseApiPath}/transfer-check`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ toUserId: targetUserId, previousOwnerAction: action }),
+        });
+        const json = await res.json();
+        if (res.ok) {
+          const data = json?.data ?? json;
+          setFitResult({ ok: true, limit: data.limit, collaboratorsAfter: data.collaboratorsAfter });
+        } else {
+          setFitResult({
+            ok: false,
+            limit: json.error?.details?.limit ?? 0,
+            collaboratorsAfter: json.error?.details?.collaboratorsAfter ?? 0,
+            error: json.error?.message,
+          });
+        }
+      } catch {
+        setFitResult(null);
+      } finally {
+        setCheckingFit(false);
+      }
+    },
+    [baseApiPath]
+  );
+
+  const handleAcceptTransfer = async (transferId: string) => {
+    try {
+      const res = await fetch(`/api/v1/ownership-transfers/${transferId}/accept`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const json = await res.json();
+        throw new Error(json?.error?.message || "Failed to accept transfer");
+      }
+      toast.success("Ownership transfer accepted! You are now the owner.");
+      fetchMembers();
+      fetchPendingTransfer();
+      fetchActivity();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to accept transfer");
+    }
+  };
+
+  const handleDeclineTransfer = async (transferId: string) => {
+    try {
+      const res = await fetch(`/api/v1/ownership-transfers/${transferId}/decline`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const json = await res.json();
+        throw new Error(json?.error?.message || "Failed to decline transfer");
+      }
+      toast.success("Ownership transfer declined");
+      fetchPendingTransfer();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to decline transfer");
+    }
+  };
+
+  const handleCancelTransfer = async (transferId: string) => {
+    try {
+      const res = await fetch(`/api/v1/ownership-transfers/${transferId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const json = await res.json();
+        throw new Error(json?.error?.message || "Failed to cancel transfer");
+      }
+      toast.success("Ownership transfer request cancelled");
+      fetchPendingTransfer();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to cancel transfer");
+    }
+  };
+
+  const handleToggleKeepActive = async (targetUserId: string, keepActive: boolean) => {
+    try {
+      const res = await fetch(`${baseApiPath}/members/${targetUserId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ keepActive }),
+      });
+      if (!res.ok) {
+        const json = await res.json();
+        throw new Error(json?.error?.message || "Failed to update keep-active status");
+      }
+      toast.success("Collaborator keep-active status updated");
+      fetchMembers();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to update keep-active status");
+    }
+  };
+
   const handleExecuteTransfer = async () => {
     if (!transferTarget || transferring) return;
     setTransferring(true);
@@ -623,7 +760,10 @@ export function ShareAndPeopleDialog({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          toUserId: transferTarget.userId,
           newOwnerId: transferTarget.userId,
+          previousOwnerAction,
+          confirm: transferConfirmText.trim(),
           confirmation: transferConfirmText.trim(),
         }),
       });
@@ -829,6 +969,50 @@ export function ShareAndPeopleDialog({
               value="members"
               className="flex-1 overflow-y-auto p-6 m-0 space-y-5"
             >
+              {pendingTransfer && (
+                <div className="rounded-xl border border-accent/40 bg-accent-soft p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 font-semibold text-sm text-fg">
+                      <Crown className="h-4 w-4 text-accent" />
+                      <span>Ownership Transfer Request</span>
+                    </div>
+                    <p className="text-xs text-fg-muted">
+                      {pendingTransfer.fromUser?.name || "The current owner"} has requested to transfer ownership of this {resourceLabel} to you.
+                      <span className="block mt-0.5 font-medium text-fg">You will pay for all usage in this workspace.</span>
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button
+                      size="sm"
+                      variant="default"
+                      onClick={() => handleAcceptTransfer(pendingTransfer.id)}
+                    >
+                      Accept
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleDeclineTransfer(pendingTransfer.id)}
+                    >
+                      Decline
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {graceInfo?.inGrace && (
+                <div className="rounded-xl border border-warning/40 bg-warning/10 p-4 flex items-center justify-between gap-3">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 font-semibold text-sm text-warning">
+                      <AlertCircle className="h-4 w-4" />
+                      <span>Plan Collaborator Limit Exceeded</span>
+                    </div>
+                    <p className="text-xs text-fg-muted">
+                      Your plan allows {graceInfo.limit} collaborators. Choose who stays active before grace period ends.
+                    </p>
+                  </div>
+                </div>
+              )}
               {canManage && (
                 <div className="rounded-xl border border-border bg-surface-2/40 p-4">
                   {renderInviteForm()}
@@ -1133,6 +1317,26 @@ export function ShareAndPeopleDialog({
 
                             return (
                               <div className="flex items-center gap-5 sm:gap-6 flex-wrap">
+                                  {graceInfo?.inGrace && (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                                          <Switch
+                                            size="sm"
+                                            checked={Boolean(m.keepActive)}
+                                            disabled={!canEditThisMember}
+                                            onCheckedChange={(val) => handleToggleKeepActive(m.userId, val)}
+                                          />
+                                          <span className="text-xs text-fg-muted font-medium whitespace-nowrap">
+                                            Keep active
+                                          </span>
+                                        </label>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        Protects this member from automatic suspension if plan limits are exceeded
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  )}
                                 <div className="flex items-center gap-2">
                                   {isCommentInherited ? (
                                     <Tooltip>
@@ -1666,6 +1870,43 @@ export function ShareAndPeopleDialog({
             </DialogHeader>
 
             <div className="space-y-3 py-2 text-xs">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-fg">Your role after transfer</label>
+                <Select
+                  value={previousOwnerAction}
+                  onValueChange={(val: "STAY_ADMIN" | "LEAVE") => {
+                    setPreviousOwnerAction(val);
+                    if (transferTarget) {
+                      void checkFit(transferTarget.userId, val);
+                    }
+                  }}
+                >
+                  <SelectTrigger className="h-9 bg-surface text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="STAY_ADMIN">Stay as Administrator</SelectItem>
+                    <SelectItem value="LEAVE">Leave {resourceLabel}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {checkingFit && (
+                <div className="flex items-center gap-2 text-xs text-muted">
+                  <Spinner className="h-3 w-3" />
+                  <span>Checking recipient's plan limit...</span>
+                </div>
+              )}
+
+              {fitResult && !fitResult.ok && (
+                <div className="p-2.5 rounded-lg border border-danger/40 bg-danger/10 text-xs text-danger flex items-start gap-2">
+                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                  <span>
+                    {fitResult.error || `Recipient's plan limit (${fitResult.limit}) cannot fit this workspace (${fitResult.collaboratorsAfter} collaborators).`}
+                  </span>
+                </div>
+              )}
+
               <p className="text-muted">
                 To confirm this transfer, please type{" "}
                 <span className="font-bold font-mono text-fg">TRANSFER</span> or

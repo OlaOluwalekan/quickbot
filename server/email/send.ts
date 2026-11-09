@@ -20,6 +20,15 @@ import { renderCreditsLow } from "./templates/credits-low";
 import { renderPaymentFailed } from "./templates/payment-failed";
 import { renderSupportAck } from "./templates/support-ack";
 import { renderSupportNotification } from "./templates/support-notification";
+import {
+  renderOwnershipTransferRequested,
+  renderOwnershipTransferAccepted,
+} from "./templates/ownership-transfer";
+import {
+  renderMemberLimitExceeded,
+  renderMemberSuspended,
+  renderMemberRestored,
+} from "./templates/member-limits";
 
 export type {
   EmailTemplateMap,
@@ -163,6 +172,36 @@ export async function renderEmail<T extends EmailTemplateName>(
     case "payment-failed":
       return renderPaymentFailed(
         data as EmailTemplateMap["payment-failed"],
+        t,
+        to
+      );
+    case "ownership-transfer-requested":
+      return renderOwnershipTransferRequested(
+        data as EmailTemplateMap["ownership-transfer-requested"],
+        t,
+        to
+      );
+    case "ownership-transfer-accepted":
+      return renderOwnershipTransferAccepted(
+        data as EmailTemplateMap["ownership-transfer-accepted"],
+        t,
+        to
+      );
+    case "member-limit-exceeded":
+      return renderMemberLimitExceeded(
+        data as EmailTemplateMap["member-limit-exceeded"],
+        t,
+        to
+      );
+    case "member-suspended":
+      return renderMemberSuspended(
+        data as EmailTemplateMap["member-suspended"],
+        t,
+        to
+      );
+    case "member-restored":
+      return renderMemberRestored(
+        data as EmailTemplateMap["member-restored"],
         t,
         to
       );

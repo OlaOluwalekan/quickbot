@@ -19,6 +19,7 @@ export const PATCH = route({
       role: body.role,
       canComment: body.canComment,
       canAsk: body.canAsk,
+      keepActive: body.keepActive,
     });
   },
 });

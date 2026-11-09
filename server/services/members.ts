@@ -5,6 +5,8 @@ import { Errors } from "@/server/http/errors";
 import { requireWorkspace, requireProject, resolveWorkspaceRole } from "@/server/authz/access";
 import { can, ROLE_RANK, maxRole, computeCapabilities, type EffectiveRole } from "@/server/authz/permissions";
 import { logActivity } from "./activity";
+import { requestOwnershipTransfer } from "./ownership-transfer";
+import { getOwnerGraceInfo } from "./member-limits";
 import { notify } from "./notify";
 import { getUserAvatar } from "./avatar";
 import { getMonthlySpendByActor } from "./billing-owner";
@@ -93,6 +95,7 @@ export type MemberSummary = {
   suspendedReason?: string | null;
   monthlyCreditCap?: number | null;
   monthlyCreditsUsed?: number;
+  keepActive?: boolean;
 };
 
 export async function listWorkspaceMembers(actor: Actor, workspaceId: string) {
@@ -234,6 +237,7 @@ export async function listWorkspaceMembers(actor: Actor, workspaceId: string) {
           effectiveCanAsk: inheritedCaps.ask,
           suspendedAt: pm.suspendedAt,
           suspendedReason: pm.suspendedReason,
+      keepActive: pm.keepActive ?? false,
           monthlyCreditCap: pm.monthlyCreditCap,
         });
       }
@@ -281,6 +285,7 @@ export async function listWorkspaceMembers(actor: Actor, workspaceId: string) {
         effectiveCanAsk: wsCaps.ask,
         suspendedAt: wm.suspendedAt,
         suspendedReason: wm.suspendedReason,
+      keepActive: wm.keepActive ?? false,
         monthlyCreditCap: wm.monthlyCreditCap,
       });
     }
@@ -431,6 +436,7 @@ export type UpdateMemberRoleInput =
       role?: string;
       canComment?: boolean | null;
       canAsk?: boolean | null;
+      keepActive?: boolean;
     };
 
 export async function updateWorkspaceMemberRole(
@@ -441,7 +447,7 @@ export async function updateWorkspaceMemberRole(
 ) {
   const inputObj =
     typeof roleOrInput === "string" ? { role: roleOrInput } : roleOrInput;
-  const { role: newRole, canComment, canAsk } = inputObj;
+  const { role: newRole, canComment, canAsk, keepActive } = inputObj as any;
 
   const { ws } = await requireWorkspace(actor, workspaceId, "workspace.manage_members");
 
@@ -530,6 +536,7 @@ export async function updateWorkspaceMemberRole(
   if (newRole !== undefined) updateData.role = newRole as WorkspaceRole;
   if (canComment !== undefined) updateData.canComment = canComment;
   if (canAsk !== undefined) updateData.canAsk = canAsk;
+  if (keepActive !== undefined) (updateData as any).keepActive = keepActive;
 
   const createData = {
     workspaceId,

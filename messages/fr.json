@@ -306,6 +306,46 @@
       "legalNotice": "Klecx est un produit de {companyLegalName} · {companyAddress} · © {year}",
       "merchantOfRecordNotice": "Services Merchant of Record assurés par Creem.",
       "transactionalDisclaimer": "Ceci est un message transactionnel automatisé envoyé à {email}. Vous le recevez suite à un événement de compte ou une action de sécurité."
+    },
+    "ownershipTransferRequested": {
+      "subject": "{fromUserName} wants to transfer ownership of \"{resourceName}\" to you",
+      "heading": "Ownership transfer request",
+      "greeting": "Hi,",
+      "body": "{fromUserName} has requested to transfer ownership of the workspace \"{resourceName}\" to you. Accepting this transfer means you will own this workspace and pay for all usage in it.",
+      "button": "Review & Accept Transfer",
+      "disclaimer": "This transfer request expires in 7 days. If you do not wish to become the owner, you can decline it in Klecx."
+    },
+    "ownershipTransferAccepted": {
+      "subject": "Ownership of \"{resourceName}\" has been transferred to {toUserName}",
+      "heading": "Ownership transfer completed",
+      "greeting": "Hi,",
+      "body": "Ownership of \"{resourceName}\" was accepted by {toUserName}. You are now an Administrator on this resource.",
+      "button": "Open Workspace",
+      "disclaimer": "You can view your updated role in your workspace settings."
+    },
+    "memberLimitExceeded": {
+      "subject": "Action Required: Your plan collaborator limit has been exceeded",
+      "heading": "Collaborator limit exceeded",
+      "greeting": "Hi,",
+      "body": "Your account has more collaborators than your current plan allows (limit: {limit}). You have a 14-day grace period until {graceEndsAt} to choose who stays active or upgrade your plan.",
+      "button": "Manage Collaborators",
+      "disclaimer": "After the grace period, excess collaborators will be suspended automatically."
+    },
+    "memberSuspended": {
+      "subject": "Notice: Your access to \"{resourceName}\" has been suspended",
+      "heading": "Collaborator access suspended",
+      "greeting": "Hi,",
+      "body": "Your active access to \"{resourceName}\" has been suspended due to plan collaborator limits ({reason}). You still have read-only access.",
+      "button": "Open Workspace",
+      "disclaimer": "The owner of the workspace can restore full access by upgrading or adjusting active members."
+    },
+    "memberRestored": {
+      "subject": "Your active access to \"{resourceName}\" has been restored",
+      "heading": "Access restored",
+      "greeting": "Hi,",
+      "body": "Your active collaboration access to \"{resourceName}\" has been restored. You can now comment and prompt as normal.",
+      "button": "Open Workspace",
+      "disclaimer": "Welcome back to collaborating in this workspace."
     }
   },
   "AppShell": {
@@ -1076,5 +1116,33 @@
       "updated": "Autorisations du membre mises à jour",
       "updateFailed": "Impossible de mettre à jour les autorisations du membre"
     }
+  },
+  "Transfer": {
+    "title": "Transfer Ownership",
+    "request": "Request Ownership Transfer",
+    "pending": "Ownership transfer requested (pending acceptance)",
+    "pendingBanner": "Ownership transfer requested: The current owner wants to transfer this workspace to you. You will pay for all usage in this workspace.",
+    "pendingOwnerBanner": "Ownership transfer pending acceptance by {name}",
+    "accept": "Accept Transfer",
+    "decline": "Decline",
+    "cancel": "Cancel Transfer",
+    "stayAdmin": "Stay as an Administrator",
+    "leave": "Leave workspace upon transfer",
+    "recipientPlanFit": "Recipient plan check:",
+    "planFits": "Recipient's plan supports this workspace ({collaboratorsAfter} / {limit} collaborators)",
+    "planExceeded": "Recipient's plan allows {limit} collaborators, but {collaboratorsAfter} would remain. They must upgrade or you must choose 'Leave' / remove members.",
+    "confirmPrompt": "To confirm this transfer request, type TRANSFER or the resource name below:",
+    "errors": {
+      "memberLimit": "Transfer would exceed recipient's collaborator limit ({collaboratorsAfter} collaborators vs limit of {limit})",
+      "busy": "A generation is currently running in this scope. Please wait for it to finish.",
+      "movedOutOfProject": "This workspace was detached from its previous project because the new owner is different."
+    }
+  },
+  "MemberLimits": {
+    "graceBanner": "Your plan allows {limit} collaborators — choose who stays active ({daysRemaining} days left)",
+    "keepActive": "Keep active",
+    "keepActiveHint": "Protects this member from automatic suspension if plan limits are exceeded",
+    "suspended": "Suspended (Plan Limit)",
+    "suspendedNotice": "This member's write access is suspended due to plan limits (read-only)."
   }
 }

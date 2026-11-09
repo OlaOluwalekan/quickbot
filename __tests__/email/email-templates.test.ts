@@ -69,6 +69,28 @@ describe("Step 1.7 & F0.2 — Transactional Email Module", () => {
       reason: "Card expired",
       retryUrl: "https://klecx.vyraxity.com/settings/billing",
     },
+    "ownership-transfer-requested": {
+      fromUserName: "Sarah Connor",
+      resourceName: "Cyberdyne Systems",
+      acceptUrl: "https://klecx.vyraxity.com/transfers/accept?id=t-123",
+      expiresInDays: 7,
+    },
+    "ownership-transfer-accepted": {
+      toUserName: "John Connor",
+      resourceName: "Cyberdyne Systems",
+    },
+    "member-limit-exceeded": {
+      limit: 5,
+      graceEndsAt: "2026-11-15T00:00:00.000Z",
+      manageUrl: "https://klecx.vyraxity.com/settings/members",
+    },
+    "member-suspended": {
+      resourceName: "Cyberdyne Systems",
+      reason: "Member limit exceeded",
+    },
+    "member-restored": {
+      resourceName: "Cyberdyne Systems",
+    },
   };
 
   const allTemplates: EmailTemplateName[] = [

@@ -1,9 +1,9 @@
 import { route } from "@/server/http/route";
 import { transferOwnershipSchema } from "@/lib/schemas/member";
-import { transferProjectOwnership } from "@/server/services/members";
+import { requestOwnershipTransfer } from "@/server/services/ownership-transfer";
 
 export const POST = route({
   body: transferOwnershipSchema,
   handler: async ({ actor, params, body }) =>
-    transferProjectOwnership(actor, params.id as string, body),
+    requestOwnershipTransfer(actor, { projectId: params.id as string }, body),
 });
