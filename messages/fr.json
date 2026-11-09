@@ -306,6 +306,47 @@
       "legalNotice": "Klecx est un produit de {companyLegalName} · {companyAddress} · © {year}",
       "merchantOfRecordNotice": "Services Merchant of Record assurés par Creem.",
       "transactionalDisclaimer": "Ceci est un message transactionnel automatisé envoyé à {email}. Vous le recevez suite à un événement de compte ou une action de sécurité."
+    },
+    "ownershipTransferRequested": {
+      "subject": "{fromUserName} souhaite vous transférer la propriété de « {resourceName} »",
+      "heading": "Demande de transfert de propriété",
+      "greeting": "Bonjour,",
+      "body": "{fromUserName} a demandé à vous transférer la propriété de « {resourceName} ». Si vous acceptez, vous en devenez propriétaire et payez toute l'utilisation.",
+      "button": "Voir la demande",
+      "disclaimer": "Cette demande expire dans {days} jours. Si vous ne souhaitez pas devenir propriétaire, vous pouvez la refuser dans Klecx."
+    },
+    "ownershipTransferAccepted": {
+      "subject": "{toUserName} est désormais propriétaire de « {resourceName} »",
+      "heading": "Transfert de propriété terminé",
+      "greeting": "Bonjour,",
+      "body": "{toUserName} a accepté la propriété de « {resourceName} ». Vous restez administrateur.",
+      "bodyLeft": "{toUserName} a accepté la propriété de « {resourceName} ». Comme vous l'avez choisi, vous n'y avez plus accès.",
+      "button": "Ouvrir Klecx",
+      "disclaimer": "Vous recevez ce message car vous avez demandé ce transfert."
+    },
+    "memberLimitExceeded": {
+      "subject": "Action requise : vous dépassez la limite de collaborateurs de votre forfait",
+      "heading": "Limite de collaborateurs dépassée",
+      "greeting": "Bonjour,",
+      "body": "Votre forfait autorise {limit} collaborateurs par espace de travail ou projet, et certains des vôtres en ont davantage. Jusqu'au {graceEndsAt}, choisissez qui reste actif dans Partage et personnes, retirez des membres ou changez de forfait.",
+      "button": "Gérer les collaborateurs",
+      "disclaimer": "Après cette date, les membres ajoutés le plus récemment au-delà de la limite passent en lecture seule. Rien n'est supprimé."
+    },
+    "memberSuspended": {
+      "subject": "Votre accès à « {resourceName} » est désormais en lecture seule",
+      "heading": "Accès passé en lecture seule",
+      "greeting": "Bonjour,",
+      "body": "Le forfait du propriétaire ne couvre plus tous les collaborateurs : votre accès à « {resourceName} » est désormais en lecture seule. Vous pouvez toujours tout consulter, y compris vos propres contributions.",
+      "button": "Ouvrir",
+      "disclaimer": "L'accès complet revient automatiquement lorsque le forfait du propriétaire autorise davantage de collaborateurs."
+    },
+    "memberRestored": {
+      "subject": "Votre accès complet à « {resourceName} » est rétabli",
+      "heading": "Accès rétabli",
+      "greeting": "Bonjour,",
+      "body": "Votre accès complet à « {resourceName} » a été rétabli. Vous pouvez de nouveau commenter, poser des questions et générer.",
+      "button": "Ouvrir",
+      "disclaimer": "Vous recevez ce message car votre accès a changé."
     }
   },
   "AppShell": {
@@ -1076,5 +1117,51 @@
       "updated": "Autorisations du membre mises à jour",
       "updateFailed": "Impossible de mettre à jour les autorisations du membre"
     }
+  },
+  "Transfer": {
+    "buttonTitle": "Transférer la propriété",
+    "dialogTitle": "Transférer la propriété",
+    "dialogDescription": "Vous demandez à {name} de reprendre « {resourceName} ». Rien ne change tant que la demande n'est pas acceptée. Ensuite, cette personne paie toute l'utilisation.",
+    "yourRole": "Votre rôle après le transfert",
+    "stayAdmin": "Rester administrateur",
+    "leave": "Partir",
+    "checking": "Vérification du forfait du destinataire…",
+    "planFits": "Compatible avec le forfait du destinataire : {collaboratorsAfter} collaborateurs sur {limit}.",
+    "confirmPrompt": "Pour confirmer, saisissez TRANSFER ou le nom exact.",
+    "confirmPlaceholder": "TRANSFER",
+    "cancel": "Annuler",
+    "send": "Envoyer la demande",
+    "requestSent": "Demande envoyée. La propriété changera quand {name} acceptera.",
+    "incomingTitle": "Demande de transfert de propriété",
+    "incomingBody": "{name} souhaite vous transférer la propriété de {type, select, project {ce projet} other {cet espace de travail}}.",
+    "incomingPays": "Si vous acceptez, vous payez toute l'utilisation ici.",
+    "accept": "Accepter",
+    "decline": "Refuser",
+    "accepted": "Vous êtes désormais propriétaire.",
+    "declined": "Demande de transfert refusée.",
+    "outgoingPending": "En attente de l'acceptation du transfert par {name}.",
+    "cancelRequest": "Annuler la demande",
+    "cancelled": "Demande de transfert annulée.",
+    "someone": "Quelqu'un",
+    "errors": {
+      "memberLimit": "Le forfait du destinataire autorise {limit} collaborateurs, mais il en resterait {collaboratorsAfter}. Choisissez Partir, retirez des membres ou demandez-lui de changer de forfait.",
+      "busy": "Une réponse est en cours de génération. Réessayez une fois terminée.",
+      "movedOutOfProject": "Vous êtes désormais propriétaire. L'espace de travail a quitté son projet, car ce projet ne vous appartient pas.",
+      "alreadyPending": "Une demande de transfert est déjà en attente.",
+      "expired": "Cette demande de transfert a expiré.",
+      "notPending": "Cette demande de transfert n'est plus en attente.",
+      "recipientNotMember": "Le destinataire doit être membre.",
+      "recipientSuspended": "L'accès du destinataire est suspendu.",
+      "emailNotVerified": "Le destinataire n'a pas encore vérifié son adresse e-mail.",
+      "generic": "Une erreur s'est produite. Veuillez réessayer."
+    }
+  },
+  "MemberLimits": {
+    "graceTitle": "Limite de collaborateurs de votre forfait dépassée",
+    "graceBanner": "Votre forfait autorise {limit} collaborateurs : choisissez qui reste actif ({daysRemaining, plural, one {# jour restant} other {# jours restants}}). Ensuite, les membres ajoutés le plus récemment passent en lecture seule.",
+    "keepActive": "Garder actif",
+    "keepActiveHint": "Les membres que vous gardez actifs sont les derniers à passer en lecture seule.",
+    "keepActiveUpdated": "Enregistré.",
+    "keepActiveFailed": "Impossible de mettre à jour ce membre."
   }
 }

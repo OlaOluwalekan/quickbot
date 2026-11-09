@@ -1,6 +1,7 @@
 import "server-only";
 import { getSiteConfig } from "@/server/config/site";
 import { renderEmailLayout } from "./layout";
+import { escapeHtml } from "./escape";
 import { EmailTemplateResult, EmailTranslator, ShareCreatedData } from "./types";
 
 export function renderShareCreated(
@@ -20,11 +21,11 @@ export function renderShareCreated(
     title: subject,
     heading,
     greeting,
-    bodyHtml: `<p style="margin: 0;">${bodyText}</p>`,
+    bodyHtml: `<p style="margin: 0;">${escapeHtml(bodyText)}</p>`,
     bodyText,
     actionUrl: data.shareUrl,
     actionLabel,
-    disclaimerHtml: disclaimerText,
+    disclaimerHtml: escapeHtml(disclaimerText),
     disclaimerText,
     toEmail,
     supportEmail: site.emails.support,

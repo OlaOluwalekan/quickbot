@@ -22,8 +22,6 @@ import {
   removeWorkspaceMember,
   removeProjectMember,
   countWorkspaceMembers,
-  transferWorkspaceOwnership,
-  transferProjectOwnership,
 } from "@/server/services/members";
 import { listWorkspaceActivity, logActivity } from "@/server/services/activity";
 import { resolveWorkspaceRole } from "@/server/authz/access";
@@ -351,63 +349,20 @@ describe("Step 7.4 — Members and invitations", () => {
     });
   });
 
-  // ---------------- Ownership transfer ----------------
-  describe("ownership transfer", () => {
-    it("requires owner, typed confirmation, and an existing member", async () => {
-      await expect(
-        transferWorkspaceOwnership(actorFor("admin"), workspaceId, { newOwnerId: ids.editor, confirmation: "TRANSFER" })
-      ).rejects.toMatchObject({ status: 403 });
-      await expect(
-        transferWorkspaceOwnership(actorFor("owner"), workspaceId, { newOwnerId: ids.editor, confirmation: "yes" })
-      ).rejects.toMatchObject({ status: 400 });
-      await expect(
-        transferWorkspaceOwnership(actorFor("owner"), workspaceId, { newOwnerId: ids.stranger, confirmation: "TRANSFER" })
-      ).rejects.toMatchObject({ status: 400 });
-    });
-
-    it("transfers workspace ownership; previous owner becomes ADMIN; activity recorded", async () => {
-      await transferWorkspaceOwnership(actorFor("owner"), workspaceId, {
-        newOwnerId: ids.admin,
-        confirmation: "Team WS",
-      });
-      expect((await resolveWorkspaceRole(ids.admin, workspaceId))?.role).toBe("OWNER");
-      expect((await resolveWorkspaceRole(ids.owner, workspaceId))?.role).toBe("ADMIN");
-
-      const page = await listWorkspaceActivity(actorFor("admin"), workspaceId, { limit: 50 });
+  // Ownership transfer moved to a request/accept flow in F1.3
+  // (see __tests__/fix-F1-3-ownership-transfer.test.ts).
+  describe("activity", () => {
+    it("records member and invitation activity", async () => {
+      const page = await listWorkspaceActivity(actorFor("owner"), workspaceId, { limit: 50 });
       const actions = page.items.map((i) => i.action);
       expect(actions).toEqual(
         expect.arrayContaining([
-          "workspace.ownership_transferred",
           "invitation.created",
           "member.added",
           "member.role_changed",
           "member.removed",
         ])
       );
-
-      // restore for cleanup ownership
-      await transferWorkspaceOwnership(actorFor("admin"), workspaceId, {
-        newOwnerId: ids.owner,
-        confirmation: "TRANSFER",
-      });
-    });
-
-    it("transfers project ownership to an existing project member", async () => {
-      await db.projectMember.upsert({
-        where: { projectId_userId: { projectId, userId: ids.admin } },
-        update: { role: "ADMIN" },
-        create: { projectId, userId: ids.admin, role: "ADMIN", invitedById: ids.owner },
-      });
-      await transferProjectOwnership(actorFor("owner"), projectId, {
-        newOwnerId: ids.admin,
-        confirmation: "TRANSFER",
-      });
-      const p = await db.project.findUnique({ where: { id: projectId } });
-      expect(p?.ownerId).toBe(ids.admin);
-      await transferProjectOwnership(actorFor("admin"), projectId, {
-        newOwnerId: ids.owner,
-        confirmation: "TRANSFER",
-      });
     });
   });
 

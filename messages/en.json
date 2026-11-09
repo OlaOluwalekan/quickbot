@@ -306,6 +306,47 @@
       "legalNotice": "Klecx is a product of {companyLegalName} · {companyAddress} · © {year}",
       "merchantOfRecordNotice": "Merchant of Record services provided by Creem.",
       "transactionalDisclaimer": "This is an automated transactional message sent to {email}. You are receiving this because an account event or security action occurred."
+    },
+    "ownershipTransferRequested": {
+      "subject": "{fromUserName} wants to transfer ownership of \"{resourceName}\" to you",
+      "heading": "Ownership transfer request",
+      "greeting": "Hi,",
+      "body": "{fromUserName} asked to transfer ownership of \"{resourceName}\" to you. If you accept, you become the owner and pay for all usage in it.",
+      "button": "Review the request",
+      "disclaimer": "This request expires in {days} days. If you don't want to become the owner, you can decline it in Klecx."
+    },
+    "ownershipTransferAccepted": {
+      "subject": "{toUserName} is now the owner of \"{resourceName}\"",
+      "heading": "Ownership transfer completed",
+      "greeting": "Hi,",
+      "body": "{toUserName} accepted ownership of \"{resourceName}\". You stay on as an administrator.",
+      "bodyLeft": "{toUserName} accepted ownership of \"{resourceName}\". As you chose, you no longer have access to it.",
+      "button": "Open Klecx",
+      "disclaimer": "You received this because you requested the transfer."
+    },
+    "memberLimitExceeded": {
+      "subject": "Action needed: you're over your plan's collaborator limit",
+      "heading": "Collaborator limit exceeded",
+      "greeting": "Hi,",
+      "body": "Your plan allows {limit} collaborators per workspace or project, and some of yours have more. Until {graceEndsAt}, choose who stays active in Share & people, remove members or change your plan.",
+      "button": "Manage collaborators",
+      "disclaimer": "After that date, the most recently added members beyond the limit become read-only. Nothing is deleted."
+    },
+    "memberSuspended": {
+      "subject": "Your access to \"{resourceName}\" is now read-only",
+      "heading": "Access changed to read-only",
+      "greeting": "Hi,",
+      "body": "The owner's plan no longer covers all collaborators, so your access to \"{resourceName}\" is now read-only. You can still see everything, including your own contributions.",
+      "button": "Open",
+      "disclaimer": "Full access comes back automatically when the owner's plan allows more collaborators."
+    },
+    "memberRestored": {
+      "subject": "Your full access to \"{resourceName}\" is back",
+      "heading": "Access restored",
+      "greeting": "Hi,",
+      "body": "Your full access to \"{resourceName}\" has been restored. You can comment, ask and generate again.",
+      "button": "Open",
+      "disclaimer": "You received this because your access changed."
     }
   },
   "AppShell": {
@@ -1076,5 +1117,51 @@
       "updated": "Member permissions updated",
       "updateFailed": "Couldn't update member permissions"
     }
+  },
+  "Transfer": {
+    "buttonTitle": "Transfer ownership",
+    "dialogTitle": "Transfer ownership",
+    "dialogDescription": "You're asking {name} to take over \"{resourceName}\". Nothing changes until they accept. From then on, they pay for all usage.",
+    "yourRole": "Your role after the transfer",
+    "stayAdmin": "Stay as administrator",
+    "leave": "Leave",
+    "checking": "Checking the recipient's plan…",
+    "planFits": "Fits the recipient's plan: {collaboratorsAfter} of {limit} collaborators.",
+    "confirmPrompt": "To confirm, type TRANSFER or the exact name.",
+    "confirmPlaceholder": "TRANSFER",
+    "cancel": "Cancel",
+    "send": "Send request",
+    "requestSent": "Request sent. Ownership moves when {name} accepts.",
+    "incomingTitle": "Ownership transfer request",
+    "incomingBody": "{name} wants to transfer ownership of this {type, select, project {project} other {workspace}} to you.",
+    "incomingPays": "If you accept, you pay for all usage here.",
+    "accept": "Accept",
+    "decline": "Decline",
+    "accepted": "You're now the owner.",
+    "declined": "Transfer request declined.",
+    "outgoingPending": "Waiting for {name} to accept the ownership transfer.",
+    "cancelRequest": "Cancel request",
+    "cancelled": "Transfer request cancelled.",
+    "someone": "Someone",
+    "errors": {
+      "memberLimit": "The recipient's plan allows {limit} collaborators, but {collaboratorsAfter} would remain. Choose Leave, remove members, or ask them to change plan.",
+      "busy": "A response is being generated. Try again when it's finished.",
+      "movedOutOfProject": "You're now the owner. The workspace left its project because you don't own that project.",
+      "alreadyPending": "A transfer request is already pending.",
+      "expired": "This transfer request has expired.",
+      "notPending": "This transfer request is no longer pending.",
+      "recipientNotMember": "The recipient must be a member.",
+      "recipientSuspended": "The recipient's access is suspended.",
+      "emailNotVerified": "The recipient hasn't verified their email address yet.",
+      "generic": "Something went wrong. Please try again."
+    }
+  },
+  "MemberLimits": {
+    "graceTitle": "Over your plan's collaborator limit",
+    "graceBanner": "Your plan allows {limit} collaborators — choose who stays active ({daysRemaining, plural, one {# day} other {# days}} left). After that, the most recently added members become read-only.",
+    "keepActive": "Keep active",
+    "keepActiveHint": "Members you keep active are the last to become read-only.",
+    "keepActiveUpdated": "Saved.",
+    "keepActiveFailed": "Couldn't update this member."
   }
 }

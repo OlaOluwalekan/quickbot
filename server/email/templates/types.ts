@@ -49,7 +49,6 @@ export interface CreditsLowData {
   upgradeUrl: string;
 }
 
-
 export interface SupportAckData {
   ticketId: string;
   topic: string;
@@ -71,6 +70,37 @@ export interface PaymentFailedData {
   retryUrl: string;
 }
 
+export interface OwnershipTransferRequestedData {
+  fromUserName: string;
+  resourceName: string;
+  acceptUrl: string;
+  expiresInDays?: number;
+}
+
+export interface OwnershipTransferAcceptedData {
+  toUserName: string;
+  resourceName: string;
+  actionUrl?: string;
+  previousOwnerAction?: "STAY_ADMIN" | "LEAVE";
+}
+
+export interface MemberLimitExceededData {
+  limit: number;
+  graceEndsAt: string;
+  manageUrl: string;
+}
+
+export interface MemberSuspendedData {
+  resourceName: string;
+  reason?: string;
+  actionUrl?: string;
+}
+
+export interface MemberRestoredData {
+  resourceName: string;
+  actionUrl?: string;
+}
+
 export interface EmailTemplateMap {
   "verify-email": VerifyEmailData;
   "reset-password": ResetPasswordData;
@@ -82,6 +112,11 @@ export interface EmailTemplateMap {
   "payment-failed": PaymentFailedData;
   "support-ack": SupportAckData;
   "support-notification": SupportNotificationData;
+  "ownership-transfer-requested": OwnershipTransferRequestedData;
+  "ownership-transfer-accepted": OwnershipTransferAcceptedData;
+  "member-limit-exceeded": MemberLimitExceededData;
+  "member-suspended": MemberSuspendedData;
+  "member-restored": MemberRestoredData;
 }
 
 export type EmailTemplateName = keyof EmailTemplateMap;

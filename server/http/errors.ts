@@ -11,7 +11,8 @@ export class ApiError extends Error {
 }
 
 export const Errors = {
-  badRequest: (m = "Malformed JSON") => new ApiError(400, "bad_request", m),
+  badRequest: (m = "Malformed JSON", code = "bad_request", details?: unknown) =>
+    new ApiError(400, code, m, details),
   unauthorized: (m = "Authentication required") =>
     new ApiError(401, "unauthorized", m),
   paymentRequired: (m = "Not enough credits") =>
@@ -19,7 +20,8 @@ export const Errors = {
   forbidden: (m = "You don't have permission", code = "forbidden") =>
     new ApiError(403, code, m),
   notFound: (what = "Resource") => new ApiError(404, "not_found", `${what} not found`),
-  conflict: (m: string, code = "conflict") => new ApiError(409, code, m),
+  conflict: (m: string, code = "conflict", details?: unknown) =>
+    new ApiError(409, code, m, details),
   validation: (details: unknown) =>
     new ApiError(422, "validation_error", "Invalid input", details),
   unprocessable: (

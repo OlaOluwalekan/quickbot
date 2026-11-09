@@ -15,6 +15,7 @@ import { sendEmail, maskEmail } from "@/server/email/send";
 import { env } from "@/server/env";
 import { PLANS, type PlanKey } from "@/server/billing/plans";
 import { getEntitlements } from "@/server/billing/entitlements";
+import { isOwnerInGrace } from "./member-limits";
 import type { WorkspaceRole, ProjectRole, Prisma } from "../db/generated/client";
 
 export type CreateInvitationOptions = {
@@ -120,6 +121,13 @@ async function assertMemberCapacity(
   ownerId: string,
   opts: { excludeInvitationId?: string } = {}
 ) {
+  const inGrace = await isOwnerInGrace(ownerId);
+  if (inGrace) {
+    throw Errors.forbidden(
+      "Cannot invite new members while over your plan limit.",
+      "member_limit_exceeded"
+    );
+  }
   const ownerPlanKey = await resolveOwnerPlan(ownerId);
   const maxMembers = PLANS[ownerPlanKey]?.limits?.members ?? 0;
   const now = new Date();

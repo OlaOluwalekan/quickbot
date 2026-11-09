@@ -13,6 +13,12 @@ export const NOTIFICATION_TYPES = [
   "NEW_SIGN_IN",
   "EXPORT_READY",
   "QUESTIONS_ANSWERED",
+  "OWNERSHIP_TRANSFER_REQUESTED",
+  "OWNERSHIP_TRANSFER_ACCEPTED",
+  "OWNERSHIP_TRANSFER_DECLINED",
+  "MEMBER_LIMIT_EXCEEDED",
+  "MEMBER_SUSPENDED",
+  "MEMBER_RESTORED",
 ] as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
@@ -44,6 +50,12 @@ export const updateNotificationPrefsSchema = z
     NEW_SIGN_IN: notificationChannelPrefSchema.optional(),
     EXPORT_READY: notificationChannelPrefSchema.optional(),
     QUESTIONS_ANSWERED: notificationChannelPrefSchema.optional(),
+    OWNERSHIP_TRANSFER_REQUESTED: notificationChannelPrefSchema.optional(),
+    OWNERSHIP_TRANSFER_ACCEPTED: notificationChannelPrefSchema.optional(),
+    OWNERSHIP_TRANSFER_DECLINED: notificationChannelPrefSchema.optional(),
+    MEMBER_LIMIT_EXCEEDED: notificationChannelPrefSchema.optional(),
+    MEMBER_SUSPENDED: notificationChannelPrefSchema.optional(),
+    MEMBER_RESTORED: notificationChannelPrefSchema.optional(),
   })
   .strict();
 

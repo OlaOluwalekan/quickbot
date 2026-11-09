@@ -35,6 +35,12 @@ export const DEFAULT_NOTIFICATION_PREFS: NotificationPreferencesMap = {
   NEW_SIGN_IN:          { inApp: true, email: true },
   EXPORT_READY:         { inApp: true, email: false },
   QUESTIONS_ANSWERED:   { inApp: true, email: false },
+  OWNERSHIP_TRANSFER_REQUESTED: { inApp: true, email: true },
+  OWNERSHIP_TRANSFER_ACCEPTED:  { inApp: true, email: true },
+  OWNERSHIP_TRANSFER_DECLINED:  { inApp: true, email: false },
+  MEMBER_LIMIT_EXCEEDED:        { inApp: true, email: true },
+  MEMBER_SUSPENDED:             { inApp: true, email: true },
+  MEMBER_RESTORED:              { inApp: true, email: true },
 };
 
 export function resolveNotificationPreferences(
@@ -53,6 +59,12 @@ export function resolveNotificationPreferences(
     NEW_SIGN_IN:          { ...DEFAULT_NOTIFICATION_PREFS.NEW_SIGN_IN },
     EXPORT_READY:         { ...DEFAULT_NOTIFICATION_PREFS.EXPORT_READY },
     QUESTIONS_ANSWERED:   { ...DEFAULT_NOTIFICATION_PREFS.QUESTIONS_ANSWERED },
+    OWNERSHIP_TRANSFER_REQUESTED: { ...DEFAULT_NOTIFICATION_PREFS.OWNERSHIP_TRANSFER_REQUESTED },
+    OWNERSHIP_TRANSFER_ACCEPTED:  { ...DEFAULT_NOTIFICATION_PREFS.OWNERSHIP_TRANSFER_ACCEPTED },
+    OWNERSHIP_TRANSFER_DECLINED:  { ...DEFAULT_NOTIFICATION_PREFS.OWNERSHIP_TRANSFER_DECLINED },
+    MEMBER_LIMIT_EXCEEDED:        { ...DEFAULT_NOTIFICATION_PREFS.MEMBER_LIMIT_EXCEEDED },
+    MEMBER_SUSPENDED:             { ...DEFAULT_NOTIFICATION_PREFS.MEMBER_SUSPENDED },
+    MEMBER_RESTORED:              { ...DEFAULT_NOTIFICATION_PREFS.MEMBER_RESTORED },
   };
 
   if (!raw || typeof raw !== "object") {
@@ -204,6 +216,55 @@ function resolveDefaultEmailMapping(
           device: payload.device as string | undefined,
           ipAddress: payload.ipAddress as string | undefined,
           location: payload.location as string | undefined,
+        },
+      };
+    // F1.3 — ownership transfer and member-limit emails.
+    case "OWNERSHIP_TRANSFER_REQUESTED":
+      return {
+        template: "ownership-transfer-requested",
+        data: {
+          fromUserName: (payload.fromUserName as string) || "",
+          resourceName: (payload.resourceName as string) || "",
+          acceptUrl: `${appUrl}${(payload.href as string) || "/workspaces"}`,
+          expiresInDays: 7,
+        },
+      };
+    case "OWNERSHIP_TRANSFER_ACCEPTED":
+      return {
+        template: "ownership-transfer-accepted",
+        data: {
+          toUserName: (payload.toUserName as string) || "",
+          resourceName: (payload.resourceName as string) || "",
+          actionUrl: `${appUrl}${(payload.href as string) || "/workspaces"}`,
+          previousOwnerAction:
+            payload.previousOwnerAction === "LEAVE" ? "LEAVE" : "STAY_ADMIN",
+        },
+      };
+    case "MEMBER_LIMIT_EXCEEDED":
+      // The email asks the owner to act; members get the in-app notice only.
+      if (payload.isOwner !== true) return null;
+      return {
+        template: "member-limit-exceeded",
+        data: {
+          limit: typeof payload.limit === "number" ? payload.limit : 0,
+          graceEndsAt: (payload.graceEndsAt as string) || "",
+          manageUrl: `${appUrl}/workspaces`,
+        },
+      };
+    case "MEMBER_SUSPENDED":
+      return {
+        template: "member-suspended",
+        data: {
+          resourceName: (payload.resourceName as string) || "",
+          actionUrl: `${appUrl}${(payload.href as string) || "/workspaces"}`,
+        },
+      };
+    case "MEMBER_RESTORED":
+      return {
+        template: "member-restored",
+        data: {
+          resourceName: (payload.resourceName as string) || "",
+          actionUrl: `${appUrl}${(payload.href as string) || "/workspaces"}`,
         },
       };
     default:

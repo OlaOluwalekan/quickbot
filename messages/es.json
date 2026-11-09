@@ -306,6 +306,47 @@
       "legalNotice": "Klecx es un producto de {companyLegalName} · {companyAddress} · © {year}",
       "merchantOfRecordNotice": "Servicios de Merchant of Record proporcionados por Creem.",
       "transactionalDisclaimer": "Este es un mensaje transaccional automatizado enviado a {email}. Lo recibe porque ocurrió un evento de cuenta o una acción de seguridad."
+    },
+    "ownershipTransferRequested": {
+      "subject": "{fromUserName} quiere transferirte la propiedad de \"{resourceName}\"",
+      "heading": "Solicitud de transferencia de propiedad",
+      "greeting": "Hola:",
+      "body": "{fromUserName} ha solicitado transferirte la propiedad de \"{resourceName}\". Si aceptas, pasarás a ser el propietario y pagarás todo el uso.",
+      "button": "Revisar la solicitud",
+      "disclaimer": "Esta solicitud caduca en {days} días. Si no quieres ser el propietario, puedes rechazarla en Klecx."
+    },
+    "ownershipTransferAccepted": {
+      "subject": "{toUserName} es ahora el propietario de \"{resourceName}\"",
+      "heading": "Transferencia de propiedad completada",
+      "greeting": "Hola:",
+      "body": "{toUserName} ha aceptado la propiedad de \"{resourceName}\". Sigues como administrador.",
+      "bodyLeft": "{toUserName} ha aceptado la propiedad de \"{resourceName}\". Como elegiste, ya no tienes acceso.",
+      "button": "Abrir Klecx",
+      "disclaimer": "Recibes este mensaje porque solicitaste la transferencia."
+    },
+    "memberLimitExceeded": {
+      "subject": "Acción necesaria: superas el límite de colaboradores de tu plan",
+      "heading": "Límite de colaboradores superado",
+      "greeting": "Hola:",
+      "body": "Tu plan permite {limit} colaboradores por espacio de trabajo o proyecto, y algunos de los tuyos tienen más. Hasta el {graceEndsAt}, elige quién sigue activo en Compartir y personas, elimina miembros o cambia de plan.",
+      "button": "Gestionar colaboradores",
+      "disclaimer": "Después de esa fecha, los miembros añadidos más recientemente por encima del límite pasarán a solo lectura. No se elimina nada."
+    },
+    "memberSuspended": {
+      "subject": "Tu acceso a \"{resourceName}\" es ahora de solo lectura",
+      "heading": "Acceso cambiado a solo lectura",
+      "greeting": "Hola:",
+      "body": "El plan del propietario ya no cubre a todos los colaboradores, así que tu acceso a \"{resourceName}\" es ahora de solo lectura. Puedes seguir viendo todo, incluidas tus propias contribuciones.",
+      "button": "Abrir",
+      "disclaimer": "El acceso completo vuelve automáticamente cuando el plan del propietario permita más colaboradores."
+    },
+    "memberRestored": {
+      "subject": "Has recuperado el acceso completo a \"{resourceName}\"",
+      "heading": "Acceso restablecido",
+      "greeting": "Hola:",
+      "body": "Se ha restablecido tu acceso completo a \"{resourceName}\". Ya puedes volver a comentar, preguntar y generar.",
+      "button": "Abrir",
+      "disclaimer": "Recibes este mensaje porque tu acceso ha cambiado."
     }
   },
   "AppShell": {
@@ -1076,5 +1117,51 @@
       "updated": "Permisos del miembro actualizados",
       "updateFailed": "No se pudieron actualizar los permisos del miembro"
     }
+  },
+  "Transfer": {
+    "buttonTitle": "Transferir la propiedad",
+    "dialogTitle": "Transferir la propiedad",
+    "dialogDescription": "Vas a pedir a {name} que se haga cargo de \"{resourceName}\". No cambia nada hasta que acepte. A partir de entonces, pagará todo el uso.",
+    "yourRole": "Tu rol después de la transferencia",
+    "stayAdmin": "Seguir como administrador",
+    "leave": "Salir",
+    "checking": "Comprobando el plan del destinatario…",
+    "planFits": "Cabe en el plan del destinatario: {collaboratorsAfter} de {limit} colaboradores.",
+    "confirmPrompt": "Para confirmar, escribe TRANSFER o el nombre exacto.",
+    "confirmPlaceholder": "TRANSFER",
+    "cancel": "Cancelar",
+    "send": "Enviar solicitud",
+    "requestSent": "Solicitud enviada. La propiedad cambiará cuando {name} acepte.",
+    "incomingTitle": "Solicitud de transferencia de propiedad",
+    "incomingBody": "{name} quiere transferirte la propiedad de este {type, select, project {proyecto} other {espacio de trabajo}}.",
+    "incomingPays": "Si aceptas, pagarás todo el uso aquí.",
+    "accept": "Aceptar",
+    "decline": "Rechazar",
+    "accepted": "Ahora eres el propietario.",
+    "declined": "Solicitud de transferencia rechazada.",
+    "outgoingPending": "Esperando a que {name} acepte la transferencia de propiedad.",
+    "cancelRequest": "Cancelar solicitud",
+    "cancelled": "Solicitud de transferencia cancelada.",
+    "someone": "Alguien",
+    "errors": {
+      "memberLimit": "El plan del destinatario permite {limit} colaboradores, pero quedarían {collaboratorsAfter}. Elige Salir, elimina miembros o pídele que cambie de plan.",
+      "busy": "Se está generando una respuesta. Inténtalo de nuevo cuando termine.",
+      "movedOutOfProject": "Ahora eres el propietario. El espacio de trabajo salió de su proyecto porque ese proyecto no es tuyo.",
+      "alreadyPending": "Ya hay una solicitud de transferencia pendiente.",
+      "expired": "Esta solicitud de transferencia ha caducado.",
+      "notPending": "Esta solicitud de transferencia ya no está pendiente.",
+      "recipientNotMember": "El destinatario debe ser miembro.",
+      "recipientSuspended": "El acceso del destinatario está suspendido.",
+      "emailNotVerified": "El destinatario aún no ha verificado su correo electrónico.",
+      "generic": "Algo salió mal. Inténtalo de nuevo."
+    }
+  },
+  "MemberLimits": {
+    "graceTitle": "Superas el límite de colaboradores de tu plan",
+    "graceBanner": "Tu plan permite {limit} colaboradores: elige quién sigue activo ({daysRemaining, plural, one {queda # día} other {quedan # días}}). Después, los miembros añadidos más recientemente pasarán a solo lectura.",
+    "keepActive": "Mantener activo",
+    "keepActiveHint": "Los miembros que mantengas activos serán los últimos en pasar a solo lectura.",
+    "keepActiveUpdated": "Guardado.",
+    "keepActiveFailed": "No se pudo actualizar este miembro."
   }
 }

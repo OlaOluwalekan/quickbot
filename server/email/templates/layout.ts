@@ -1,6 +1,7 @@
 import "server-only";
 import enMessages from "@/messages/en.json";
 import { getSiteConfig } from "@/server/config/site";
+import { escapeHtml } from "./escape";
 
 export interface EmailLayoutOptions {
   title: string;
@@ -28,6 +29,13 @@ export interface RenderedEmail {
 
 export function renderEmailLayout(options: EmailLayoutOptions): RenderedEmail {
   const site = getSiteConfig();
+  // Plain-text fields can contain user-controlled values (names, titles):
+  // escape them for HTML. bodyHtml/disclaimerHtml are HTML and must be
+  // escaped by the template that builds them.
+  const titleHtml = escapeHtml(options.title);
+  const headingHtml = escapeHtml(options.heading);
+  const actionLabelHtml = options.actionLabel ? escapeHtml(options.actionLabel) : "";
+  const actionUrlHtml = options.actionUrl ? escapeHtml(options.actionUrl) : "";
   const currentYear = new Date().getFullYear().toString();
   const supportEmail = options.supportEmail || site.emails.support;
 
@@ -64,8 +72,8 @@ export function renderEmailLayout(options: EmailLayoutOptions): RenderedEmail {
       <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 28px 0 24px 0;">
         <tr>
           <td align="center" style="border-radius: 8px; background: #4f46e5;">
-            <a href="${options.actionUrl}" target="_blank" style="font-size: 15px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-weight: 600; color: #ffffff; text-decoration: none; padding: 13px 28px; border-radius: 8px; display: inline-block; background-color: #4f46e5;">
-              ${options.actionLabel}
+            <a href="${actionUrlHtml}" target="_blank" style="font-size: 15px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-weight: 600; color: #ffffff; text-decoration: none; padding: 13px 28px; border-radius: 8px; display: inline-block; background-color: #4f46e5;">
+              ${actionLabelHtml}
             </a>
           </td>
         </tr>
@@ -74,7 +82,7 @@ export function renderEmailLayout(options: EmailLayoutOptions): RenderedEmail {
         ${copyUrlNotice}
       </p>
       <p style="margin: 6px 0 0 0; font-size: 12px; line-height: 1.4; color: #818cf8; word-break: break-all;">
-        <a href="${options.actionUrl}" style="color: #818cf8; text-decoration: underline;">${options.actionUrl}</a>
+        <a href="${actionUrlHtml}" style="color: #818cf8; text-decoration: underline;">${actionUrlHtml}</a>
       </p>
     `
       : "";
@@ -88,7 +96,7 @@ export function renderEmailLayout(options: EmailLayoutOptions): RenderedEmail {
     : "";
 
   const greetingHtml = options.greeting
-    ? `<p style="margin: 0 0 16px 0; font-size: 15px; line-height: 1.6; color: #f1f5f9; font-weight: 500;">${options.greeting}</p>`
+    ? `<p style="margin: 0 0 16px 0; font-size: 15px; line-height: 1.6; color: #f1f5f9; font-weight: 500;">${escapeHtml(options.greeting)}</p>`
     : "";
 
   const html = `<!DOCTYPE html>
@@ -97,7 +105,7 @@ export function renderEmailLayout(options: EmailLayoutOptions): RenderedEmail {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <title>${options.title}</title>
+  <title>${titleHtml}</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #020617; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #f8fafc; -webkit-font-smoothing: antialiased;">
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #020617; width: 100%; table-layout: fixed; padding: 40px 16px;">
@@ -123,7 +131,7 @@ export function renderEmailLayout(options: EmailLayoutOptions): RenderedEmail {
           <tr>
             <td style="padding: 32px;">
               <h1 style="margin: 0 0 20px 0; font-size: 20px; font-weight: 700; color: #f8fafc; letter-spacing: -0.01em;">
-                ${options.heading}
+                ${headingHtml}
               </h1>
 
               ${greetingHtml}

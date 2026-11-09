@@ -2,9 +2,11 @@ import "server-only";
 import { db } from "@/server/db/client";
 import type { Actor } from "@/server/auth/session";
 import { Errors } from "@/server/http/errors";
-import { requireWorkspace, requireProject, resolveWorkspaceRole } from "@/server/authz/access";
+import { requireWorkspace, requireProject } from "@/server/authz/access";
 import { can, ROLE_RANK, maxRole, computeCapabilities, type EffectiveRole } from "@/server/authz/permissions";
 import { logActivity } from "./activity";
+import { getOwnerGraceInfo } from "./member-limits";
+import { getPendingOutgoingTransfer } from "./ownership-transfer";
 import { notify } from "./notify";
 import { getUserAvatar } from "./avatar";
 import { getMonthlySpendByActor } from "./billing-owner";
@@ -93,6 +95,7 @@ export type MemberSummary = {
   suspendedReason?: string | null;
   monthlyCreditCap?: number | null;
   monthlyCreditsUsed?: number;
+  keepActive?: boolean;
 };
 
 export async function listWorkspaceMembers(actor: Actor, workspaceId: string) {
@@ -234,6 +237,7 @@ export async function listWorkspaceMembers(actor: Actor, workspaceId: string) {
           effectiveCanAsk: inheritedCaps.ask,
           suspendedAt: pm.suspendedAt,
           suspendedReason: pm.suspendedReason,
+          keepActive: pm.keepActive,
           monthlyCreditCap: pm.monthlyCreditCap,
         });
       }
@@ -281,6 +285,7 @@ export async function listWorkspaceMembers(actor: Actor, workspaceId: string) {
         effectiveCanAsk: wsCaps.ask,
         suspendedAt: wm.suspendedAt,
         suspendedReason: wm.suspendedReason,
+        keepActive: wm.keepActive,
         monthlyCreditCap: wm.monthlyCreditCap,
       });
     }
@@ -306,6 +311,7 @@ export async function listWorkspaceMembers(actor: Actor, workspaceId: string) {
     totalCount: memberList.length + 1, // members + owner
     canManage: can(actorRole, "workspace.manage_members"),
     isOwner: actor.userId === workspace.ownerId,
+    ...(await ownerOnlyExtras(actor, workspace.ownerId, { workspaceId })),
   };
 }
 
@@ -408,7 +414,25 @@ export async function listProjectMembers(actor: Actor, projectId: string) {
     totalCount: memberList.length + 1,
     canManage: can(actorRole, "workspace.manage_members"),
     isOwner: actor.userId === proj.ownerId,
+    ...(await ownerOnlyExtras(actor, proj.ownerId, { projectId })),
   };
+}
+
+/**
+ * Owner-only data for the Share & people dialog (F1.3): the over-limit grace
+ * banner and the owner's own pending outgoing transfer (so it can be cancelled).
+ */
+async function ownerOnlyExtras(
+  actor: Actor,
+  ownerId: string,
+  scope: { workspaceId?: string; projectId?: string }
+) {
+  if (actor.userId !== ownerId) return {};
+  const [grace, outgoingTransfer] = await Promise.all([
+    getOwnerGraceInfo(ownerId),
+    getPendingOutgoingTransfer(actor.userId, scope),
+  ]);
+  return { grace, outgoingTransfer };
 }
 
 function rowCapabilities(row: {
@@ -808,166 +832,6 @@ export async function removeProjectMember(
   }
 
   return { success: true };
-}
-
-export async function transferWorkspaceOwnership(
-  actor: Actor,
-  workspaceId: string,
-  input: { newOwnerId: string; confirmation: string }
-) {
-  const ws = await db.workspace.findUnique({
-    where: { id: workspaceId },
-    select: { id: true, title: true, ownerId: true },
-  });
-
-  if (!ws) throw Errors.notFound("Workspace");
-
-  if (actor.userId !== ws.ownerId) {
-    throw Errors.forbidden("Only the workspace owner can transfer ownership");
-  }
-
-  const { newOwnerId, confirmation } = input;
-  const cleanConf = confirmation.trim();
-  if (cleanConf !== "TRANSFER" && cleanConf !== ws.title.trim()) {
-    throw Errors.badRequest("Invalid confirmation text. Type 'TRANSFER' or the workspace title.");
-  }
-
-  if (newOwnerId === actor.userId) {
-    throw Errors.badRequest("You are already the owner of this workspace");
-  }
-
-  const targetUser = await db.user.findUnique({
-    where: { id: newOwnerId },
-  });
-  if (!targetUser) {
-    throw Errors.notFound("New owner user");
-  }
-
-  const targetAccess = await resolveWorkspaceRole(newOwnerId, workspaceId);
-  if (!targetAccess) {
-    throw Errors.badRequest("New owner must be an existing member of this workspace");
-  }
-
-  return await db.$transaction(async (tx) => {
-    // 1. Update workspace owner
-    await tx.workspace.update({
-      where: { id: workspaceId },
-      data: { ownerId: newOwnerId },
-    });
-
-    // 2. Remove new owner from workspaceMember table if present
-    await tx.workspaceMember.deleteMany({
-      where: { workspaceId, userId: newOwnerId },
-    });
-
-    // 3. Make previous owner an ADMIN
-    await tx.workspaceMember.upsert({
-      where: { workspaceId_userId: { workspaceId, userId: actor.userId } },
-      update: { role: "ADMIN" },
-      create: {
-        workspaceId,
-        userId: actor.userId,
-        role: "ADMIN",
-        invitedById: actor.userId,
-      },
-    });
-
-    // 4. Log activity
-    await logActivity(tx, {
-      workspaceId,
-      actorId: actor.userId,
-      action: "workspace.ownership_transferred",
-      targetType: "user",
-      targetId: newOwnerId,
-      meta: {
-        previousOwnerId: actor.userId,
-        newOwnerId,
-      },
-    });
-
-    return { success: true, newOwnerId };
-  });
-}
-
-export async function transferProjectOwnership(
-  actor: Actor,
-  projectId: string,
-  input: { newOwnerId: string; confirmation: string }
-) {
-  const project = await db.project.findUnique({
-    where: { id: projectId },
-    select: { id: true, name: true, ownerId: true },
-  });
-
-  if (!project) throw Errors.notFound("Project");
-
-  if (actor.userId !== project.ownerId) {
-    throw Errors.forbidden("Only the project owner can transfer ownership");
-  }
-
-  const { newOwnerId, confirmation } = input;
-  const cleanConf = confirmation.trim();
-  if (cleanConf !== "TRANSFER" && cleanConf !== project.name.trim()) {
-    throw Errors.badRequest("Invalid confirmation text. Type 'TRANSFER' or the project name.");
-  }
-
-  if (newOwnerId === actor.userId) {
-    throw Errors.badRequest("You are already the owner of this project");
-  }
-
-  const targetUser = await db.user.findUnique({
-    where: { id: newOwnerId },
-  });
-  if (!targetUser) {
-    throw Errors.notFound("New owner user");
-  }
-
-  const targetMembership = await db.projectMember.findUnique({
-    where: { projectId_userId: { projectId, userId: newOwnerId } },
-  });
-  if (!targetMembership) {
-    throw Errors.badRequest("New owner must be an existing member of this project");
-  }
-
-  return await db.$transaction(async (tx) => {
-    // 1. Update project owner
-    await tx.project.update({
-      where: { id: projectId },
-      data: { ownerId: newOwnerId },
-    });
-
-    // 2. Remove new owner from projectMember table
-    await tx.projectMember.deleteMany({
-      where: { projectId, userId: newOwnerId },
-    });
-
-    // 3. Make previous owner an ADMIN
-    await tx.projectMember.upsert({
-      where: { projectId_userId: { projectId, userId: actor.userId } },
-      update: { role: "ADMIN" },
-      create: {
-        projectId,
-        userId: actor.userId,
-        role: "ADMIN",
-        invitedById: actor.userId,
-      },
-    });
-
-    // 4. Log activity
-    await logActivity(tx, {
-      projectId,
-      actorId: actor.userId,
-      action: "project.ownership_transferred",
-      targetType: "user",
-      targetId: newOwnerId,
-      meta: {
-        previousOwnerId: actor.userId,
-        newOwnerId,
-      },
-    });
-
-    return { success: true, newOwnerId };
-  });
 }
 
 /**

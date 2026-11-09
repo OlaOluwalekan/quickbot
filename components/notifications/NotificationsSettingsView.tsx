@@ -76,6 +76,36 @@ const NOTIFICATION_TYPE_METADATA: NotificationTypeMeta[] = [
     label: "Queued questions answered",
     description: "When a batch of queued passage questions finishes answering.",
   },
+  {
+    type: "OWNERSHIP_TRANSFER_REQUESTED",
+    label: "Ownership transfer request",
+    description: "When someone asks you to take over a workspace or project.",
+  },
+  {
+    type: "OWNERSHIP_TRANSFER_ACCEPTED",
+    label: "Ownership transfer accepted",
+    description: "When the person you chose accepts ownership.",
+  },
+  {
+    type: "OWNERSHIP_TRANSFER_DECLINED",
+    label: "Ownership transfer declined",
+    description: "When the person you chose declines ownership.",
+  },
+  {
+    type: "MEMBER_LIMIT_EXCEEDED",
+    label: "Collaborator limit exceeded",
+    description: "When an owner's plan no longer covers all collaborators.",
+  },
+  {
+    type: "MEMBER_SUSPENDED",
+    label: "Access changed to read-only",
+    description: "When your access becomes read-only because of a plan limit.",
+  },
+  {
+    type: "MEMBER_RESTORED",
+    label: "Access restored",
+    description: "When your full access comes back.",
+  },
 ];
 
 export function NotificationsSettingsView() {

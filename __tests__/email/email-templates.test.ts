@@ -69,6 +69,28 @@ describe("Step 1.7 & F0.2 — Transactional Email Module", () => {
       reason: "Card expired",
       retryUrl: "https://klecx.vyraxity.com/settings/billing",
     },
+    "ownership-transfer-requested": {
+      fromUserName: "Sarah Connor",
+      resourceName: "Cyberdyne Systems",
+      acceptUrl: "https://klecx.vyraxity.com/transfers/accept?id=t-123",
+      expiresInDays: 7,
+    },
+    "ownership-transfer-accepted": {
+      toUserName: "John Connor",
+      resourceName: "Cyberdyne Systems",
+    },
+    "member-limit-exceeded": {
+      limit: 5,
+      graceEndsAt: "2026-11-15T00:00:00.000Z",
+      manageUrl: "https://klecx.vyraxity.com/settings/members",
+    },
+    "member-suspended": {
+      resourceName: "Cyberdyne Systems",
+      reason: "Member limit exceeded",
+    },
+    "member-restored": {
+      resourceName: "Cyberdyne Systems",
+    },
   };
 
   const allTemplates: EmailTemplateName[] = [
@@ -174,6 +196,29 @@ describe("Step 1.7 & F0.2 — Transactional Email Module", () => {
   });
 
   describe("Email Masking & Security", () => {
+    it("escapes user-controlled names in the HTML but keeps the plain text as typed", async () => {
+      const evil = '<img src=x onerror="alert(1)">';
+      const cases = [
+        renderEmail("invitation", "u@example.com", {
+          ...sampleData.invitation,
+          inviterName: evil,
+          teamOrProjectName: evil,
+        }),
+        renderEmail("share-created", "u@example.com", { ...sampleData["share-created"], title: evil }),
+        renderEmail("ownership-transfer-requested", "u@example.com", {
+          ...sampleData["ownership-transfer-requested"],
+          fromUserName: evil,
+          resourceName: evil,
+        }),
+        renderEmail("member-suspended", "u@example.com", { resourceName: evil }),
+      ];
+      for (const rendered of await Promise.all(cases)) {
+        expect(rendered.html).not.toContain("<img");
+        expect(rendered.html).toContain("&lt;img");
+        expect(rendered.text).toContain(evil);
+      }
+    });
+
     it("masks email addresses correctly in logs without leaking full identity", () => {
       expect(maskEmail("user@example.com")).toBe("u***r@example.com");
       expect(maskEmail("a@example.com")).toBe("a*@example.com");
