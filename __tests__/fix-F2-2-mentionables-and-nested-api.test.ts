@@ -5,13 +5,32 @@
 import crypto from "node:crypto";
 import { db } from "@/server/db/client";
 import {
+  createAnnotation,
   createAnnotationOnMessage,
+  createAndStreamAnnotationReply,
+  setAnnotationCustomProviderForTesting,
 } from "@/server/services/annotation";
+import type { AiProvider, StreamEvent } from "@/server/ai/types";
 import {
   listMentionables,
 } from "@/server/services/members";
 import type { Actor } from "@/server/auth/session";
 import { MAX_ANNOTATION_DEPTH } from "@/lib/annotations/limits";
+
+class FakeAskProvider implements AiProvider {
+  id = "gemini" as const;
+  async *stream(): AsyncIterable<StreamEvent> {
+    yield { type: "text_delta", text: "Paxos is harder to implement than Raft." };
+    yield { type: "usage", inputTokens: 50, outputTokens: 10, estimated: false };
+  }
+}
+
+async function drain(stream: ReadableStream<Uint8Array>) {
+  const reader = stream.getReader();
+  while (!(await reader.read()).done) {
+    // read to the end
+  }
+}
 
 describe("Fix F2.2 — Mentionables & Nested Annotation API", () => {
   let owner: { id: string; email: string };
@@ -21,9 +40,15 @@ describe("Fix F2.2 — Mentionables & Nested Annotation API", () => {
   let ownerActor: Actor;
   let memberActor: Actor;
 
+  let outsider: { id: string; email: string };
+  let noUsername: { id: string };
+  let outsiderActor: Actor;
+  let versionId: string;
+
   let assistantMsgId: string;
   let userMsgId: string;
   let rootAnnotId: string;
+  let privateAssistantMsgId: string;
 
   beforeAll(async () => {
     // 1. Create users
@@ -54,6 +79,29 @@ describe("Fix F2.2 — Mentionables & Nested Annotation API", () => {
       },
     });
 
+    outsider = await db.user.create({
+      data: {
+        id: crypto.randomUUID(),
+        email: `f22-outsider-${Date.now()}@example.com`,
+        name: "Outsider",
+        username: `outsider_${Date.now()}`,
+      },
+    });
+    outsiderActor = {
+      userId: outsider.id,
+      email: outsider.email,
+      role: "USER",
+      sessionId: "sess_f22_outsider",
+    };
+
+    noUsername = await db.user.create({
+      data: {
+        id: crypto.randomUUID(),
+        email: `f22-nousername-${Date.now()}@example.com`,
+        name: "Nameless Alice",
+      },
+    });
+
     ownerActor = {
       userId: owner.id,
       email: owner.email,
@@ -80,6 +128,11 @@ describe("Fix F2.2 — Mentionables & Nested Annotation API", () => {
               role: "EDITOR",
               canComment: true,
               canAsk: true,
+              invitedById: owner.id,
+            },
+            {
+              userId: noUsername.id,
+              role: "VIEWER",
               invitedById: owner.id,
             },
             {
@@ -122,6 +175,7 @@ describe("Fix F2.2 — Mentionables & Nested Annotation API", () => {
         responseId: response.id,
         versionId: version.id,
         kind: "ASK",
+        visibility: "WORKSPACE",
         targetType: "RESPONSE_VERSION",
         depth: 0,
         authorType: "USER",
@@ -153,16 +207,46 @@ describe("Fix F2.2 — Mentionables & Nested Annotation API", () => {
     const assistantMsg = parentAnnot.messages.find((m) => m.role === "ASSISTANT")!;
     userMsgId = userMsg.id;
     assistantMsgId = assistantMsg.id;
+    versionId = version.id;
+
+    // 5. The owner's PRIVATE Ask thread (the default visibility)
+    const privateAnnot = await db.annotation.create({
+      data: {
+        workspaceId: workspace.id,
+        responseId: response.id,
+        versionId: version.id,
+        kind: "ASK",
+        visibility: "PRIVATE",
+        anchorExact: "Root version",
+        anchorPrefix: "",
+        anchorSuffix: "",
+        createdById: owner.id,
+        messages: {
+          create: [
+            { role: "USER", content: "A private question", authorId: owner.id },
+            { role: "ASSISTANT", content: "A private answer only the owner may read." },
+          ],
+        },
+      },
+      include: { messages: true },
+    });
+    privateAssistantMsgId = privateAnnot.messages.find((m) => m.role === "ASSISTANT")!.id;
+
+    setAnnotationCustomProviderForTesting(new FakeAskProvider());
   });
 
   afterAll(async () => {
+    setAnnotationCustomProviderForTesting(null);
     await db.annotation.deleteMany({ where: { workspaceId: workspace.id } });
+    await db.generation.deleteMany({ where: { workspaceId: workspace.id } });
     await db.responseVersion.deleteMany({ where: { response: { workspaceId: workspace.id } } });
     await db.response.deleteMany({ where: { workspaceId: workspace.id } });
     await db.workspaceMember.deleteMany({ where: { workspaceId: workspace.id } });
     await db.workspace.delete({ where: { id: workspace.id } });
     await db.user.deleteMany({
-      where: { id: { in: [owner.id, member1.id, suspendedMember.id] } },
+      where: {
+        id: { in: [owner.id, member1.id, suspendedMember.id, outsider.id, noUsername.id] },
+      },
     });
   });
 
@@ -190,6 +274,17 @@ describe("Fix F2.2 — Mentionables & Nested Annotation API", () => {
       const userItems = items.filter((i) => i.kind === "user");
       expect(userItems.length).toBe(1);
       expect((userItems[0] as { username: string }).username).toBe(member1.username);
+    });
+
+    it("leaves out members without a username (they can't be mentioned)", async () => {
+      const items = await listMentionables(ownerActor, workspace.id, "nameless");
+      expect(items.filter((i) => i.kind === "user")).toEqual([]);
+    });
+
+    it("returns 404 to a user who is not a member", async () => {
+      await expect(
+        listMentionables(outsiderActor, workspace.id, "")
+      ).rejects.toMatchObject({ status: 404 });
     });
 
     it("matches Klecx when query is 'kl'", async () => {
@@ -266,6 +361,105 @@ describe("Fix F2.2 — Mentionables & Nested Annotation API", () => {
           text: "Question on missing text",
         })
       ).rejects.toThrow("Selected text is not a substring of the message content");
+    });
+
+    it("returns 404 to a user who is not a member", async () => {
+      await expect(
+        createAnnotationOnMessage(outsiderActor, assistantMsgId, {
+          kind: "COMMENT",
+          anchor: { exact: "consensus algorithm", prefix: "", suffix: "" },
+          text: "Let me in",
+        })
+      ).rejects.toMatchObject({ status: 404 });
+    });
+
+    it("returns 404 when the parent thread is another member's private thread", async () => {
+      // Same answer whether or not the quote exists, so the text can't be probed.
+      for (const exact of ["private answer", "text that is not there"]) {
+        await expect(
+          createAnnotationOnMessage(memberActor, privateAssistantMsgId, {
+            kind: "COMMENT",
+            anchor: { exact, prefix: "", suffix: "" },
+            text: "Peeking",
+          })
+        ).rejects.toMatchObject({ status: 404 });
+      }
+    });
+
+    it("keeps a child of a private thread private", async () => {
+      const created = await createAnnotationOnMessage(ownerActor, privateAssistantMsgId, {
+        kind: "COMMENT",
+        visibility: "WORKSPACE",
+        anchor: { exact: "private answer", prefix: "", suffix: "" },
+        text: "Note to self",
+      });
+      expect(created.visibility).toBe("PRIVATE");
+    });
+  });
+
+  describe("3. Ask now is answered", () => {
+    async function threadOf(annotationId: string) {
+      return db.annotationMessage.findMany({
+        where: { annotationId },
+        orderBy: { createdAt: "asc" },
+      });
+    }
+
+    it("answers a nested Ask created with mode 'now' without repeating the question", async () => {
+      const ask = await createAnnotationOnMessage(ownerActor, assistantMsgId, {
+        kind: "ASK",
+        mode: "now",
+        anchor: { exact: "consensus algorithm", prefix: "", suffix: "" },
+        text: "How does it compare to Paxos?",
+      });
+
+      const { stream } = await createAndStreamAnnotationReply(ownerActor, ask.id, {
+        idempotencyKey: `asknow_${ask.id}`,
+      });
+      await drain(stream);
+
+      const thread = await threadOf(ask.id);
+      expect(thread.map((m) => m.role)).toEqual(["USER", "ASSISTANT"]);
+      expect(thread[1]?.content).toContain("Paxos");
+
+      // Already answered: a second prompt-less call is refused.
+      await expect(
+        createAndStreamAnnotationReply(ownerActor, ask.id, {
+          idempotencyKey: `asknow_again_${ask.id}`,
+        })
+      ).rejects.toMatchObject({ status: 400 });
+    });
+
+    it("answers an Ask created with mode 'now' on a response version", async () => {
+      const ask = await createAnnotation(ownerActor, versionId, {
+        kind: "ASK",
+        mode: "now",
+        anchor: { exact: "Root version", prefix: "", suffix: "" },
+        text: "What is this?",
+      });
+
+      const { stream } = await createAndStreamAnnotationReply(ownerActor, ask.id, {
+        idempotencyKey: `asknow_${ask.id}`,
+      });
+      await drain(stream);
+
+      expect((await threadOf(ask.id)).map((m) => m.role)).toEqual(["USER", "ASSISTANT"]);
+    });
+
+    it("does not start an answer for a queued Ask or for someone else's private Ask", async () => {
+      const queued = await createAnnotation(ownerActor, versionId, {
+        kind: "ASK",
+        mode: "queue",
+        anchor: { exact: "Root version", prefix: "", suffix: "" },
+        text: "Later",
+      });
+      await expect(
+        createAndStreamAnnotationReply(ownerActor, queued.id, {})
+      ).rejects.toMatchObject({ status: 400 });
+
+      await expect(
+        createAndStreamAnnotationReply(memberActor, queued.id, {})
+      ).rejects.toMatchObject({ status: 404 });
     });
   });
 });

@@ -399,6 +399,13 @@ export function WorkspaceView({
         actor={actor}
         responses={displayedResponses}
         memberCount={workspace.memberCount ?? 1}
+        capabilities={workspace.capabilities}
+        onQuestionQueued={() => {
+          // Update the composer's queue badge right away.
+          queryClient.invalidateQueries({
+            queryKey: ["workspaces", workspace.id, "questions", "QUEUED"],
+          });
+        }}
         optimisticPrompt={optimisticFirstPrompt}
         onRegenerateTurn={handleRegenerateTurn}
         onRetryFailed={handleRetryFailed}

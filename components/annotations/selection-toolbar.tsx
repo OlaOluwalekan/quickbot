@@ -30,6 +30,8 @@ export interface SelectionTargetMetadata {
 }
 
 export interface SelectionToolbarProps {
+  /** Workspace the annotatable surfaces belong to (used for @mentions). */
+  workspaceId?: string;
   canAnnotate?: boolean;
   canComment?: boolean;
   canAsk?: boolean;
@@ -48,34 +50,39 @@ export interface SelectionToolbarProps {
   }) => void;
 }
 
-const DEFAULT_TRANSLATIONS: Record<string, string> = {
-  comment: "Comment",
-  ask: "Ask",
-  askNow: "Ask now",
-  addToQueue: "Add to queue",
-  addAndAnother: "Add & select another",
-  mentionHint: "Type @ to mention a member or @klecx to have Klecx remember this.",
-  klecxLabel: "Klecx",
-  klecxDescription: "AI assistant · remembers this for future answers",
-  maxDepth: "Maximum thread depth ({depth}) reached. Promote this answer to a new workspace to continue.",
-  commentPlaceholder: "Add a comment... (Enter to save, Esc to cancel)",
-  askPlaceholder: "Ask a question about this selection...",
-  commentAdded: "Comment added",
-  commentFailed: "Failed to create comment",
-  askFailed: "Failed to add question",
-  addedToQueue: "Added to your queue ({count})",
-  addedToQueueAnnouncement: "Question added to queue ({count})",
-  cancel: "Cancel",
-  save: "Save",
-  outOfCredits: "Out of credits",
-  noPermissionComment: "You do not have permission to comment",
-  noPermissionAsk: "You do not have permission to ask Klecx",
-  actionsAriaLabel: "Annotation actions",
-  commentAriaLabel: "Comment text",
-  askAriaLabel: "Ask question text",
-};
+/**
+ * Starts the answer for an Ask that was just created with `mode: "now"` and
+ * reads the stream to the end (the server stops generating if nobody reads).
+ * The thread is refreshed through the `annotation-changed` event.
+ */
+async function streamAskNowAnswer(annotationId: string, detail: object) {
+  const notify = () =>
+    window.dispatchEvent(new CustomEvent("annotation-changed", { detail }));
+  try {
+    const res = await fetch(`/api/v1/annotations/${annotationId}/reply`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        // One answer per created Ask, even if this is sent twice.
+        "x-idempotency-key": `asknow_${annotationId}`,
+      },
+      body: JSON.stringify({}),
+    });
+    if (!res.ok || !res.body) return false;
+    const reader = res.body.getReader();
+    while (!(await reader.read()).done) {
+      // drain
+    }
+    return true;
+  } catch {
+    return false;
+  } finally {
+    notify();
+  }
+}
 
 export function SelectionToolbar({
+  workspaceId: workspaceIdProp,
   canAnnotate = true,
   canComment: explicitCanComment,
   canAsk: explicitCanAsk,
@@ -86,34 +93,7 @@ export function SelectionToolbar({
   onAskNow,
   onReplyTriggered,
 }: SelectionToolbarProps) {
-  // Safe translation hook with English fallback
-  let t: (key: string, values?: Record<string, string | number>) => string;
-  try {
-    const rawT = useTranslations("Annotations.toolbar");
-    t = (key: string, values?: Record<string, string | number>) => {
-      try {
-        return rawT(key as never, values as never);
-      } catch {
-        let str = DEFAULT_TRANSLATIONS[key] ?? key;
-        if (values) {
-          Object.entries(values).forEach(([k, v]) => {
-            str = str.replace(new RegExp(`\\{${k}\\}`, "g"), String(v));
-          });
-        }
-        return str;
-      }
-    };
-  } catch {
-    t = (key: string, values?: Record<string, string | number>) => {
-      let str = DEFAULT_TRANSLATIONS[key] ?? key;
-      if (values) {
-        Object.entries(values).forEach(([k, v]) => {
-          str = str.replace(new RegExp(`\\{${k}\\}`, "g"), String(v));
-        });
-      }
-      return str;
-    };
-  }
+  const t = useTranslations("Annotations.toolbar");
 
   const effectiveCanComment = explicitCanComment ?? canAnnotate;
   const effectiveCanAsk = explicitCanAsk ?? (canAnnotate && canGenerate);
@@ -135,6 +115,10 @@ export function SelectionToolbar({
   const popoverRef = React.useRef<HTMLDivElement>(null);
   const commentInputRef = React.useRef<HTMLTextAreaElement>(null);
   const askInputRef = React.useRef<HTMLInputElement>(null);
+  const askTextRef = React.useRef("");
+  React.useEffect(() => {
+    askTextRef.current = askText;
+  }, [askText]);
 
   const setRightPanelOpen = useUiStore((s) => s.setRightPanelOpen);
   const setRightPanelFocus = useUiStore((s) => s.setRightPanelFocus);
@@ -216,14 +200,22 @@ export function SelectionToolbar({
     const handleSelectionChange = () => {
       clearTimeout(timer);
       timer = setTimeout(() => {
-        if (mode !== "idle") {
+        // While a form is open the selection normally stays put. The one
+        // exception: an empty Ask input follows a new selection, so "Add to
+        // queue" can be used on one passage after another.
+        const editing = mode !== "idle";
+        if (editing && !(mode === "ask" && askTextRef.current === "")) {
           return;
         }
+        const dismiss = () => {
+          if (editing) return;
+          setIsVisible(false);
+          setActiveRange(null);
+        };
 
         const sel = window.getSelection();
         if (!sel || sel.isCollapsed || sel.rangeCount === 0) {
-          setIsVisible(false);
-          setActiveRange(null);
+          dismiss();
           return;
         }
 
@@ -232,8 +224,7 @@ export function SelectionToolbar({
 
         // Length validation: 3 to 1000 characters
         if (text.length < 3 || text.length > 1000) {
-          setIsVisible(false);
-          setActiveRange(null);
+          dismiss();
           return;
         }
 
@@ -250,8 +241,7 @@ export function SelectionToolbar({
           startEl?.closest("[data-annot-ignore]") ||
           endEl?.closest("[data-annot-ignore]")
         ) {
-          setIsVisible(false);
-          setActiveRange(null);
+          dismiss();
           return;
         }
 
@@ -259,8 +249,7 @@ export function SelectionToolbar({
         const endRoot = endEl?.closest("[data-annot-root]") as HTMLElement | null;
 
         if (!startRoot || !endRoot || startRoot !== endRoot) {
-          setIsVisible(false);
-          setActiveRange(null);
+          dismiss();
           return;
         }
 
@@ -281,14 +270,16 @@ export function SelectionToolbar({
         const depth = depthAttr ? parseInt(depthAttr, 10) : 0;
 
         const contentSource =
-          (startRoot.getAttribute("data-content-source") as "ORIGINAL" | "EDIT") ||
+          ((startRoot.getAttribute("data-annot-content-source") ||
+            startRoot.getAttribute("data-content-source")) as "ORIGINAL" | "EDIT") ||
           "ORIGINAL";
-        const revAttr = startRoot.getAttribute("data-edit-revision");
+        const revAttr =
+          startRoot.getAttribute("data-annot-edit-revision") ||
+          startRoot.getAttribute("data-edit-revision");
         const editRevision = revAttr ? parseInt(revAttr, 10) : undefined;
         const workspaceId =
-          startRoot.getAttribute("data-workspace-id") ||
-          (startRoot.closest("[data-workspace-id]")?.getAttribute("data-workspace-id") ??
-            undefined);
+          startRoot.closest("[data-workspace-id]")?.getAttribute("data-workspace-id") ||
+          workspaceIdProp;
 
         const anchor = selectionToAnchor(startRoot, range);
 
@@ -313,7 +304,7 @@ export function SelectionToolbar({
       clearTimeout(timer);
       document.removeEventListener("selectionchange", handleSelectionChange);
     };
-  }, [canAnnotate, mode]);
+  }, [canAnnotate, mode, workspaceIdProp]);
 
   // Focus input when entering mode
   React.useEffect(() => {
@@ -347,12 +338,12 @@ export function SelectionToolbar({
       const mod = isMac ? e.metaKey : e.ctrlKey;
 
       if (mod && e.altKey) {
-        const key = e.key.toLowerCase();
-        if (key === "m" && effectiveCanComment) {
+        // `e.code`, because Alt changes `e.key` on macOS (⌥M → "µ").
+        if (e.code === "KeyM" && effectiveCanComment) {
           e.preventDefault();
           setMode("comment");
         } else if (
-          key === "a" &&
+          e.code === "KeyA" &&
           effectiveCanAsk &&
           !isOutOfCredits &&
           (!metadata || metadata.depth + 1 <= MAX_ANNOTATION_DEPTH)
@@ -452,6 +443,13 @@ export function SelectionToolbar({
         );
       }
 
+      const changedDetail = {
+        responseId: metadata.responseId,
+        versionId: metadata.versionId,
+        targetId: metadata.targetId,
+        targetType: metadata.targetType,
+      };
+
       if (askMode === "queue") {
         const nextCount = questionQueueCount + 1;
         setQuestionQueueCount(nextCount);
@@ -459,23 +457,25 @@ export function SelectionToolbar({
         setAnnouncement(t("addedToQueueAnnouncement", { count: nextCount }));
         onQuestionCreated?.(res);
 
-        // Keep popover open with cleared input for the next selection
+        // Stay open with an empty input: the next selection re-anchors the
+        // popover (see the selection listener), so several passages can be
+        // queued in a row.
         setAskText("");
         askInputRef.current?.focus();
       } else {
-        // "now": opens its column (F2.4) where answer streams
-        toast.success("Question created");
-        onAskNow?.(res);
-        onQuestionCreated?.(res);
-
-        // Notify app to open ask column
-        if (typeof window !== "undefined") {
-          window.dispatchEvent(
-            new CustomEvent("open-ask-column", {
-              detail: { annotation: res },
-            })
-          );
+        // "now": the answer starts streaming right away. F2.4 shows it in the
+        // Ask column; until then the thread opens in the right panel.
+        const created = res as { id?: string };
+        if (created?.id) {
+          void streamAskNowAnswer(created.id, changedDetail).then((ok) => {
+            if (!ok) toast.error(t("askFailed"));
+          });
         }
+        onAskNow?.(res);
+
+        window.dispatchEvent(
+          new CustomEvent("open-ask-column", { detail: { annotation: res } })
+        );
 
         if (metadata.responseId && metadata.versionId) {
           setRightPanelFocus({
@@ -486,7 +486,6 @@ export function SelectionToolbar({
           setRightPanelOpen(true);
         }
 
-        // Backward compatibility callback
         onReplyTriggered?.({
           anchor: activeAnchor,
           prompt: askText.trim(),
@@ -520,9 +519,8 @@ export function SelectionToolbar({
     ? { code: "no_permission", capability: "ask" }
     : metadata && metadata.depth + 1 > MAX_ANNOTATION_DEPTH
     ? { code: "max_depth", depth: MAX_ANNOTATION_DEPTH }
-    : isOutOfCredits
-    ? { code: "daily_cap" }
     : null;
+  const askDisabled = Boolean(askGateReason) || isOutOfCredits;
 
   const quoteSnippet = activeAnchor?.exact
     ? activeAnchor.exact.length > 60
@@ -584,12 +582,13 @@ export function SelectionToolbar({
                 size="sm"
                 data-testid="action-ask"
                 aria-label={t("ask")}
-                disabled={Boolean(askGateReason)}
+                disabled={askDisabled}
+                title={!askGateReason && isOutOfCredits ? t("outOfCredits") : undefined}
                 onClick={() => setMode("ask")}
                 className={cn(
                   "h-8 px-2.5 text-xs text-fg hover:text-accent hover:bg-surface-2 gap-1.5 font-medium",
                   isCoarsePointer && "min-h-[44px] min-w-[44px] px-3.5",
-                  Boolean(askGateReason) && "opacity-50 cursor-not-allowed"
+                  askDisabled && "opacity-50 cursor-not-allowed"
                 )}
               >
                 <HelpCircle className="h-3.5 w-3.5" />
@@ -612,6 +611,7 @@ export function SelectionToolbar({
               <button
                 type="button"
                 data-testid="comment-cancel-icon"
+                aria-label={t("cancel")}
                 onClick={() => setMode("idle")}
                 className="text-fg-muted hover:text-fg p-0.5 rounded cursor-pointer"
               >
@@ -670,6 +670,7 @@ export function SelectionToolbar({
               <button
                 type="button"
                 data-testid="ask-cancel-icon"
+                aria-label={t("cancel")}
                 onClick={() => setMode("idle")}
                 className="text-fg-muted hover:text-fg p-0.5 rounded cursor-pointer"
               >

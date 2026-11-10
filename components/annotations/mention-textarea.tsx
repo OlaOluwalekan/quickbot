@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import Logo from "@/components/logo/Logo";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
@@ -48,10 +49,10 @@ export const MentionTextarea = React.forwardRef<
     },
     forwardedRef
   ) => {
-    const internalRef = React.useRef<HTMLTextAreaElement | null>(null);
-    const textareaRef =
-      (forwardedRef as React.MutableRefObject<HTMLTextAreaElement | null>) ||
-      internalRef;
+    const t = useTranslations("Annotations.toolbar");
+    // The internal ref is always set (see the ref callback below); the
+    // forwarded one may be a function or missing.
+    const textareaRef = React.useRef<HTMLTextAreaElement | null>(null);
 
     const [isOpen, setIsOpen] = React.useState(false);
     const [query, setQuery] = React.useState("");
@@ -64,7 +65,7 @@ export const MentionTextarea = React.forwardRef<
     const detectMention = React.useCallback(
       (text: string, cursorPos: number) => {
         const textBeforeCursor = text.slice(0, cursorPos);
-        const match = /(?:^|\s)@([a-zA-Z0-9_\-\.]*)$/.exec(textBeforeCursor);
+        const match = /(?:^|[\s(])@([a-zA-Z0-9_]*)$/.exec(textBeforeCursor);
 
         if (match) {
           const atIndex = match.index + (match[0].startsWith("@") ? 0 : 1);
@@ -228,7 +229,7 @@ export const MentionTextarea = React.forwardRef<
       <div className="relative w-full">
         <textarea
           ref={(node) => {
-            internalRef.current = node;
+            textareaRef.current = node;
             if (typeof forwardedRef === "function") {
               forwardedRef(node);
             } else if (forwardedRef) {
@@ -261,17 +262,17 @@ export const MentionTextarea = React.forwardRef<
         {isOpen && (
           <div
             role="listbox"
-            aria-label="Mention options"
+            aria-label={t("mentionListLabel")}
             data-testid="mention-autocomplete-menu"
             className="border-border bg-surface absolute bottom-full left-0 z-50 mb-1 max-h-56 w-full overflow-y-auto rounded-lg border px-1 py-1 shadow-lg"
           >
             {isLoading && items.length === 0 ? (
               <div className="text-fg-muted px-3 py-2 text-xs">
-                Searching members...
+                {t("mentionSearching")}
               </div>
             ) : items.length === 0 ? (
               <div className="text-fg-muted px-3 py-2 text-xs">
-                No members found
+                {t("mentionEmpty")}
               </div>
             ) : (
               items.map((item, idx) => {
@@ -310,17 +311,14 @@ export const MentionTextarea = React.forwardRef<
                           <Logo size="small" collapsed />
                         </div>
                         <div className="flex min-w-0 flex-col">
-                          <span className="text-fg flex items-center gap-1.5 font-medium">
-                            Klecx
-                            <span className="py-0.2 bg-accent/15 text-accent rounded px-1 text-[10px] font-normal">
-                              AI
-                            </span>
+                          <span className="text-fg font-medium">
+                            {t("klecxLabel")}
                           </span>
                           <span
                             className="text-fg-muted truncate text-[11px]"
-                            title="AI assistant · remembers this for future answers"
+                            title={t("klecxDescription")}
                           >
-                            AI assistant · remembers this for future answers
+                            {t("klecxDescription")}
                           </span>
                         </div>
                       </>
@@ -364,17 +362,27 @@ export const MentionTextarea = React.forwardRef<
 
 MentionTextarea.displayName = "MentionTextarea";
 
+// Same rules as usernames (and as the server's mention parser in F2.3): the
+// `@` must start a word, so e-mail addresses are left alone.
+const MENTION_SPLIT_RE = /(?<=^|[\s(])(@[a-zA-Z][a-zA-Z0-9_]{2,29})\b/g;
+
 /**
  * Renders plain text with mention tokens converted into rich spans/chips.
- * - `@klecx` -> accent chip "Klecx noted this"
+ * - `@klecx` -> accent chip with `klecxNotedLabel` ("Klecx noted this")
  * - `@username` -> highlighted span
  */
-export function renderMentions(text: string): React.ReactNode {
+export function renderMentions(
+  text: string,
+  klecxNotedLabel: string
+): React.ReactNode {
   if (!text) return null;
 
-  const parts = text.split(/(@klecx|@[a-zA-Z0-9_\-\.]+)/gi);
+  const parts = text.split(MENTION_SPLIT_RE);
 
   return parts.map((part, index) => {
+    // split() puts captured mentions at odd indexes
+    if (index % 2 === 0) return part;
+
     if (part.toLowerCase() === "@klecx") {
       return (
         <span
@@ -382,25 +390,20 @@ export function renderMentions(text: string): React.ReactNode {
           data-mention="klecx"
           className="bg-accent/15 text-accent border-accent/25 inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[11px] font-medium select-none"
         >
-          Klecx noted this
+          {klecxNotedLabel}
         </span>
       );
     }
 
-    if (part.startsWith("@")) {
-      const username = part.slice(1);
-      return (
-        <span
-          key={index}
-          data-mention={username}
-          className="text-accent inline-flex cursor-pointer items-center font-medium hover:underline"
-        >
-          {part}
-        </span>
-      );
-    }
-
-    return part;
+    return (
+      <span
+        key={index}
+        data-mention={part.slice(1)}
+        className="text-accent font-medium"
+      >
+        {part}
+      </span>
+    );
   });
 }
 
@@ -411,5 +414,8 @@ export function RenderMentions({
   text: string;
   className?: string;
 }) {
-  return <span className={className}>{renderMentions(text)}</span>;
+  const t = useTranslations("Annotations.toolbar");
+  return (
+    <span className={className}>{renderMentions(text, t("klecxNoted"))}</span>
+  );
 }

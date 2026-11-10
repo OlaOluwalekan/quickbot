@@ -51,30 +51,7 @@ export function Gated({
   className,
   side = "top",
 }: GatedProps) {
-  let t: GateTranslator;
-  try {
-    const rawT = useTranslations("Gates");
-    t = rawT as unknown as GateTranslator;
-  } catch {
-    t = (key: string, values?: Record<string, string | number>) => {
-      switch (key) {
-        case "requires_plan":
-          return `Available on the ${values?.plan ?? "paid"} plan and above`;
-        case "member_limit":
-          return `Your plan allows up to ${values?.limit ?? 1} collaborators`;
-        case "daily_cap":
-          return "You have reached your daily limit for this feature";
-        case "no_permission":
-          return `You do not have permission to ${values?.capability ?? ""}`;
-        case "max_depth":
-          return `Maximum thread depth (${values?.depth ?? 100}) reached. Promote this answer to a new workspace to continue.`;
-        case "upgrade":
-          return "Upgrade";
-        default:
-          return key;
-      }
-    };
-  }
+  const t = useTranslations("Gates");
   const [open, setOpen] = React.useState(false);
   const closeTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 

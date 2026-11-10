@@ -174,6 +174,8 @@ describe("Fix F2.2 — Selection Popover v2 & Mention Autocomplete", () => {
 
     it("opens toolbar and targets ANNOTATION_MESSAGE when selection is inside Ask answer", async () => {
       (api as jest.Mock).mockResolvedValueOnce({ id: "annot_2", kind: "ASK" });
+      const fetchMock = jest.fn().mockResolvedValue({ ok: false, body: null });
+      global.fetch = fetchMock as unknown as typeof fetch;
       render(<SelectionToolbar />);
 
       const textNode = messageRoot.querySelector("#msg_text")!.firstChild!;
@@ -203,6 +205,14 @@ describe("Fix F2.2 — Selection Popover v2 & Mention Autocomplete", () => {
               anchor: expect.objectContaining({ exact: "Paxos guarantees safety" }),
             }),
           })
+        );
+      });
+
+      // "Ask now" starts the answer for the Ask it just created
+      await waitFor(() => {
+        expect(fetchMock).toHaveBeenCalledWith(
+          "/api/v1/annotations/annot_2/reply",
+          expect.objectContaining({ method: "POST" })
         );
       });
     });
@@ -311,7 +321,10 @@ describe("Fix F2.2 — Selection Popover v2 & Mention Autocomplete", () => {
 
   describe("3. Mention Chip Rendering", () => {
     it("renders @klecx as accent chip and @username as mention chip", () => {
-      const rendered = renderMentions("Hello @klecx and @mira please check this");
+      const rendered = renderMentions(
+        "Hello @klecx and @mira please check this (mail me@example.com)",
+        "Klecx noted this"
+      );
       const { container } = render(<div>{rendered}</div>);
 
       const klecxChip = container.querySelector("[data-mention='klecx']");
@@ -321,6 +334,9 @@ describe("Fix F2.2 — Selection Popover v2 & Mention Autocomplete", () => {
       const userChip = container.querySelector("[data-mention='mira']");
       expect(userChip).toBeInTheDocument();
       expect(userChip).toHaveTextContent("@mira");
+
+      // An e-mail address is not a mention
+      expect(container.querySelectorAll("[data-mention]")).toHaveLength(2);
     });
   });
 

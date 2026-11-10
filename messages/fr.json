@@ -1281,12 +1281,13 @@
       "cancel": "Annuler",
       "save": "Enregistrer",
       "outOfCredits": "Crédits épuisés",
-      "noPermissionComment": "Vous n'avez pas la permission de commenter",
-      "noPermissionAsk": "Vous n'avez pas la permission de demander à Klecx",
       "actionsAriaLabel": "Actions d'annotation",
       "commentAriaLabel": "Texte du commentaire",
       "askAriaLabel": "Texte de la question",
-      "quoteSnippet": "«{quote}»"
+      "mentionListLabel": "Personnes que vous pouvez mentionner",
+      "mentionSearching": "Recherche de membres…",
+      "mentionEmpty": "Aucun membre trouvé",
+      "klecxNoted": "Klecx en a pris note"
     }
   }
 }

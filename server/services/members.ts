@@ -1023,8 +1023,11 @@ export async function listMentionables(
     if (seen.has(m.userId)) continue;
     seen.add(m.userId);
 
-    const username = m.username || "";
-    const displayName = m.name || m.username || "Member";
+    // A mention is inserted as `@username`, so people who haven't picked a
+    // username yet can't be mentioned.
+    const username = m.username;
+    if (!username) continue;
+    const displayName = m.name || username;
     const uLower = username.toLowerCase();
     const dLower = displayName.toLowerCase();
 

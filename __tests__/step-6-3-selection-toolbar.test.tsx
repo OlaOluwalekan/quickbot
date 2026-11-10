@@ -275,7 +275,7 @@ describe("Step 6.3 / F2.2 — Selection popover v2 (Comment · Ask: Ask now / Ad
       });
 
       // Trigger Ctrl+Alt+M
-      fireEvent.keyDown(window, { key: "m", ctrlKey: true, altKey: true });
+      fireEvent.keyDown(window, { key: "m", code: "KeyM", ctrlKey: true, altKey: true });
 
       expect(screen.getByTestId("comment-textarea")).toBeInTheDocument();
 
@@ -431,7 +431,7 @@ describe("Step 6.3 / F2.2 — Selection popover v2 (Comment · Ask: Ask now / Ad
       });
 
       // Trigger Ctrl+Alt+A
-      fireEvent.keyDown(window, { key: "a", ctrlKey: true, altKey: true });
+      fireEvent.keyDown(window, { key: "a", code: "KeyA", ctrlKey: true, altKey: true });
 
       expect(screen.getByTestId("ask-input")).toBeInTheDocument();
     });

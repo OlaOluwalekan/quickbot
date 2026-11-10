@@ -227,6 +227,15 @@ export function RightPanel({
     }
   }, [rightPanelOpen, workspaceId, fetchAnnotations]);
 
+  // Refresh when a thread is created or answered elsewhere (e.g. "Ask now"
+  // from the selection toolbar).
+  React.useEffect(() => {
+    if (!rightPanelOpen || !workspaceId) return;
+    const refresh = () => fetchAnnotations();
+    window.addEventListener("annotation-changed", refresh);
+    return () => window.removeEventListener("annotation-changed", refresh);
+  }, [rightPanelOpen, workspaceId, fetchAnnotations]);
+
   // Filtered annotations by scope and kind
   const currentResponseId =
     propActiveResponseId || rightPanelFocus?.responseId;

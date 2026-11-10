@@ -318,6 +318,8 @@ export async function createAnnotationOnMessage(
           deletedAt: true,
           depth: true,
           rootAnnotationId: true,
+          visibility: true,
+          createdById: true,
         },
       },
     },
@@ -327,19 +329,28 @@ export async function createAnnotationOnMessage(
     throw Errors.notFound("AnnotationMessage");
   }
 
-  if (message.role !== "ASSISTANT") {
-    throw Errors.badRequest("Annotations can only be attached to assistant messages");
-  }
+  const parent = message.annotation;
+  const workspaceId = parent.workspaceId;
 
-  const workspaceId = message.annotation.workspaceId;
-
+  // Authorize before revealing anything about the message (role, text).
   await requireWorkspace(
     actor,
     workspaceId,
     annotationKindPermission(input.kind)
   );
 
-  const newDepth = message.annotation.depth + 1;
+  // A private thread is only visible to its author, so nobody else may
+  // annotate (or probe the text of) its answers.
+  const parentIsPrivate = parent.visibility === "PRIVATE";
+  if (parentIsPrivate && parent.createdById !== actor.userId) {
+    throw Errors.notFound("AnnotationMessage");
+  }
+
+  if (message.role !== "ASSISTANT") {
+    throw Errors.badRequest("Annotations can only be attached to assistant messages");
+  }
+
+  const newDepth = parent.depth + 1;
   if (newDepth > MAX_ANNOTATION_DEPTH) {
     throw Errors.badRequest("Maximum annotation depth exceeded");
   }
@@ -350,8 +361,11 @@ export async function createAnnotationOnMessage(
     );
   }
 
-  const rootAnnotationId = message.annotation.rootAnnotationId || message.annotation.id;
-  const parentAnnotationId = message.annotation.id;
+  // A child quotes its parent's answer, so it can't be more visible than it.
+  const visibility = parentIsPrivate ? "PRIVATE" : input.visibility ?? "PRIVATE";
+
+  const rootAnnotationId = parent.rootAnnotationId || parent.id;
+  const parentAnnotationId = parent.id;
 
   const created = await db.annotation.create({
     data: {
@@ -365,7 +379,7 @@ export async function createAnnotationOnMessage(
       createdById: actor.userId,
       kind: input.kind,
       questionState: input.kind === "ASK" ? (input.mode === "now" ? "NONE" : "QUEUED") : "NONE",
-      visibility: input.visibility ?? "PRIVATE",
+      visibility,
       anchorExact: input.anchor.exact,
       anchorPrefix: input.anchor.prefix ?? "",
       anchorSuffix: input.anchor.suffix ?? "",
@@ -637,17 +651,20 @@ export async function createAndStreamAnnotationReply(
   generationId: string;
   annotationId: string;
 }> {
-  const effectivePrompt = (input.prompt || input.content || "").trim();
-  if (!effectivePrompt) {
-    throw Errors.badRequest("Prompt cannot be empty");
-  }
+  let effectivePrompt = (input.prompt || input.content || "").trim();
   const idempotencyKey = input.idempotencyKey || crypto.randomUUID();
 
   let targetAnnotation: any;
   let targetVersion: any;
   let workspaceId: string;
+  // The text the highlight sits in, and the prompt that produced that text.
+  let sourceText: string;
+  let sourcePrompt: string;
 
   if (annotationIdOrNew === "new") {
+    if (!effectivePrompt) {
+      throw Errors.badRequest("Prompt cannot be empty");
+    }
     if (!input.anchor || !input.versionId) {
       throw Errors.badRequest(
         "Anchor and versionId are required to start a new reply thread"
@@ -731,6 +748,8 @@ export async function createAndStreamAnnotationReply(
         messages: { orderBy: { createdAt: "asc" } },
       },
     });
+    sourceText = targetVersion.content;
+    sourcePrompt = targetVersion.response.prompt;
   } else {
     // Existing annotation thread
     targetAnnotation = await db.annotation.findUnique({
@@ -744,15 +763,29 @@ export async function createAndStreamAnnotationReply(
             },
           },
         },
+        // Nested annotations sit on an ASSISTANT message of a parent thread.
+        targetMessage: {
+          include: {
+            annotation: {
+              select: {
+                deletedAt: true,
+                messages: {
+                  where: { role: "USER" },
+                  orderBy: { createdAt: "asc" },
+                  select: { content: true, createdAt: true },
+                },
+              },
+            },
+          },
+        },
       },
     });
 
-    if (!targetAnnotation || targetAnnotation.version.response.deletedAt !== null) {
+    if (!targetAnnotation) {
       throw Errors.notFound("Annotation");
     }
 
     workspaceId = targetAnnotation.workspaceId;
-    targetVersion = targetAnnotation.version;
 
     // Enforce workspace.ask
     await requireWorkspace(actor, workspaceId, "workspace.ask");
@@ -764,15 +797,51 @@ export async function createAndStreamAnnotationReply(
       throw Errors.notFound("Annotation");
     }
 
-    // Add user message to thread
-    await db.annotationMessage.create({
-      data: {
-        annotationId: targetAnnotation.id,
-        role: "USER",
-        content: effectivePrompt,
-        authorId: actor.userId,
-      },
-    });
+    if (targetAnnotation.kind !== "ASK") {
+      throw Errors.badRequest("Only Ask threads can be answered");
+    }
+
+    targetVersion = targetAnnotation.version;
+    const parentMessage = targetAnnotation.targetMessage;
+    if (targetVersion && targetVersion.response.deletedAt === null) {
+      sourceText = targetVersion.content;
+      sourcePrompt = targetVersion.response.prompt;
+    } else if (parentMessage && parentMessage.annotation.deletedAt === null) {
+      sourceText = parentMessage.content;
+      // The question that produced the parent answer: the last USER message
+      // written before it.
+      const asked = parentMessage.annotation.messages.filter(
+        (m: { createdAt: Date }) => m.createdAt <= parentMessage.createdAt
+      );
+      sourcePrompt = asked.length ? asked[asked.length - 1].content : "";
+    } else {
+      throw Errors.notFound("Annotation");
+    }
+
+    if (effectivePrompt) {
+      // Follow-up: add the user message to the thread
+      await db.annotationMessage.create({
+        data: {
+          annotationId: targetAnnotation.id,
+          role: "USER",
+          content: effectivePrompt,
+          authorId: actor.userId,
+        },
+      });
+    } else {
+      // "Ask now": answer the question the thread was created with. Only
+      // valid while that question is still unanswered and not queued.
+      const msgs = targetAnnotation.messages as Array<{ role: string; content: string }>;
+      const last = msgs[msgs.length - 1];
+      if (
+        targetAnnotation.questionState !== "NONE" ||
+        !last ||
+        last.role !== "USER"
+      ) {
+        throw Errors.badRequest("This thread has no unanswered question");
+      }
+      effectivePrompt = last.content;
+    }
   }
 
   // Resolve billing account = workspace owner's credit account
@@ -831,8 +900,8 @@ export async function createAndStreamAnnotationReply(
   // Construct prompt
   const fullPrompt = buildAnnotationReplyPrompt({
     exact: targetAnnotation.anchorExact,
-    versionText: targetVersion.content,
-    originalPrompt: targetVersion.response.prompt,
+    versionText: sourceText,
+    originalPrompt: sourcePrompt,
     prompt: effectivePrompt,
   });
 

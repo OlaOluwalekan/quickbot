@@ -31,6 +31,13 @@ export interface ResponseListProps {
   responses: ResponseItemData[];
   optimisticPrompt?: string | null;
   memberCount?: number;
+  /**
+   * Caller's workspace capabilities, for gating the annotation toolbar.
+   * When unknown the buttons stay enabled; the server checks either way.
+   */
+  capabilities?: string[];
+  /** Called after an Ask was added to the question queue. */
+  onQuestionQueued?: () => void;
   onRegenerateTurn?: (responseId: string) => void;
   onRetryFailed?: (prompt: string, idempotencyKey: string) => void;
   onDeleteResponse?: (responseId: string) => void;
@@ -43,6 +50,8 @@ export function ResponseList({
   responses,
   optimisticPrompt,
   memberCount = 1,
+  capabilities,
+  onQuestionQueued,
   onRegenerateTurn,
   onRetryFailed,
   onDeleteResponse,
@@ -350,7 +359,12 @@ export function ResponseList({
       </div>
 
       {/* Step 6.3 Annotation Selection Toolbar */}
-      <SelectionToolbar />
+      <SelectionToolbar
+        workspaceId={workspaceId}
+        canComment={capabilities ? capabilities.includes("workspace.comment") : undefined}
+        canAsk={capabilities ? capabilities.includes("workspace.ask") : undefined}
+        onQuestionCreated={onQuestionQueued}
+      />
 
       {/* Floating "Jump to latest" Pill */}
       {showJumpToLatest && (
