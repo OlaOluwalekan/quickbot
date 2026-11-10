@@ -1259,5 +1259,33 @@
     },
     "currentlyIn": "Currently in {name}",
     "moveSearchHint": "Showing your most recent workspaces. Search to find others."
+  },
+  "Annotations": {
+    "toolbar": {
+      "comment": "Comment",
+      "ask": "Ask",
+      "askNow": "Ask now",
+      "addToQueue": "Add to queue",
+      "mentionHint": "Type @ to mention a member or @klecx to have Klecx remember this.",
+      "klecxLabel": "Klecx",
+      "klecxDescription": "AI assistant · remembers this for future answers",
+      "commentPlaceholder": "Add a comment... (Enter to save, Esc to cancel)",
+      "askPlaceholder": "Ask a question about this selection...",
+      "commentAdded": "Comment added",
+      "commentFailed": "Failed to create comment",
+      "askFailed": "Failed to add question",
+      "addedToQueue": "Added to your queue ({count})",
+      "addedToQueueAnnouncement": "Question added to queue ({count})",
+      "cancel": "Cancel",
+      "save": "Save",
+      "outOfCredits": "Out of credits",
+      "actionsAriaLabel": "Annotation actions",
+      "commentAriaLabel": "Comment text",
+      "askAriaLabel": "Ask question text",
+      "mentionListLabel": "People you can mention",
+      "mentionSearching": "Searching members…",
+      "mentionEmpty": "No members found",
+      "klecxNoted": "Klecx noted this"
+    }
   }
 }

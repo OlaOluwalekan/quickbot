@@ -23,6 +23,8 @@ export interface WorkspaceDto {
   memberCount?: number;
   /** Caller's effective role (returned by GET /api/v1/workspaces/:id). */
   role?: "OWNER" | "ADMIN" | "EDITOR" | "COMMENTER" | "VIEWER";
+  /** Caller's capabilities on this workspace (server-computed, UI gating only). */
+  capabilities?: string[];
   createdAt: string;
   updatedAt: string;
 }

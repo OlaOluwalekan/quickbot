@@ -2,35 +2,44 @@
 
 import * as React from "react";
 import { computePosition, offset, flip, shift } from "@floating-ui/dom";
-import {
-  MessageSquare,
-  CornerDownLeft,
-  HelpCircle,
-  X,
-  Send,
-  Plus,
-} from "lucide-react";
+import { MessageSquare, HelpCircle, X, Send } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Gated } from "@/components/ui/gated";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { api } from "@/lib/api/client";
 import { useUiStore } from "@/lib/stores/ui";
 import { selectionToAnchor, type Anchor } from "@/lib/annotations";
+import { MAX_ANNOTATION_DEPTH } from "@/lib/annotations/limits";
+import { MentionTextarea } from "./mention-textarea";
 import { cn } from "@/lib/utils";
+import type { GateReason } from "@/lib/entitlements/shared";
 
-export type ToolbarMode = "idle" | "comment" | "reply" | "question";
+export type ToolbarMode = "idle" | "comment" | "ask";
+
+export interface SelectionTargetMetadata {
+  targetType: "RESPONSE_VERSION" | "ANNOTATION_MESSAGE" | "DOCUMENT_REVISION";
+  targetId: string;
+  responseId?: string;
+  versionId?: string;
+  depth: number;
+  contentSource: "ORIGINAL" | "EDIT";
+  editRevision?: number;
+  workspaceId?: string;
+}
 
 export interface SelectionToolbarProps {
+  /** Workspace the annotatable surfaces belong to (used for @mentions). */
+  workspaceId?: string;
   canAnnotate?: boolean;
+  canComment?: boolean;
+  canAsk?: boolean;
   canGenerate?: boolean;
   isOutOfCredits?: boolean;
   onCommentCreated?: (annotation: unknown) => void;
   onQuestionCreated?: (annotation: unknown) => void;
+  onAskNow?: (annotation: unknown) => void;
   onReplyTriggered?: (data: {
     anchor: Anchor;
     prompt: string;
@@ -41,43 +50,86 @@ export interface SelectionToolbarProps {
   }) => void;
 }
 
+/**
+ * Starts the answer for an Ask that was just created with `mode: "now"` and
+ * reads the stream to the end (the server stops generating if nobody reads).
+ * The thread is refreshed through the `annotation-changed` event.
+ */
+async function streamAskNowAnswer(annotationId: string, detail: object) {
+  const notify = () =>
+    window.dispatchEvent(new CustomEvent("annotation-changed", { detail }));
+  try {
+    const res = await fetch(`/api/v1/annotations/${annotationId}/reply`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        // One answer per created Ask, even if this is sent twice.
+        "x-idempotency-key": `asknow_${annotationId}`,
+      },
+      body: JSON.stringify({}),
+    });
+    if (!res.ok || !res.body) return false;
+    const reader = res.body.getReader();
+    while (!(await reader.read()).done) {
+      // drain
+    }
+    return true;
+  } catch {
+    return false;
+  } finally {
+    notify();
+  }
+}
+
 export function SelectionToolbar({
+  workspaceId: workspaceIdProp,
   canAnnotate = true,
+  canComment: explicitCanComment,
+  canAsk: explicitCanAsk,
   canGenerate = true,
   isOutOfCredits = false,
   onCommentCreated,
   onQuestionCreated,
+  onAskNow,
   onReplyTriggered,
 }: SelectionToolbarProps) {
+  const t = useTranslations("Annotations.toolbar");
+
+  const effectiveCanComment = explicitCanComment ?? canAnnotate;
+  const effectiveCanAsk = explicitCanAsk ?? (canAnnotate && canGenerate);
+
   const [isVisible, setIsVisible] = React.useState(false);
   const [mode, setMode] = React.useState<ToolbarMode>("idle");
   const [activeRange, setActiveRange] = React.useState<Range | null>(null);
   const [activeAnchor, setActiveAnchor] = React.useState<Anchor | null>(null);
-  const [metadata, setMetadata] = React.useState<{
-    responseId: string;
-    versionId: string;
-    contentSource: "ORIGINAL" | "EDIT";
-    editRevision?: number;
-  } | null>(null);
+  const [metadata, setMetadata] = React.useState<SelectionTargetMetadata | null>(null);
 
   const [commentText, setCommentText] = React.useState("");
-  const [replyText, setReplyText] = React.useState("");
-  const [questionText, setQuestionText] = React.useState("");
+  const [askText, setAskText] = React.useState("");
   const [questionQueueCount, setQuestionQueueCount] = React.useState(0);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [announcement, setAnnouncement] = React.useState("");
 
   const [isCoarsePointer, setIsCoarsePointer] = React.useState(false);
+  // Shortcut modifier and hints follow the user's OS (⌘ on Apple devices,
+  // Ctrl elsewhere). Known only in the browser, so it starts as non-Mac.
+  const [isMac, setIsMac] = React.useState(false);
+  React.useEffect(() => {
+    setIsMac(/mac|iphone|ipad|ipod/i.test(navigator.platform || navigator.userAgent));
+  }, []);
 
   const popoverRef = React.useRef<HTMLDivElement>(null);
   const commentInputRef = React.useRef<HTMLTextAreaElement>(null);
-  const replyInputRef = React.useRef<HTMLInputElement>(null);
-  const questionInputRef = React.useRef<HTMLInputElement>(null);
+  const askInputRef = React.useRef<HTMLInputElement>(null);
+  const askTextRef = React.useRef("");
+  React.useEffect(() => {
+    askTextRef.current = askText;
+  }, [askText]);
 
   const setRightPanelOpen = useUiStore((s) => s.setRightPanelOpen);
   const setRightPanelFocus = useUiStore((s) => s.setRightPanelFocus);
 
-  // Detect coarse pointer (mobile / touch)
+  // Detect coarse pointer (touch device)
   React.useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
       return;
@@ -154,15 +206,22 @@ export function SelectionToolbar({
     const handleSelectionChange = () => {
       clearTimeout(timer);
       timer = setTimeout(() => {
-        // If user is actively typing in an open inline form, do not dismiss on focus switch
-        if (mode !== "idle") {
+        // While a form is open the selection normally stays put. The one
+        // exception: an empty Ask input follows a new selection, so "Add to
+        // queue" can be used on one passage after another.
+        const editing = mode !== "idle";
+        if (editing && !(mode === "ask" && askTextRef.current === "")) {
           return;
         }
+        const dismiss = () => {
+          if (editing) return;
+          setIsVisible(false);
+          setActiveRange(null);
+        };
 
         const sel = window.getSelection();
         if (!sel || sel.isCollapsed || sel.rangeCount === 0) {
-          setIsVisible(false);
-          setActiveRange(null);
+          dismiss();
           return;
         }
 
@@ -171,8 +230,7 @@ export function SelectionToolbar({
 
         // Length validation: 3 to 1000 characters
         if (text.length < 3 || text.length > 1000) {
-          setIsVisible(false);
-          setActiveRange(null);
+          dismiss();
           return;
         }
 
@@ -185,44 +243,63 @@ export function SelectionToolbar({
             ? (range.endContainer as Element)
             : range.endContainer.parentElement;
 
-        // Skip if inside [data-annot-ignore]
         if (
           startEl?.closest("[data-annot-ignore]") ||
           endEl?.closest("[data-annot-ignore]")
         ) {
-          setIsVisible(false);
-          setActiveRange(null);
+          dismiss();
           return;
         }
 
-        // Must be inside one [data-annot-root]
         const startRoot = startEl?.closest("[data-annot-root]") as HTMLElement | null;
         const endRoot = endEl?.closest("[data-annot-root]") as HTMLElement | null;
 
         if (!startRoot || !endRoot || startRoot !== endRoot) {
-          setIsVisible(false);
-          setActiveRange(null);
+          dismiss();
           return;
         }
 
+        const targetType = (startRoot.getAttribute("data-annot-target-type") ||
+          "RESPONSE_VERSION") as SelectionTargetMetadata["targetType"];
+
+        const targetId =
+          startRoot.getAttribute("data-annot-target-id") ||
+          startRoot.getAttribute("data-version-id") ||
+          "";
+
         const responseId = startRoot.getAttribute("data-response-id") || "";
-        const versionId = startRoot.getAttribute("data-version-id") || "";
+        const versionId =
+          startRoot.getAttribute("data-version-id") ||
+          (targetType === "RESPONSE_VERSION" ? targetId : undefined);
+
+        const depthAttr = startRoot.getAttribute("data-annot-depth");
+        const depth = depthAttr ? parseInt(depthAttr, 10) : 0;
+
         const contentSource =
-          (startRoot.getAttribute("data-content-source") as
-            | "ORIGINAL"
-            | "EDIT") || "ORIGINAL";
-        const revAttr = startRoot.getAttribute("data-edit-revision");
+          ((startRoot.getAttribute("data-annot-content-source") ||
+            startRoot.getAttribute("data-content-source")) as "ORIGINAL" | "EDIT") ||
+          "ORIGINAL";
+        const revAttr =
+          startRoot.getAttribute("data-annot-edit-revision") ||
+          startRoot.getAttribute("data-edit-revision");
         const editRevision = revAttr ? parseInt(revAttr, 10) : undefined;
+        const workspaceId =
+          startRoot.closest("[data-workspace-id]")?.getAttribute("data-workspace-id") ||
+          workspaceIdProp;
 
         const anchor = selectionToAnchor(startRoot, range);
 
         setActiveRange(range);
         setActiveAnchor(anchor);
         setMetadata({
+          targetType,
+          targetId,
           responseId,
           versionId,
+          depth,
           contentSource,
           editRevision,
+          workspaceId,
         });
         setIsVisible(true);
       }, 120);
@@ -233,23 +310,20 @@ export function SelectionToolbar({
       clearTimeout(timer);
       document.removeEventListener("selectionchange", handleSelectionChange);
     };
-  }, [canAnnotate, mode]);
+  }, [canAnnotate, mode, workspaceIdProp]);
 
-  // Reset inputs when switching modes
+  // Focus input when entering mode
   React.useEffect(() => {
     if (mode === "comment") {
       setCommentText("");
       setTimeout(() => commentInputRef.current?.focus(), 50);
-    } else if (mode === "reply") {
-      setReplyText("");
-      setTimeout(() => replyInputRef.current?.focus(), 50);
-    } else if (mode === "question") {
-      setQuestionText("");
-      setTimeout(() => questionInputRef.current?.focus(), 50);
+    } else if (mode === "ask") {
+      setAskText("");
+      setTimeout(() => askInputRef.current?.focus(), 50);
     }
   }, [mode]);
 
-  // Keyboard shortcuts: Ctrl/Cmd + Alt + M (Comment), + R (Reply), + Q (Question)
+  // Keyboard shortcuts: Ctrl/Cmd + Alt + M (Comment), + A (Ask)
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!isVisible && mode === "idle") return;
@@ -264,57 +338,64 @@ export function SelectionToolbar({
         return;
       }
 
-      const isMac =
-        typeof navigator !== "undefined" &&
-        navigator.platform.toUpperCase().indexOf("MAC") >= 0;
       const mod = isMac ? e.metaKey : e.ctrlKey;
 
       if (mod && e.altKey) {
-        const key = e.key.toLowerCase();
-        if (key === "m") {
+        // `e.code`, because Alt changes `e.key` on macOS (⌥M → "µ").
+        if (e.code === "KeyM" && effectiveCanComment) {
           e.preventDefault();
           setMode("comment");
-        } else if (key === "r" && canGenerate && !isOutOfCredits) {
+        } else if (
+          e.code === "KeyA" &&
+          effectiveCanAsk &&
+          !isOutOfCredits &&
+          (!metadata || metadata.depth + 1 <= MAX_ANNOTATION_DEPTH)
+        ) {
           e.preventDefault();
-          setMode("reply");
-        } else if (key === "q") {
-          e.preventDefault();
-          setMode("question");
+          setMode("ask");
         }
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isVisible, mode, canGenerate, isOutOfCredits]);
+  }, [isVisible, mode, effectiveCanComment, effectiveCanAsk, isOutOfCredits, metadata, isMac]);
 
   // Action 1: Save comment
   const handleSaveComment = async () => {
-    if (!commentText.trim() || !activeAnchor || !metadata?.versionId) return;
+    if (!commentText.trim() || !activeAnchor || !metadata) return;
 
     try {
       setIsSubmitting(true);
-      const res = await api(
-        `/api/v1/response-versions/${metadata.versionId}/annotations`,
-        {
-          method: "POST",
-          json: {
-            kind: "COMMENT",
-            anchor: activeAnchor,
-            contentSource: metadata.contentSource,
-            editRevision: metadata.editRevision,
-            text: commentText.trim(),
-          },
-        }
-      );
+      const endpoint =
+        metadata.targetType === "ANNOTATION_MESSAGE"
+          ? `/api/v1/annotation-messages/${metadata.targetId}/annotations`
+          : `/api/v1/response-versions/${metadata.targetId || metadata.versionId}/annotations`;
 
-      toast.success("Comment added");
-      setAnnouncement("Comment added successfully");
+      const res = await api(endpoint, {
+        method: "POST",
+        json: {
+          kind: "COMMENT",
+          anchor: activeAnchor,
+          contentSource: metadata.contentSource,
+          editRevision: metadata.editRevision,
+          text: commentText.trim(),
+        },
+      });
+
+      toast.success(t("commentAdded"));
+      setAnnouncement(t("commentAdded"));
       onCommentCreated?.(res);
+
       if (typeof window !== "undefined") {
         window.dispatchEvent(
           new CustomEvent("annotation-changed", {
-            detail: { responseId: metadata.responseId, versionId: metadata.versionId },
+            detail: {
+              responseId: metadata.responseId,
+              versionId: metadata.versionId,
+              targetId: metadata.targetId,
+              targetType: metadata.targetType,
+            },
           })
         );
       }
@@ -323,89 +404,119 @@ export function SelectionToolbar({
       setMode("idle");
       window.getSelection()?.removeAllRanges();
     } catch {
-      toast.error("Failed to create comment");
+      toast.error(t("commentFailed"));
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Action 2: Trigger AI reply
-  const handleSendReply = () => {
-    if (!replyText.trim() || !activeAnchor || !metadata) return;
-
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(
-        new CustomEvent("annotation-changed", {
-          detail: { responseId: metadata.responseId, versionId: metadata.versionId },
-        })
-      );
-    }
-
-    onReplyTriggered?.({
-      anchor: activeAnchor,
-      prompt: replyText.trim(),
-      responseId: metadata.responseId,
-      versionId: metadata.versionId,
-      contentSource: metadata.contentSource,
-      editRevision: metadata.editRevision,
-    });
-
-    // Open right panel and set focus
-    setRightPanelFocus({
-      responseId: metadata.responseId,
-      versionId: metadata.versionId,
-      tab: "replies",
-    });
-    setRightPanelOpen(true);
-
-    setIsVisible(false);
-    setMode("idle");
-    window.getSelection()?.removeAllRanges();
-  };
-
-  // Action 3: Add Question to queue
-  const handleSaveQuestion = async (keepOpen = false) => {
-    if (!questionText.trim() || !activeAnchor || !metadata?.versionId) return;
+  // Action 2: Save Ask ("now" or "queue")
+  const handleSaveAsk = async (askMode: "now" | "queue") => {
+    if (!askText.trim() || !activeAnchor || !metadata) return;
 
     try {
       setIsSubmitting(true);
-      const res = await api(
-        `/api/v1/response-versions/${metadata.versionId}/annotations`,
-        {
-          method: "POST",
-          json: {
-            kind: "ASK",
-            anchor: activeAnchor,
-            contentSource: metadata.contentSource,
-            editRevision: metadata.editRevision,
-            text: questionText.trim(),
-          },
-        }
-      );
+      const endpoint =
+        metadata.targetType === "ANNOTATION_MESSAGE"
+          ? `/api/v1/annotation-messages/${metadata.targetId}/annotations`
+          : `/api/v1/response-versions/${metadata.targetId || metadata.versionId}/annotations`;
 
-      const nextCount = questionQueueCount + 1;
-      setQuestionQueueCount(nextCount);
-      toast.success(`Added to your queue (${nextCount})`);
-      setAnnouncement(`Question added to queue (${nextCount})`);
-      onQuestionCreated?.(res);
+      const res = await api(endpoint, {
+        method: "POST",
+        json: {
+          kind: "ASK",
+          mode: askMode,
+          anchor: activeAnchor,
+          contentSource: metadata.contentSource,
+          editRevision: metadata.editRevision,
+          text: askText.trim(),
+        },
+      });
+
       if (typeof window !== "undefined") {
         window.dispatchEvent(
           new CustomEvent("annotation-changed", {
-            detail: { responseId: metadata.responseId, versionId: metadata.versionId },
+            detail: {
+              responseId: metadata.responseId,
+              versionId: metadata.versionId,
+              targetId: metadata.targetId,
+              targetType: metadata.targetType,
+            },
           })
         );
       }
 
-      if (keepOpen) {
-        setQuestionText("");
-        questionInputRef.current?.focus();
+      const changedDetail = {
+        responseId: metadata.responseId,
+        versionId: metadata.versionId,
+        targetId: metadata.targetId,
+        targetType: metadata.targetType,
+      };
+
+      if (askMode === "queue") {
+        // Show the real queue size (it survives reloads and includes
+        // questions queued elsewhere). If it can't be loaded, fall back to
+        // the number added from this toolbar.
+        let nextCount = questionQueueCount + 1;
+        if (metadata.workspaceId) {
+          try {
+            const queued = await api<unknown[]>(
+              `/api/v1/workspaces/${metadata.workspaceId}/questions?state=QUEUED`
+            );
+            if (Array.isArray(queued)) nextCount = Math.max(queued.length, 1);
+          } catch {
+            // keep the local count
+          }
+        }
+        setQuestionQueueCount(nextCount);
+        toast.success(t("addedToQueue", { count: nextCount }));
+        setAnnouncement(t("addedToQueueAnnouncement", { count: nextCount }));
+        onQuestionCreated?.(res);
+
+        // Stay open with an empty input: the next selection re-anchors the
+        // popover (see the selection listener), so several passages can be
+        // queued in a row.
+        setAskText("");
+        askInputRef.current?.focus();
       } else {
+        // "now": the answer starts streaming right away. F2.4 shows it in the
+        // Ask column; until then the thread opens in the right panel.
+        const created = res as { id?: string };
+        if (created?.id) {
+          void streamAskNowAnswer(created.id, changedDetail).then((ok) => {
+            if (!ok) toast.error(t("askFailed"));
+          });
+        }
+        onAskNow?.(res);
+
+        window.dispatchEvent(
+          new CustomEvent("open-ask-column", { detail: { annotation: res } })
+        );
+
+        if (metadata.responseId && metadata.versionId) {
+          setRightPanelFocus({
+            responseId: metadata.responseId,
+            versionId: metadata.versionId,
+            tab: "replies",
+          });
+          setRightPanelOpen(true);
+        }
+
+        onReplyTriggered?.({
+          anchor: activeAnchor,
+          prompt: askText.trim(),
+          responseId: metadata.responseId || "",
+          versionId: metadata.versionId || metadata.targetId,
+          contentSource: metadata.contentSource,
+          editRevision: metadata.editRevision,
+        });
+
         setIsVisible(false);
         setMode("idle");
         window.getSelection()?.removeAllRanges();
       }
     } catch {
-      toast.error("Failed to add question to queue");
+      toast.error(t("askFailed"));
     } finally {
       setIsSubmitting(false);
     }
@@ -415,7 +526,18 @@ export function SelectionToolbar({
     return null;
   }
 
-  // Quote preview snippet (shortened)
+  // Calculate gate reasons
+  const commentGateReason: GateReason | null = !effectiveCanComment
+    ? { code: "no_permission", capability: "comment" }
+    : null;
+
+  const askGateReason: GateReason | null = !effectiveCanAsk
+    ? { code: "no_permission", capability: "ask" }
+    : metadata && metadata.depth + 1 > MAX_ANNOTATION_DEPTH
+    ? { code: "max_depth", depth: MAX_ANNOTATION_DEPTH }
+    : null;
+  const askDisabled = Boolean(askGateReason) || isOutOfCredits;
+
   const quoteSnippet = activeAnchor?.exact
     ? activeAnchor.exact.length > 60
       ? `${activeAnchor.exact.slice(0, 60)}…`
@@ -427,7 +549,7 @@ export function SelectionToolbar({
       <div
         ref={popoverRef}
         role="toolbar"
-        aria-label="Annotation actions"
+        aria-label={t("actionsAriaLabel")}
         data-testid="selection-toolbar"
         className={cn(
           "z-50 bg-surface border border-border shadow-md transition-all duration-150",
@@ -445,79 +567,53 @@ export function SelectionToolbar({
         {mode === "idle" && (
           <div className="flex items-center gap-1">
             {/* Comment */}
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              data-testid="action-comment"
-              aria-label="Add comment"
-              onClick={() => setMode("comment")}
-              className={cn(
-                "h-8 px-2.5 text-xs text-fg hover:text-accent hover:bg-surface-2 gap-1.5 font-medium",
-                isCoarsePointer && "min-h-[44px] min-w-[44px] px-3.5"
-              )}
-            >
-              <MessageSquare className="h-3.5 w-3.5" />
-              <span>Comment</span>
-              <kbd className="hidden sm:inline-block ml-1 text-[10px] text-fg-muted font-mono opacity-60">
-                ⌥⌘M
-              </kbd>
-            </Button>
+            <Gated reason={commentGateReason}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                data-testid="action-comment"
+                aria-label={t("comment")}
+                disabled={!effectiveCanComment}
+                onClick={() => setMode("comment")}
+                className={cn(
+                  "h-8 px-2.5 text-xs text-fg hover:text-accent hover:bg-surface-2 gap-1.5 font-medium",
+                  isCoarsePointer && "min-h-[44px] min-w-[44px] px-3.5",
+                  !effectiveCanComment && "opacity-50 cursor-not-allowed"
+                )}
+              >
+                <MessageSquare className="h-3.5 w-3.5" />
+                <span>{t("comment")}</span>
+                <kbd className="hidden sm:inline-block ml-1 text-[10px] text-fg-muted font-mono opacity-60">
+                  {isMac ? "⌥⌘M" : "Ctrl+Alt+M"}
+                </kbd>
+              </Button>
+            </Gated>
 
-            {/* Reply */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    data-testid="action-reply"
-                    aria-label="Reply to selection"
-                    disabled={!canGenerate || isOutOfCredits}
-                    onClick={() => setMode("reply")}
-                    className={cn(
-                      "h-8 px-2.5 text-xs text-fg hover:text-accent hover:bg-surface-2 gap-1.5 font-medium",
-                      isCoarsePointer && "min-h-[44px] min-w-[44px] px-3.5",
-                      (!canGenerate || isOutOfCredits) && "opacity-50 cursor-not-allowed"
-                    )}
-                  >
-                    <CornerDownLeft className="h-3.5 w-3.5" />
-                    <span>Reply</span>
-                    <kbd className="hidden sm:inline-block ml-1 text-[10px] text-fg-muted font-mono opacity-60">
-                      ⌥⌘R
-                    </kbd>
-                  </Button>
-                </span>
-              </TooltipTrigger>
-              {(!canGenerate || isOutOfCredits) && (
-                <TooltipContent>
-                  {!canGenerate
-                    ? "Workspace generation permission required"
-                    : "Out of credits"}
-                </TooltipContent>
-              )}
-            </Tooltip>
-
-            {/* Question */}
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              data-testid="action-question"
-              aria-label="Add question"
-              onClick={() => setMode("question")}
-              className={cn(
-                "h-8 px-2.5 text-xs text-fg hover:text-accent hover:bg-surface-2 gap-1.5 font-medium",
-                isCoarsePointer && "min-h-[44px] min-w-[44px] px-3.5"
-              )}
-            >
-              <HelpCircle className="h-3.5 w-3.5" />
-              <span>Add question</span>
-              <kbd className="hidden sm:inline-block ml-1 text-[10px] text-fg-muted font-mono opacity-60">
-                ⌥⌘Q
-              </kbd>
-            </Button>
+            {/* Ask (replaces Reply & Question) */}
+            <Gated reason={askGateReason}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                data-testid="action-ask"
+                aria-label={t("ask")}
+                disabled={askDisabled}
+                title={!askGateReason && isOutOfCredits ? t("outOfCredits") : undefined}
+                onClick={() => setMode("ask")}
+                className={cn(
+                  "h-8 px-2.5 text-xs text-fg hover:text-accent hover:bg-surface-2 gap-1.5 font-medium",
+                  isCoarsePointer && "min-h-[44px] min-w-[44px] px-3.5",
+                  askDisabled && "opacity-50 cursor-not-allowed"
+                )}
+              >
+                <HelpCircle className="h-3.5 w-3.5" />
+                <span>{t("ask")}</span>
+                <kbd className="hidden sm:inline-block ml-1 text-[10px] text-fg-muted font-mono opacity-60">
+                  {isMac ? "⌥⌘A" : "Ctrl+Alt+A"}
+                </kbd>
+              </Button>
+            </Gated>
           </div>
         )}
 
@@ -531,30 +627,26 @@ export function SelectionToolbar({
               <button
                 type="button"
                 data-testid="comment-cancel-icon"
+                aria-label={t("cancel")}
                 onClick={() => setMode("idle")}
                 className="text-fg-muted hover:text-fg p-0.5 rounded cursor-pointer"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
             </div>
-            <textarea
+            <MentionTextarea
               ref={commentInputRef}
               data-testid="comment-textarea"
-              aria-label="Comment text"
-              placeholder="Add a comment... (Enter to save, Esc to cancel)"
+              aria-label={t("commentAriaLabel")}
+              placeholder={t("commentPlaceholder")}
               value={commentText}
-              onChange={(e) => setCommentText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSaveComment();
-                } else if (e.key === "Escape") {
-                  e.preventDefault();
-                  setMode("idle");
-                }
-              }}
+              onChange={setCommentText}
+              workspaceId={metadata?.workspaceId}
+              canAskOrGenerate={effectiveCanAsk}
+              onEnterSubmit={handleSaveComment}
+              onCancel={() => setMode("idle")}
+              hint={t("mentionHint")}
               rows={2}
-              className="w-full text-xs p-2 rounded-lg border border-border bg-surface-2 text-fg placeholder:text-fg-muted focus:outline-none focus:ring-1 focus:ring-accent resize-none"
             />
             <div className="flex items-center justify-end gap-1.5 pt-1">
               <Button
@@ -565,7 +657,7 @@ export function SelectionToolbar({
                 onClick={() => setMode("idle")}
                 className={cn("h-7 px-2.5 text-xs", isCoarsePointer && "min-h-[44px]")}
               >
-                Cancel
+                {t("cancel")}
               </Button>
               <Button
                 type="button"
@@ -578,76 +670,23 @@ export function SelectionToolbar({
                   isCoarsePointer && "min-h-[44px]"
                 )}
               >
-                Save
+                {t("save")}
               </Button>
             </div>
           </div>
         )}
 
-        {/* 3. Inline Reply Form */}
-        {mode === "reply" && (
-          <div className="w-72 sm:w-84 p-2 space-y-2">
-            <div className="flex items-center justify-between text-xs text-fg-muted pb-1 border-b border-border/60">
-              <span className="font-medium truncate max-w-[200px]">
-                Reply to «{quoteSnippet}»
-              </span>
-              <button
-                type="button"
-                data-testid="reply-cancel-icon"
-                onClick={() => setMode("idle")}
-                className="text-fg-muted hover:text-fg p-0.5 rounded cursor-pointer"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <input
-                ref={replyInputRef}
-                type="text"
-                data-testid="reply-input"
-                aria-label="Reply prompt"
-                placeholder="Ask AI about this passage..."
-                value={replyText}
-                onChange={(e) => setReplyText(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleSendReply();
-                  } else if (e.key === "Escape") {
-                    e.preventDefault();
-                    setMode("idle");
-                  }
-                }}
-                className="flex-1 text-xs px-2.5 py-1.5 rounded-lg border border-border bg-surface-2 text-fg placeholder:text-fg-muted focus:outline-none focus:ring-1 focus:ring-accent"
-              />
-              <Button
-                type="button"
-                size="sm"
-                data-testid="reply-send"
-                disabled={!replyText.trim()}
-                onClick={handleSendReply}
-                className={cn(
-                  "h-8 px-2.5 bg-accent text-accent-fg hover:bg-accent-hover font-medium",
-                  isCoarsePointer && "min-h-[44px] min-w-[44px]"
-                )}
-              >
-                <Send className="h-3.5 w-3.5" />
-                <span className="sr-only sm:not-sr-only sm:ml-1 text-xs">Send</span>
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* 4. Inline Question Form */}
-        {mode === "question" && (
+        {/* 3. Inline Ask Form */}
+        {mode === "ask" && (
           <div className="w-72 sm:w-88 p-2 space-y-2">
             <div className="flex items-center justify-between text-xs text-fg-muted pb-1 border-b border-border/60">
               <span className="font-medium truncate max-w-[200px]">
-                Question on «{quoteSnippet}»
+                «{quoteSnippet}»
               </span>
               <button
                 type="button"
-                data-testid="question-cancel-icon"
+                data-testid="ask-cancel-icon"
+                aria-label={t("cancel")}
                 onClick={() => setMode("idle")}
                 className="text-fg-muted hover:text-fg p-0.5 rounded cursor-pointer"
               >
@@ -655,17 +694,21 @@ export function SelectionToolbar({
               </button>
             </div>
             <input
-              ref={questionInputRef}
+              ref={askInputRef}
               type="text"
-              data-testid="question-input"
-              aria-label="Question text"
-              placeholder="Ask a question to queue..."
-              value={questionText}
-              onChange={(e) => setQuestionText(e.target.value)}
+              data-testid="ask-input"
+              aria-label={t("askAriaLabel")}
+              placeholder={t("askPlaceholder")}
+              maxLength={500}
+              value={askText}
+              onChange={(e) => setAskText(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter") {
+                if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
                   e.preventDefault();
-                  handleSaveQuestion(false);
+                  handleSaveAsk("queue");
+                } else if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleSaveAsk("now");
                 } else if (e.key === "Escape") {
                   e.preventDefault();
                   setMode("idle");
@@ -678,39 +721,45 @@ export function SelectionToolbar({
                 type="button"
                 variant="ghost"
                 size="sm"
-                data-testid="question-cancel"
+                data-testid="ask-cancel"
                 onClick={() => setMode("idle")}
                 className={cn("h-7 px-2 text-xs", isCoarsePointer && "min-h-[44px]")}
               >
-                Cancel
+                {t("cancel")}
               </Button>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                data-testid="question-add-another"
-                disabled={!questionText.trim() || isSubmitting}
-                onClick={() => handleSaveQuestion(true)}
+                data-testid="action-add-to-queue"
+                disabled={!askText.trim() || isSubmitting}
+                onClick={() => handleSaveAsk("queue")}
                 className={cn(
-                  "h-7 px-2 text-xs border-border text-fg hover:bg-surface-2",
+                  "h-7 px-2.5 text-xs border-border text-fg hover:bg-surface-2",
                   isCoarsePointer && "min-h-[44px]"
                 )}
               >
-                <Plus className="h-3 w-3 mr-1" />
-                Add & another
+                {t("addToQueue")}
+                <kbd className="hidden sm:inline-block ml-1 text-[9px] text-fg-muted font-mono opacity-60">
+                  {isMac ? "⌘↵" : "Ctrl+↵"}
+                </kbd>
               </Button>
               <Button
                 type="button"
                 size="sm"
-                data-testid="question-add"
-                disabled={!questionText.trim() || isSubmitting}
-                onClick={() => handleSaveQuestion(false)}
+                data-testid="action-ask-now"
+                disabled={!askText.trim() || isSubmitting}
+                onClick={() => handleSaveAsk("now")}
                 className={cn(
                   "h-7 px-3 text-xs bg-accent text-accent-fg hover:bg-accent-hover font-medium",
                   isCoarsePointer && "min-h-[44px]"
                 )}
               >
-                Add
+                <Send className="h-3 w-3 mr-1" />
+                {t("askNow")}
+                <kbd className="hidden sm:inline-block ml-1 text-[9px] text-accent-fg/80 font-mono">
+                  ↵
+                </kbd>
               </Button>
             </div>
           </div>

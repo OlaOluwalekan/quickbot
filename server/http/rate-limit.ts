@@ -21,6 +21,7 @@ export const policies = {
 
   "link:fetch":   { n: 10,  window: "1 m"  as Duration }, // key: userId
   "annotation:create": { n: 60, window: "1 m"  as Duration }, // key: userId
+  "mentionables:list": { n: 60, window: "1 m"  as Duration }, // key: userId
   "username:check":    { n: 20, window: "1 m"  as Duration }, // key: userId or ip
 } as const;
 

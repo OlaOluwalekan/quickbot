@@ -34,6 +34,8 @@ const SingleWorkspacePage = async ({
         createdBy: workspace.ownerId,
         projectId: workspace.projectId,
         memberCount: workspace.memberCount,
+        role: workspace.role,
+        capabilities: workspace.capabilities,
         createdAt: workspace.createdAt.toISOString(),
         updatedAt: workspace.updatedAt.toISOString(),
       }}

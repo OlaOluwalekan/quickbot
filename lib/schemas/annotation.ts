@@ -4,6 +4,7 @@ export const createAnnotationSchema = z
   .object({
     kind: z.enum(["COMMENT", "ASK"]),
     mode: z.enum(["now", "queue"]).optional(),
+    visibility: z.enum(["PRIVATE", "WORKSPACE"]).optional(),
     anchor: z.object({
       exact: z
         .string()
@@ -45,7 +46,7 @@ export const createAnnotationSchema = z
     }
   });
 
-export type CreateAnnotationInput = z.infer<typeof createAnnotationSchema>;
+export type CreateAnnotationInput = z.input<typeof createAnnotationSchema>;
 
 export const listAnnotationsQuerySchema = z.object({
   versionId: z.string().optional(),

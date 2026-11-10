@@ -971,3 +971,83 @@ export async function updateProjectMemberCap(
 
   return { success: true, member: updated };
 }
+
+export type MentionableItem =
+  | { kind: "klecx" }
+  | {
+      kind: "user";
+      id: string;
+      username: string;
+      displayName: string;
+      avatarUrl: string | null;
+    };
+
+export async function listMentionables(
+  actor: Actor,
+  workspaceId: string,
+  query: string = ""
+): Promise<MentionableItem[]> {
+  const { capabilities } = await requireWorkspace(
+    actor,
+    workspaceId,
+    "workspace.read"
+  );
+
+  const canAskOrGenerate =
+    capabilities.has("workspace.ask") || capabilities.has("workspace.generate");
+
+  const q = query.trim().toLowerCase();
+
+  const data = await listWorkspaceMembers(actor, workspaceId);
+
+  const results: MentionableItem[] = [];
+
+  // Klecx is always first when the query matches "k…" or is empty,
+  // hidden when the caller can neither ask nor generate
+  if (canAskOrGenerate) {
+    if (!q || "klecx".startsWith(q)) {
+      results.push({ kind: "klecx" });
+    }
+  }
+
+  const seen = new Set<string>();
+  const candidates: Array<{
+    id: string;
+    username: string;
+    displayName: string;
+    avatarUrl: string | null;
+  }> = [];
+
+  for (const m of [data.owner, ...data.members]) {
+    if (m.suspendedAt) continue;
+    if (seen.has(m.userId)) continue;
+    seen.add(m.userId);
+
+    // A mention is inserted as `@username`, so people who haven't picked a
+    // username yet can't be mentioned.
+    const username = m.username;
+    if (!username) continue;
+    const displayName = m.name || username;
+    const uLower = username.toLowerCase();
+    const dLower = displayName.toLowerCase();
+
+    if (!q || uLower.includes(q) || dLower.includes(q)) {
+      candidates.push({
+        id: m.userId,
+        username,
+        displayName,
+        avatarUrl: m.avatarUrl || m.image || null,
+      });
+    }
+  }
+
+  for (const c of candidates) {
+    if (results.length >= 20) break;
+    results.push({
+      kind: "user",
+      ...c,
+    });
+  }
+
+  return results;
+}

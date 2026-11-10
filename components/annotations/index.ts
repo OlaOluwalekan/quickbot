@@ -9,3 +9,10 @@ export {
   AnnotationLayer,
   type AnnotationLayerProps,
 } from "./annotation-layer";
+export {
+  MentionTextarea,
+  type MentionTextareaProps,
+  type MentionItem,
+  RenderMentions,
+  renderMentions,
+} from "./mention-textarea";
