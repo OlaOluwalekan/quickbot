@@ -14,3 +14,4 @@ export * from "./support-ack";
 export * from "./support-notification";
 export * from "./ownership-transfer";
 export * from "./member-limits";
+export * from "./mentioned";

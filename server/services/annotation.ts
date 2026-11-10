@@ -4,6 +4,8 @@ import { db } from "@/server/db/client";
 import { Errors } from "@/server/http/errors";
 import { requireWorkspace } from "@/server/authz/access";
 import { logActivity } from "./activity";
+import { resolveMentions, syncMentionsAndNotes, archiveNoteForAnnotation } from "./mentions";
+import { loadActiveNotes } from "@/server/ai/notes";
 import { resolveBilledAccount, reserveForWorkspaceGeneration } from "./billing-owner";
 import type { Actor } from "@/server/auth/session";
 import type {
@@ -241,6 +243,21 @@ export async function createAnnotation(
     );
   }
 
+  let initialVisibility = input.visibility ?? "PRIVATE";
+  if (input.kind === "COMMENT") {
+    const mentions = await resolveMentions(version.response.workspaceId, input.text);
+    if (mentions.klecx) {
+      const access = await requireWorkspace(actor, version.response.workspaceId, "workspace.read");
+      const canAskOrGenerate = access.capabilities.has("workspace.ask") || access.capabilities.has("workspace.generate");
+      if (!canAskOrGenerate) {
+        throw Errors.forbidden("klecx_note_forbidden", "klecx_note_forbidden");
+      }
+    }
+    if (mentions.klecx || mentions.userIds.length > 0) {
+      initialVisibility = "WORKSPACE";
+    }
+  }
+
   const created = await db.annotation.create({
     data: {
       workspaceId: version.response.workspaceId,
@@ -254,7 +271,7 @@ export async function createAnnotation(
       createdById: actor.userId,
       kind: input.kind,
       questionState: input.kind === "ASK" ? (input.mode === "now" ? "NONE" : "QUEUED") : "NONE",
-      visibility: input.visibility ?? "PRIVATE",
+      visibility: initialVisibility,
       anchorExact: input.anchor.exact,
       anchorPrefix: input.anchor.prefix ?? "",
       anchorSuffix: input.anchor.suffix ?? "",
@@ -284,6 +301,23 @@ export async function createAnnotation(
       },
     },
   });
+
+  if (input.kind === "COMMENT") {
+    const userMsg = created.messages[0];
+    if (userMsg) {
+      const syncResult = await syncMentionsAndNotes({
+        workspaceId: version.response.workspaceId,
+        annotationId: created.id,
+        messageId: userMsg.id,
+        text: input.text,
+        anchorExact: created.anchorExact,
+        actor,
+        currentVisibility: created.visibility,
+        isNewMessage: true,
+      });
+      created.visibility = syncResult.visibility;
+    }
+  }
 
   await logActivity(db, {
     workspaceId: version.response.workspaceId,
@@ -361,6 +395,20 @@ export async function createAnnotationOnMessage(
     );
   }
 
+  if (input.kind === "COMMENT") {
+    const mentions = await resolveMentions(workspaceId, input.text);
+    if (mentions.klecx) {
+      const access = await requireWorkspace(actor, workspaceId, "workspace.read");
+      const canAskOrGenerate = access.capabilities.has("workspace.ask") || access.capabilities.has("workspace.generate");
+      if (!canAskOrGenerate) {
+        throw Errors.forbidden("klecx_note_forbidden", "klecx_note_forbidden");
+      }
+    }
+    if ((mentions.klecx || mentions.userIds.length > 0) && !parentIsPrivate) {
+      input.visibility = "WORKSPACE";
+    }
+  }
+
   // A child quotes its parent's answer, so it can't be more visible than it.
   const visibility = parentIsPrivate ? "PRIVATE" : input.visibility ?? "PRIVATE";
 
@@ -409,6 +457,23 @@ export async function createAnnotationOnMessage(
       },
     },
   });
+
+  if (input.kind === "COMMENT") {
+    const userMsg = created.messages[0];
+    if (userMsg) {
+      const syncResult = await syncMentionsAndNotes({
+        workspaceId,
+        annotationId: created.id,
+        messageId: userMsg.id,
+        text: input.text,
+        anchorExact: created.anchorExact,
+        actor,
+        currentVisibility: created.visibility,
+        isNewMessage: true,
+      });
+      created.visibility = syncResult.visibility;
+    }
+  }
 
   await logActivity(db, {
     workspaceId,
@@ -511,10 +576,34 @@ export async function updateAnnotation(
       annot.messages.find((m) => m.authorId === annot.createdById) ??
       annot.messages[0];
     if (targetMsg) {
+      if (annot.kind === "COMMENT") {
+        const mentions = await resolveMentions(annot.workspaceId, input.text);
+        if (mentions.klecx) {
+          const canAskOrGenerate = access.capabilities.has("workspace.ask") || access.capabilities.has("workspace.generate");
+          if (!canAskOrGenerate) {
+            throw Errors.forbidden("klecx_note_forbidden", "klecx_note_forbidden");
+          }
+        }
+      }
+
       await db.annotationMessage.update({
         where: { id: targetMsg.id },
         data: { content: input.text },
       });
+
+      if (annot.kind === "COMMENT") {
+        const syncResult = await syncMentionsAndNotes({
+          workspaceId: annot.workspaceId,
+          annotationId: annot.id,
+          messageId: targetMsg.id,
+          text: input.text,
+          anchorExact: annot.anchorExact,
+          actor,
+          currentVisibility: annot.visibility,
+          isNewMessage: false,
+        });
+        annot.visibility = syncResult.visibility;
+      }
     }
   }
 
@@ -526,6 +615,9 @@ export async function updateAnnotation(
 
   if (input.resolved !== undefined) {
     updateData.resolvedAt = input.resolved ? new Date() : null;
+    if (input.resolved) {
+      await archiveNoteForAnnotation(annot.id);
+    }
   }
 
   if (input.visibility !== undefined) {
@@ -593,6 +685,8 @@ export async function deleteAnnotation(actor: Actor, annotationId: string) {
     data: { deletedAt: new Date() },
   });
 
+  await archiveNoteForAnnotation(annot.id);
+
   return { success: true };
 }
 
@@ -618,7 +712,18 @@ export async function createAnnotationMessage(
     throw Errors.notFound("Annotation");
   }
 
-  return db.annotationMessage.create({
+  if (annot.kind === "COMMENT") {
+    const mentions = await resolveMentions(annot.workspaceId, content);
+    if (mentions.klecx) {
+      const access = await requireWorkspace(actor, annot.workspaceId, "workspace.read");
+      const canAskOrGenerate = access.capabilities.has("workspace.ask") || access.capabilities.has("workspace.generate");
+      if (!canAskOrGenerate) {
+        throw Errors.forbidden("klecx_note_forbidden", "klecx_note_forbidden");
+      }
+    }
+  }
+
+  const createdMsg = await db.annotationMessage.create({
     data: {
       annotationId: annot.id,
       role: "USER",
@@ -631,6 +736,21 @@ export async function createAnnotationMessage(
       },
     },
   });
+
+  if (annot.kind === "COMMENT") {
+    await syncMentionsAndNotes({
+      workspaceId: annot.workspaceId,
+      annotationId: annot.id,
+      messageId: createdMsg.id,
+      text: content,
+      anchorExact: annot.anchorExact,
+      actor,
+      currentVisibility: annot.visibility,
+      isNewMessage: true,
+    });
+  }
+
+  return createdMsg;
 }
 
 /**
@@ -937,9 +1057,12 @@ export async function createAndStreamAnnotationReply(
           encoder.encode(formatSSEEvent("status", { stage: "writing" }))
         );
 
+        const notesPrompt = await loadActiveNotes(workspaceId);
+
         const aiStream = streamAi(
           {
             modelKey,
+            system: notesPrompt ?? undefined,
             messages: [
               {
                 role: "user",

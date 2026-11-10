@@ -33,6 +33,7 @@ import LocaleSwitcher from "@/components/layout/locale-switcher";
 import type { SidebarProjectItem, SidebarWorkspaceItem } from "./types";
 import { ShareAndPeopleDialog } from "@/components/workspace/ShareAndPeopleDialog";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { NotesPopover } from "@/components/workspace/notes-popover";
 
 export interface TopbarProps {
   activeWorkspace: SidebarWorkspaceItem | null;
@@ -261,6 +262,13 @@ export function Topbar({
         >
           <PanelRight className="h-4 w-4" strokeWidth={1.5} />
         </Button>
+
+        {activeWorkspace && (
+          <NotesPopover
+            workspaceId={activeWorkspace.id}
+            currentUserId={currentUserId}
+          />
+        )}
 
         {currentUserId && <NotificationBell />}
 

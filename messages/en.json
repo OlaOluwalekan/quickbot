@@ -347,6 +347,14 @@
       "body": "Your full access to \"{resourceName}\" has been restored. You can comment, ask and generate again.",
       "button": "Open",
       "disclaimer": "You received this because your access changed."
+    },
+    "mentioned": {
+      "subject": "{authorName} mentioned you on Klecx",
+      "heading": "You were mentioned in a comment",
+      "greeting": "Hello,",
+      "body": "{authorName} mentioned you: {excerpt}",
+      "button": "View Comment",
+      "disclaimer": "You received this email because someone mentioned you in a workspace comment."
     }
   },
   "AppShell": {
@@ -1287,5 +1295,24 @@
       "mentionEmpty": "No members found",
       "klecxNoted": "Klecx noted this"
     }
+  },
+  "Notifications": {
+    "types": {
+      "MENTIONED": "When someone mentions you in a comment"
+    }
+  },
+  "Notes": {
+    "title": "Klecx notes",
+    "button": "Klecx notes ({count})",
+    "empty": "No notes recorded yet. Type @klecx in any comment to teach Klecx for future answers.",
+    "warningBudget": "The oldest notes are no longer sent to Klecx",
+    "viewInContext": "View in context",
+    "archive": "Archive",
+    "restore": "Restore",
+    "delete": "Delete",
+    "archived": "Archived",
+    "active": "Active",
+    "all": "All",
+    "chip": "Klecx will remember this"
   }
 }

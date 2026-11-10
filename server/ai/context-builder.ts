@@ -2,6 +2,7 @@ import "server-only";
 import { db } from "@/server/db/client";
 import { getModel } from "./registry";
 import { buildSystemPrompt } from "./prompts/system";
+import { loadActiveNotes } from "./notes";
 import type { Msg, Part } from "./types";
 
 export type BuildContextArgs = {
@@ -132,7 +133,9 @@ export function assembleContextMessages(args: {
  */
 export async function buildContext(args: BuildContextArgs): Promise<BuildContextResult> {
   const model = getModel(args.modelKey);
-  const systemPrompt = buildSystemPrompt(args.language);
+  const baseSystem = buildSystemPrompt(args.language);
+  const notesText = await loadActiveNotes(args.workspaceId);
+  const systemPrompt = notesText ? `${baseSystem}\n\n${notesText}` : baseSystem;
   const systemTokens = estimateTokens(systemPrompt);
 
   // 1) Load responses in (sortAt, id) order for this workspace

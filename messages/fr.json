@@ -347,6 +347,14 @@
       "body": "Votre accès complet à « {resourceName} » a été rétabli. Vous pouvez de nouveau commenter, poser des questions et générer.",
       "button": "Ouvrir",
       "disclaimer": "Vous recevez ce message car votre accès a changé."
+    },
+    "mentioned": {
+      "subject": "{authorName} vous a mentionné sur Klecx",
+      "heading": "Vous avez été mentionné dans un commentaire",
+      "greeting": "Bonjour,",
+      "body": "{authorName} vous a mentionné : {excerpt}",
+      "button": "Voir le commentaire",
+      "disclaimer": "Vous recevez cet e-mail car quelqu'un vous a mentionné dans un commentaire d'espace de travail."
     }
   },
   "AppShell": {
@@ -1287,5 +1295,24 @@
       "mentionEmpty": "Aucun membre trouvé",
       "klecxNoted": "Klecx en a pris note"
     }
+  },
+  "Notifications": {
+    "types": {
+      "MENTIONED": "Quand quelqu'un vous mentionne dans un commentaire"
+    }
+  },
+  "Notes": {
+    "title": "Notes Klecx",
+    "button": "Notes Klecx ({count})",
+    "empty": "Aucune note enregistrée pour le moment. Tapez @klecx dans un commentaire pour orienter les futures réponses de Klecx.",
+    "warningBudget": "Les notes les plus anciennes ne sont plus envoyées à Klecx",
+    "viewInContext": "Voir dans le contexte",
+    "archive": "Archiver",
+    "restore": "Restaurer",
+    "delete": "Supprimer",
+    "archived": "Archivé",
+    "active": "Actif",
+    "all": "Tout",
+    "chip": "Klecx s'en souviendra"
   }
 }

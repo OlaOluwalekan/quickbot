@@ -19,6 +19,7 @@ export const NOTIFICATION_TYPES = [
   "MEMBER_LIMIT_EXCEEDED",
   "MEMBER_SUSPENDED",
   "MEMBER_RESTORED",
+  "MENTIONED",
 ] as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
@@ -56,6 +57,7 @@ export const updateNotificationPrefsSchema = z
     MEMBER_LIMIT_EXCEEDED: notificationChannelPrefSchema.optional(),
     MEMBER_SUSPENDED: notificationChannelPrefSchema.optional(),
     MEMBER_RESTORED: notificationChannelPrefSchema.optional(),
+    MENTIONED: notificationChannelPrefSchema.optional(),
   })
   .strict();
 

@@ -32,6 +32,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Markdown } from "@/components/markdown";
+import { RenderMentions } from "@/components/annotations/mention-textarea";
 import { useUiStore } from "@/lib/stores/ui";
 import { cn } from "@/lib/utils";
 import { isQueuedAsk } from "@/lib/annotations/anchor";

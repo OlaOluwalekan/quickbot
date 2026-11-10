@@ -49,6 +49,11 @@ export interface CreditsLowData {
   upgradeUrl: string;
 }
 
+export interface PaymentFailedData {
+  reason?: string;
+  retryUrl: string;
+}
+
 export interface SupportAckData {
   ticketId: string;
   topic: string;
@@ -63,11 +68,6 @@ export interface SupportNotificationData {
   message: string;
   diagnostics?: string;
   userId?: string;
-}
-
-export interface PaymentFailedData {
-  reason?: string;
-  retryUrl: string;
 }
 
 export interface OwnershipTransferRequestedData {
@@ -101,6 +101,13 @@ export interface MemberRestoredData {
   actionUrl?: string;
 }
 
+export interface MentionedData {
+  authorName: string;
+  quote?: string;
+  excerpt: string;
+  actionUrl?: string;
+}
+
 export interface EmailTemplateMap {
   "verify-email": VerifyEmailData;
   "reset-password": ResetPasswordData;
@@ -117,6 +124,7 @@ export interface EmailTemplateMap {
   "member-limit-exceeded": MemberLimitExceededData;
   "member-suspended": MemberSuspendedData;
   "member-restored": MemberRestoredData;
+  mentioned: MentionedData;
 }
 
 export type EmailTemplateName = keyof EmailTemplateMap;

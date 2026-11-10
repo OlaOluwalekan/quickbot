@@ -21,6 +21,7 @@ import { getEntitlements } from "@/server/billing/entitlements";
 import { streamAi, type AiProvider } from "@/server/ai";
 import { getCustomProvider } from "@/server/services/generation";
 import { estimateTokens } from "@/server/ai/context-builder";
+import { loadActiveNotes } from "@/server/ai/notes";
 import {
   buildQuestionBatchPrompt,
   questionBatchResponseSchema,
@@ -275,9 +276,12 @@ export async function runQuestionBatch(
           encoder.encode(formatSSEEvent("status", { stage: "answering" }))
         );
 
+        const notesPrompt = await loadActiveNotes(workspaceId);
+
         const aiStream = streamAi(
           {
             modelKey,
+            system: notesPrompt ?? undefined,
             messages: [
               {
                 role: "user",
