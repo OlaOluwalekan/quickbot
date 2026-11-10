@@ -8,6 +8,43 @@ import { SelectionToolbar } from "@/components/annotations/selection-toolbar";
 import { api } from "@/lib/api/client";
 import { useUiStore } from "@/lib/stores/ui";
 
+const MESSAGES: Record<string, string> = {
+  actionsAriaLabel: "Annotation actions",
+  comment: "Comment",
+  ask: "Ask",
+  askNow: "Ask now",
+  addToQueue: "Add to queue",
+  addAndAnother: "Add & select another",
+  mentionHint: "Type @ to mention a member or @klecx to have Klecx remember this.",
+  klecxLabel: "Klecx",
+  klecxDescription: "AI assistant · remembers this for future answers",
+  maxDepth: "Maximum thread depth ({depth}) reached. Promote this answer to a new workspace to continue.",
+  commentPlaceholder: "Add a comment... (Enter to save, Esc to cancel)",
+  askPlaceholder: "Ask a question about this selection...",
+  commentAdded: "Comment added",
+  commentFailed: "Failed to create comment",
+  askFailed: "Failed to add question",
+  addedToQueue: "Added to your queue ({count})",
+  addedToQueueAnnouncement: "Question added to queue ({count})",
+  cancel: "Cancel",
+  save: "Save",
+  outOfCredits: "Out of credits",
+  noPermissionComment: "You do not have permission to comment",
+  noPermissionAsk: "You do not have permission to ask Klecx",
+};
+
+jest.mock("next-intl", () => ({
+  useTranslations: () => (key: string, values?: Record<string, string | number>) => {
+    let str = MESSAGES[key] || key;
+    if (values) {
+      Object.entries(values).forEach(([k, v]) => {
+        str = str.replace(new RegExp(`\\{${k}\\}`, "g"), String(v));
+      });
+    }
+    return str;
+  },
+}));
+
 jest.mock("../lib/api/client", () => ({
   api: jest.fn(),
 }));
@@ -20,7 +57,7 @@ jest.mock("sonner", () => ({
   },
 }));
 
-describe("Step 6.3 — Selection popover (Comment · Reply · Add question)", () => {
+describe("Step 6.3 / F2.2 — Selection popover v2 (Comment · Ask: Ask now / Add to queue)", () => {
   let annotRoot: HTMLDivElement;
   let outsideDiv: HTMLDivElement;
   let ignoredDiv: HTMLDivElement;
@@ -63,6 +100,8 @@ describe("Step 6.3 — Selection popover (Comment · Reply · Add question)", ()
     // Response body marked with data-annot-root
     annotRoot = document.createElement("div");
     annotRoot.setAttribute("data-annot-root", "true");
+    annotRoot.setAttribute("data-annot-target-type", "RESPONSE_VERSION");
+    annotRoot.setAttribute("data-annot-target-id", "ver_456");
     annotRoot.setAttribute("data-response-id", "resp_123");
     annotRoot.setAttribute("data-version-id", "ver_456");
     annotRoot.setAttribute("data-content-source", "ORIGINAL");
@@ -115,8 +154,7 @@ describe("Step 6.3 — Selection popover (Comment · Reply · Add question)", ()
       });
 
       expect(screen.getByTestId("action-comment")).toBeInTheDocument();
-      expect(screen.getByTestId("action-reply")).toBeInTheDocument();
-      expect(screen.getByTestId("action-question")).toBeInTheDocument();
+      expect(screen.getByTestId("action-ask")).toBeInTheDocument();
       expect(screen.getByRole("toolbar", { name: "Annotation actions" })).toBeInTheDocument();
     });
 
@@ -150,7 +188,6 @@ describe("Step 6.3 — Selection popover (Comment · Reply · Add question)", ()
       render(<SelectionToolbar />);
 
       const p1Text = annotRoot.querySelector("#p1")!.firstChild!;
-      // Select "Tw" (length 2)
       mockSelection(p1Text, 0, 2);
 
       await act(async () => {
@@ -249,70 +286,81 @@ describe("Step 6.3 — Selection popover (Comment · Reply · Add question)", ()
     });
   });
 
-  describe("3. Reply Flow (Click & Hotkey Ctrl/Cmd+Alt+R)", () => {
-    it("disables Reply button when canGenerate is false", async () => {
-      render(<SelectionToolbar canGenerate={false} />);
+  describe("3. Ask Flow: Ask Now (primary) and Add to Queue (secondary)", () => {
+    it("disables Ask button when canAsk is false", async () => {
+      render(<SelectionToolbar canAsk={false} />);
 
       const p1Text = annotRoot.querySelector("#p1")!.firstChild!;
       mockSelection(p1Text, 0, 16);
 
       await waitFor(() => {
-        expect(screen.getByTestId("action-reply")).toBeInTheDocument();
+        expect(screen.getByTestId("action-ask")).toBeInTheDocument();
       });
 
-      expect(screen.getByTestId("action-reply")).toBeDisabled();
+      expect(screen.getByTestId("action-ask")).toBeDisabled();
     });
 
-    it("disables Reply button when isOutOfCredits is true", async () => {
+    it("disables Ask button when isOutOfCredits is true", async () => {
       render(<SelectionToolbar isOutOfCredits={true} />);
 
       const p1Text = annotRoot.querySelector("#p1")!.firstChild!;
       mockSelection(p1Text, 0, 16);
 
       await waitFor(() => {
-        expect(screen.getByTestId("action-reply")).toBeInTheDocument();
+        expect(screen.getByTestId("action-ask")).toBeInTheDocument();
       });
 
-      expect(screen.getByTestId("action-reply")).toBeDisabled();
+      expect(screen.getByTestId("action-ask")).toBeDisabled();
     });
 
-    it("opens inline reply form and opens right panel on send", async () => {
-      const onReplyTriggered = jest.fn();
-      render(<SelectionToolbar onReplyTriggered={onReplyTriggered} />);
+    it("submits Ask now on Enter, creates ASK with mode='now', and opens panel/column", async () => {
+      (api as jest.Mock).mockResolvedValueOnce({
+        id: "annot_ask_now",
+        kind: "ASK",
+      });
+
+      const onAskNow = jest.fn();
+      render(<SelectionToolbar onAskNow={onAskNow} />);
 
       const p1Text = annotRoot.querySelector("#p1")!.firstChild!;
       mockSelection(p1Text, 0, 16);
 
       await waitFor(() => {
-        expect(screen.getByTestId("action-reply")).toBeInTheDocument();
+        expect(screen.getByTestId("action-ask")).toBeInTheDocument();
       });
 
-      // Click Reply
-      fireEvent.click(screen.getByTestId("action-reply"));
+      fireEvent.click(screen.getByTestId("action-ask"));
+      expect(screen.getByTestId("ask-input")).toBeInTheDocument();
+      expect(screen.getByTestId("action-ask-now")).toBeInTheDocument();
 
-      expect(screen.getByTestId("reply-input")).toBeInTheDocument();
-      expect(screen.getByTestId("reply-send")).toBeInTheDocument();
-
-      // Enter reply prompt
-      fireEvent.change(screen.getByTestId("reply-input"), {
+      // Enter ask question
+      fireEvent.change(screen.getByTestId("ask-input"), {
         target: { value: "How does 2PC handle coordinator crash?" },
       });
 
-      // Click Send
-      fireEvent.click(screen.getByTestId("reply-send"));
+      // Click Ask Now
+      fireEvent.click(screen.getByTestId("action-ask-now"));
 
-      expect(onReplyTriggered).toHaveBeenCalledWith(
-        expect.objectContaining({
-          prompt: "How does 2PC handle coordinator crash?",
-          responseId: "resp_123",
-          versionId: "ver_456",
-          anchor: expect.objectContaining({
-            exact: "Two-phase commit",
-          }),
-        })
-      );
+      await waitFor(() => {
+        expect(api).toHaveBeenCalledWith(
+          "/api/v1/response-versions/ver_456/annotations",
+          expect.objectContaining({
+            method: "POST",
+            json: expect.objectContaining({
+              kind: "ASK",
+              mode: "now",
+              text: "How does 2PC handle coordinator crash?",
+              anchor: expect.objectContaining({
+                exact: "Two-phase commit",
+              }),
+            }),
+          })
+        );
+      });
 
-      // Verify right panel was opened and focused
+      expect(onAskNow).toHaveBeenCalled();
+
+      // Verify right panel focus was updated
       const uiState = useUiStore.getState();
       expect(uiState.rightPanelOpen).toBe(true);
       expect(uiState.rightPanelFocus).toEqual(
@@ -323,12 +371,10 @@ describe("Step 6.3 — Selection popover (Comment · Reply · Add question)", ()
         })
       );
     });
-  });
 
-  describe("4. Question Flow (Click, Hotkey, & Add & another)", () => {
-    it("submits question and closes toolbar when clicking Add", async () => {
-      (api as jest.Mock).mockResolvedValueOnce({
-        id: "annot_q1",
+    it("submits 'Add to queue' on click or Ctrl+Enter, keeps popover open for next selection", async () => {
+      (api as jest.Mock).mockResolvedValue({
+        id: "annot_ask_queue",
         kind: "ASK",
       });
 
@@ -339,17 +385,19 @@ describe("Step 6.3 — Selection popover (Comment · Reply · Add question)", ()
       mockSelection(p1Text, 0, 16);
 
       await waitFor(() => {
-        expect(screen.getByTestId("action-question")).toBeInTheDocument();
+        expect(screen.getByTestId("action-ask")).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByTestId("action-question"));
-      expect(screen.getByTestId("question-input")).toBeInTheDocument();
+      // Open Ask form
+      fireEvent.click(screen.getByTestId("action-ask"));
 
-      fireEvent.change(screen.getByTestId("question-input"), {
+      // Enter question
+      fireEvent.change(screen.getByTestId("ask-input"), {
         target: { value: "Why is 2PC a blocking protocol?" },
       });
 
-      fireEvent.click(screen.getByTestId("question-add"));
+      // Click Add to queue
+      fireEvent.click(screen.getByTestId("action-add-to-queue"));
 
       await waitFor(() => {
         expect(api).toHaveBeenCalledWith(
@@ -358,6 +406,7 @@ describe("Step 6.3 — Selection popover (Comment · Reply · Add question)", ()
             method: "POST",
             json: expect.objectContaining({
               kind: "ASK",
+              mode: "queue",
               text: "Why is 2PC a blocking protocol?",
             }),
           })
@@ -365,45 +414,30 @@ describe("Step 6.3 — Selection popover (Comment · Reply · Add question)", ()
       });
 
       expect(onQuestionCreated).toHaveBeenCalled();
+
+      // Popover remains open with cleared input for the next selection
+      expect(screen.getByTestId("ask-input")).toBeInTheDocument();
+      expect((screen.getByTestId("ask-input") as HTMLInputElement).value).toBe("");
     });
 
-    it("submits question and keeps form open for another when clicking 'Add & another'", async () => {
-      (api as jest.Mock).mockResolvedValue({
-        id: "annot_q2",
-        kind: "ASK",
-      });
-
+    it("triggers ask mode with hotkey Ctrl+Alt+A", async () => {
       render(<SelectionToolbar />);
 
       const p1Text = annotRoot.querySelector("#p1")!.firstChild!;
       mockSelection(p1Text, 0, 16);
 
       await waitFor(() => {
-        expect(screen.getByTestId("action-question")).toBeInTheDocument();
+        expect(screen.getByTestId("selection-toolbar")).toBeInTheDocument();
       });
 
-      // Open Question form
-      fireEvent.click(screen.getByTestId("action-question"));
+      // Trigger Ctrl+Alt+A
+      fireEvent.keyDown(window, { key: "a", ctrlKey: true, altKey: true });
 
-      // Enter first question
-      fireEvent.change(screen.getByTestId("question-input"), {
-        target: { value: "Question 1" },
-      });
-
-      // Click "Add & another"
-      fireEvent.click(screen.getByTestId("question-add-another"));
-
-      await waitFor(() => {
-        expect(api).toHaveBeenCalledTimes(1);
-      });
-
-      // Popover remains open with cleared input for the next question
-      expect(screen.getByTestId("question-input")).toBeInTheDocument();
-      expect((screen.getByTestId("question-input") as HTMLInputElement).value).toBe("");
+      expect(screen.getByTestId("ask-input")).toBeInTheDocument();
     });
   });
 
-  describe("5. Accessibility & Screen Reader Live Region", () => {
+  describe("4. Accessibility & Screen Reader Live Region", () => {
     it("provides polite live region and correct toolbar accessibility attributes", async () => {
       render(<SelectionToolbar />);
 

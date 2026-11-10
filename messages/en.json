@@ -1259,5 +1259,34 @@
     },
     "currentlyIn": "Currently in {name}",
     "moveSearchHint": "Showing your most recent workspaces. Search to find others."
+  },
+  "Annotations": {
+    "toolbar": {
+      "comment": "Comment",
+      "ask": "Ask",
+      "askNow": "Ask now",
+      "addToQueue": "Add to queue",
+      "addAndAnother": "Add & select another",
+      "mentionHint": "Type @ to mention a member or @klecx to have Klecx remember this.",
+      "klecxLabel": "Klecx",
+      "klecxDescription": "AI assistant · remembers this for future answers",
+      "maxDepth": "Maximum thread depth ({depth}) reached. Promote this answer to a new workspace to continue.",
+      "commentPlaceholder": "Add a comment... (Enter to save, Esc to cancel)",
+      "askPlaceholder": "Ask a question about this selection...",
+      "commentAdded": "Comment added",
+      "commentFailed": "Failed to create comment",
+      "askFailed": "Failed to add question",
+      "addedToQueue": "Added to your queue ({count})",
+      "addedToQueueAnnouncement": "Question added to queue ({count})",
+      "cancel": "Cancel",
+      "save": "Save",
+      "outOfCredits": "Out of credits",
+      "noPermissionComment": "You do not have permission to comment",
+      "noPermissionAsk": "You do not have permission to ask Klecx",
+      "actionsAriaLabel": "Annotation actions",
+      "commentAriaLabel": "Comment text",
+      "askAriaLabel": "Ask question text",
+      "quoteSnippet": "«{quote}»"
+    }
   }
 }

@@ -29,6 +29,7 @@ import {
   buildAnnotationReplyPrompt,
   ANNOTATION_PROMPT_VERSION,
 } from "@/server/ai/prompts/annotation";
+import { MAX_ANNOTATION_DEPTH } from "@/lib/annotations/limits";
 import { estimateTokens } from "@/server/ai/context-builder";
 
 let customAnnotationProviderForTesting: AiProvider | null = null;
@@ -245,12 +246,15 @@ export async function createAnnotation(
       workspaceId: version.response.workspaceId,
       responseId: version.response.id,
       versionId: version.id,
+      targetType: "RESPONSE_VERSION",
+      depth: 0,
+      authorType: "USER",
       contentSource: input.contentSource ?? "ORIGINAL",
       editRevision: input.editRevision ?? null,
       createdById: actor.userId,
       kind: input.kind,
       questionState: input.kind === "ASK" ? (input.mode === "now" ? "NONE" : "QUEUED") : "NONE",
-      visibility: "PRIVATE",
+      visibility: input.visibility ?? "PRIVATE",
       anchorExact: input.anchor.exact,
       anchorPrefix: input.anchor.prefix ?? "",
       anchorSuffix: input.anchor.suffix ?? "",
@@ -287,7 +291,118 @@ export async function createAnnotation(
     action: "annotation.created",
     targetType: "annotation",
     targetId: created.id,
-    meta: { kind: created.kind },
+    meta: { kind: created.kind, depth: 0 },
+  });
+
+  return created;
+}
+
+/**
+ * Creates a new annotation and its initial USER message on an ASSISTANT annotation message.
+ * Requires workspace.comment (COMMENT) or workspace.ask (ASK).
+ * Validates that anchor.exact is a true substring of the message text,
+ * and ensures that depth does not exceed MAX_ANNOTATION_DEPTH.
+ */
+export async function createAnnotationOnMessage(
+  actor: Actor,
+  messageId: string,
+  input: CreateAnnotationInput
+) {
+  const message = await db.annotationMessage.findUnique({
+    where: { id: messageId },
+    include: {
+      annotation: {
+        select: {
+          id: true,
+          workspaceId: true,
+          deletedAt: true,
+          depth: true,
+          rootAnnotationId: true,
+        },
+      },
+    },
+  });
+
+  if (!message || message.annotation.deletedAt !== null) {
+    throw Errors.notFound("AnnotationMessage");
+  }
+
+  if (message.role !== "ASSISTANT") {
+    throw Errors.badRequest("Annotations can only be attached to assistant messages");
+  }
+
+  const workspaceId = message.annotation.workspaceId;
+
+  await requireWorkspace(
+    actor,
+    workspaceId,
+    annotationKindPermission(input.kind)
+  );
+
+  const newDepth = message.annotation.depth + 1;
+  if (newDepth > MAX_ANNOTATION_DEPTH) {
+    throw Errors.badRequest("Maximum annotation depth exceeded");
+  }
+
+  if (!message.content.includes(input.anchor.exact)) {
+    throw Errors.badRequest(
+      "Selected text is not a substring of the message content"
+    );
+  }
+
+  const rootAnnotationId = message.annotation.rootAnnotationId || message.annotation.id;
+  const parentAnnotationId = message.annotation.id;
+
+  const created = await db.annotation.create({
+    data: {
+      workspaceId,
+      targetType: "ANNOTATION_MESSAGE",
+      targetMessageId: message.id,
+      parentAnnotationId,
+      rootAnnotationId,
+      depth: newDepth,
+      authorType: "USER",
+      createdById: actor.userId,
+      kind: input.kind,
+      questionState: input.kind === "ASK" ? (input.mode === "now" ? "NONE" : "QUEUED") : "NONE",
+      visibility: input.visibility ?? "PRIVATE",
+      anchorExact: input.anchor.exact,
+      anchorPrefix: input.anchor.prefix ?? "",
+      anchorSuffix: input.anchor.suffix ?? "",
+      anchorStart: input.anchor.start ?? null,
+      anchorEnd: input.anchor.end ?? null,
+      messages: {
+        create: [
+          {
+            role: "USER",
+            content: input.text,
+            authorId: actor.userId,
+          },
+        ],
+      },
+    },
+    include: {
+      messages: {
+        orderBy: { createdAt: "asc" },
+        include: {
+          author: {
+            select: { id: true, name: true, email: true, image: true },
+          },
+        },
+      },
+      createdBy: {
+        select: { id: true, name: true, email: true, image: true },
+      },
+    },
+  });
+
+  await logActivity(db, {
+    workspaceId,
+    actorId: actor.userId,
+    action: "annotation.created",
+    targetType: "annotation",
+    targetId: created.id,
+    meta: { kind: created.kind, depth: newDepth },
   });
 
   return created;

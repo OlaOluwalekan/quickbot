@@ -750,6 +750,9 @@ export function ResponseCard({
               <div
                 className="leading-relaxed select-text"
                 data-annot-root="true"
+                data-annot-target-type="RESPONSE_VERSION"
+                data-annot-target-id={activeVer?.id || response.activeVersionId || undefined}
+                data-annot-depth="0"
                 data-response-id={response.id}
                 data-version-id={activeVer?.id || response.activeVersionId || undefined}
                 data-content-source={viewMode === "original" ? "ORIGINAL" : (hasEdits ? "EDIT" : "ORIGINAL")}

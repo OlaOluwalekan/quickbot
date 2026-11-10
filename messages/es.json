@@ -1259,5 +1259,34 @@
     },
     "currentlyIn": "Ahora en {name}",
     "moveSearchHint": "Se muestran tus espacios de trabajo más recientes. Busca para encontrar otros."
+  },
+  "Annotations": {
+    "toolbar": {
+      "comment": "Comentar",
+      "ask": "Preguntar",
+      "askNow": "Preguntar ahora",
+      "addToQueue": "Añadir a la cola",
+      "addAndAnother": "Añadir y seleccionar otro",
+      "mentionHint": "Escribe @ para mencionar a un miembro o @klecx para que Klecx lo recuerde.",
+      "klecxLabel": "Klecx",
+      "klecxDescription": "Asistente de IA · recuerda esto para futuras respuestas",
+      "maxDepth": "Profundidad máxima alcanzada ({depth}). Promueva esta respuesta para continuar.",
+      "commentPlaceholder": "Añade un comentario... (Enter para guardar, Esc para cancelar)",
+      "askPlaceholder": "Haz una pregunta sobre esta selección...",
+      "commentAdded": "Comentario añadido",
+      "commentFailed": "Error al crear el comentario",
+      "askFailed": "Error al añadir la pregunta",
+      "addedToQueue": "Añadido a tu cola ({count})",
+      "addedToQueueAnnouncement": "Pregunta añadida a la cola ({count})",
+      "cancel": "Cancelar",
+      "save": "Guardar",
+      "outOfCredits": "Sin créditos",
+      "noPermissionComment": "No tienes permiso para comentar",
+      "noPermissionAsk": "No tienes permiso para preguntar a Klecx",
+      "actionsAriaLabel": "Acciones de anotación",
+      "commentAriaLabel": "Texto del comentario",
+      "askAriaLabel": "Texto de la pregunta",
+      "quoteSnippet": "«{quote}»"
+    }
   }
 }

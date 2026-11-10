@@ -50,6 +50,7 @@ import {
 } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
+import { cn } from "@/lib/utils";
 
 const ROLE_RANK: Record<string, number> = {
   VIEWER: 1,
@@ -1404,7 +1405,7 @@ export function ShareAndPeopleDialog({
                       </div>
 
                       {!isMemberOwner && m.role !== "ADMIN" && (
-                        <div className="pt-2 border-t border-border/40 flex items-center justify-between gap-3 text-xs">
+                        <div className="pt-2.5 border-t border-border/50 flex items-center justify-between gap-3 text-xs">
                           {(() => {
                             // The server resolves role defaults, toggles,
                             // suspension and project inheritance.
@@ -1414,100 +1415,131 @@ export function ShareAndPeopleDialog({
                             const effectiveAsk = Boolean(m.effectiveCanAsk);
 
                             return (
-                              <div className="flex items-center gap-5 sm:gap-6 flex-wrap">
-                                  {isOwner && graceInfo?.inGrace && (
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <label className="flex items-center gap-2 cursor-pointer select-none">
-                                          <Switch
-                                            size="sm"
-                                            checked={Boolean(m.keepActive)}
-                                            aria-label={tLimits("keepActive")}
-                                            onCheckedChange={(val) => handleToggleKeepActive(m.userId, val)}
-                                          />
-                                          <span className="text-xs text-fg-muted font-medium whitespace-nowrap">
-                                            {tLimits("keepActive")}
-                                          </span>
-                                        </label>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        {tLimits("keepActiveHint")}
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  )}
-                                <div className="flex items-center gap-2">
-                                  {isCommentInherited ? (
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <div className="flex items-center gap-2 cursor-not-allowed opacity-75 select-none">
-                                          <Switch size="sm" checked={true} disabled />
-                                          <span className="text-xs text-muted font-medium flex items-center gap-1 whitespace-nowrap">
-                                            {tMembers("capabilities.comment")}
-                                            <Lock className="h-3 w-3 text-muted" />
-                                          </span>
-                                        </div>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        {tMembers("capabilities.inheritedLocked")}
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  ) : (
-                                    <label className="flex items-center gap-2 cursor-pointer select-none">
-                                      <Switch
-                                        size="sm"
-                                        checked={effectiveComment}
-                                        disabled={!canEditThisMember}
-                                        onCheckedChange={(val) =>
-                                          handleToggleCapability(m.userId, "canComment", val)
-                                        }
-                                      />
-                                      <span className="text-xs text-fg-muted font-medium whitespace-nowrap">
-                                        {tMembers("capabilities.comment")}
-                                      </span>
-                                    </label>
-                                  )}
-                                </div>
+                              <div className="flex items-center gap-2.5 flex-wrap">
+                                {isOwner && graceInfo?.inGrace && (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <label
+                                        className={cn(
+                                          "inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all select-none cursor-pointer",
+                                          Boolean(m.keepActive)
+                                            ? "border-accent/40 bg-accent-soft text-fg hover:border-accent/60"
+                                            : "border-border/60 bg-surface-2/50 text-fg-muted hover:bg-surface-2 hover:text-fg"
+                                        )}
+                                      >
+                                        <Switch
+                                          size="sm"
+                                          checked={Boolean(m.keepActive)}
+                                          aria-label={tLimits("keepActive")}
+                                          onCheckedChange={(val) => handleToggleKeepActive(m.userId, val)}
+                                        />
+                                        <span className="whitespace-nowrap">
+                                          {tLimits("keepActive")}
+                                        </span>
+                                      </label>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      {tLimits("keepActiveHint")}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                )}
 
-                                <div className="flex items-center gap-2">
-                                  {isAskInherited ? (
+                                {isCommentInherited ? (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <div className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-border/40 bg-surface-2/20 text-xs text-muted cursor-not-allowed opacity-75 select-none">
+                                        <Switch size="sm" checked={true} disabled />
+                                        <span className="font-medium whitespace-nowrap flex items-center gap-1.5">
+                                          {tMembers("capabilities.comment")}
+                                          <Lock className="h-3 w-3 text-muted" />
+                                        </span>
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      {tMembers("capabilities.inheritedLocked")}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                ) : (
+                                  <label
+                                    className={cn(
+                                      "inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all select-none",
+                                      !canEditThisMember
+                                        ? "opacity-60 cursor-not-allowed border-border/40 bg-surface-2/30 text-muted"
+                                        : effectiveComment
+                                        ? "border-accent/40 bg-accent-soft text-fg cursor-pointer hover:border-accent/60"
+                                        : "border-border/60 bg-surface-2/50 text-fg-muted cursor-pointer hover:bg-surface-2 hover:text-fg"
+                                    )}
+                                  >
+                                    <Switch
+                                      size="sm"
+                                      checked={effectiveComment}
+                                      disabled={!canEditThisMember}
+                                      onCheckedChange={(val) =>
+                                        handleToggleCapability(m.userId, "canComment", val)
+                                      }
+                                    />
+                                    <span className="whitespace-nowrap">
+                                      {tMembers("capabilities.comment")}
+                                    </span>
+                                  </label>
+                                )}
+
+                                {isAskInherited ? (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <div className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-border/40 bg-surface-2/20 text-xs text-muted cursor-not-allowed opacity-75 select-none">
+                                        <Switch size="sm" checked={true} disabled />
+                                        <span className="font-medium whitespace-nowrap flex items-center gap-1.5">
+                                          {tMembers("capabilities.ask")}
+                                          <Lock className="h-3 w-3 text-muted" />
+                                        </span>
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      {tMembers("capabilities.inheritedLocked")}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                ) : (
+                                  <div
+                                    className={cn(
+                                      "inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all select-none",
+                                      !canEditThisMember
+                                        ? "opacity-60 cursor-not-allowed border-border/40 bg-surface-2/30 text-muted"
+                                        : effectiveAsk
+                                        ? "border-accent/40 bg-accent-soft text-fg hover:border-accent/60"
+                                        : "border-border/60 bg-surface-2/50 text-fg-muted hover:bg-surface-2 hover:text-fg"
+                                    )}
+                                  >
+                                    <Switch
+                                      size="sm"
+                                      id={`ask-switch-${m.userId}`}
+                                      checked={effectiveAsk}
+                                      disabled={!canEditThisMember}
+                                      onCheckedChange={(val) =>
+                                        handleToggleCapability(m.userId, "canAsk", val)
+                                      }
+                                    />
+                                    <label
+                                      htmlFor={`ask-switch-${m.userId}`}
+                                      className="whitespace-nowrap cursor-pointer select-none"
+                                    >
+                                      {tMembers("capabilities.ask")}
+                                    </label>
                                     <Tooltip>
                                       <TooltipTrigger asChild>
-                                        <div className="flex items-center gap-2 cursor-not-allowed opacity-75 select-none">
-                                          <Switch size="sm" checked={true} disabled />
-                                          <span className="text-xs text-muted font-medium flex items-center gap-1 whitespace-nowrap">
-                                            {tMembers("capabilities.ask")}
-                                            <Lock className="h-3 w-3 text-muted" />
-                                          </span>
-                                        </div>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        {tMembers("capabilities.inheritedLocked")}
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  ) : (
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <label className="flex items-center gap-2 cursor-pointer select-none">
-                                          <Switch
-                                            size="sm"
-                                            checked={effectiveAsk}
-                                            disabled={!canEditThisMember}
-                                            onCheckedChange={(val) =>
-                                              handleToggleCapability(m.userId, "canAsk", val)
-                                            }
-                                          />
-                                          <span className="text-xs text-fg-muted font-medium flex items-center gap-1 whitespace-nowrap">
-                                            {tMembers("capabilities.ask")}
-                                            <HelpCircle className="h-3 w-3 text-muted/70 hover:text-fg-muted" />
-                                          </span>
-                                        </label>
+                                        <span
+                                          className="inline-flex items-center justify-center p-0.5 -mr-0.5 rounded text-muted hover:text-fg cursor-help"
+                                          aria-label={tMembers("capabilities.askHint")}
+                                        >
+                                          <HelpCircle className="h-3.5 w-3.5" />
+                                        </span>
                                       </TooltipTrigger>
                                       <TooltipContent>
                                         {tMembers("capabilities.askHint")}
                                       </TooltipContent>
                                     </Tooltip>
-                                  )}
-                                </div>
+                                  </div>
+                                )}
                               </div>
                             );
                           })()}

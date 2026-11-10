@@ -1259,5 +1259,34 @@
     },
     "currentlyIn": "Actuellement dans {name}",
     "moveSearchHint": "Vos espaces de travail les plus récents sont affichés. Recherchez pour en trouver d'autres."
+  },
+  "Annotations": {
+    "toolbar": {
+      "comment": "Commenter",
+      "ask": "Demander",
+      "askNow": "Demander maintenant",
+      "addToQueue": "Ajouter à la file",
+      "addAndAnother": "Ajouter et sélectionner un autre",
+      "mentionHint": "Tapez @ pour mentionner un membre ou @klecx pour que Klecx s'en souvienne.",
+      "klecxLabel": "Klecx",
+      "klecxDescription": "Assistant IA · retient ceci pour les réponses futures",
+      "maxDepth": "Profondeur maximale ({depth}) atteinte. Promouvez cette réponse pour continuer.",
+      "commentPlaceholder": "Ajouter un commentaire... (Entrée pour enregistrer, Échap pour annuler)",
+      "askPlaceholder": "Posez une question sur cette sélection...",
+      "commentAdded": "Commentaire ajouté",
+      "commentFailed": "Échec de l'ajout du commentaire",
+      "askFailed": "Échec de l'ajout de la question",
+      "addedToQueue": "Ajouté à votre file ({count})",
+      "addedToQueueAnnouncement": "Question ajoutée à la file ({count})",
+      "cancel": "Annuler",
+      "save": "Enregistrer",
+      "outOfCredits": "Crédits épuisés",
+      "noPermissionComment": "Vous n'avez pas la permission de commenter",
+      "noPermissionAsk": "Vous n'avez pas la permission de demander à Klecx",
+      "actionsAriaLabel": "Actions d'annotation",
+      "commentAriaLabel": "Texte du commentaire",
+      "askAriaLabel": "Texte de la question",
+      "quoteSnippet": "«{quote}»"
+    }
   }
 }

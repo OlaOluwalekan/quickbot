@@ -1,0 +1,1 @@
+export const MAX_ANNOTATION_DEPTH = 100;
