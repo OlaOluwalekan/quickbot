@@ -16,7 +16,7 @@ import {
   PopoverContent,
   PopoverAnchor,
 } from "@/components/ui/popover";
-import { useUiStore } from "@/lib/stores/ui";
+import { useThreadStackStore } from "@/lib/stores/thread-stack";
 import { anchorToRange, isQueuedAsk } from "@/lib/annotations/anchor";
 import {
   applyCustomHighlights,
@@ -144,9 +144,6 @@ export function AnnotationLayer({
   const rafIdRef = React.useRef<number | null>(null);
   const isOverPopoverRef = React.useRef(false);
 
-  // Store actions
-  const setRightPanelOpen = useUiStore((s) => s.setRightPanelOpen);
-  const setRightPanelFocus = useUiStore((s) => s.setRightPanelFocus);
 
   // 1. Fetch annotations if not provided via props
   const fetchAnnotations = React.useCallback(async () => {
@@ -434,32 +431,20 @@ export function AnnotationLayer({
     };
   }, []);
 
-  // 4. Action: "View more" opens right panel focused on that annotation
+  // 4. Action: "View" opens the annotation's column, right after the column
+  // this text is in (0 = main conversation).
   const handleViewMore = (annot: AnnotationItem) => {
-    const tabMap: Record<string, "comments" | "replies" | "questions"> = {
-      COMMENT: "comments",
-      REPLY: "replies",
-      QUESTION: "questions",
-    };
-    setRightPanelFocus({
-      annotationId: annot.id,
-      responseId: annot.responseId,
-      versionId: annot.versionId,
-      tab: tabMap[displayKind(annot)] || "comments",
-    });
-    setRightPanelOpen(true);
+    const columnAttr = rootRef.current
+      ?.closest("[data-thread-column-index]")
+      ?.getAttribute("data-thread-column-index");
+    useThreadStackStore
+      .getState()
+      .open(
+        { kind: "annotation", id: annot.id },
+        { fromIndex: columnAttr ? parseInt(columnAttr, 10) || 0 : 0 }
+      );
     setActivePreview(null);
     clearHoverHighlight();
-
-    if (typeof window !== "undefined") {
-      try {
-        const url = new URL(window.location.href);
-        url.searchParams.set("annotation", annot.id);
-        window.history.pushState(null, "", url.toString());
-      } catch {
-        // Ignore URL state errors
-      }
-    }
   };
 
   // 5. Gutter dot click / keyboard activator

@@ -13,6 +13,7 @@ import { queryKeys } from "@/lib/api/hooks/query-keys";
 import { Composer } from "@/components/workspace/composer";
 import { ResponseList } from "@/components/response/response-list";
 import { ThreadStackLayout } from "@/components/threads/thread-stack-layout";
+import { SelectionToolbar } from "@/components/annotations/selection-toolbar";
 import type { ResponseItemData } from "@/components/response/response-card";
 import type { Actor } from "@/server/auth/session";
 import type { WorkspaceDto } from "@/lib/api/hooks/workspaces";
@@ -392,10 +393,26 @@ export function WorkspaceView({
     [startStreamTurn]
   );
 
+  // Update the composer's queue badge right away.
+  const handleQuestionQueued = () => {
+    queryClient.invalidateQueries({
+      queryKey: ["workspaces", workspace.id, "questions", "QUEUED"],
+    });
+  };
+  const canComment = workspace.capabilities
+    ? workspace.capabilities.includes("workspace.comment")
+    : undefined;
+  const canAsk = workspace.capabilities
+    ? workspace.capabilities.includes("workspace.ask")
+    : undefined;
+
   return (
+    <>
     <ThreadStackLayout
       workspaceId={workspace.id}
       currentUserId={actor.userId}
+      canComment={canComment}
+      canAsk={canAsk}
       className="flex-1 h-full w-full"
     >
       <div className="flex-1 flex flex-col h-full w-full overflow-hidden bg-bg">
@@ -406,12 +423,8 @@ export function WorkspaceView({
           responses={displayedResponses}
           memberCount={workspace.memberCount ?? 1}
           capabilities={workspace.capabilities}
-          onQuestionQueued={() => {
-            // Update the composer's queue badge right away.
-            queryClient.invalidateQueries({
-              queryKey: ["workspaces", workspace.id, "questions", "QUEUED"],
-            });
-          }}
+          onQuestionQueued={handleQuestionQueued}
+          withSelectionToolbar={false}
           optimisticPrompt={optimisticFirstPrompt}
           onRegenerateTurn={handleRegenerateTurn}
           onRetryFailed={handleRetryFailed}
@@ -436,6 +449,17 @@ export function WorkspaceView({
         </div>
       </div>
     </ThreadStackLayout>
+
+    {/* One selection toolbar for every column: main responses and Ask
+        answers at any depth. It lives outside the main column, which is
+        hidden while it is collapsed to a spine. */}
+    <SelectionToolbar
+      workspaceId={workspace.id}
+      canComment={canComment}
+      canAsk={canAsk}
+      onQuestionCreated={handleQuestionQueued}
+    />
+    </>
   );
 }
 

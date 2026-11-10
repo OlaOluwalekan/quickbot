@@ -42,7 +42,7 @@ export function ThreadBreadcrumb({
 
   return (
     <nav
-      aria-label="Thread navigation"
+      aria-label={t("navLabel")}
       className={`flex items-center text-xs text-muted font-medium overflow-hidden ${
         className || ""
       }`}
@@ -63,7 +63,9 @@ export function ThreadBreadcrumb({
         items.map((item, idx) => {
           const colIndex = idx + 1;
           const isLast = idx === items.length - 1;
-          const label = item.quote ? `«${truncate(item.quote)}»` : `L${item.depth + 1}`;
+          const label = item.quote
+            ? `«${truncate(item.quote)}»`
+            : t("level", { level: item.depth + 1 });
 
           return (
             <React.Fragment key={item.id}>
@@ -77,7 +79,7 @@ export function ThreadBreadcrumb({
                     ? "text-foreground font-semibold cursor-default"
                     : "hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
                 }`}
-                title={item.quote || `Level ${item.depth + 1}`}
+                title={item.quote || t("level", { level: item.depth + 1 })}
               >
                 {label}
               </button>
@@ -105,8 +107,11 @@ export function ThreadBreadcrumb({
               {items.slice(0, -1).map((item, idx) => {
                 const colIndex = idx + 1;
                 const label = item.quote
-                  ? `Level ${item.depth + 1}: «${truncate(item.quote, 30)}»`
-                  : `Level ${item.depth + 1}`;
+                  ? t("levelWithQuote", {
+                      level: item.depth + 1,
+                      quote: truncate(item.quote, 30),
+                    })
+                  : t("level", { level: item.depth + 1 });
 
                 return (
                   <DropdownMenuItem
@@ -129,7 +134,7 @@ export function ThreadBreadcrumb({
             if (!lastItem) return null;
             const label = lastItem.quote
               ? `«${truncate(lastItem.quote, 28)}»`
-              : `L${lastItem.depth + 1}`;
+              : t("level", { level: lastItem.depth + 1 });
 
             return (
               <span

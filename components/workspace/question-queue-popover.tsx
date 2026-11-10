@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api/client";
 import { useUiStore } from "@/lib/stores/ui";
-import { useThreadStackStore } from "@/lib/stores/thread-stack";
+import { openAnnotationThread } from "@/lib/stores/thread-stack";
 import {
   Popover,
   PopoverContent,
@@ -200,7 +200,9 @@ function QuestionQueuePopoverInner({
         queryKey: ["workspaces", workspaceId, "annotations"],
       });
 
-      // Open right panel focused on Questions tab
+      // Open columns of answered questions reload, and the All-annotations
+      // drawer opens on the answered threads.
+      window.dispatchEvent(new CustomEvent("annotation-changed", { detail: {} }));
       setRightPanelFocus({ tab: "questions" });
       setRightPanelOpen(true);
       setIsOpen(false);
@@ -299,9 +301,11 @@ function QuestionQueuePopoverInner({
                 <div
                   key={q.id}
                   data-testid={`queued-question-${q.id}`}
-                  onClick={() => {
+                  onClick={(e) => {
+                    // Edit / delete / save buttons inside the card keep their own action.
+                    if ((e.target as HTMLElement).closest("button, textarea")) return;
                     if (editingId !== q.id) {
-                      useThreadStackStore.getState().open({ kind: "annotation", id: q.id });
+                      void openAnnotationThread(q.id);
                       setIsOpen(false);
                     }
                   }}

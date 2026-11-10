@@ -224,6 +224,8 @@ describe("Fix F2.4 — Annotation Ancestor Chain (Recursive CTE & API)", () => {
     expect(chain[0]!.messages.length).toBeGreaterThan(0);
     expect(chain[1]!.messages.length).toBeGreaterThan(0);
     expect(chain[2]!.createdBy).toBeDefined();
+    // Member e-mail addresses are not part of the column payload.
+    expect(chain[2]!.createdBy).not.toHaveProperty("email");
   });
 
   it("denies access to non-workspace member", async () => {

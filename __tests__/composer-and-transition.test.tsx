@@ -19,6 +19,7 @@ jest.mock("next/navigation", () => ({
     refresh: mockRefresh,
   }),
   usePathname: () => "/workspaces",
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 jest.mock("next-intl", () => ({

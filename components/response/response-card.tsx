@@ -55,6 +55,7 @@ import { Markdown } from "@/components/markdown";
 import { AnnotationLayer } from "@/components/annotations";
 import { ShareAndPeopleDialog } from "@/components/workspace/ShareAndPeopleDialog";
 import { useUiStore } from "@/lib/stores/ui";
+import { openAnnotationThread } from "@/lib/stores/thread-stack";
 import {
   useResponseVersions,
   useSwitchActiveVersion,
@@ -404,12 +405,9 @@ export function ResponseCard({
                   <button
                     type="button"
                     onClick={() => {
-                      useUiStore.getState().setRightPanelFocus({
-                        annotationId: response.sourceAnnotationId || undefined,
-                        responseId: response.id,
-                        tab: "questions",
-                      });
-                      useUiStore.getState().setRightPanelOpen(true);
+                      if (response.sourceAnnotationId) {
+                        void openAnnotationThread(response.sourceAnnotationId);
+                      }
                     }}
                     className="text-accent hover:underline font-medium cursor-pointer"
                   >

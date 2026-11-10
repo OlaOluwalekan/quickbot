@@ -59,6 +59,7 @@ export function Topbar({
 }: TopbarProps) {
   const t = useTranslations("AppShell");
   const tChat = useTranslations("Chat");
+  const tThreads = useTranslations("Threads");
   const pathname = usePathname();
   const mobileNavIsOpen = useUiStore((s) => s.mobileNavIsOpen);
   const toggleMobileNavOpen = useUiStore((s) => s.toggleMobileNavOpen);
@@ -254,10 +255,10 @@ export function Topbar({
           type="button"
           variant={rightPanelOpen ? "secondary" : "ghost"}
           size="icon"
-          aria-label={t("toggleRightPanel")}
-          aria-pressed={rightPanelOpen}
+          aria-label={tThreads("allAnnotations")}
+          aria-haspopup="dialog"
           aria-expanded={rightPanelOpen}
-          tooltip={t("toggleRightPanel")}
+          tooltip={tThreads("allAnnotations")}
           onClick={() => toggleRightPanelOpen()}
         >
           <PanelRight className="h-4 w-4" strokeWidth={1.5} />

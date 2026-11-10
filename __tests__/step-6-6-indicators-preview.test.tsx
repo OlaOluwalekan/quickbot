@@ -15,6 +15,7 @@ import {
   isPointInRange,
 } from "@/lib/annotations/highlight";
 import { useUiStore } from "@/lib/stores/ui";
+import { useThreadStackStore } from "@/lib/stores/thread-stack";
 import type { AnnotationItem } from "@/components/annotations/right-panel";
 
 // Mock Highlight constructor and CSS.highlights
@@ -452,7 +453,7 @@ describe("Step 6.6 — Indicators and Hover/Tap Previews in Workspace", () => {
     const fullText =
       "In modern architecture, Distributed consensus algorithms ensure data consistency across replicas. Raft is one such example. It is widely used in etcd.";
 
-    it("displays author, AI replied status, truncated text, and activates right panel on 'View more'", () => {
+    it("displays author, AI replied status, truncated text, and opens the column on 'View more'", () => {
       render(
         <AnnotationLayer
           responseId="resp_1"
@@ -484,15 +485,11 @@ describe("Step 6.6 — Indicators and Hover/Tap Previews in Workspace", () => {
         fireEvent.click(viewMoreBtn);
       });
 
-      // Verifies right panel opened and focused
-      const storeState = useUiStore.getState();
-      expect(storeState.rightPanelOpen).toBe(true);
-      expect(storeState.rightPanelFocus).toEqual({
-        annotationId: "annot_reply_1",
-        responseId: "resp_1",
-        versionId: "ver_1",
-        tab: "replies",
-      });
+      // F2.4: "View more" opens the annotation's column, not the drawer.
+      expect(useThreadStackStore.getState().stack).toEqual([
+        { kind: "annotation", id: "annot_reply_1" },
+      ]);
+      expect(useUiStore.getState().rightPanelOpen).toBe(false);
 
       // Dialog closed
       expect(screen.queryByRole("dialog", { name: /annotation preview/i })).not.toBeInTheDocument();

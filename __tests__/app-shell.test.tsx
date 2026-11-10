@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { AppShell } from "@/components/layout/app-shell";
 import { getDateBucket } from "@/components/layout/sidebar";
 import { useUiStore, parseSidebarCookie } from "@/lib/stores/ui";
@@ -339,19 +339,17 @@ describe("Step 3.4 — AppShell, Sidebar, Topbar, Mobile Drawer & Command Palett
     ).toBeInTheDocument();
   });
 
-  it("toggles Right Panel (Annotations) and opens mobile drawer Sheet & Command Palette", () => {
+  it("opens the All-annotations drawer from the top bar (closed by default) & the Command Palette", async () => {
     renderAppShell(false);
 
-    // Toggle Right Panel
-    const panelBtn = screen.getByRole("button", {
-      name: /Toggle annotations panel/i,
-    });
-    expect(panelBtn).toHaveAttribute("aria-pressed", "false");
+    // F2.4: the right panel is a drawer, closed until the top-bar button is used.
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    const panelBtn = screen.getByRole("button", { name: /All annotations/i });
+    expect(panelBtn).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(panelBtn);
-    expect(panelBtn).toHaveAttribute("aria-pressed", "true");
-    expect(
-      screen.getByRole("complementary", { name: /Annotations & Notes/i })
-    ).toBeInTheDocument();
+    expect(useUiStore.getState().rightPanelOpen).toBe(true);
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    act(() => useUiStore.getState().setRightPanelOpen(false));
 
     // Open Command Palette via Ctrl+K
     fireEvent.keyDown(window, { key: "k", ctrlKey: true });

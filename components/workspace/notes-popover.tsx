@@ -19,7 +19,7 @@ import { useFormatter, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api/client";
-import { useUiStore } from "@/lib/stores/ui";
+import { openAnnotationThread } from "@/lib/stores/thread-stack";
 import {
   Popover,
   PopoverContent,
@@ -69,8 +69,6 @@ function NotesPopoverInner({ workspaceId, className }: NotesPopoverProps) {
     null
   );
 
-  const setRightPanelOpen = useUiStore((s) => s.setRightPanelOpen);
-  const setRightPanelFocus = useUiStore((s) => s.setRightPanelFocus);
 
   const queryKey = React.useMemo(
     () => ["workspaces", workspaceId, "notes"],
@@ -138,12 +136,11 @@ function NotesPopoverInner({ workspaceId, className }: NotesPopoverProps) {
     }
   };
 
-  // Until the annotation columns exist (F2.4), "View in context" focuses the
-  // comment in the annotations panel.
+  // "View in context" opens the column of the comment that recorded the
+  // note (with its ancestor columns when the comment is nested).
   const handleViewInContext = (note: WorkspaceNoteDto) => {
     setIsOpen(false);
-    setRightPanelFocus({ annotationId: note.annotationId });
-    setRightPanelOpen(true);
+    void openAnnotationThread(note.annotationId);
   };
 
   // Hidden while the workspace has no notes at all. It stays visible when

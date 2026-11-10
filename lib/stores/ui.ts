@@ -40,9 +40,8 @@ export interface UiState extends PersistedUiSlice {
   clearDraft: (workspaceId: string) => void;
   clearAllDrafts: () => void;
 
-  // Compatibility stubs for legacy v1 components
+  /** No-op kept for the legacy v1 stream client (`utils/chat-stream-client.ts`). */
   addOptimisticResponse: (response: unknown) => void;
-  setDialogData: (data: unknown) => void;
 
   // Transient UI state (never persisted to localStorage)
   mobileNavIsOpen: boolean;
@@ -125,7 +124,6 @@ export const useUiStore = create<UiState>()(
       drafts: {},
 
       addOptimisticResponse: () => {},
-      setDialogData: () => {},
 
       ...initialTransientState,
 
@@ -143,7 +141,9 @@ export const useUiStore = create<UiState>()(
       setRightPanelOpen: (rightPanelOpen) => set({ rightPanelOpen }),
       setRightPanelWidth: (rightPanelWidth) => {
         if (typeof window !== "undefined") {
-          window.localStorage?.setItem("klecx-panel-width", String(rightPanelWidth));
+          try {
+            window.localStorage?.setItem("klecx-panel-width", String(rightPanelWidth));
+          } catch {}
         }
         set({ rightPanelWidth });
       },
@@ -155,9 +155,15 @@ export const useUiStore = create<UiState>()(
       setOnboardingDismissed: (onboardingDismissed) =>
         set({ onboardingDismissed }),
       setDraft: (workspaceId, text) =>
-        set((state) => ({
-          drafts: { ...state.drafts, [workspaceId]: text },
-        })),
+        set((state) => {
+          const next = { ...state.drafts };
+          if (!text) {
+            delete next[workspaceId];
+          } else {
+            next[workspaceId] = text;
+          }
+          return { drafts: next };
+        }),
       clearDraft: (workspaceId) =>
         set((state) => {
           const next = { ...state.drafts };
@@ -192,6 +198,26 @@ export const useUiStore = create<UiState>()(
             },
       ),
       partialize: partializeUiState,
+      // Restore only the fields that are persisted today. Older versions also
+      // stored `rightPanelOpen`; taking it back would open the All-annotations
+      // drawer on load.
+      merge: (persisted, current) => {
+        const saved = (persisted ?? {}) as Partial<PersistedUiSlice>;
+        return {
+          ...current,
+          ...(typeof saved.sidebarCollapsed === "boolean" && {
+            sidebarCollapsed: saved.sidebarCollapsed,
+          }),
+          ...(typeof saved.composerEnterToSend === "boolean" && {
+            composerEnterToSend: saved.composerEnterToSend,
+          }),
+          ...(typeof saved.onboardingDismissed === "boolean" && {
+            onboardingDismissed: saved.onboardingDismissed,
+          }),
+          ...(saved.drafts &&
+            typeof saved.drafts === "object" && { drafts: saved.drafts }),
+        };
+      },
     },
   ),
 );

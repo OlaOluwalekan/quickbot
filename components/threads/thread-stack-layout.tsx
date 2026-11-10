@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Home, MoreHorizontal, MessageSquare, ChevronRight, Sparkles } from "lucide-react";
+import { Home, MoreHorizontal } from "lucide-react";
 import { useTranslations } from "next-intl";
 import {
   DropdownMenu,
@@ -9,19 +9,34 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
 import {
   computeColumnLayout,
-  type ColumnLayout,
   DEFAULT_LAYOUT_PREFS,
 } from "@/lib/annotations/thread-stack";
 import { useThreadStackStore, useThreadStackUrlSync } from "@/lib/stores/thread-stack";
 import { ThreadColumn } from "./thread-column";
 import { cn } from "@/lib/utils";
 
+const COL_WIDTH_KEY = "klecx-ask-col-width";
+const COL_WIDTH_MIN = DEFAULT_LAYOUT_PREFS.colMin;
+const COL_WIDTH_MAX = 900;
+/** Below this viewport width only one column is shown at a time. */
+const SINGLE_COLUMN_QUERY = "(max-width: 1023px)";
+
+const spineClass =
+  "w-[44px] h-full flex flex-col items-center py-4 bg-surface/80 border-r border-border hover:bg-surface text-muted hover:text-foreground transition-colors shrink-0 group focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent";
+
+function truncateQuote(quote: string | undefined, max = 60): string {
+  const text = (quote ?? "").trim();
+  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+}
+
 export interface ThreadStackLayoutProps {
   workspaceId: string;
   currentUserId?: string;
+  canComment?: boolean;
+  canAsk?: boolean;
+  /** The main conversation (column 0). It stays mounted while it is a spine. */
   children: React.ReactNode;
   className?: string;
 }
@@ -29,296 +44,303 @@ export interface ThreadStackLayoutProps {
 export function ThreadStackLayout({
   workspaceId,
   currentUserId,
+  canComment,
+  canAsk,
   children,
   className,
 }: ThreadStackLayoutProps) {
   const t = useTranslations("Threads");
 
-  // Keep URL ?thread= in sync with store
   useThreadStackUrlSync();
 
   const stack = useThreadStackStore((s) => s.stack);
+  const quotes = useThreadStackStore((s) => s.quotes);
   const back = useThreadStackStore((s) => s.back);
   const closeAll = useThreadStackStore((s) => s.closeAll);
   const goTo = useThreadStackStore((s) => s.goTo);
 
   const containerRef = React.useRef<HTMLDivElement>(null);
-  const [containerWidth, setContainerWidth] = React.useState(1280);
-  const [isMobile, setIsMobile] = React.useState(false);
+  const [containerWidth, setContainerWidth] = React.useState(0);
+  const [isSingleColumn, setIsSingleColumn] = React.useState(false);
 
-  // Preferred column width remembered in localStorage
-  const [colPreferred, setColPreferred] = React.useState(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const stored = window.localStorage.getItem("klecx-ask-col-width");
-        if (stored) {
-          const val = Number(stored);
-          if (val >= 420 && val <= 900) return val;
-        }
-      } catch {
-        // Ignore localStorage error
+  // Preferred Ask column width, remembered per browser.
+  const [colPreferred, setColPreferred] = React.useState(
+    DEFAULT_LAYOUT_PREFS.colPreferred
+  );
+  React.useEffect(() => {
+    try {
+      const stored = Number(window.localStorage.getItem(COL_WIDTH_KEY));
+      if (stored >= COL_WIDTH_MIN && stored <= COL_WIDTH_MAX) {
+        setColPreferred(stored);
       }
+    } catch {
+      // Storage unavailable: keep the default width.
     }
-    return DEFAULT_LAYOUT_PREFS.colPreferred;
-  });
+  }, []);
 
-  // Track container width via ResizeObserver
   React.useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-
+    setContainerWidth(el.getBoundingClientRect().width);
+    if (typeof ResizeObserver === "undefined") return;
     const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const width = entry.contentRect.width;
-        if (width > 0) {
-          setContainerWidth(width);
-          setIsMobile(width < 1024);
-        }
-      }
+      const width = entries[0]?.contentRect.width ?? 0;
+      if (width > 0) setContainerWidth(width);
     });
-
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
 
-  // Keyboard navigation: Alt+Left = Back, Alt+Home = Main
+  // Phone / small tablet: by viewport, not by the space left next to the sidebar.
   React.useEffect(() => {
-    const handleWindowKeyDown = (e: KeyboardEvent) => {
-      if (stack.length === 0) return;
-      if (e.altKey && e.key === "ArrowLeft") {
+    if (typeof window.matchMedia !== "function") return;
+    const mq = window.matchMedia(SINGLE_COLUMN_QUERY);
+    setIsSingleColumn(mq.matches);
+    const onChange = (e: MediaQueryListEvent) => setIsSingleColumn(e.matches);
+    mq.addEventListener?.("change", onChange);
+    return () => mq.removeEventListener?.("change", onChange);
+  }, []);
+
+  // Alt+← = Back, Alt+Home = Main conversation
+  const hasColumns = stack.length > 0;
+  React.useEffect(() => {
+    if (!hasColumns) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!e.altKey) return;
+      if (e.key === "ArrowLeft") {
         e.preventDefault();
         back();
-      } else if (e.altKey && e.key === "Home") {
+      } else if (e.key === "Home") {
         e.preventDefault();
         closeAll();
       }
     };
-    window.addEventListener("keydown", handleWindowKeyDown);
-    return () => window.removeEventListener("keydown", handleWindowKeyDown);
-  }, [stack.length, back, closeAll]);
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [hasColumns, back, closeAll]);
 
-  // Compute column layouts
-  const layout = React.useMemo(() => {
-    return computeColumnLayout(containerWidth, stack.length, {
-      colPreferred,
-    });
-  }, [containerWidth, stack.length, colPreferred]);
+  const layout = React.useMemo(
+    () => computeColumnLayout(containerWidth, stack.length, { colPreferred }),
+    [containerWidth, stack.length, colPreferred]
+  );
 
-  // Drag handle for resizing the rightmost full column
-  const isDraggingRef = React.useRef(false);
-  const startXRef = React.useRef(0);
-  const startWidthRef = React.useRef(0);
-
-  const handleMouseDownDrag = (e: React.MouseEvent) => {
+  // Drag handle between the last two full columns
+  const handleResizeStart = (e: React.MouseEvent) => {
     e.preventDefault();
-    isDraggingRef.current = true;
-    startXRef.current = e.clientX;
-    startWidthRef.current = colPreferred;
+    const startX = e.clientX;
+    const startWidth = colPreferred;
+    let latest = startWidth;
 
-    const onMouseMove = (moveEvent: MouseEvent) => {
-      if (!isDraggingRef.current) return;
-      // Dragging left increases width of the right column; dragging right decreases it
-      const delta = startXRef.current - moveEvent.clientX;
-      const newWidth = Math.max(420, Math.min(800, startWidthRef.current + delta));
-      setColPreferred(newWidth);
+    const onMove = (move: MouseEvent) => {
+      latest = Math.max(
+        COL_WIDTH_MIN,
+        Math.min(COL_WIDTH_MAX, startWidth + (startX - move.clientX))
+      );
+      setColPreferred(latest);
+    };
+    const onUp = () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
       try {
-        window.localStorage.setItem("klecx-ask-col-width", String(newWidth));
+        window.localStorage.setItem(COL_WIDTH_KEY, String(latest));
       } catch {
-        // Ignore
+        // Not remembered; the width still applies until reload.
       }
     };
-
-    const onMouseUp = () => {
-      isDraggingRef.current = false;
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseup", onMouseUp);
-    };
-
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseup", onMouseUp);
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
   };
 
-  // Find full columns for drag handle placement
-  const fullCols = layout.filter((c) => c.mode === "full");
-  const hasMultipleFull = fullCols.length >= 2;
-  const lastFullIndex = fullCols.length > 0 ? (fullCols[fullCols.length - 1]?.index ?? -1) : -1;
-
-  // Main column layout (col 0)
-  const mainColLayout = layout.find((c) => c.index === 0) || {
-    index: 0,
-    mode: "full" as const,
-    width: containerWidth,
-  };
-  const isMainSpine = mainColLayout.mode === "spine";
-
-  // Mobile rendering (< 1024px)
-  if (isMobile) {
-    if (stack.length === 0) {
-      return (
-        <div ref={containerRef} className={cn("flex-1 h-full overflow-hidden", className)}>
-          {children}
-        </div>
-      );
+  const handleResizeKey = (e: React.KeyboardEvent) => {
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+    e.preventDefault();
+    const next = Math.max(
+      COL_WIDTH_MIN,
+      Math.min(COL_WIDTH_MAX, colPreferred + (e.key === "ArrowLeft" ? 24 : -24))
+    );
+    setColPreferred(next);
+    try {
+      window.localStorage.setItem(COL_WIDTH_KEY, String(next));
+    } catch {
+      // ignore
     }
+  };
 
+  const columnProps = {
+    workspaceId,
+    currentUserId,
+    canComment,
+    canAsk,
+    onBack: back,
+    onCloseAll: closeAll,
+    onNavigate: goTo,
+  };
+
+  // One column at a time: the last entry covers the main conversation, which
+  // stays mounted (hidden) so its scroll position and composer draft survive.
+  if (isSingleColumn) {
     const activeEntry = stack[stack.length - 1];
-    if (!activeEntry) {
-      return (
-        <div ref={containerRef} className={cn("flex-1 h-full overflow-hidden", className)}>
+    return (
+      <div
+        ref={containerRef}
+        className={cn("relative flex h-full w-full flex-col overflow-hidden", className)}
+      >
+        <div
+          className={cn("flex h-full w-full flex-col overflow-hidden", activeEntry && "hidden")}
+        >
           {children}
         </div>
-      );
-    }
-
-    return (
-      <div ref={containerRef} className={cn("flex-1 h-full overflow-hidden flex flex-col", className)}>
-        <ThreadColumn
-          id={activeEntry.id}
-          index={stack.length}
-          width={containerWidth}
-          workspaceId={workspaceId}
-          currentUserId={currentUserId}
-          onBack={back}
-          onCloseAll={closeAll}
-          onNavigate={(idx) => goTo(idx)}
-          className="w-full flex-1"
-        />
+        {activeEntry && (
+          <ThreadColumn
+            key={activeEntry.id}
+            id={activeEntry.id}
+            index={stack.length}
+            width={containerWidth}
+            {...columnProps}
+            className="!w-full flex-1 border-r-0"
+          />
+        )}
       </div>
     );
   }
+
+  const fullColumns = layout.filter((c) => c.mode === "full");
+  const lastFullIndex = fullColumns[fullColumns.length - 1]?.index ?? -1;
+  const mainColumn = layout.find((c) => c.index === 0 && !c.isGrouped);
+  const mainIsFull = mainColumn?.mode === "full";
+  const mainIsOwnSpine = mainColumn?.mode === "spine";
+
+  const spineLabel = (index: number) =>
+    index === 0
+      ? t("mainSpineLabel")
+      : t("spineLabel", {
+          level: index,
+          quote: truncateQuote(quotes[stack[index - 1]?.id ?? ""]),
+        });
 
   return (
     <div
       ref={containerRef}
       className={cn(
-        "flex flex-row h-full w-full overflow-hidden bg-background relative",
+        "relative flex h-full w-full flex-row overflow-hidden bg-background",
         className
       )}
     >
-      {/* Column 0: Main Conversation */}
-      {isMainSpine ? (
-        // Main conversation rendered as a 44px Spine Button
+      {/* Column 0: main conversation. Hidden, not unmounted, while it is a spine. */}
+      <div
+        style={mainIsFull && hasColumns ? { width: mainColumn?.width } : undefined}
+        className={cn(
+          "h-full flex-col overflow-hidden transition-[width] duration-200 ease-out motion-reduce:transition-none",
+          mainIsFull ? "flex" : "hidden",
+          hasColumns ? "shrink-0 border-r border-border" : "min-w-0 flex-1"
+        )}
+        aria-hidden={mainIsFull ? undefined : true}
+      >
+        {children}
+      </div>
+
+      {mainIsOwnSpine && (
         <button
           type="button"
           onClick={closeAll}
           aria-label={t("mainSpineLabel")}
-          className="w-[44px] h-full flex flex-col items-center py-4 bg-surface/80 border-r border-border hover:bg-surface text-muted hover:text-foreground transition-colors shrink-0 group focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+          title={t("mainSpineLabel")}
+          className={spineClass}
         >
-          <Home className="w-4 h-4 mb-3 text-accent group-hover:scale-110 transition-transform" />
+          <Home className="w-4 h-4 mb-3 text-accent" />
           <span className="[writing-mode:vertical-rl] rotate-180 text-xs font-medium tracking-wide uppercase">
             {t("breadcrumbMain")}
           </span>
         </button>
-      ) : (
-        // Main conversation full column
-        <div
-          style={{ width: mainColLayout.width }}
-          className="h-full overflow-hidden flex flex-col shrink-0 transition-[width] duration-200 ease-out motion-reduce:transition-none border-r border-border"
-        >
-          {children}
-        </div>
       )}
 
-      {/* Columns 1..N: Thread Stack Entries */}
-      {layout
-        .filter((c) => c.index > 0)
-        .map((col) => {
-          const entryIdx = col.index - 1;
-          const entry = stack[entryIdx];
-          if (!entry) return null;
-
-          if (col.mode === "spine") {
-            // Grouped spine (+N) when more than 6 spines
-            if (col.isGrouped) {
-              return (
-                <DropdownMenu key={`grouped-spine-${col.index}`}>
-                  <DropdownMenuTrigger asChild>
-                    <button
-                      type="button"
-                      aria-label={t("hiddenLevels")}
-                      className="w-[44px] h-full flex flex-col items-center py-4 bg-surface/80 border-r border-border hover:bg-surface text-muted hover:text-foreground transition-colors shrink-0 group focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
-                    >
-                      <MoreHorizontal className="w-4 h-4 mb-3 text-accent" />
-                      <span className="text-[11px] font-bold text-foreground">
-                        +{col.groupedCount}
-                      </span>
-                      <span className="[writing-mode:vertical-rl] rotate-180 text-[10px] font-medium tracking-wide mt-2">
-                        {t("hiddenLevels")}
-                      </span>
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-56 text-xs">
-                    {(col.groupedIndices || []).map((idx) => {
-                      const hiddenEntry = idx === 0 ? null : stack[idx - 1];
-                      return (
-                        <DropdownMenuItem
-                          key={`hidden-entry-${idx}`}
-                          onClick={() => goTo(idx)}
-                          className="cursor-pointer"
-                        >
-                          {idx === 0
-                            ? t("breadcrumbMain")
-                            : `Level ${idx}: ${hiddenEntry?.id ? hiddenEntry.id.slice(0, 8) : ""}`}
-                        </DropdownMenuItem>
-                      );
-                    })}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              );
-            }
-
-            // Normal Individual 44px Spine Button
-            return (
-              <button
-                key={`spine-${entry.id}`}
-                type="button"
-                onClick={() => goTo(col.index)}
-                aria-label={t("spineLabel", {
-                  level: col.index,
-                  quote: entry.id.slice(0, 8),
-                })}
-                className="w-[44px] h-full flex flex-col items-center py-4 bg-surface/80 border-r border-border hover:bg-surface text-muted hover:text-foreground transition-colors shrink-0 group focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
-              >
-                <div className="w-6 h-6 rounded-full bg-accent/10 text-accent font-semibold text-xs flex items-center justify-center mb-3 group-hover:bg-accent group-hover:text-accent-foreground transition-colors">
-                  L{col.index}
-                </div>
-                <span className="[writing-mode:vertical-rl] rotate-180 text-xs font-medium tracking-wide truncate max-h-[220px]">
-                  Level {col.index}
-                </span>
-              </button>
-            );
-          }
-
-          // Full column mode
-          const isRightmost = col.index === lastFullIndex;
-          const showDragHandle = hasMultipleFull && isRightmost;
-
+      {layout.map((col) => {
+        // Oldest spines merged into one "+N" spine
+        if (col.isGrouped) {
           return (
-            <React.Fragment key={`full-${entry.id}`}>
-              {/* Optional resize drag handle before the rightmost full column */}
-              {showDragHandle && (
-                <div
-                  onMouseDown={handleMouseDownDrag}
-                  aria-label={t("resize")}
-                  role="separator"
-                  className="w-1.5 h-full cursor-col-resize hover:bg-accent/40 active:bg-accent transition-colors z-20 shrink-0 -mx-[3px]"
-                />
-              )}
-
-              <ThreadColumn
-                id={entry.id}
-                index={col.index}
-                width={col.width}
-                workspaceId={workspaceId}
-                currentUserId={currentUserId}
-                onBack={back}
-                onCloseAll={closeAll}
-                onNavigate={(idx) => goTo(idx)}
-                className="h-full overflow-hidden"
-              />
-            </React.Fragment>
+            <DropdownMenu key="grouped-spine">
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  aria-label={t("moreSpines", { count: col.groupedCount ?? 0 })}
+                  title={t("hiddenLevels")}
+                  className={spineClass}
+                >
+                  <MoreHorizontal className="w-4 h-4 mb-3 text-accent" />
+                  <span className="text-[11px] font-bold text-foreground">
+                    +{col.groupedCount}
+                  </span>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="max-h-80 w-64 overflow-y-auto text-xs">
+                {(col.groupedIndices ?? []).map((idx) => (
+                  <DropdownMenuItem
+                    key={idx}
+                    onClick={() => goTo(idx)}
+                    className="cursor-pointer"
+                  >
+                    <span className="truncate">{spineLabel(idx)}</span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           );
-        })}
+        }
+
+        if (col.index === 0) return null; // main conversation, rendered above
+
+        const entry = stack[col.index - 1];
+        if (!entry) return null;
+
+        if (col.mode === "spine") {
+          const quote = truncateQuote(quotes[entry.id], 40);
+          return (
+            <button
+              key={`spine-${entry.id}`}
+              type="button"
+              onClick={() => goTo(col.index)}
+              aria-label={spineLabel(col.index)}
+              title={spineLabel(col.index)}
+              className={spineClass}
+            >
+              <span className="w-6 h-6 rounded-full bg-accent/10 text-accent font-semibold text-xs flex items-center justify-center mb-3 group-hover:bg-accent group-hover:text-accent-foreground transition-colors">
+                {col.index}
+              </span>
+              <span className="[writing-mode:vertical-rl] rotate-180 text-xs font-medium tracking-wide truncate max-h-[60%]">
+                {quote ? `«${quote}»` : t("level", { level: col.index })}
+              </span>
+            </button>
+          );
+        }
+
+        const showResizeHandle = fullColumns.length >= 2 && col.index === lastFullIndex;
+
+        return (
+          <React.Fragment key={`column-${entry.id}`}>
+            {showResizeHandle && (
+              <div
+                role="separator"
+                aria-orientation="vertical"
+                aria-label={t("resize")}
+                aria-valuenow={Math.round(col.width)}
+                aria-valuemin={COL_WIDTH_MIN}
+                aria-valuemax={COL_WIDTH_MAX}
+                tabIndex={0}
+                onMouseDown={handleResizeStart}
+                onKeyDown={handleResizeKey}
+                className="w-1.5 h-full cursor-col-resize hover:bg-accent/40 active:bg-accent focus-visible:bg-accent/60 focus-visible:outline-none transition-colors z-20 shrink-0 -mx-[3px]"
+              />
+            )}
+            <ThreadColumn
+              id={entry.id}
+              index={col.index}
+              width={col.width}
+              {...columnProps}
+              className="h-full overflow-hidden"
+            />
+          </React.Fragment>
+        );
+      })}
     </div>
   );
 }
