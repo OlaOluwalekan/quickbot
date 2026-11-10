@@ -6,6 +6,10 @@ export {
   type AnnotationMessageItem,
 } from "./right-panel";
 export {
+  AllAnnotationsDrawer,
+  type AllAnnotationsDrawerProps,
+} from "./all-annotations-drawer";
+export {
   AnnotationLayer,
   type AnnotationLayerProps,
 } from "./annotation-layer";

@@ -12,6 +12,8 @@ import { useResponses } from "@/lib/api/hooks/responses";
 import { queryKeys } from "@/lib/api/hooks/query-keys";
 import { Composer } from "@/components/workspace/composer";
 import { ResponseList } from "@/components/response/response-list";
+import { ThreadStackLayout } from "@/components/threads/thread-stack-layout";
+import { SelectionToolbar } from "@/components/annotations/selection-toolbar";
 import type { ResponseItemData } from "@/components/response/response-card";
 import type { Actor } from "@/server/auth/session";
 import type { WorkspaceDto } from "@/lib/api/hooks/workspaces";
@@ -391,44 +393,73 @@ export function WorkspaceView({
     [startStreamTurn]
   );
 
-  return (
-    <div className="flex-1 flex flex-col h-full w-full overflow-hidden bg-bg">
-      {/* Response Timeline List */}
-      <ResponseList
-        workspaceId={workspace.id}
-        actor={actor}
-        responses={displayedResponses}
-        memberCount={workspace.memberCount ?? 1}
-        capabilities={workspace.capabilities}
-        onQuestionQueued={() => {
-          // Update the composer's queue badge right away.
-          queryClient.invalidateQueries({
-            queryKey: ["workspaces", workspace.id, "questions", "QUEUED"],
-          });
-        }}
-        optimisticPrompt={optimisticFirstPrompt}
-        onRegenerateTurn={handleRegenerateTurn}
-        onRetryFailed={handleRetryFailed}
-      />
+  // Update the composer's queue badge right away.
+  const handleQuestionQueued = () => {
+    queryClient.invalidateQueries({
+      queryKey: ["workspaces", workspace.id, "questions", "QUEUED"],
+    });
+  };
+  const canComment = workspace.capabilities
+    ? workspace.capabilities.includes("workspace.comment")
+    : undefined;
+  const canAsk = workspace.capabilities
+    ? workspace.capabilities.includes("workspace.ask")
+    : undefined;
 
-      {/* Fixed Bottom Composer with view-transition-name: composer */}
-      <div className="border-t border-border/50 bg-bg/80 backdrop-blur-md px-4 sm:px-6 py-3 shrink-0">
-        <div className="max-w-4xl mx-auto">
-          <Composer
-            workspaceId={workspace.id}
-            size="compact"
-            className="vt-composer shadow-lg"
-            onSubmitted={() => {
-              refetchResponses();
-              queryClient.invalidateQueries({
-                queryKey: queryKeys.responses.all(actor.userId, workspace.id),
-              });
-              router.refresh();
-            }}
-          />
+  return (
+    <>
+    <ThreadStackLayout
+      workspaceId={workspace.id}
+      currentUserId={actor.userId}
+      canComment={canComment}
+      canAsk={canAsk}
+      className="flex-1 h-full w-full"
+    >
+      <div className="flex-1 flex flex-col h-full w-full overflow-hidden bg-bg">
+        {/* Response Timeline List */}
+        <ResponseList
+          workspaceId={workspace.id}
+          actor={actor}
+          responses={displayedResponses}
+          memberCount={workspace.memberCount ?? 1}
+          capabilities={workspace.capabilities}
+          onQuestionQueued={handleQuestionQueued}
+          withSelectionToolbar={false}
+          optimisticPrompt={optimisticFirstPrompt}
+          onRegenerateTurn={handleRegenerateTurn}
+          onRetryFailed={handleRetryFailed}
+        />
+
+        {/* Fixed Bottom Composer with view-transition-name: composer */}
+        <div className="border-t border-border/50 bg-bg/80 backdrop-blur-md px-4 sm:px-6 py-3 shrink-0">
+          <div className="max-w-4xl mx-auto">
+            <Composer
+              workspaceId={workspace.id}
+              size="compact"
+              className="vt-composer shadow-lg"
+              onSubmitted={() => {
+                refetchResponses();
+                queryClient.invalidateQueries({
+                  queryKey: queryKeys.responses.all(actor.userId, workspace.id),
+                });
+                router.refresh();
+              }}
+            />
+          </div>
         </div>
       </div>
-    </div>
+    </ThreadStackLayout>
+
+    {/* One selection toolbar for every column: main responses and Ask
+        answers at any depth. It lives outside the main column, which is
+        hidden while it is collapsed to a spine. */}
+    <SelectionToolbar
+      workspaceId={workspace.id}
+      canComment={canComment}
+      canAsk={canAsk}
+      onQuestionCreated={handleQuestionQueued}
+    />
+    </>
   );
 }
 

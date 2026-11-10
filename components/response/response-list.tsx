@@ -38,6 +38,12 @@ export interface ResponseListProps {
   capabilities?: string[];
   /** Called after an Ask was added to the question queue. */
   onQuestionQueued?: () => void;
+  /**
+   * Render the selection toolbar here (default). The workspace page renders
+   * one toolbar for all columns instead, because this list is hidden while
+   * the main conversation is collapsed to a spine.
+   */
+  withSelectionToolbar?: boolean;
   onRegenerateTurn?: (responseId: string) => void;
   onRetryFailed?: (prompt: string, idempotencyKey: string) => void;
   onDeleteResponse?: (responseId: string) => void;
@@ -52,6 +58,7 @@ export function ResponseList({
   memberCount = 1,
   capabilities,
   onQuestionQueued,
+  withSelectionToolbar = true,
   onRegenerateTurn,
   onRetryFailed,
   onDeleteResponse,
@@ -359,12 +366,14 @@ export function ResponseList({
       </div>
 
       {/* Step 6.3 Annotation Selection Toolbar */}
-      <SelectionToolbar
-        workspaceId={workspaceId}
-        canComment={capabilities ? capabilities.includes("workspace.comment") : undefined}
-        canAsk={capabilities ? capabilities.includes("workspace.ask") : undefined}
-        onQuestionCreated={onQuestionQueued}
-      />
+      {withSelectionToolbar && (
+        <SelectionToolbar
+          workspaceId={workspaceId}
+          canComment={capabilities ? capabilities.includes("workspace.comment") : undefined}
+          canAsk={capabilities ? capabilities.includes("workspace.ask") : undefined}
+          onQuestionCreated={onQuestionQueued}
+        />
+      )}
 
       {/* Floating "Jump to latest" Pill */}
       {showJumpToLatest && (

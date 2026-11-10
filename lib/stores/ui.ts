@@ -1,6 +1,5 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import type { ChatProps, ResponseProps } from "@/types/chats";
 
 export const SIDEBAR_COOKIE_NAME = "sidebar";
 
@@ -20,17 +19,16 @@ export function parseSidebarCookie(raw?: string | null): boolean {
 
 export interface PersistedUiSlice {
   sidebarCollapsed: boolean;
-  rightPanelOpen: boolean;
-
   composerEnterToSend: boolean;
   onboardingDismissed: boolean;
   drafts: Record<string, string>;
 }
 
 export interface UiState extends PersistedUiSlice {
+  rightPanelOpen: boolean;
   rightPanelWidth: number;
 
-  // Persisted actions
+  // Actions
   setSidebarCollapsed: (collapsed: boolean) => void;
   toggleSidebarCollapsed: () => void;
   setRightPanelOpen: (open: boolean) => void;
@@ -42,6 +40,9 @@ export interface UiState extends PersistedUiSlice {
   clearDraft: (workspaceId: string) => void;
   clearAllDrafts: () => void;
 
+  /** No-op kept for the legacy v1 stream client (`utils/chat-stream-client.ts`). */
+  addOptimisticResponse: (response: unknown) => void;
+
   // Transient UI state (never persisted to localStorage)
   mobileNavIsOpen: boolean;
   commandPaletteOpen: boolean;
@@ -51,15 +52,7 @@ export interface UiState extends PersistedUiSlice {
   currentPageId: string | null;
   currentProjectId: string | null;
   currentProjectName: string | null;
-  chatMenuIsOpen: boolean;
-  chatMenuClass: string;
-  dialogData: ChatProps | null;
-  editPopUpIsOpen: boolean;
-  deletePopUpIsOpen: boolean;
-  chatInputHeight: string;
-  searchResultIsOpen: boolean;
   chatMode: "text" | "image";
-  optimisticResponses: ResponseProps[];
   rightPanelFocus: {
     annotationId?: string;
     responseId?: string;
@@ -78,16 +71,7 @@ export interface UiState extends PersistedUiSlice {
     id: string | null;
     name: string | null;
   }) => void;
-  toggleChatMenuOpen: (open: boolean) => void;
-  setChatMenuClass: (cls: string) => void;
-  setDialogData: (data: ChatProps | null) => void;
-  setEditPopUpOpen: (open: boolean) => void;
-  setDeletePopUpOpen: (open: boolean) => void;
-  setChatInputHeight: (height: string) => void;
-  setSearchResultIsOpen: (open: boolean) => void;
   setChatMode: (mode: "text" | "image") => void;
-  addOptimisticResponse: (response: ResponseProps) => void;
-  clearOptimisticResponses: () => void;
   setRightPanelFocus: (
     focus: {
       annotationId?: string;
@@ -100,23 +84,16 @@ export interface UiState extends PersistedUiSlice {
 }
 
 const initialTransientState = {
+  rightPanelOpen: false,
   mobileNavIsOpen: false,
   commandPaletteOpen: false,
   profileDialogIsOpen: false,
   codeTheme: "light" as const,
-  currentPageTitle: "New Chat",
+  currentPageTitle: "",
   currentPageId: null as string | null,
   currentProjectId: null as string | null,
   currentProjectName: null as string | null,
-  chatMenuIsOpen: false,
-  chatMenuClass: "",
-  dialogData: null as ChatProps | null,
-  editPopUpIsOpen: false,
-  deletePopUpIsOpen: false,
-  chatInputHeight: "56px",
-  searchResultIsOpen: false,
   chatMode: "text" as const,
-  optimisticResponses: [] as ResponseProps[],
   rightPanelFocus: null as {
     annotationId?: string;
     responseId?: string;
@@ -128,8 +105,6 @@ const initialTransientState = {
 export function partializeUiState(state: UiState): PersistedUiSlice {
   return {
     sidebarCollapsed: state.sidebarCollapsed,
-    rightPanelOpen: state.rightPanelOpen,
-
     composerEnterToSend: state.composerEnterToSend,
     onboardingDismissed: state.onboardingDismissed,
     drafts: state.drafts,
@@ -140,7 +115,6 @@ export const useUiStore = create<UiState>()(
   persist(
     (set) => ({
       sidebarCollapsed: false,
-      rightPanelOpen: false,
       rightPanelWidth:
         typeof window !== "undefined" && window.localStorage?.getItem("klecx-panel-width")
           ? Number(window.localStorage.getItem("klecx-panel-width")) || 360
@@ -148,6 +122,8 @@ export const useUiStore = create<UiState>()(
       composerEnterToSend: true,
       onboardingDismissed: false,
       drafts: {},
+
+      addOptimisticResponse: () => {},
 
       ...initialTransientState,
 
@@ -161,6 +137,7 @@ export const useUiStore = create<UiState>()(
           writeSidebarCookie(next);
           return { sidebarCollapsed: next };
         }),
+
       setRightPanelOpen: (rightPanelOpen) => set({ rightPanelOpen }),
       setRightPanelWidth: (rightPanelWidth) => {
         if (typeof window !== "undefined") {
@@ -172,6 +149,7 @@ export const useUiStore = create<UiState>()(
       },
       toggleRightPanelOpen: () =>
         set((state) => ({ rightPanelOpen: !state.rightPanelOpen })),
+
       setComposerEnterToSend: (composerEnterToSend) =>
         set({ composerEnterToSend }),
       setOnboardingDismissed: (onboardingDismissed) =>
@@ -204,25 +182,7 @@ export const useUiStore = create<UiState>()(
       setCurrentPageId: (currentPageId) => set({ currentPageId }),
       setCurrentProject: ({ id, name }) =>
         set({ currentProjectId: id, currentProjectName: name }),
-      toggleChatMenuOpen: (chatMenuIsOpen) => set({ chatMenuIsOpen }),
-      setChatMenuClass: (chatMenuClass) => set({ chatMenuClass }),
-      setDialogData: (dialogData) => set({ dialogData }),
-      setEditPopUpOpen: (editPopUpIsOpen) => set({ editPopUpIsOpen }),
-      setDeletePopUpOpen: (deletePopUpIsOpen) => set({ deletePopUpIsOpen }),
-      setChatInputHeight: (chatInputHeight) => set({ chatInputHeight }),
-      setSearchResultIsOpen: (searchResultIsOpen) =>
-        set({ searchResultIsOpen }),
       setChatMode: (chatMode) => set({ chatMode }),
-      addOptimisticResponse: (response) =>
-        set((state) => {
-          if (state.optimisticResponses.some((r) => r.id === response.id)) {
-            return state;
-          }
-          return {
-            optimisticResponses: [...state.optimisticResponses, response],
-          };
-        }),
-      clearOptimisticResponses: () => set({ optimisticResponses: [] }),
       setRightPanelFocus: (rightPanelFocus) => set({ rightPanelFocus }),
       resetTransientUi: () => set({ ...initialTransientState }),
     }),
@@ -238,6 +198,26 @@ export const useUiStore = create<UiState>()(
             },
       ),
       partialize: partializeUiState,
+      // Restore only the fields that are persisted today. Older versions also
+      // stored `rightPanelOpen`; taking it back would open the All-annotations
+      // drawer on load.
+      merge: (persisted, current) => {
+        const saved = (persisted ?? {}) as Partial<PersistedUiSlice>;
+        return {
+          ...current,
+          ...(typeof saved.sidebarCollapsed === "boolean" && {
+            sidebarCollapsed: saved.sidebarCollapsed,
+          }),
+          ...(typeof saved.composerEnterToSend === "boolean" && {
+            composerEnterToSend: saved.composerEnterToSend,
+          }),
+          ...(typeof saved.onboardingDismissed === "boolean" && {
+            onboardingDismissed: saved.onboardingDismissed,
+          }),
+          ...(saved.drafts &&
+            typeof saved.drafts === "object" && { drafts: saved.drafts }),
+        };
+      },
     },
   ),
 );

@@ -7,6 +7,7 @@ import { render, screen, fireEvent, waitFor, act } from "@testing-library/react"
 import { SelectionToolbar } from "@/components/annotations/selection-toolbar";
 import { api } from "@/lib/api/client";
 import { useUiStore } from "@/lib/stores/ui";
+import { useThreadStackStore } from "@/lib/stores/thread-stack";
 
 const MESSAGES: Record<string, string> = {
   actionsAriaLabel: "Annotation actions",
@@ -63,6 +64,7 @@ describe("Step 6.3 / F2.2 — Selection popover v2 (Comment · Ask: Ask now / Ad
   beforeEach(() => {
     jest.clearAllMocks();
     useUiStore.setState({ rightPanelOpen: false, rightPanelFocus: null });
+    useThreadStackStore.setState({ stack: [] });
 
     window.matchMedia =
       window.matchMedia ||
@@ -358,16 +360,13 @@ describe("Step 6.3 / F2.2 — Selection popover v2 (Comment · Ask: Ask now / Ad
 
       expect(onAskNow).toHaveBeenCalled();
 
-      // Verify right panel focus was updated
-      const uiState = useUiStore.getState();
-      expect(uiState.rightPanelOpen).toBe(true);
-      expect(uiState.rightPanelFocus).toEqual(
-        expect.objectContaining({
-          responseId: "resp_123",
-          versionId: "ver_456",
-          tab: "replies",
-        })
-      );
+      // F2.4: "Ask now" opens the Ask's column next to the main conversation
+      // (where the answer streams) and does not open the All-annotations drawer.
+      const created = (await (api as jest.Mock).mock.results[0]!.value) as { id: string };
+      expect(useThreadStackStore.getState().stack).toEqual([
+        { kind: "annotation", id: created.id },
+      ]);
+      expect(useUiStore.getState().rightPanelOpen).toBe(false);
     });
 
     it("submits 'Add to queue' on click or Ctrl+Enter, keeps popover open for next selection", async () => {

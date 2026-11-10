@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Gated } from "@/components/ui/gated";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { api } from "@/lib/api/client";
-import { useUiStore } from "@/lib/stores/ui";
+import { useThreadStackStore } from "@/lib/stores/thread-stack";
+import { streamAskAnswer } from "@/lib/stores/ask-stream";
 import { selectionToAnchor, type Anchor } from "@/lib/annotations";
 import { MAX_ANNOTATION_DEPTH } from "@/lib/annotations/limits";
 import { MentionTextarea } from "./mention-textarea";
@@ -27,6 +28,8 @@ export interface SelectionTargetMetadata {
   contentSource: "ORIGINAL" | "EDIT";
   editRevision?: number;
   workspaceId?: string;
+  /** Column the selection is in: 0 = main conversation, n = nth thread column. */
+  columnIndex: number;
 }
 
 export interface SelectionToolbarProps {
@@ -48,37 +51,6 @@ export interface SelectionToolbarProps {
     contentSource: string;
     editRevision?: number;
   }) => void;
-}
-
-/**
- * Starts the answer for an Ask that was just created with `mode: "now"` and
- * reads the stream to the end (the server stops generating if nobody reads).
- * The thread is refreshed through the `annotation-changed` event.
- */
-async function streamAskNowAnswer(annotationId: string, detail: object) {
-  const notify = () =>
-    window.dispatchEvent(new CustomEvent("annotation-changed", { detail }));
-  try {
-    const res = await fetch(`/api/v1/annotations/${annotationId}/reply`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        // One answer per created Ask, even if this is sent twice.
-        "x-idempotency-key": `asknow_${annotationId}`,
-      },
-      body: JSON.stringify({}),
-    });
-    if (!res.ok || !res.body) return false;
-    const reader = res.body.getReader();
-    while (!(await reader.read()).done) {
-      // drain
-    }
-    return true;
-  } catch {
-    return false;
-  } finally {
-    notify();
-  }
 }
 
 export function SelectionToolbar({
@@ -126,9 +98,6 @@ export function SelectionToolbar({
   React.useEffect(() => {
     askTextRef.current = askText;
   }, [askText]);
-
-  const setRightPanelOpen = useUiStore((s) => s.setRightPanelOpen);
-  const setRightPanelFocus = useUiStore((s) => s.setRightPanelFocus);
 
   // Detect coarse pointer (touch device)
   React.useEffect(() => {
@@ -288,6 +257,11 @@ export function SelectionToolbar({
           startRoot.closest("[data-workspace-id]")?.getAttribute("data-workspace-id") ||
           workspaceIdProp;
 
+        const columnAttr = startRoot
+          .closest("[data-thread-column-index]")
+          ?.getAttribute("data-thread-column-index");
+        const columnIndex = columnAttr ? parseInt(columnAttr, 10) || 0 : 0;
+
         const anchor = selectionToAnchor(startRoot, range);
 
         setActiveRange(range);
@@ -301,6 +275,7 @@ export function SelectionToolbar({
           contentSource,
           editRevision,
           workspaceId,
+          columnIndex,
         });
         setIsVisible(true);
       }, 120);
@@ -486,28 +461,21 @@ export function SelectionToolbar({
         setAskText("");
         askInputRef.current?.focus();
       } else {
-        // "now": the answer starts streaming right away. F2.4 shows it in the
-        // Ask column; until then the thread opens in the right panel.
+        // "now": the Ask opens as the column right after the one the text
+        // was selected in (0 = main conversation), and its answer streams
+        // into that column.
         const created = res as { id?: string };
         if (created?.id) {
-          void streamAskNowAnswer(created.id, changedDetail).then((ok) => {
-            if (!ok) toast.error(t("askFailed"));
-          });
+          useThreadStackStore
+            .getState()
+            .open(
+              { kind: "annotation", id: created.id },
+              { fromIndex: metadata.columnIndex }
+            );
+          // A failed answer is reported in the column, with a retry button.
+          void streamAskAnswer(created.id, { detail: changedDetail });
         }
         onAskNow?.(res);
-
-        window.dispatchEvent(
-          new CustomEvent("open-ask-column", { detail: { annotation: res } })
-        );
-
-        if (metadata.responseId && metadata.versionId) {
-          setRightPanelFocus({
-            responseId: metadata.responseId,
-            versionId: metadata.versionId,
-            tab: "replies",
-          });
-          setRightPanelOpen(true);
-        }
 
         onReplyTriggered?.({
           anchor: activeAnchor,

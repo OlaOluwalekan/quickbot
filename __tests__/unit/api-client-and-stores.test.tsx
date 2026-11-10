@@ -239,32 +239,25 @@ describe("Step 3.3 — Client Data Layer (api client, TanStack Query, Zustand)",
   });
 
   describe("Zustand stores: useUiStore & useGenerationStore", () => {
-    it("persists only non-sensitive UI fields (sidebarCollapsed, rightPanelOpen, composerEnterToSend, drafts)", () => {
+    it("persists only non-sensitive UI fields (sidebarCollapsed, composerEnterToSend, drafts) and never rightPanelOpen (F2.4)", () => {
       act(() => {
         useUiStore.getState().setSidebarCollapsed(true);
         useUiStore.getState().setRightPanelOpen(true);
         useUiStore.getState().setComposerEnterToSend(false);
         useUiStore.getState().setDraft("ws-1", "my draft");
         useUiStore.getState().setCurrentPageTitle("Sensitive Title");
-        useUiStore.getState().setDialogData({
-          id: "ws-1",
-          title: "Sensitive",
-          createdBy: "u-1",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        });
       });
 
       const persisted = partializeUiState(useUiStore.getState());
       expect(persisted).toEqual({
         sidebarCollapsed: true,
-        rightPanelOpen: true,
         composerEnterToSend: false,
         onboardingDismissed: false,
         drafts: { "ws-1": "my draft" },
       });
       expect("currentPageTitle" in persisted).toBe(false);
-      expect("dialogData" in persisted).toBe(false);
+      // F2.4: the drawer never re-opens on load.
+      expect("rightPanelOpen" in persisted).toBe(false);
       expect("optimisticResponses" in persisted).toBe(false);
     });
 

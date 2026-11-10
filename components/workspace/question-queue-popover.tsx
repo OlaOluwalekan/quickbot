@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api/client";
 import { useUiStore } from "@/lib/stores/ui";
+import { openAnnotationThread } from "@/lib/stores/thread-stack";
 import {
   Popover,
   PopoverContent,
@@ -199,7 +200,9 @@ function QuestionQueuePopoverInner({
         queryKey: ["workspaces", workspaceId, "annotations"],
       });
 
-      // Open right panel focused on Questions tab
+      // Open columns of answered questions reload, and the All-annotations
+      // drawer opens on the answered threads.
+      window.dispatchEvent(new CustomEvent("annotation-changed", { detail: {} }));
       setRightPanelFocus({ tab: "questions" });
       setRightPanelOpen(true);
       setIsOpen(false);
@@ -298,7 +301,15 @@ function QuestionQueuePopoverInner({
                 <div
                   key={q.id}
                   data-testid={`queued-question-${q.id}`}
-                  className="rounded-lg border border-border/80 bg-surface-2/40 p-2.5 text-xs space-y-1.5 group"
+                  onClick={(e) => {
+                    // Edit / delete / save buttons inside the card keep their own action.
+                    if ((e.target as HTMLElement).closest("button, textarea")) return;
+                    if (editingId !== q.id) {
+                      void openAnnotationThread(q.id);
+                      setIsOpen(false);
+                    }
+                  }}
+                  className="rounded-lg border border-border/80 bg-surface-2/40 p-2.5 text-xs space-y-1.5 group cursor-pointer hover:border-accent/50 transition-colors"
                 >
                   {/* Quoted passage snippet */}
                   <div className="border-l-2 border-accent/60 pl-2 text-[11px] italic text-subtle line-clamp-2">
