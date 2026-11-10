@@ -1313,6 +1313,14 @@
     "archived": "Archived",
     "active": "Active",
     "all": "All",
-    "chip": "Klecx will remember this"
+    "chip": "Klecx will remember this",
+    "loading": "Loading notes…",
+    "noteArchived": "Note archived",
+    "noteRestored": "Note restored",
+    "noteDeleted": "Note deleted",
+    "updateFailed": "Couldn't update the note",
+    "deleteFailed": "Couldn't delete the note",
+    "unknownAuthor": "Former member",
+    "filter": "Show notes"
   }
 }

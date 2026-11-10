@@ -106,6 +106,11 @@ const NOTIFICATION_TYPE_METADATA: NotificationTypeMeta[] = [
     label: "Access restored",
     description: "When your full access comes back.",
   },
+  {
+    type: "MENTIONED",
+    label: "Mentions",
+    description: "When someone mentions you in a comment.",
+  },
 ];
 
 export function NotificationsSettingsView() {

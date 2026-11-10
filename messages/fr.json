@@ -1310,9 +1310,17 @@
     "archive": "Archiver",
     "restore": "Restaurer",
     "delete": "Supprimer",
-    "archived": "Archivé",
-    "active": "Actif",
-    "all": "Tout",
-    "chip": "Klecx s'en souviendra"
+    "archived": "Archivées",
+    "active": "Actives",
+    "all": "Toutes",
+    "chip": "Klecx s'en souviendra",
+    "loading": "Chargement des notes…",
+    "noteArchived": "Note archivée",
+    "noteRestored": "Note restaurée",
+    "noteDeleted": "Note supprimée",
+    "updateFailed": "Impossible de mettre à jour la note",
+    "deleteFailed": "Impossible de supprimer la note",
+    "unknownAuthor": "Ancien membre",
+    "filter": "Afficher les notes"
   }
 }

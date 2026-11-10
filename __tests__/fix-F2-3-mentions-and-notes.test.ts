@@ -6,6 +6,9 @@ import crypto from "node:crypto";
 import { db } from "@/server/db/client";
 import {
   createAnnotation,
+  createAnnotationOnMessage,
+  createAnnotationMessage,
+  deleteAnnotation,
   updateAnnotation,
 } from "@/server/services/annotation";
 import { loadActiveNotes } from "@/server/ai/notes";
@@ -269,7 +272,14 @@ describe("Fix F2.3 — Mentions, notifications and Klecx notes in the AI context
         })
       ).rejects.toMatchObject({
         status: 403,
+        code: "klecx_note_forbidden",
       });
+
+      // Nothing is saved when the note is refused (one transaction).
+      const leftover = await db.annotation.count({
+        where: { workspaceId: workspace.id, createdById: memberCommentOnly.id },
+      });
+      expect(leftover).toBe(0);
     });
 
     it("allows commenter without ask/generate to mention workspace members", async () => {
@@ -378,10 +388,64 @@ describe("Fix F2.3 — Mentions, notifications and Klecx notes in the AI context
       noteId = note!.id;
     });
 
-    it("listWorkspaceNotes returns active notes", async () => {
-      const notes = await listWorkspaceNotes(ownerActor, workspace.id, "ACTIVE");
-      expect(notes.some((n) => n.id === noteId)).toBe(true);
-      expect(notes[0]?.instruction).toBe("always use Redis for caching");
+    it("listWorkspaceNotes returns active notes without the author's email", async () => {
+      const { notes, overBudget } = await listWorkspaceNotes(
+        ownerActor,
+        workspace.id,
+        "ACTIVE"
+      );
+      const note = notes.find((n) => n.id === noteId);
+      expect(note?.instruction).toBe("always use Redis for caching");
+      expect(note?.author).toEqual({
+        name: "F23 Owner",
+        username: owner.username,
+        image: null,
+      });
+      expect(note?.canManage).toBe(true);
+      expect(overBudget).toBe(false);
+      expect(JSON.stringify(notes)).not.toContain(owner.email);
+    });
+
+    it("someone outside the workspace gets 404 on list, update and delete", async () => {
+      const outsider = await db.user.create({
+        data: {
+          id: crypto.randomUUID(),
+          email: `f23-outsider-${Date.now()}@example.com`,
+          name: "Outsider",
+        },
+      });
+      const outsiderActor: Actor = {
+        userId: outsider.id,
+        email: outsider.email,
+        role: "USER",
+        sessionId: "sess_f23_outsider",
+      };
+
+      try {
+        await expect(
+          listWorkspaceNotes(outsiderActor, workspace.id)
+        ).rejects.toMatchObject({ status: 404 });
+        await expect(
+          updateWorkspaceNoteStatus(outsiderActor, noteId, "ARCHIVED")
+        ).rejects.toMatchObject({ status: 404 });
+        await expect(
+          deleteWorkspaceNote(outsiderActor, noteId)
+        ).rejects.toMatchObject({ status: 404 });
+      } finally {
+        await db.user.delete({ where: { id: outsider.id } });
+      }
+    });
+
+    it("a member who is neither the author nor an admin can't manage the note", async () => {
+      const { notes } = await listWorkspaceNotes(memberCanAskActor, workspace.id);
+      expect(notes.find((n) => n.id === noteId)?.canManage).toBe(false);
+
+      await expect(
+        updateWorkspaceNoteStatus(memberCanAskActor, noteId, "ARCHIVED")
+      ).rejects.toMatchObject({ status: 403 });
+      await expect(
+        deleteWorkspaceNote(memberCanAskActor, noteId)
+      ).rejects.toMatchObject({ status: 403 });
     });
 
     it("updateWorkspaceNoteStatus archives the note", async () => {
@@ -389,8 +453,17 @@ describe("Fix F2.3 — Mentions, notifications and Klecx notes in the AI context
       expect(updated.status).toBe("ARCHIVED");
       expect(updated.archivedAt).not.toBeNull();
 
-      const activeNotes = await listWorkspaceNotes(ownerActor, workspace.id, "ACTIVE");
-      expect(activeNotes.some((n) => n.id === noteId)).toBe(false);
+      const active = await listWorkspaceNotes(ownerActor, workspace.id, "ACTIVE");
+      expect(active.notes.some((n) => n.id === noteId)).toBe(false);
+    });
+
+    it("a note can't be restored once its comment is deleted", async () => {
+      const note = await db.workspaceNote.findUniqueOrThrow({ where: { id: noteId } });
+      await deleteAnnotation(ownerActor, note.annotationId);
+
+      await expect(
+        updateWorkspaceNoteStatus(ownerActor, noteId, "ACTIVE")
+      ).rejects.toMatchObject({ status: 409, code: "note_annotation_deleted" });
     });
 
     it("deleteWorkspaceNote removes the note", async () => {
@@ -399,6 +472,113 @@ describe("Fix F2.3 — Mentions, notifications and Klecx notes in the AI context
         where: { id: noteId },
       });
       expect(note).toBeNull();
+    });
+  });
+
+  describe("5. Edits, replies and private threads", () => {
+    it("removing @klecx from the comment archives its note; making it private does too", async () => {
+      const annot = await createAnnotation(ownerActor, versionId, {
+        kind: "COMMENT",
+        anchor: { exact: "persistence", prefix: "", suffix: "" },
+        text: "@klecx prefer managed storage",
+      });
+
+      await updateAnnotation(ownerActor, annot.id, { text: "prefer managed storage" });
+      let note = await db.workspaceNote.findUniqueOrThrow({
+        where: { annotationId: annot.id },
+      });
+      expect(note.status).toBe("ARCHIVED");
+
+      await updateAnnotation(ownerActor, annot.id, {
+        text: "@klecx prefer managed storage always",
+      });
+      note = await db.workspaceNote.findUniqueOrThrow({
+        where: { annotationId: annot.id },
+      });
+      expect(note.status).toBe("ACTIVE");
+      expect(note.instruction).toBe("prefer managed storage always");
+
+      await updateAnnotation(ownerActor, annot.id, { visibility: "PRIVATE" });
+      note = await db.workspaceNote.findUniqueOrThrow({
+        where: { annotationId: annot.id },
+      });
+      expect(note.status).toBe("ARCHIVED");
+    });
+
+    it("a reply in a comment thread notifies the mentioned member once", async () => {
+      const annot = await createAnnotation(ownerActor, versionId, {
+        kind: "COMMENT",
+        visibility: "WORKSPACE",
+        anchor: { exact: "fast reads", prefix: "", suffix: "" },
+        text: "Is this still true?",
+      });
+
+      const reply = await createAnnotationMessage(
+        ownerActor,
+        annot.id,
+        `@${memberCanAsk.username} can you confirm?`
+      );
+
+      const rows = await db.notification.findMany({
+        where: {
+          userId: memberCanAsk.id,
+          dedupeKey: `mention:${reply.id}:${memberCanAsk.id}`,
+        },
+      });
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.payload).toMatchObject({
+        workspaceId: workspace.id,
+        annotationId: annot.id,
+        href: `/workspaces/${workspace.id}`,
+      });
+    });
+
+    it("a comment inside a private thread stays private and notifies nobody", async () => {
+      const ask = await db.annotation.create({
+        data: {
+          workspaceId: workspace.id,
+          responseId,
+          versionId,
+          targetType: "RESPONSE_VERSION",
+          createdById: memberCanAsk.id,
+          kind: "ASK",
+          visibility: "PRIVATE",
+          anchorExact: "MongoDB database",
+          anchorPrefix: "",
+          anchorSuffix: "",
+          messages: {
+            create: [
+              { role: "USER", content: "Why MongoDB?", authorId: memberCanAsk.id },
+              { role: "ASSISTANT", content: "Because it stores flexible documents." },
+            ],
+          },
+        },
+        include: { messages: true },
+      });
+      const answer = ask.messages.find((m) => m.role === "ASSISTANT")!;
+
+      const child = await createAnnotationOnMessage(memberCanAskActor, answer.id, {
+        kind: "COMMENT",
+        anchor: { exact: "flexible documents", prefix: "", suffix: "" },
+        text: `@${owner.username} @klecx we need strict schemas`,
+      });
+
+      const saved = await db.annotation.findUniqueOrThrow({ where: { id: child.id } });
+      expect(saved.visibility).toBe("PRIVATE");
+
+      const userMentions = await db.annotationMention.count({
+        where: { message: { annotationId: child.id }, isKlecx: false },
+      });
+      expect(userMentions).toBe(0);
+
+      const notified = await db.notification.count({
+        where: { userId: owner.id, payload: { path: ["annotationId"], equals: child.id } },
+      });
+      expect(notified).toBe(0);
+
+      // The author still asked Klecx to remember it.
+      const note = await db.workspaceNote.findUnique({ where: { annotationId: child.id } });
+      expect(note?.status).toBe("ACTIVE");
     });
   });
 });

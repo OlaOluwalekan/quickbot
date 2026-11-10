@@ -264,10 +264,7 @@ export function Topbar({
         </Button>
 
         {activeWorkspace && (
-          <NotesPopover
-            workspaceId={activeWorkspace.id}
-            currentUserId={currentUserId}
-          />
+          <NotesPopover workspaceId={activeWorkspace.id} />
         )}
 
         {currentUserId && <NotificationBell />}

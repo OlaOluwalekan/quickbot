@@ -2,16 +2,21 @@ import "server-only";
 
 import { db } from "@/server/db/client";
 import { Errors } from "@/server/http/errors";
-import { requireWorkspace } from "@/server/authz/access";
 import { notify } from "@/server/services/notify";
 import { logActivity } from "@/server/services/activity";
 import type { Actor } from "@/server/auth/session";
+import type { Permission } from "@/server/authz/permissions";
+import type { Prisma } from "@/server/db/generated/client";
+
+type DbOrTx = Prisma.TransactionClient | typeof db;
 
 /**
  * Regex matching valid usernames (3-30 chars, lowercase letter followed by letters/digits/underscores).
  * Same rules as usernames across the app.
  */
 export const MENTION_RE = /(^|[\s(])@([a-z][a-z0-9_]{2,29})\b/g;
+
+const EXCERPT_MAX = 200;
 
 /**
  * Strips the `@klecx` mention token and cleans up remaining whitespace.
@@ -24,13 +29,32 @@ export function extractInstructionFromKlecx(text: string): string {
 }
 
 /**
+ * `@klecx` records a note that steers later answers, so it needs the right to
+ * ask or generate. Everyone else can still mention people.
+ */
+export function assertCanCreateKlecxNote(capabilities: Set<Permission>): void {
+  if (
+    !capabilities.has("workspace.ask") &&
+    !capabilities.has("workspace.generate")
+  ) {
+    throw Errors.forbidden(
+      "You don't have permission to record Klecx notes",
+      "klecx_note_forbidden"
+    );
+  }
+}
+
+/**
  * Resolves mentions from a given text inside a workspace.
- * Returns only the user IDs of active, non-suspended workspace members / project members / owner.
+ * Returns only the ids of people who are mentionable here (same set as
+ * `listMentionables`): the workspace owner, the project owner, and
+ * non-suspended workspace / project members. Unknown names stay plain text.
  * Also returns `klecx: true` if `@klecx` was mentioned.
  */
 export async function resolveMentions(
   workspaceId: string,
-  text: string
+  text: string,
+  client: DbOrTx = db
 ): Promise<{ userIds: string[]; klecx: boolean }> {
   if (!text) {
     return { userIds: [], klecx: false };
@@ -54,12 +78,13 @@ export async function resolveMentions(
     return { userIds: [], klecx };
   }
 
-  const workspace = await db.workspace.findUnique({
-    where: { id: workspaceId },
+  const workspace = await client.workspace.findFirst({
+    where: { id: workspaceId, deletedAt: null },
     select: {
       id: true,
       ownerId: true,
       projectId: true,
+      project: { select: { ownerId: true, deletedAt: true } },
     },
   });
 
@@ -67,44 +92,44 @@ export async function resolveMentions(
     return { userIds: [], klecx };
   }
 
-  const lowerUsernames = Array.from(handles);
-  const candidateUsers = await db.user.findMany({
+  const project =
+    workspace.projectId && workspace.project && !workspace.project.deletedAt
+      ? { id: workspace.projectId, ownerId: workspace.project.ownerId }
+      : null;
+
+  const candidateUsers = await client.user.findMany({
     where: {
-      username: { in: lowerUsernames, mode: "insensitive" },
+      username: { in: Array.from(handles), mode: "insensitive" },
     },
     select: {
       id: true,
-      username: true,
       workspaceMemberships: {
         where: { workspaceId: workspace.id, suspendedAt: null },
         select: { userId: true },
       },
-      projectMemberships: workspace.projectId
+      projectMemberships: project
         ? {
-            where: { projectId: workspace.projectId, suspendedAt: null },
+            where: { projectId: project.id, suspendedAt: null },
             select: { userId: true },
           }
         : false,
     },
   });
 
-  const validUserIds: string[] = [];
+  const validUserIds = new Set<string>();
   for (const u of candidateUsers) {
-    const isOwner = u.id === workspace.ownerId;
+    const isOwner = u.id === workspace.ownerId || u.id === project?.ownerId;
     const isDirectMember = u.workspaceMemberships.length > 0;
     const isProjectMember = Boolean(
       u.projectMemberships && u.projectMemberships.length > 0
     );
 
     if (isOwner || isDirectMember || isProjectMember) {
-      validUserIds.push(u.id);
+      validUserIds.add(u.id);
     }
   }
 
-  return {
-    userIds: Array.from(new Set(validUserIds)),
-    klecx,
-  };
+  return { userIds: Array.from(validUserIds), klecx };
 }
 
 export interface SyncMentionsOptions {
@@ -114,21 +139,45 @@ export interface SyncMentionsOptions {
   text: string;
   anchorExact: string;
   actor: Actor;
+  capabilities: Set<Permission>;
   currentVisibility: "PRIVATE" | "WORKSPACE";
-  isNewMessage?: boolean;
+  /**
+   * False when the annotation sits inside a private thread: it quotes a
+   * private answer, so it can't become visible to the workspace. People
+   * can't open it, so `@user` stays plain text there; `@klecx` still records
+   * a note.
+   */
+  canShare: boolean;
+  isNewMessage: boolean;
 }
 
-/**
- * Synchronizes mentions, notifications, and Klecx notes for an annotation message.
- * Called inside createAnnotation, createAnnotationMessage, and updateAnnotation.
- */
-export async function syncMentionsAndNotes(
-  options: SyncMentionsOptions
-): Promise<{
+export interface SyncMentionsResult {
   visibility: "PRIVATE" | "WORKSPACE";
   userIds: string[];
   klecx: boolean;
-}> {
+  /** Pass to `sendMentionNotifications` after the transaction commits. */
+  pendingNotifications: {
+    workspaceId: string;
+    annotationId: string;
+    messageId: string;
+    quote: string;
+    excerpt: string;
+    authorName: string;
+    href: string;
+    userIds: string[];
+  };
+}
+
+/**
+ * Synchronizes mention rows, visibility and the Klecx note for one annotation
+ * message. Runs on the caller's transaction, so the message, its mentions and
+ * its note are saved together or not at all. It does not send anything:
+ * call `sendMentionNotifications(result.pendingNotifications)` after commit.
+ */
+export async function syncMentionsAndNotes(
+  tx: DbOrTx,
+  options: SyncMentionsOptions
+): Promise<SyncMentionsResult> {
   const {
     workspaceId,
     annotationId,
@@ -136,45 +185,37 @@ export async function syncMentionsAndNotes(
     text,
     anchorExact,
     actor,
+    capabilities,
     currentVisibility,
-    isNewMessage = true,
+    canShare,
+    isNewMessage,
   } = options;
 
-  const { userIds, klecx } = await resolveMentions(workspaceId, text);
+  const resolved = await resolveMentions(workspaceId, text, tx);
+  const klecx = resolved.klecx;
+  const userIds = canShare ? resolved.userIds : [];
 
-  // If @klecx is present, verify permission
   if (klecx) {
-    const { capabilities } = await requireWorkspace(
-      actor,
-      workspaceId,
-      "workspace.read"
-    );
-    const canAskOrGenerate =
-      capabilities.has("workspace.ask") ||
-      capabilities.has("workspace.generate");
-
-    if (!canAskOrGenerate) {
-      throw Errors.forbidden(
-        "klecx_note_forbidden",
-        "klecx_note_forbidden"
-      );
-    }
+    assertCanCreateKlecxNote(capabilities);
   }
 
-  // Force WORKSPACE visibility if @klecx is present or any member was mentioned
-  let newVisibility = currentVisibility;
-  if ((klecx || userIds.length > 0) && currentVisibility === "PRIVATE") {
-    newVisibility = "WORKSPACE";
-    await db.annotation.update({
+  // A mention makes the comment visible to the workspace (the client warned).
+  let visibility = currentVisibility;
+  if (
+    canShare &&
+    (klecx || userIds.length > 0) &&
+    currentVisibility === "PRIVATE"
+  ) {
+    visibility = "WORKSPACE";
+    await tx.annotation.update({
       where: { id: annotationId },
       data: { visibility: "WORKSPACE" },
     });
   }
 
-  // Sync AnnotationMention rows
-  const existingMentions = await db.annotationMention.findMany({
-    where: { messageId },
-  });
+  const existingMentions = isNewMessage
+    ? []
+    : await tx.annotationMention.findMany({ where: { messageId } });
 
   const existingUserIds = new Set(
     existingMentions
@@ -183,55 +224,41 @@ export async function syncMentionsAndNotes(
   );
   const existingHasKlecx = existingMentions.some((m) => m.isKlecx);
 
-  // Insert missing user mentions
-  const newUserIdsToInsert = userIds.filter((id) => !existingUserIds.has(id));
-  if (newUserIdsToInsert.length > 0) {
-    await db.annotationMention.createMany({
-      data: newUserIdsToInsert.map((userId) => ({
-        messageId,
-        userId,
-        isKlecx: false,
-      })),
+  const newUserIds = userIds.filter((id) => !existingUserIds.has(id));
+  if (newUserIds.length > 0) {
+    await tx.annotationMention.createMany({
+      data: newUserIds.map((userId) => ({ messageId, userId, isKlecx: false })),
       skipDuplicates: true,
     });
   }
 
-  // Insert missing Klecx mention
   if (klecx && !existingHasKlecx) {
-    await db.annotationMention.create({
-      data: {
-        messageId,
-        userId: null,
-        isKlecx: true,
-      },
+    await tx.annotationMention.create({
+      data: { messageId, userId: null, isKlecx: true },
     });
   }
 
-  // If updating, delete removed mentions
-  if (!isNewMessage) {
-    const desiredUserIds = new Set(userIds);
-    const mentionsToDelete = existingMentions.filter((m) => {
-      if (m.isKlecx && !klecx) return true;
-      if (!m.isKlecx && m.userId && !desiredUserIds.has(m.userId)) return true;
-      return false;
-    });
-
-    if (mentionsToDelete.length > 0) {
-      await db.annotationMention.deleteMany({
-        where: { id: { in: mentionsToDelete.map((m) => m.id) } },
-      });
-    }
+  // On edit, drop the mentions that are no longer in the text.
+  const desiredUserIds = new Set(userIds);
+  const staleIds = existingMentions
+    .filter((m) =>
+      m.isKlecx ? !klecx : Boolean(m.userId && !desiredUserIds.has(m.userId))
+    )
+    .map((m) => m.id);
+  if (staleIds.length > 0) {
+    await tx.annotationMention.deleteMany({ where: { id: { in: staleIds } } });
   }
 
-  // Handle WorkspaceNote
   if (klecx) {
     const instruction = extractInstructionFromKlecx(text);
-    const existingNote = await db.workspaceNote.findUnique({
+    const existingNote = await tx.workspaceNote.findUnique({
       where: { annotationId },
+      select: { id: true },
     });
 
     if (existingNote) {
-      await db.workspaceNote.update({
+      // One note per annotation: the latest @klecx message replaces it.
+      await tx.workspaceNote.update({
         where: { id: existingNote.id },
         data: {
           messageId,
@@ -242,7 +269,7 @@ export async function syncMentionsAndNotes(
         },
       });
     } else {
-      const newNote = await db.workspaceNote.create({
+      const note = await tx.workspaceNote.create({
         data: {
           workspaceId,
           annotationId,
@@ -254,65 +281,78 @@ export async function syncMentionsAndNotes(
         },
       });
 
-      await logActivity(db, {
+      // No note text in the activity log (rule: no user content in logs).
+      await logActivity(tx, {
         workspaceId,
         actorId: actor.userId,
         action: "note.created",
         targetType: "note",
-        targetId: newNote.id,
-        meta: { quote: anchorExact, instruction },
+        targetId: note.id,
       });
     }
-  } else if (!isNewMessage) {
-    // If not a new message and @klecx was removed, archive the note
-    await archiveNoteForAnnotation(annotationId);
-  }
-
-  // Send notifications for newly mentioned users (excluding the author)
-  const targetUserIds = isNewMessage ? userIds : newUserIdsToInsert;
-  const excerpt = text.length > 200 ? `${text.slice(0, 197)}...` : text;
-
-  for (const targetUserId of targetUserIds) {
-    if (targetUserId === actor.userId) continue;
-
-    await notify(
-      targetUserId,
-      "MENTIONED",
-      {
-        workspaceId,
-        annotationId,
-        quote: anchorExact,
-        excerpt,
-        authorName: actor.name || "A member",
-      },
-      {
-        dedupeKey: `mention:${messageId}:${targetUserId}`,
-        email: true,
-      }
-    );
+  } else if (existingHasKlecx) {
+    // `@klecx` was removed from the message that recorded the note.
+    await tx.workspaceNote.updateMany({
+      where: { annotationId, messageId, status: "ACTIVE" },
+      data: { status: "ARCHIVED", archivedAt: new Date() },
+    });
   }
 
   return {
-    visibility: newVisibility,
+    visibility,
     userIds,
     klecx,
+    pendingNotifications: {
+      workspaceId,
+      annotationId,
+      messageId,
+      quote: anchorExact,
+      excerpt:
+        text.length > EXCERPT_MAX
+          ? `${text.slice(0, EXCERPT_MAX - 1)}…`
+          : text,
+      authorName: actor.name ?? "",
+      href: `/workspaces/${workspaceId}`,
+      // New messages notify everyone mentioned; edits only the newly added.
+      userIds: newUserIds.filter((id) => id !== actor.userId),
+    },
   };
 }
 
 /**
- * Archives any active WorkspaceNote associated with an annotation (on delete, resolve, or note removal).
+ * Sends the MENTIONED notifications collected by `syncMentionsAndNotes`.
+ * Call it after the transaction commits. A failed notification never fails
+ * the comment that was already saved.
+ */
+export async function sendMentionNotifications(
+  pending: SyncMentionsResult["pendingNotifications"]
+): Promise<void> {
+  const { userIds, messageId, ...payload } = pending;
+  for (const userId of userIds) {
+    try {
+      await notify(userId, "MENTIONED", payload, {
+        dedupeKey: `mention:${messageId}:${userId}`,
+        email: true,
+      });
+    } catch (err) {
+      console.error(
+        "[mentions] notification failed:",
+        err instanceof Error ? err.name : "unknown"
+      );
+    }
+  }
+}
+
+/**
+ * Archives the active WorkspaceNote of an annotation (on delete, resolve, or
+ * when the annotation becomes private).
  */
 export async function archiveNoteForAnnotation(
-  annotationId: string
+  annotationId: string,
+  client: DbOrTx = db
 ): Promise<void> {
-  await db.workspaceNote.updateMany({
-    where: {
-      annotationId,
-      status: "ACTIVE",
-    },
-    data: {
-      status: "ARCHIVED",
-      archivedAt: new Date(),
-    },
+  await client.workspaceNote.updateMany({
+    where: { annotationId, status: "ACTIVE" },
+    data: { status: "ARCHIVED", archivedAt: new Date() },
   });
 }

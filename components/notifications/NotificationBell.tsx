@@ -7,6 +7,7 @@ import {
   Check,
   CheckCheck,
   X,
+  AtSign,
   UserPlus,
   UserCheck,
   UserMinus,
@@ -187,6 +188,13 @@ export function formatNotificationPresentation(item: NotificationItemDto): {
         description: `Your full access to ${(p.resourceName as string) || "a workspace"} is back.`,
         href: href || "/workspaces",
         icon: <UserCheck className="h-4 w-4 text-accent" />,
+      };
+    case "MENTIONED":
+      return {
+        title: "You were mentioned",
+        description: `${(p.authorName as string) || "Someone"} mentioned you in a comment${p.quote ? ` on «${p.quote as string}»` : ""}.`,
+        href: href || "/workspaces",
+        icon: <AtSign className="h-4 w-4 text-accent" />,
       };
     default:
       return {

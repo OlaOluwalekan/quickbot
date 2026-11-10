@@ -59,6 +59,9 @@ jest.mock("next-intl", () => ({
     };
   },
   useLocale: () => "en",
+  useFormatter: () => ({
+    dateTime: (date: Date) => date.toISOString().slice(0, 10),
+  }),
 }));
 
 beforeAll(() => {
@@ -288,10 +291,11 @@ describe("Step 3.4 — AppShell, Sidebar, Topbar, Mobile Drawer & Command Palett
     global.fetch = fetchMock as unknown as typeof fetch;
     // The Topbar also renders NotificationBell, which polls
     // /api/v1/notifications/unread-count through the same fetch. Only count
-    // calls that hit the workspace endpoint.
+    // calls that hit the workspace endpoint itself (the Klecx notes button
+    // reads /api/v1/workspaces/:id/notes).
     const workspaceCalls = () =>
       fetchMock.mock.calls.filter(([url]) =>
-        String(url).startsWith("/api/v1/workspaces/")
+        /^\/api\/v1\/workspaces\/[^/]+$/.test(String(url))
       );
 
     renderAppShell(false);

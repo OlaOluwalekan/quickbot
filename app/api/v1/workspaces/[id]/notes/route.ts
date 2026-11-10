@@ -9,11 +9,6 @@ export const GET = route({
     key: (c) => c.actor.userId,
   },
   handler: async ({ actor, params, query }) => {
-    const notes = await listWorkspaceNotes(
-      actor,
-      params.id as string,
-      query.status
-    );
-    return { notes };
+    return listWorkspaceNotes(actor, params.id as string, query.status);
   },
 });
