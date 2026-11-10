@@ -1,4 +1,4 @@
-export const PROMPT_VERSION = "2026-10-1";
+export const PROMPT_VERSION = "2026-11-1";
 
 export function buildSystemPrompt(language = "en"): string {
   return `You are Klecx, an assistant inside a workspace app. Write in clean Markdown.

@@ -94,6 +94,7 @@ export function SelectionToolbar({
   onReplyTriggered,
 }: SelectionToolbarProps) {
   const t = useTranslations("Annotations.toolbar");
+  const tNotes = useTranslations("Notes");
 
   const effectiveCanComment = explicitCanComment ?? canAnnotate;
   const effectiveCanAsk = explicitCanAsk ?? (canAnnotate && canGenerate);
@@ -372,6 +373,7 @@ export function SelectionToolbar({
           ? `/api/v1/annotation-messages/${metadata.targetId}/annotations`
           : `/api/v1/response-versions/${metadata.targetId || metadata.versionId}/annotations`;
 
+      const text = commentText.trim();
       const res = await api(endpoint, {
         method: "POST",
         json: {
@@ -379,11 +381,16 @@ export function SelectionToolbar({
           anchor: activeAnchor,
           contentSource: metadata.contentSource,
           editRevision: metadata.editRevision,
-          text: commentText.trim(),
+          text,
         },
       });
 
-      toast.success(t("commentAdded"));
+      // `@klecx` records a note; no answer is generated.
+      const notedByKlecx = /(^|[\s(])@klecx\b/i.test(text);
+      toast.success(
+        t("commentAdded"),
+        notedByKlecx ? { description: tNotes("chip") } : undefined
+      );
       setAnnouncement(t("commentAdded"));
       onCommentCreated?.(res);
 

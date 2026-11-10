@@ -46,8 +46,11 @@ npm run verify
 
 - **Check in F2.4 — migrated replies in the wrong tab.** The F2.1 migration turned old REPLY rows into ASK with `questionState` ANSWERED/FAILED, so in the right panel (`isQueuedAsk()` split) they show under Questions, not with the asked-now Asks. The F2.4 panel must show them with the asked-now Asks, as answered threads (e.g. treat ASK rows with an ASSISTANT message and no queue history the same as asked-now, or backfill a marker).
 - **Check in F2.4 — mention chips not shown.** `RenderMentions` (`components/annotations/mention-textarea.tsx`) exists but nothing renders saved comments with it yet. The F2.4 thread column must use it for comment messages (the profile hovercard is still missing too).
+- **Check in F2.4 — Klecx note "View in context".** The Klecx notes popover (`components/workspace/notes-popover.tsx`) opens the old right panel focused on the comment. F2.4 must make it open the annotation's column instead (for nested ones, the ancestor chain).
 - **Check in F2.5 — interim "Ask now" answer.** The toolbar creates the Ask (`mode: "now"`) and then calls `POST /api/v1/annotations/[id]/reply` with no prompt to answer the pending question. F2.5 replaces this with `POST /annotations/:id/answer` (STREAMING/FAILED status + Retry); remove the prompt-less path of `/reply` then.
 - **Check in F2.6 — missing foreign keys.** `WorkspaceNote.messageId` (→ `annotation_messages`), `WorkspaceNote.createdById` (→ `users`) and `Annotation.rootAnnotationId` (→ `annotations`) have no FK, so deleting the message/user/root leaves dangling ids. Add the relations + FKs in a new migration (with the right `onDelete`).
+
+**Undecided product questions live in `OPEN_DECISIONS.md`.** Read it before a step that touches one of its entries. Keep the behaviour it describes until the owner decides; add an entry when a review finds a choice the owner hasn't made.
 
 ## Code layout
 
@@ -76,7 +79,7 @@ npm run verify
 
 - **Permissions are top-down:** effective role = max(project role, workspace role). A workspace row can add rights, never remove inherited ones. Per-member **Comment** and **Ask** toggles exist. Suspended members are read-only.
 - **Annotations:** two actions, **Comment** and **Ask** (Ask now / Add to queue). Nesting depth is **unlimited** (hidden safety ceiling 100), shown as a column stack whose older levels collapse into spines. An Ask's AI context = only the text containing the highlight + its own thread + Klecx notes.
-- **`@mentions`** notify members. **`@klecx`** creates a workspace note that's added to later prompts; no immediate AI call.
+- **`@mentions`** notify members. **`@klecx`** creates a workspace note that's added to later prompts; no immediate AI call. A note belongs to the message that recorded it, so one comment thread can hold several notes.
 - **Web search** is a tool the model calls when needed. It's on by default for all plans (Free included) and costs +3 credits per executed search, with a daily cap. It can be turned off in Settings. AI response language is a Settings preference (Auto by default), not a composer control.
 - **Billing owner:** the workspace owner pays for generations. Voice transcription and read-aloud are billed to the person using them.
 - **Ownership transfer** needs the recipient to accept and must fit their plan's member limit. When an owner goes over their member limit: 14-day grace, then the most recently added members are suspended. Nothing is deleted.

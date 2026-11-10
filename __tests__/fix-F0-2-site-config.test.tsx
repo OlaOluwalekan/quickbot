@@ -160,6 +160,12 @@ describe("Step F0.2 — Site configuration: emails, company identity, links from
       "member-restored": {
         resourceName: "Cyberdyne Systems",
       },
+      mentioned: {
+        authorName: "Sarah Connor",
+        quote: "MongoDB database",
+        excerpt: "use PostgreSQL instead",
+        actionUrl: "https://klecx.vyraxity.com/workspaces/wksp-1#annotation-1",
+      },
     };
 
     const allTemplates: EmailTemplateName[] = [

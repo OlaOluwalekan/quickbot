@@ -347,6 +347,14 @@
       "body": "Your full access to \"{resourceName}\" has been restored. You can comment, ask and generate again.",
       "button": "Open",
       "disclaimer": "You received this because your access changed."
+    },
+    "mentioned": {
+      "subject": "{authorName} mentioned you on Klecx",
+      "heading": "You were mentioned in a comment",
+      "greeting": "Hello,",
+      "body": "{authorName} mentioned you: {excerpt}",
+      "button": "View Comment",
+      "disclaimer": "You received this email because someone mentioned you in a workspace comment."
     }
   },
   "AppShell": {
@@ -1287,5 +1295,225 @@
       "mentionEmpty": "No members found",
       "klecxNoted": "Klecx noted this"
     }
+  },
+  "Notifications": {
+    "labels": {
+      "INVITE_RECEIVED": "Invitation received",
+      "INVITE_ACCEPTED": "Invitation accepted",
+      "MEMBER_REMOVED": "Removed from workspace",
+      "ROLE_CHANGED": "Role changed",
+      "SHARE_CREATED": "Public share link created",
+      "CREDITS_LOW": "Credits low (80%)",
+      "CREDITS_EXHAUSTED": "Credits exhausted (100%)",
+      "NEW_SIGN_IN": "New device sign-in",
+      "QUESTIONS_ANSWERED": "Queued questions answered",
+      "OWNERSHIP_TRANSFER_REQUESTED": "Ownership transfer request",
+      "OWNERSHIP_TRANSFER_ACCEPTED": "Ownership transfer accepted",
+      "OWNERSHIP_TRANSFER_DECLINED": "Ownership transfer declined",
+      "MEMBER_LIMIT_EXCEEDED": "Collaborator limit exceeded",
+      "MEMBER_SUSPENDED": "Access changed to read-only",
+      "MEMBER_RESTORED": "Access restored",
+      "MENTIONED": "Mentions"
+    },
+    "types": {
+      "INVITE_RECEIVED": "When someone invites you to collaborate on a workspace or project.",
+      "INVITE_ACCEPTED": "When a collaborator accepts an invitation you sent.",
+      "MEMBER_REMOVED": "When your access to a workspace or project is removed.",
+      "ROLE_CHANGED": "When your role in a workspace or project is updated.",
+      "SHARE_CREATED": "When a public share link is created on a workspace you own.",
+      "CREDITS_LOW": "When 80% of your monthly credit allowance has been used.",
+      "CREDITS_EXHAUSTED": "When your monthly credit allowance reaches 0.",
+      "NEW_SIGN_IN": "When your account is accessed from a new browser, OS, or country.",
+      "QUESTIONS_ANSWERED": "When a batch of queued passage questions finishes answering.",
+      "OWNERSHIP_TRANSFER_REQUESTED": "When someone asks you to take over a workspace or project.",
+      "OWNERSHIP_TRANSFER_ACCEPTED": "When the person you chose accepts ownership.",
+      "OWNERSHIP_TRANSFER_DECLINED": "When the person you chose declines ownership.",
+      "MEMBER_LIMIT_EXCEEDED": "When an owner's plan no longer covers all collaborators.",
+      "MEMBER_SUSPENDED": "When your access becomes read-only because of a plan limit.",
+      "MEMBER_RESTORED": "When your full access comes back.",
+      "MENTIONED": "When someone mentions you in a comment."
+    },
+    "roles": {
+      "OWNER": "Owner",
+      "ADMIN": "Admin",
+      "EDITOR": "Editor",
+      "COMMENTER": "Commenter",
+      "VIEWER": "Viewer"
+    },
+    "fallback": {
+      "someone": "Someone",
+      "collaborator": "A collaborator",
+      "recipient": "The recipient",
+      "workspace": "a workspace",
+      "yourWorkspace": "your workspace",
+      "role": "a collaborator",
+      "device": "a new device"
+    },
+    "items": {
+      "INVITE_RECEIVED": {
+        "title": "New invitation received",
+        "description": "{inviterName} invited you to join {resourceName} as {role}."
+      },
+      "INVITE_ACCEPTED": {
+        "title": "Invitation accepted",
+        "description": "{name} accepted your invitation."
+      },
+      "MEMBER_REMOVED": {
+        "title": "Access removed",
+        "description": "Your access to a shared workspace or project was removed.",
+        "descriptionNamed": "Your access to \"{resourceName}\" was removed."
+      },
+      "ROLE_CHANGED": {
+        "title": "Role updated",
+        "description": "Your role was changed.",
+        "descriptionRoles": "Your role was changed from {oldRole} to {newRole}."
+      },
+      "SHARE_CREATED": {
+        "title": "Public share link created",
+        "descriptionWorkspace": "A public share link was created for a workspace.",
+        "descriptionResponse": "A public share link was created for a response."
+      },
+      "CREDITS_LOW": {
+        "title": "Credits running low (80% used)",
+        "description": "You have few credits left this period.",
+        "descriptionCount": "You have {count} credits left this period."
+      },
+      "CREDITS_EXHAUSTED": {
+        "title": "Out of credits (100% used)",
+        "description": "Your monthly credit allowance has been used up."
+      },
+      "PAYMENT_FAILED": {
+        "title": "Payment failed",
+        "description": "We could not process your subscription payment. Please update your payment method."
+      },
+      "SUBSCRIPTION_CHANGED": {
+        "title": "Subscription updated",
+        "description": "Your subscription plan has been updated."
+      },
+      "NEW_SIGN_IN": {
+        "title": "New sign-in detected",
+        "description": "Signed in from {device}.",
+        "descriptionLocation": "Signed in from {device} ({location})."
+      },
+      "EXPORT_READY": {
+        "title": "Export ready",
+        "description": "Your exported document is ready to download."
+      },
+      "QUESTIONS_ANSWERED": {
+        "title": "Queued questions answered",
+        "description": "Your queued questions were answered.",
+        "descriptionOne": "1 queued question was answered.",
+        "descriptionCount": "{count} queued questions were answered."
+      },
+      "OWNERSHIP_TRANSFER_REQUESTED": {
+        "title": "Ownership transfer request",
+        "description": "{name} wants to transfer ownership of {resourceName} to you. If you accept, you pay for all usage there."
+      },
+      "OWNERSHIP_TRANSFER_ACCEPTED": {
+        "title": "Ownership transfer accepted",
+        "description": "{name} is now the owner of {resourceName}."
+      },
+      "OWNERSHIP_TRANSFER_DECLINED": {
+        "title": "Ownership transfer declined",
+        "description": "{name} declined to take over {resourceName}."
+      },
+      "MEMBER_LIMIT_EXCEEDED": {
+        "title": "Collaborator limit exceeded",
+        "description": "The owner's plan no longer covers all collaborators. Some members may become read-only soon.",
+        "descriptionOwner": "Your plan allows fewer collaborators. Choose who stays active in Share & people.",
+        "descriptionOwnerLimit": "Your plan allows {limit} collaborators. Choose who stays active in Share & people."
+      },
+      "MEMBER_SUSPENDED": {
+        "title": "Access changed to read-only",
+        "description": "Your access to {resourceName} is read-only because the owner's plan no longer covers all collaborators."
+      },
+      "MEMBER_RESTORED": {
+        "title": "Access restored",
+        "description": "Your full access to {resourceName} is back."
+      },
+      "MENTIONED": {
+        "title": "You were mentioned",
+        "description": "{name} mentioned you in a comment.",
+        "descriptionQuote": "{name} mentioned you in a comment on «{quote}»."
+      },
+      "default": {
+        "title": "Notification",
+        "description": "You have a new notification."
+      }
+    },
+    "bell": {
+      "label": "Notifications",
+      "labelUnread": "Notifications ({count} unread)",
+      "title": "Notifications",
+      "newCount": "{count} new",
+      "markAllReadTitle": "Mark all as read",
+      "markAllRead": "Mark all read",
+      "settings": "Notification settings",
+      "empty": "No notifications",
+      "emptyHint": "You're all caught up.",
+      "unread": "Unread",
+      "markRead": "Mark as read",
+      "dismiss": "Dismiss",
+      "viewAll": "View all notifications & preferences",
+      "allMarkedRead": "All notifications marked as read",
+      "markAllFailed": "Couldn't mark all as read"
+    },
+    "settings": {
+      "channelsTitle": "Notification channels",
+      "channelsDescription": "Choose which events notify you in-app and by email. Changes are saved automatically.",
+      "event": "Event",
+      "inApp": "In-app",
+      "email": "Email",
+      "inAppFor": "{label}: in-app notifications",
+      "emailFor": "{label}: email notifications",
+      "recentTitle": "Recent notifications",
+      "unreadCount": "{count} unread",
+      "recentDescription": "Your recent account and workspace activity alerts.",
+      "filter": "Show notifications",
+      "filterAll": "All",
+      "filterUnread": "Unread",
+      "markAllRead": "Mark all read",
+      "markRead": "Mark read",
+      "unread": "Unread",
+      "dismiss": "Dismiss",
+      "emptyTitle": "No notifications found",
+      "emptyUnread": "You have no unread notifications.",
+      "emptyAll": "Notifications will appear here when important events happen.",
+      "loadPrefsFailed": "Couldn't load notification preferences",
+      "loadFailed": "Couldn't load notifications",
+      "saved": "Preference saved",
+      "saveFailed": "Couldn't update the notification preference",
+      "allMarkedRead": "All notifications marked as read",
+      "markAllFailed": "Couldn't mark all as read"
+    },
+    "page": {
+      "metaTitle": "Notifications — Settings",
+      "back": "Settings",
+      "eyebrow": "Preferences",
+      "title": "Notifications",
+      "description": "Manage how and when Klecx notifies you about collaborations, credits, and security events."
+    }
+  },
+  "Notes": {
+    "title": "Klecx notes",
+    "button": "Klecx notes ({count})",
+    "empty": "No notes recorded yet. Type @klecx in any comment to teach Klecx for future answers.",
+    "warningBudget": "The oldest notes are no longer sent to Klecx",
+    "viewInContext": "View in context",
+    "archive": "Archive",
+    "restore": "Restore",
+    "delete": "Delete",
+    "archived": "Archived",
+    "active": "Active",
+    "all": "All",
+    "chip": "Klecx will remember this",
+    "loading": "Loading notes…",
+    "noteArchived": "Note archived",
+    "noteRestored": "Note restored",
+    "noteDeleted": "Note deleted",
+    "updateFailed": "Couldn't update the note",
+    "deleteFailed": "Couldn't delete the note",
+    "unknownAuthor": "Former member",
+    "filter": "Show notes"
   }
 }

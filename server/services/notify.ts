@@ -41,6 +41,7 @@ export const DEFAULT_NOTIFICATION_PREFS: NotificationPreferencesMap = {
   MEMBER_LIMIT_EXCEEDED:        { inApp: true, email: true },
   MEMBER_SUSPENDED:             { inApp: true, email: true },
   MEMBER_RESTORED:              { inApp: true, email: true },
+  MENTIONED:                    { inApp: true, email: true },
 };
 
 export function resolveNotificationPreferences(
@@ -65,6 +66,7 @@ export function resolveNotificationPreferences(
     MEMBER_LIMIT_EXCEEDED:        { ...DEFAULT_NOTIFICATION_PREFS.MEMBER_LIMIT_EXCEEDED },
     MEMBER_SUSPENDED:             { ...DEFAULT_NOTIFICATION_PREFS.MEMBER_SUSPENDED },
     MEMBER_RESTORED:              { ...DEFAULT_NOTIFICATION_PREFS.MEMBER_RESTORED },
+    MENTIONED:                    { ...DEFAULT_NOTIFICATION_PREFS.MENTIONED },
   };
 
   if (!raw || typeof raw !== "object") {
@@ -265,6 +267,16 @@ function resolveDefaultEmailMapping(
         data: {
           resourceName: (payload.resourceName as string) || "",
           actionUrl: `${appUrl}${(payload.href as string) || "/workspaces"}`,
+        },
+      };
+    case "MENTIONED":
+      return {
+        template: "mentioned",
+        data: {
+          authorName: (payload.authorName as string) || "A member",
+          quote: (payload.quote as string) || "",
+          excerpt: (payload.excerpt as string) || "",
+          actionUrl: `${appUrl}/workspaces/${payload.workspaceId || ""}`,
         },
       };
     default:

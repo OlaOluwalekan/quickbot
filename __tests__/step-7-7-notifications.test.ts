@@ -176,7 +176,7 @@ describe("Step 7.7 — Notifications (database, API, bell, email)", () => {
     // 1. Default preferences for SHARE_CREATED: inApp=true, email=true
     const defaultPrefs = await getUserNotificationPreferences(userA.id);
     expect(defaultPrefs.SHARE_CREATED).toEqual({ inApp: true, email: true });
-    expect(NOTIFICATION_TYPES).toHaveLength(18); // +6 in F1.3
+    expect(NOTIFICATION_TYPES).toHaveLength(19); // +6 in F1.3, +1 (MENTIONED) in F2.3
 
     const n1 = await notify(userA.id, "SHARE_CREATED", {
       title: "Shared Doc 1",

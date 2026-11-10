@@ -29,6 +29,7 @@ import {
   renderMemberSuspended,
   renderMemberRestored,
 } from "./templates/member-limits";
+import { renderMentioned } from "./templates/mentioned";
 
 export type {
   EmailTemplateMap,
@@ -202,6 +203,12 @@ export async function renderEmail<T extends EmailTemplateName>(
     case "member-restored":
       return renderMemberRestored(
         data as EmailTemplateMap["member-restored"],
+        t,
+        to
+      );
+    case "mentioned":
+      return renderMentioned(
+        data as EmailTemplateMap["mentioned"],
         t,
         to
       );

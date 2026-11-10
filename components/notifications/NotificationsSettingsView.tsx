@@ -15,100 +15,39 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
+import { useFormatter, useTranslations } from "next-intl";
 import {
   formatNotificationPresentation,
   type NotificationItemDto,
 } from "./NotificationBell";
 import type { NotificationType } from "@/lib/schemas/notification";
 
-interface NotificationTypeMeta {
-  type: NotificationType;
-  label: string;
-  description: string;
-}
-
 // PAYMENT_FAILED, SUBSCRIPTION_CHANGED and EXPORT_READY are reserved types with
 // no sender yet (no billing webhook; exports are synchronous downloads), so they
 // are not offered here until something emits them.
-const NOTIFICATION_TYPE_METADATA: NotificationTypeMeta[] = [
-  {
-    type: "INVITE_RECEIVED",
-    label: "Invitation received",
-    description: "When someone invites you to collaborate on a workspace or project.",
-  },
-  {
-    type: "INVITE_ACCEPTED",
-    label: "Invitation accepted",
-    description: "When a collaborator accepts an invitation you sent.",
-  },
-  {
-    type: "MEMBER_REMOVED",
-    label: "Removed from workspace",
-    description: "When your access to a workspace or project is removed.",
-  },
-  {
-    type: "ROLE_CHANGED",
-    label: "Role changed",
-    description: "When your role in a workspace or project is updated.",
-  },
-  {
-    type: "SHARE_CREATED",
-    label: "Public share link created",
-    description: "When a public share link is created on a workspace you own.",
-  },
-  {
-    type: "CREDITS_LOW",
-    label: "Credits low (80%)",
-    description: "When 80% of your monthly credit allowance has been used.",
-  },
-  {
-    type: "CREDITS_EXHAUSTED",
-    label: "Credits exhausted (100%)",
-    description: "When your monthly credit allowance reaches 0.",
-  },
-  {
-    type: "NEW_SIGN_IN",
-    label: "New device sign-in",
-    description: "When your account is accessed from a new browser, OS, or country.",
-  },
-  {
-    type: "QUESTIONS_ANSWERED",
-    label: "Queued questions answered",
-    description: "When a batch of queued passage questions finishes answering.",
-  },
-  {
-    type: "OWNERSHIP_TRANSFER_REQUESTED",
-    label: "Ownership transfer request",
-    description: "When someone asks you to take over a workspace or project.",
-  },
-  {
-    type: "OWNERSHIP_TRANSFER_ACCEPTED",
-    label: "Ownership transfer accepted",
-    description: "When the person you chose accepts ownership.",
-  },
-  {
-    type: "OWNERSHIP_TRANSFER_DECLINED",
-    label: "Ownership transfer declined",
-    description: "When the person you chose declines ownership.",
-  },
-  {
-    type: "MEMBER_LIMIT_EXCEEDED",
-    label: "Collaborator limit exceeded",
-    description: "When an owner's plan no longer covers all collaborators.",
-  },
-  {
-    type: "MEMBER_SUSPENDED",
-    label: "Access changed to read-only",
-    description: "When your access becomes read-only because of a plan limit.",
-  },
-  {
-    type: "MEMBER_RESTORED",
-    label: "Access restored",
-    description: "When your full access comes back.",
-  },
+// Labels: Notifications.labels.<TYPE>; descriptions: Notifications.types.<TYPE>.
+const OFFERED_TYPES: NotificationType[] = [
+  "INVITE_RECEIVED",
+  "INVITE_ACCEPTED",
+  "MEMBER_REMOVED",
+  "ROLE_CHANGED",
+  "SHARE_CREATED",
+  "CREDITS_LOW",
+  "CREDITS_EXHAUSTED",
+  "NEW_SIGN_IN",
+  "QUESTIONS_ANSWERED",
+  "OWNERSHIP_TRANSFER_REQUESTED",
+  "OWNERSHIP_TRANSFER_ACCEPTED",
+  "OWNERSHIP_TRANSFER_DECLINED",
+  "MEMBER_LIMIT_EXCEEDED",
+  "MEMBER_SUSPENDED",
+  "MEMBER_RESTORED",
+  "MENTIONED",
 ];
 
 export function NotificationsSettingsView() {
+  const t = useTranslations("Notifications");
+  const format = useFormatter();
   const [prefs, setPrefs] = React.useState<
     Record<string, { inApp: boolean; email: boolean }>
   >({});
@@ -132,11 +71,11 @@ export function NotificationsSettingsView() {
         }
       }
     } catch {
-      toast.error("Failed to load notification preferences");
+      toast.error(t("settings.loadPrefsFailed"));
     } finally {
       setLoadingPrefs(false);
     }
-  }, []);
+  }, [t]);
 
   const fetchList = React.useCallback(async () => {
     setLoadingList(true);
@@ -150,11 +89,11 @@ export function NotificationsSettingsView() {
         setItems(Array.isArray(data?.items) ? data.items : []);
       }
     } catch {
-      toast.error("Failed to load notifications");
+      toast.error(t("settings.loadFailed"));
     } finally {
       setLoadingList(false);
     }
-  }, [statusFilter]);
+  }, [statusFilter, t]);
 
   React.useEffect(() => {
     void fetchPreferences();
@@ -186,7 +125,7 @@ export function NotificationsSettingsView() {
         }),
       });
       if (!res.ok) throw new Error("Failed");
-      toast.success("Preference saved");
+      toast.success(t("settings.saved"));
     } catch {
       // Roll back only this channel, so a failure can't undo other toggles
       // that succeeded in the meantime
@@ -197,7 +136,7 @@ export function NotificationsSettingsView() {
           [channel]: !nextVal,
         },
       }));
-      toast.error("Failed to update notification preference");
+      toast.error(t("settings.saveFailed"));
     }
   };
 
@@ -216,9 +155,9 @@ export function NotificationsSettingsView() {
     setItems((prev) => prev.map((i) => ({ ...i, status: "READ" })));
     try {
       await fetch("/api/v1/notifications/read-all", { method: "POST" });
-      toast.success("All notifications marked as read");
+      toast.success(t("settings.allMarkedRead"));
     } catch {
-      toast.error("Failed to mark all as read");
+      toast.error(t("settings.markAllFailed"));
       void fetchList();
     }
   };
@@ -240,10 +179,10 @@ export function NotificationsSettingsView() {
       <section className="rounded-2xl border border-border bg-surface p-6 sm:p-8 shadow-sm space-y-6">
         <div>
           <h2 className="text-lg font-bold text-fg">
-            Notification Channels
+            {t("settings.channelsTitle")}
           </h2>
           <p className="text-xs sm:text-sm text-muted mt-1">
-            Choose which events notify you in-app and by email. Changes are saved automatically.
+            {t("settings.channelsDescription")}
           </p>
         </div>
 
@@ -254,18 +193,23 @@ export function NotificationsSettingsView() {
         ) : (
           <div className="divide-y divide-border">
             <div className="hidden sm:grid sm:grid-cols-12 pb-3 text-xs font-semibold uppercase tracking-wider text-muted">
-              <div className="col-span-8">Event</div>
+              <div className="col-span-8">{t("settings.event")}</div>
               <div className="col-span-2 text-center flex items-center justify-center gap-1">
                 <Smartphone className="h-3.5 w-3.5" />
-                <span>In-app</span>
+                <span>{t("settings.inApp")}</span>
               </div>
               <div className="col-span-2 text-center flex items-center justify-center gap-1">
                 <Mail className="h-3.5 w-3.5" />
-                <span>Email</span>
+                <span>{t("settings.email")}</span>
               </div>
             </div>
 
-            {NOTIFICATION_TYPE_METADATA.map((meta) => {
+            {OFFERED_TYPES.map((type) => {
+              const meta = {
+                type,
+                label: t(`labels.${type}`),
+                description: t(`types.${type}`),
+              };
               const entry = prefs[meta.type] ?? { inApp: true, email: false };
               return (
                 <div
@@ -282,27 +226,27 @@ export function NotificationsSettingsView() {
                   <div className="sm:col-span-4 flex items-center justify-between sm:grid sm:grid-cols-2 gap-4 pt-1 sm:pt-0">
                     <div className="flex items-center sm:justify-center gap-2">
                       <span className="text-xs text-muted sm:hidden">
-                        In-app
+                        {t("settings.inApp")}
                       </span>
                       <Switch
                         checked={Boolean(entry.inApp)}
                         onCheckedChange={(val) =>
                           handleToggleChannel(meta.type, "inApp", val)
                         }
-                        aria-label={`${meta.label} in-app notifications`}
+                        aria-label={t("settings.inAppFor", { label: meta.label })}
                       />
                     </div>
 
                     <div className="flex items-center sm:justify-center gap-2">
                       <span className="text-xs text-muted sm:hidden">
-                        Email
+                        {t("settings.email")}
                       </span>
                       <Switch
                         checked={Boolean(entry.email)}
                         onCheckedChange={(val) =>
                           handleToggleChannel(meta.type, "email", val)
                         }
-                        aria-label={`${meta.label} email notifications`}
+                        aria-label={t("settings.emailFor", { label: meta.label })}
                       />
                     </div>
                   </div>
@@ -318,20 +262,24 @@ export function NotificationsSettingsView() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-bold text-fg flex items-center gap-2">
-              <span>Recent Notifications</span>
+              <span>{t("settings.recentTitle")}</span>
               {unreadCount > 0 && (
                 <Badge variant="secondary" className="text-xs">
-                  {unreadCount} unread
+                  {t("settings.unreadCount", { count: unreadCount })}
                 </Badge>
               )}
             </h2>
             <p className="text-xs text-muted mt-0.5">
-              Your recent account and workspace activity alerts.
+              {t("settings.recentDescription")}
             </p>
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="inline-flex rounded-xl border border-border bg-surface-2 p-0.5 text-xs">
+            <div
+              role="group"
+              aria-label={t("settings.filter")}
+              className="inline-flex rounded-xl border border-border bg-surface-2 p-0.5 text-xs"
+            >
               <button
                 type="button"
                 onClick={() => setStatusFilter("ALL")}
@@ -341,7 +289,7 @@ export function NotificationsSettingsView() {
                     : "text-muted hover:text-fg"
                 }`}
               >
-                All
+                {t("settings.filterAll")}
               </button>
               <button
                 type="button"
@@ -352,7 +300,7 @@ export function NotificationsSettingsView() {
                     : "text-muted hover:text-fg"
                 }`}
               >
-                Unread
+                {t("settings.filterUnread")}
               </button>
             </div>
 
@@ -365,7 +313,7 @@ export function NotificationsSettingsView() {
                 className="h-8 text-xs gap-1.5"
               >
                 <CheckCheck className="h-3.5 w-3.5" />
-                <span>Mark all read</span>
+                <span>{t("settings.markAllRead")}</span>
               </Button>
             )}
           </div>
@@ -378,17 +326,17 @@ export function NotificationsSettingsView() {
         ) : items.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border py-12 text-center space-y-1">
             <Bell className="h-6 w-6 text-subtle mx-auto mb-1 opacity-60" />
-            <p className="text-sm font-medium text-fg">No notifications found</p>
+            <p className="text-sm font-medium text-fg">{t("settings.emptyTitle")}</p>
             <p className="text-xs text-muted">
               {statusFilter === "UNREAD"
-                ? "You have no unread notifications."
-                : "Notifications will appear here when important events happen."}
+                ? t("settings.emptyUnread")
+                : t("settings.emptyAll")}
             </p>
           </div>
         ) : (
           <div className="space-y-2.5">
             {items.map((item) => {
-              const info = formatNotificationPresentation(item);
+              const info = formatNotificationPresentation(item, t);
               const isUnread = item.status === "UNREAD";
 
               return (
@@ -421,7 +369,7 @@ export function NotificationsSettingsView() {
                         )}
                         {isUnread && (
                           <Badge variant="secondary" className="text-[10px]">
-                            Unread
+                            {t("settings.unread")}
                           </Badge>
                         )}
                       </div>
@@ -429,7 +377,10 @@ export function NotificationsSettingsView() {
                         {info.description}
                       </p>
                       <p className="text-[11px] text-subtle">
-                        {new Date(item.createdAt).toLocaleString()}
+                        {format.dateTime(new Date(item.createdAt), {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        })}
                       </p>
                     </div>
                   </div>
@@ -441,10 +392,11 @@ export function NotificationsSettingsView() {
                         variant="ghost"
                         size="sm"
                         className="h-8 px-2 text-xs text-muted hover:text-accent gap-1"
+                        aria-label={t("settings.markRead")}
                         onClick={() => handleMarkRead(item.id)}
                       >
                         <Check className="h-3.5 w-3.5" />
-                        <span className="hidden sm:inline">Mark read</span>
+                        <span className="hidden sm:inline">{t("settings.markRead")}</span>
                       </Button>
                     )}
                     <Button
@@ -452,7 +404,8 @@ export function NotificationsSettingsView() {
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 text-muted hover:text-danger"
-                      title="Dismiss"
+                      title={t("settings.dismiss")}
+                      aria-label={t("settings.dismiss")}
                       onClick={() => handleDismiss(item.id)}
                     >
                       <X className="h-4 w-4" />

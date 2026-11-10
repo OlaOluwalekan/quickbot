@@ -91,6 +91,12 @@ describe("Step 1.7 & F0.2 — Transactional Email Module", () => {
     "member-restored": {
       resourceName: "Cyberdyne Systems",
     },
+    mentioned: {
+      authorName: "Sarah Connor",
+      quote: "MongoDB database",
+      excerpt: "use PostgreSQL instead",
+      actionUrl: "https://klecx.vyraxity.com/workspaces/wksp-1#annotation-1",
+    },
   };
 
   const allTemplates: EmailTemplateName[] = [

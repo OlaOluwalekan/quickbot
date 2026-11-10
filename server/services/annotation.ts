@@ -4,6 +4,13 @@ import { db } from "@/server/db/client";
 import { Errors } from "@/server/http/errors";
 import { requireWorkspace } from "@/server/authz/access";
 import { logActivity } from "./activity";
+import {
+  syncMentionsAndNotes,
+  sendMentionNotifications,
+  archiveNoteForAnnotation,
+  type SyncMentionsResult,
+} from "./mentions";
+import { loadActiveNotes } from "@/server/ai/notes";
 import { resolveBilledAccount, reserveForWorkspaceGeneration } from "./billing-owner";
 import type { Actor } from "@/server/auth/session";
 import type {
@@ -202,7 +209,7 @@ export async function createAnnotation(
   }
 
   // Caller needs workspace.comment for COMMENT, workspace.ask for QUESTION
-  await requireWorkspace(
+  const access = await requireWorkspace(
     actor,
     version.response.workspaceId,
     annotationKindPermission(input.kind)
@@ -241,7 +248,10 @@ export async function createAnnotation(
     );
   }
 
-  const created = await db.annotation.create({
+  // The comment, its mentions and its Klecx note are saved together.
+  const { created, mentionSync } = await db.$transaction(async (tx) => {
+  let mentionSync: SyncMentionsResult | null = null;
+  const created = await tx.annotation.create({
     data: {
       workspaceId: version.response.workspaceId,
       responseId: version.response.id,
@@ -285,7 +295,24 @@ export async function createAnnotation(
     },
   });
 
-  await logActivity(db, {
+  const userMsg = created.messages[0];
+  if (input.kind === "COMMENT" && userMsg) {
+    mentionSync = await syncMentionsAndNotes(tx, {
+      workspaceId: version.response.workspaceId,
+      annotationId: created.id,
+      messageId: userMsg.id,
+      text: input.text,
+      anchorExact: created.anchorExact,
+      actor,
+      capabilities: access.capabilities,
+      currentVisibility: created.visibility,
+      canShare: true,
+      isNewMessage: true,
+    });
+    created.visibility = mentionSync.visibility;
+  }
+
+  await logActivity(tx, {
     workspaceId: version.response.workspaceId,
     actorId: actor.userId,
     action: "annotation.created",
@@ -293,6 +320,13 @@ export async function createAnnotation(
     targetId: created.id,
     meta: { kind: created.kind, depth: 0 },
   });
+
+  return { created, mentionSync };
+  });
+
+  if (mentionSync) {
+    await sendMentionNotifications(mentionSync.pendingNotifications);
+  }
 
   return created;
 }
@@ -333,7 +367,7 @@ export async function createAnnotationOnMessage(
   const workspaceId = parent.workspaceId;
 
   // Authorize before revealing anything about the message (role, text).
-  await requireWorkspace(
+  const access = await requireWorkspace(
     actor,
     workspaceId,
     annotationKindPermission(input.kind)
@@ -367,7 +401,9 @@ export async function createAnnotationOnMessage(
   const rootAnnotationId = parent.rootAnnotationId || parent.id;
   const parentAnnotationId = parent.id;
 
-  const created = await db.annotation.create({
+  const { created, mentionSync } = await db.$transaction(async (tx) => {
+  let mentionSync: SyncMentionsResult | null = null;
+  const created = await tx.annotation.create({
     data: {
       workspaceId,
       targetType: "ANNOTATION_MESSAGE",
@@ -410,7 +446,25 @@ export async function createAnnotationOnMessage(
     },
   });
 
-  await logActivity(db, {
+  const userMsg = created.messages[0];
+  if (input.kind === "COMMENT" && userMsg) {
+    mentionSync = await syncMentionsAndNotes(tx, {
+      workspaceId,
+      annotationId: created.id,
+      messageId: userMsg.id,
+      text: input.text,
+      anchorExact: created.anchorExact,
+      actor,
+      capabilities: access.capabilities,
+      currentVisibility: created.visibility,
+      // Inside a private thread the comment stays private.
+      canShare: !parentIsPrivate,
+      isNewMessage: true,
+    });
+    created.visibility = mentionSync.visibility;
+  }
+
+  await logActivity(tx, {
     workspaceId,
     actorId: actor.userId,
     action: "annotation.created",
@@ -418,6 +472,13 @@ export async function createAnnotationOnMessage(
     targetId: created.id,
     meta: { kind: created.kind, depth: newDepth },
   });
+
+  return { created, mentionSync };
+  });
+
+  if (mentionSync) {
+    await sendMentionNotifications(mentionSync.pendingNotifications);
+  }
 
   return created;
 }
@@ -476,6 +537,7 @@ export async function updateAnnotation(
       messages: {
         orderBy: { createdAt: "asc" },
       },
+      parent: { select: { visibility: true } },
     },
   });
 
@@ -505,19 +567,6 @@ export async function updateAnnotation(
     throw Errors.forbidden();
   }
 
-  // Update text of creator's initial message if provided
-  if (input.text !== undefined) {
-    const targetMsg =
-      annot.messages.find((m) => m.authorId === annot.createdById) ??
-      annot.messages[0];
-    if (targetMsg) {
-      await db.annotationMessage.update({
-        where: { id: targetMsg.id },
-        data: { content: input.text },
-      });
-    }
-  }
-
   const updateData: {
     resolvedAt?: Date | null;
     visibility?: "PRIVATE" | "WORKSPACE";
@@ -527,7 +576,6 @@ export async function updateAnnotation(
   if (input.resolved !== undefined) {
     updateData.resolvedAt = input.resolved ? new Date() : null;
   }
-
   if (input.visibility !== undefined) {
     updateData.visibility = input.visibility;
   }
@@ -535,23 +583,67 @@ export async function updateAnnotation(
     updateData.questionState = input.questionState;
   }
 
-  return db.annotation.update({
-    where: { id: annot.id },
-    data: updateData,
-    include: {
-      messages: {
-        orderBy: { createdAt: "asc" },
-        include: {
-          author: {
-            select: { id: true, name: true, email: true, image: true },
+  const { updated, mentionSync } = await db.$transaction(async (tx) => {
+    let mentionSync: SyncMentionsResult | null = null;
+
+    // Update text of creator's initial message if provided
+    const targetMsg =
+      annot.messages.find((m) => m.authorId === annot.createdById) ??
+      annot.messages[0];
+    if (input.text !== undefined && targetMsg) {
+      await tx.annotationMessage.update({
+        where: { id: targetMsg.id },
+        data: { content: input.text },
+      });
+
+      // Editing a comment re-syncs its mentions and its Klecx note.
+      if (annot.kind === "COMMENT") {
+        mentionSync = await syncMentionsAndNotes(tx, {
+          workspaceId: annot.workspaceId,
+          annotationId: annot.id,
+          messageId: targetMsg.id,
+          text: input.text,
+          anchorExact: annot.anchorExact,
+          actor,
+          capabilities: access.capabilities,
+          currentVisibility: annot.visibility,
+          canShare: annot.parent?.visibility !== "PRIVATE",
+          isNewMessage: false,
+        });
+      }
+    }
+
+    // A resolved or private comment no longer steers the workspace's answers.
+    if (input.resolved === true || input.visibility === "PRIVATE") {
+      await archiveNoteForAnnotation(annot.id, tx);
+    }
+
+    const updated = await tx.annotation.update({
+      where: { id: annot.id },
+      data: updateData,
+      include: {
+        messages: {
+          orderBy: { createdAt: "asc" },
+          include: {
+            author: {
+              select: { id: true, name: true, email: true, image: true },
+            },
           },
         },
+        createdBy: {
+          select: { id: true, name: true, email: true, image: true },
+        },
       },
-      createdBy: {
-        select: { id: true, name: true, email: true, image: true },
-      },
-    },
+    });
+
+    return { updated, mentionSync };
   });
+
+  if (mentionSync) {
+    await sendMentionNotifications(mentionSync.pendingNotifications);
+  }
+
+  return updated;
 }
 
 /**
@@ -588,9 +680,12 @@ export async function deleteAnnotation(actor: Actor, annotationId: string) {
     throw Errors.forbidden();
   }
 
-  await db.annotation.update({
-    where: { id: annot.id },
-    data: { deletedAt: new Date() },
+  await db.$transaction(async (tx) => {
+    await tx.annotation.update({
+      where: { id: annot.id },
+      data: { deletedAt: new Date() },
+    });
+    await archiveNoteForAnnotation(annot.id, tx);
   });
 
   return { success: true };
@@ -606,31 +701,59 @@ export async function createAnnotationMessage(
 ) {
   const annot = await db.annotation.findUnique({
     where: { id: annotationId, deletedAt: null },
+    include: { parent: { select: { visibility: true } } },
   });
 
   if (!annot) {
     throw Errors.notFound("Annotation");
   }
 
-  await requireWorkspace(actor, annot.workspaceId, annotationKindPermission(annot.kind));
+  const access = await requireWorkspace(actor, annot.workspaceId, annotationKindPermission(annot.kind));
 
   if (annot.visibility === "PRIVATE" && annot.createdById !== actor.userId) {
     throw Errors.notFound("Annotation");
   }
 
-  return db.annotationMessage.create({
-    data: {
-      annotationId: annot.id,
-      role: "USER",
-      content,
-      authorId: actor.userId,
-    },
-    include: {
-      author: {
-        select: { id: true, name: true, email: true, image: true },
+  const { createdMsg, mentionSync } = await db.$transaction(async (tx) => {
+    const createdMsg = await tx.annotationMessage.create({
+      data: {
+        annotationId: annot.id,
+        role: "USER",
+        content,
+        authorId: actor.userId,
       },
-    },
+      include: {
+        author: {
+          select: { id: true, name: true, email: true, image: true },
+        },
+      },
+    });
+
+    // Replies in a comment thread can mention people and @klecx too.
+    const mentionSync =
+      annot.kind === "COMMENT"
+        ? await syncMentionsAndNotes(tx, {
+            workspaceId: annot.workspaceId,
+            annotationId: annot.id,
+            messageId: createdMsg.id,
+            text: content,
+            anchorExact: annot.anchorExact,
+            actor,
+            capabilities: access.capabilities,
+            currentVisibility: annot.visibility,
+            canShare: annot.parent?.visibility !== "PRIVATE",
+            isNewMessage: true,
+          })
+        : null;
+
+    return { createdMsg, mentionSync };
   });
+
+  if (mentionSync) {
+    await sendMentionNotifications(mentionSync.pendingNotifications);
+  }
+
+  return createdMsg;
 }
 
 /**
@@ -937,9 +1060,12 @@ export async function createAndStreamAnnotationReply(
           encoder.encode(formatSSEEvent("status", { stage: "writing" }))
         );
 
+        const notesPrompt = await loadActiveNotes(workspaceId);
+
         const aiStream = streamAi(
           {
             modelKey,
+            system: notesPrompt ?? undefined,
             messages: [
               {
                 role: "user",

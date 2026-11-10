@@ -7,6 +7,7 @@ import {
   Check,
   CheckCheck,
   X,
+  AtSign,
   UserPlus,
   UserCheck,
   UserMinus,
@@ -29,6 +30,7 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useFormatter, useTranslations } from "next-intl";
 
 export interface NotificationItemDto {
   id: string;
@@ -41,7 +43,23 @@ export interface NotificationItemDto {
   readAt: string | null;
 }
 
-export function formatNotificationPresentation(item: NotificationItemDto): {
+type NotificationsTranslator = ReturnType<typeof useTranslations>;
+
+const ROLE_KEYS = ["OWNER", "ADMIN", "EDITOR", "COMMENTER", "VIEWER"];
+
+function text(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value : null;
+}
+
+/**
+ * Title, description, link and icon of a notification, in the viewer's
+ * language. `t` is `useTranslations("Notifications")`. Texts are built from
+ * the payload's data (names, counts), never from server-written sentences.
+ */
+export function formatNotificationPresentation(
+  item: NotificationItemDto,
+  t: NotificationsTranslator
+): {
   title: string;
   description: string;
   href: string | null;
@@ -50,148 +68,210 @@ export function formatNotificationPresentation(item: NotificationItemDto): {
   const p = (item.payload || {}) as Record<string, unknown>;
   const href = typeof p.href === "string" ? p.href : null;
 
+  const title = (key: string) => t(`items.${key}.title`);
+  const desc = (key: string, variant = "description", values?: Record<string, string | number>) =>
+    t(`items.${key}.${variant}`, values);
+  const role = (value: unknown) => {
+    const raw = text(value);
+    if (!raw) return null;
+    return ROLE_KEYS.includes(raw) ? t(`roles.${raw}`) : raw;
+  };
+  const resourceName = text(p.resourceName);
+
   switch (item.type) {
     case "INVITE_RECEIVED":
       return {
-        title: "New invitation received",
-        description: `${(p.inviterName as string) || "Someone"} invited you to join ${(p.resourceName as string) || "a workspace"} as ${(p.role as string) || "a collaborator"}.`,
+        title: title(item.type),
+        description: desc(item.type, "description", {
+          inviterName: text(p.inviterName) ?? t("fallback.someone"),
+          resourceName: resourceName ?? t("fallback.workspace"),
+          role: role(p.role) ?? t("fallback.role"),
+        }),
         href: href || "/workspaces",
         icon: <UserPlus className="h-4 w-4 text-accent" />,
       };
     case "INVITE_ACCEPTED":
       return {
-        title: "Invitation accepted",
-        description: `${(p.acceptedByName as string) || "A collaborator"} accepted your invitation.`,
+        title: title(item.type),
+        description: desc(item.type, "description", {
+          name: text(p.acceptedByName) ?? t("fallback.collaborator"),
+        }),
         href: href || "/workspaces",
         icon: <UserCheck className="h-4 w-4 text-accent" />,
       };
     case "MEMBER_REMOVED":
       return {
-        title: "Removed from workspace",
-        description:
-          (p.message as string) ||
-          "Your access to a shared workspace or project was removed.",
+        title: title(item.type),
+        description: resourceName
+          ? desc(item.type, "descriptionNamed", { resourceName })
+          : desc(item.type),
         href: href || "/workspaces",
         icon: <UserMinus className="h-4 w-4 text-danger" />,
       };
-    case "ROLE_CHANGED":
+    case "ROLE_CHANGED": {
+      const oldRole = role(p.oldRole);
+      const newRole = role(p.newRole);
       return {
-        title: "Role updated",
-        description: `Your role was changed from ${(p.oldRole as string) || "member"} to ${(p.newRole as string) || "updated role"}.`,
+        title: title(item.type),
+        description:
+          oldRole && newRole
+            ? desc(item.type, "descriptionRoles", { oldRole, newRole })
+            : desc(item.type),
         href: href || "/workspaces",
         icon: <Shield className="h-4 w-4 text-accent" />,
       };
+    }
     case "SHARE_CREATED":
       return {
-        title: "Public share link created",
-        description: `A public ${p.scope === "RESPONSE" ? "response" : "workspace"} share link was created.`,
+        title: title(item.type),
+        description: desc(
+          item.type,
+          p.scope === "RESPONSE" ? "descriptionResponse" : "descriptionWorkspace"
+        ),
         href: href || "/workspaces",
         icon: <Globe className="h-4 w-4 text-accent" />,
       };
     case "CREDITS_LOW":
       return {
-        title: "Credits running low (80% used)",
-        description: `You have ${typeof p.remainingCredits === "number" ? p.remainingCredits : "few"} credits remaining this period.`,
+        title: title(item.type),
+        description:
+          typeof p.remainingCredits === "number"
+            ? desc(item.type, "descriptionCount", { count: p.remainingCredits })
+            : desc(item.type),
         href: href || "/settings",
         icon: <AlertTriangle className="h-4 w-4 text-warning" />,
       };
     case "CREDITS_EXHAUSTED":
       return {
-        title: "Out of credits (100% used)",
-        description:
-          "Your monthly credit allowance has been exhausted. Upgrade or top up to continue generating.",
+        title: title(item.type),
+        description: desc(item.type),
         href: href || "/settings",
         icon: <AlertTriangle className="h-4 w-4 text-danger" />,
       };
     case "PAYMENT_FAILED":
       return {
-        title: "Payment failed",
-        description:
-          (p.reason as string) ||
-          "We could not process your subscription payment. Please update your payment method.",
+        title: title(item.type),
+        description: desc(item.type),
         href: href || "/settings",
         icon: <CreditCard className="h-4 w-4 text-danger" />,
       };
     case "SUBSCRIPTION_CHANGED":
       return {
-        title: "Subscription updated",
-        description:
-          (p.message as string) || "Your subscription plan has been updated.",
+        title: title(item.type),
+        description: desc(item.type),
         href: href || "/settings",
         icon: <CreditCard className="h-4 w-4 text-accent" />,
       };
-    case "NEW_SIGN_IN":
+    case "NEW_SIGN_IN": {
+      const device = text(p.device) ?? t("fallback.device");
+      const location = text(p.location);
       return {
-        title: "New sign-in detected",
-        description: `Signed in from ${(p.device as string) || "a new device"}${p.location ? ` (${p.location as string})` : ""}.`,
+        title: title(item.type),
+        description: location
+          ? desc(item.type, "descriptionLocation", { device, location })
+          : desc(item.type, "description", { device }),
         href: href || "/settings/sessions",
         icon: <Laptop className="h-4 w-4 text-warning" />,
       };
+    }
     case "EXPORT_READY":
       return {
-        title: "Export ready",
-        description:
-          (p.message as string) || "Your exported document is ready to download.",
-        href: href,
+        title: title(item.type),
+        description: desc(item.type),
+        href,
         icon: <FileDown className="h-4 w-4 text-accent" />,
       };
     case "QUESTIONS_ANSWERED":
       return {
-        title: "Queued questions answered",
-        description: `${typeof p.answeredCount === "number" ? p.answeredCount : "Your"} queued question${p.answeredCount === 1 ? " was" : "s were"} answered.`,
+        title: title(item.type),
+        description:
+          typeof p.answeredCount !== "number"
+            ? desc(item.type)
+            : p.answeredCount === 1
+              ? desc(item.type, "descriptionOne")
+              : desc(item.type, "descriptionCount", { count: p.answeredCount }),
         href: href || "/workspaces",
         icon: <MessageSquare className="h-4 w-4 text-accent" />,
       };
-    // F1.3 — English like the rest of this file; moved to next-intl with it in F5.1.
     case "OWNERSHIP_TRANSFER_REQUESTED":
       return {
-        title: "Ownership transfer request",
-        description: `${(p.fromUserName as string) || "Someone"} wants to transfer ownership of ${(p.resourceName as string) || "a workspace"} to you. If you accept, you pay for all usage there.`,
+        title: title(item.type),
+        description: desc(item.type, "description", {
+          name: text(p.fromUserName) ?? t("fallback.someone"),
+          resourceName: resourceName ?? t("fallback.workspace"),
+        }),
         href: href || "/workspaces",
         icon: <Crown className="h-4 w-4 text-accent" />,
       };
     case "OWNERSHIP_TRANSFER_ACCEPTED":
       return {
-        title: "Ownership transfer accepted",
-        description: `${(p.toUserName as string) || "The recipient"} is now the owner of ${(p.resourceName as string) || "your workspace"}.`,
+        title: title(item.type),
+        description: desc(item.type, "description", {
+          name: text(p.toUserName) ?? t("fallback.recipient"),
+          resourceName: resourceName ?? t("fallback.yourWorkspace"),
+        }),
         href: p.previousOwnerAction === "LEAVE" ? null : href,
         icon: <Crown className="h-4 w-4 text-accent" />,
       };
     case "OWNERSHIP_TRANSFER_DECLINED":
       return {
-        title: "Ownership transfer declined",
-        description: `${(p.toUserName as string) || "The recipient"} declined to take over ${(p.resourceName as string) || "your workspace"}.`,
+        title: title(item.type),
+        description: desc(item.type, "description", {
+          name: text(p.toUserName) ?? t("fallback.recipient"),
+          resourceName: resourceName ?? t("fallback.yourWorkspace"),
+        }),
         href,
         icon: <Crown className="h-4 w-4 text-muted" />,
       };
     case "MEMBER_LIMIT_EXCEEDED":
       return {
-        title: "Collaborator limit exceeded",
+        title: title(item.type),
         description:
-          p.isOwner === true
-            ? `Your plan allows ${typeof p.limit === "number" ? p.limit : "fewer"} collaborators. Choose who stays active in Share & people.`
-            : "The owner's plan no longer covers all collaborators. Some members may become read-only soon.",
+          p.isOwner !== true
+            ? desc(item.type)
+            : typeof p.limit === "number"
+              ? desc(item.type, "descriptionOwnerLimit", { limit: p.limit })
+              : desc(item.type, "descriptionOwner"),
         href: href || "/workspaces",
         icon: <AlertTriangle className="h-4 w-4 text-warning" />,
       };
     case "MEMBER_SUSPENDED":
       return {
-        title: "Access changed to read-only",
-        description: `Your access to ${(p.resourceName as string) || "a workspace"} is read-only because the owner's plan no longer covers all collaborators.`,
+        title: title(item.type),
+        description: desc(item.type, "description", {
+          resourceName: resourceName ?? t("fallback.workspace"),
+        }),
         href: href || "/workspaces",
         icon: <UserMinus className="h-4 w-4 text-warning" />,
       };
     case "MEMBER_RESTORED":
       return {
-        title: "Access restored",
-        description: `Your full access to ${(p.resourceName as string) || "a workspace"} is back.`,
+        title: title(item.type),
+        description: desc(item.type, "description", {
+          resourceName: resourceName ?? t("fallback.workspace"),
+        }),
         href: href || "/workspaces",
         icon: <UserCheck className="h-4 w-4 text-accent" />,
       };
+    case "MENTIONED": {
+      const name = text(p.authorName) ?? t("fallback.someone");
+      const quote = text(p.quote);
+      return {
+        title: title(item.type),
+        description: quote
+          ? desc(item.type, "descriptionQuote", {
+              name,
+              quote: quote.length > 80 ? `${quote.slice(0, 79)}…` : quote,
+            })
+          : desc(item.type, "description", { name }),
+        href: href || "/workspaces",
+        icon: <AtSign className="h-4 w-4 text-accent" />,
+      };
+    }
     default:
       return {
-        title: (p.title as string) || item.type.replace(/_/g, " "),
-        description: (p.message as string) || "You have a new notification.",
+        title: title("default"),
+        description: desc("default"),
         href,
         icon: <Bell className="h-4 w-4 text-accent" />,
       };
@@ -199,6 +279,8 @@ export function formatNotificationPresentation(item: NotificationItemDto): {
 }
 
 export function NotificationBell() {
+  const t = useTranslations("Notifications");
+  const format = useFormatter();
   const [open, setOpen] = React.useState(false);
   const [unreadCount, setUnreadCount] = React.useState(0);
   const [items, setItems] = React.useState<NotificationItemDto[]>([]);
@@ -305,9 +387,9 @@ export function NotificationBell() {
         method: "POST",
       });
       if (!res.ok) throw new Error("Failed");
-      toast.success("All notifications marked as read");
+      toast.success(t("bell.allMarkedRead"));
     } catch {
-      toast.error("Failed to mark all as read");
+      toast.error(t("bell.markAllFailed"));
       void fetchNotificationsList();
       void fetchUnreadCount();
     }
@@ -340,8 +422,8 @@ export function NotificationBell() {
           size="icon"
           aria-label={
             unreadCount > 0
-              ? `Notifications (${unreadCount} unread)`
-              : "Notifications"
+              ? t("bell.labelUnread", { count: unreadCount })
+              : t("bell.label")
           }
           className="relative"
         >
@@ -364,10 +446,10 @@ export function NotificationBell() {
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border px-4 py-3 bg-surface-2/40">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-fg">Notifications</span>
+            <span className="text-sm font-semibold text-fg">{t("bell.title")}</span>
             {unreadCount > 0 && (
               <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-semibold text-accent">
-                {unreadCount} new
+                {t("bell.newCount", { count: unreadCount })}
               </span>
             )}
           </div>
@@ -379,10 +461,10 @@ export function NotificationBell() {
                 size="sm"
                 onClick={handleMarkAllRead}
                 className="h-7 px-2 text-xs text-muted hover:text-fg gap-1"
-                title="Mark all as read"
+                title={t("bell.markAllReadTitle")}
               >
                 <CheckCheck className="h-3.5 w-3.5" />
-                <span>Mark all read</span>
+                <span>{t("bell.markAllRead")}</span>
               </Button>
             )}
             <Button
@@ -390,7 +472,8 @@ export function NotificationBell() {
               variant="ghost"
               size="icon"
               className="h-7 w-7 text-muted hover:text-fg"
-              title="Notification settings"
+              title={t("bell.settings")}
+              aria-label={t("bell.settings")}
               onClick={() => setOpen(false)}
             >
               <Link href="/settings/notifications">
@@ -409,14 +492,14 @@ export function NotificationBell() {
           ) : items.length === 0 ? (
             <div className="py-10 px-4 text-center space-y-1">
               <Bell className="h-6 w-6 text-subtle mx-auto mb-1.5 opacity-60" />
-              <p className="text-xs font-medium text-fg">No notifications</p>
+              <p className="text-xs font-medium text-fg">{t("bell.empty")}</p>
               <p className="text-[11px] text-muted">
-                You&apos;re all caught up.
+                {t("bell.emptyHint")}
               </p>
             </div>
           ) : (
             items.map((item) => {
-              const info = formatNotificationPresentation(item);
+              const info = formatNotificationPresentation(item, t);
               const isUnread = item.status === "UNREAD";
 
               return (
@@ -455,7 +538,8 @@ export function NotificationBell() {
 
                       {isUnread && (
                         <span
-                          aria-label="Unread"
+                          role="img"
+                          aria-label={t("bell.unread")}
                           className="mt-1 h-2 w-2 shrink-0 rounded-full bg-accent"
                         />
                       )}
@@ -466,7 +550,7 @@ export function NotificationBell() {
                     </p>
 
                     <p className="text-[10px] text-subtle">
-                      {new Date(item.createdAt).toLocaleString(undefined, {
+                      {format.dateTime(new Date(item.createdAt), {
                         month: "short",
                         day: "numeric",
                         hour: "2-digit",
@@ -482,7 +566,8 @@ export function NotificationBell() {
                         variant="ghost"
                         size="icon"
                         className="h-6 w-6 text-muted hover:text-accent"
-                        title="Mark as read"
+                        title={t("bell.markRead")}
+                        aria-label={t("bell.markRead")}
                         onClick={() => handleMarkRead(item.id)}
                       >
                         <Check className="h-3.5 w-3.5" />
@@ -493,7 +578,8 @@ export function NotificationBell() {
                       variant="ghost"
                       size="icon"
                       className="h-6 w-6 text-muted hover:text-danger"
-                      title="Dismiss"
+                      title={t("bell.dismiss")}
+                      aria-label={t("bell.dismiss")}
                       onClick={() => handleDismiss(item.id)}
                     >
                       <X className="h-3.5 w-3.5" />
@@ -512,7 +598,7 @@ export function NotificationBell() {
             onClick={() => setOpen(false)}
             className="text-xs font-medium text-accent hover:underline"
           >
-            View all notifications & preferences
+            {t("bell.viewAll")}
           </Link>
         </div>
       </PopoverContent>

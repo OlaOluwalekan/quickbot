@@ -578,7 +578,7 @@ model Annotation {
   children           Annotation[]        @relation("AnnotationChildren")
   messages           AnnotationMessage[] @relation("AnnotationThreadMessages")
   promotions         Promotion[]
-  note               WorkspaceNote?
+  notes              WorkspaceNote[]
 
   @@index([versionId, deletedAt])
   @@index([workspaceId, createdById, questionState])
@@ -633,7 +633,7 @@ enum NoteStatus {
 model WorkspaceNote {
   id           String     @id @default(uuid(7))
   workspaceId  String     @map("workspace_id")
-  annotationId String     @unique @map("annotation_id")
+  annotationId String     @map("annotation_id")
   messageId    String     @unique @map("message_id")
   createdById  String     @map("created_by_id")
   quote        String     @db.Text
@@ -645,6 +645,7 @@ model WorkspaceNote {
   annotation   Annotation @relation(fields: [annotationId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId, status, createdAt])
+  @@index([annotationId])
   @@map("workspace_notes")
 }
 

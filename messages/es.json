@@ -347,6 +347,14 @@
       "body": "Se ha restablecido tu acceso completo a \"{resourceName}\". Ya puedes volver a comentar, preguntar y generar.",
       "button": "Abrir",
       "disclaimer": "Recibes este mensaje porque tu acceso ha cambiado."
+    },
+    "mentioned": {
+      "subject": "{authorName} te mencionó en Klecx",
+      "heading": "Te mencionaron en un comentario",
+      "greeting": "Hola,",
+      "body": "{authorName} te mencionó: {excerpt}",
+      "button": "Ver comentario",
+      "disclaimer": "Recibiste este correo porque alguien te mencionó en un comentario de espacio de trabajo."
     }
   },
   "AppShell": {
@@ -1287,5 +1295,225 @@
       "mentionEmpty": "No se encontraron miembros",
       "klecxNoted": "Klecx tomó nota"
     }
+  },
+  "Notifications": {
+    "labels": {
+      "INVITE_RECEIVED": "Invitación recibida",
+      "INVITE_ACCEPTED": "Invitación aceptada",
+      "MEMBER_REMOVED": "Acceso eliminado",
+      "ROLE_CHANGED": "Rol cambiado",
+      "SHARE_CREATED": "Enlace público creado",
+      "CREDITS_LOW": "Créditos bajos (80 %)",
+      "CREDITS_EXHAUSTED": "Créditos agotados (100 %)",
+      "NEW_SIGN_IN": "Inicio de sesión en un dispositivo nuevo",
+      "QUESTIONS_ANSWERED": "Preguntas en cola respondidas",
+      "OWNERSHIP_TRANSFER_REQUESTED": "Solicitud de transferencia de propiedad",
+      "OWNERSHIP_TRANSFER_ACCEPTED": "Transferencia de propiedad aceptada",
+      "OWNERSHIP_TRANSFER_DECLINED": "Transferencia de propiedad rechazada",
+      "MEMBER_LIMIT_EXCEEDED": "Límite de colaboradores superado",
+      "MEMBER_SUSPENDED": "Acceso cambiado a solo lectura",
+      "MEMBER_RESTORED": "Acceso restaurado",
+      "MENTIONED": "Menciones"
+    },
+    "types": {
+      "INVITE_RECEIVED": "Cuando alguien te invita a colaborar en un espacio de trabajo o proyecto.",
+      "INVITE_ACCEPTED": "Cuando un colaborador acepta una invitación que enviaste.",
+      "MEMBER_REMOVED": "Cuando se elimina tu acceso a un espacio de trabajo o proyecto.",
+      "ROLE_CHANGED": "Cuando se actualiza tu rol en un espacio de trabajo o proyecto.",
+      "SHARE_CREATED": "Cuando se crea un enlace público en un espacio de trabajo tuyo.",
+      "CREDITS_LOW": "Cuando se ha usado el 80 % de tus créditos mensuales.",
+      "CREDITS_EXHAUSTED": "Cuando tus créditos mensuales llegan a 0.",
+      "NEW_SIGN_IN": "Cuando se accede a tu cuenta desde un navegador, sistema o país nuevo.",
+      "QUESTIONS_ANSWERED": "Cuando se termina de responder un lote de preguntas en cola.",
+      "OWNERSHIP_TRANSFER_REQUESTED": "Cuando alguien te pide que te hagas cargo de un espacio de trabajo o proyecto.",
+      "OWNERSHIP_TRANSFER_ACCEPTED": "Cuando la persona que elegiste acepta la propiedad.",
+      "OWNERSHIP_TRANSFER_DECLINED": "Cuando la persona que elegiste rechaza la propiedad.",
+      "MEMBER_LIMIT_EXCEEDED": "Cuando el plan de un propietario ya no cubre a todos los colaboradores.",
+      "MEMBER_SUSPENDED": "Cuando tu acceso pasa a solo lectura por un límite del plan.",
+      "MEMBER_RESTORED": "Cuando recuperas tu acceso completo.",
+      "MENTIONED": "Cuando alguien te menciona en un comentario."
+    },
+    "roles": {
+      "OWNER": "Propietario",
+      "ADMIN": "Administrador",
+      "EDITOR": "Editor",
+      "COMMENTER": "Comentarista",
+      "VIEWER": "Lector"
+    },
+    "fallback": {
+      "someone": "Alguien",
+      "collaborator": "Un colaborador",
+      "recipient": "El destinatario",
+      "workspace": "un espacio de trabajo",
+      "yourWorkspace": "tu espacio de trabajo",
+      "role": "colaborador",
+      "device": "un dispositivo nuevo"
+    },
+    "items": {
+      "INVITE_RECEIVED": {
+        "title": "Nueva invitación recibida",
+        "description": "{inviterName} te invitó a unirte a {resourceName} como {role}."
+      },
+      "INVITE_ACCEPTED": {
+        "title": "Invitación aceptada",
+        "description": "{name} aceptó tu invitación."
+      },
+      "MEMBER_REMOVED": {
+        "title": "Acceso eliminado",
+        "description": "Se eliminó tu acceso a un espacio de trabajo o proyecto compartido.",
+        "descriptionNamed": "Se eliminó tu acceso a «{resourceName}»."
+      },
+      "ROLE_CHANGED": {
+        "title": "Rol actualizado",
+        "description": "Tu rol ha cambiado.",
+        "descriptionRoles": "Tu rol cambió de {oldRole} a {newRole}."
+      },
+      "SHARE_CREATED": {
+        "title": "Enlace público creado",
+        "descriptionWorkspace": "Se creó un enlace público para un espacio de trabajo.",
+        "descriptionResponse": "Se creó un enlace público para una respuesta."
+      },
+      "CREDITS_LOW": {
+        "title": "Quedan pocos créditos (80 % usado)",
+        "description": "Te quedan pocos créditos en este periodo.",
+        "descriptionCount": "Te quedan {count} créditos en este periodo."
+      },
+      "CREDITS_EXHAUSTED": {
+        "title": "Sin créditos (100 % usado)",
+        "description": "Has agotado tus créditos mensuales."
+      },
+      "PAYMENT_FAILED": {
+        "title": "Pago fallido",
+        "description": "No pudimos procesar el pago de tu suscripción. Actualiza tu método de pago."
+      },
+      "SUBSCRIPTION_CHANGED": {
+        "title": "Suscripción actualizada",
+        "description": "Tu plan de suscripción se ha actualizado."
+      },
+      "NEW_SIGN_IN": {
+        "title": "Nuevo inicio de sesión detectado",
+        "description": "Sesión iniciada desde {device}.",
+        "descriptionLocation": "Sesión iniciada desde {device} ({location})."
+      },
+      "EXPORT_READY": {
+        "title": "Exportación lista",
+        "description": "Tu documento exportado está listo para descargar."
+      },
+      "QUESTIONS_ANSWERED": {
+        "title": "Preguntas en cola respondidas",
+        "description": "Se respondieron tus preguntas en cola.",
+        "descriptionOne": "Se respondió 1 pregunta en cola.",
+        "descriptionCount": "Se respondieron {count} preguntas en cola."
+      },
+      "OWNERSHIP_TRANSFER_REQUESTED": {
+        "title": "Solicitud de transferencia de propiedad",
+        "description": "{name} quiere transferirte la propiedad de {resourceName}. Si aceptas, pagarás todo el uso allí."
+      },
+      "OWNERSHIP_TRANSFER_ACCEPTED": {
+        "title": "Transferencia de propiedad aceptada",
+        "description": "{name} ahora es propietario de {resourceName}."
+      },
+      "OWNERSHIP_TRANSFER_DECLINED": {
+        "title": "Transferencia de propiedad rechazada",
+        "description": "{name} rechazó hacerse cargo de {resourceName}."
+      },
+      "MEMBER_LIMIT_EXCEEDED": {
+        "title": "Límite de colaboradores superado",
+        "description": "El plan del propietario ya no cubre a todos los colaboradores. Algunos miembros podrían pasar pronto a solo lectura.",
+        "descriptionOwner": "Tu plan permite menos colaboradores. Elige quién sigue activo en Compartir y personas.",
+        "descriptionOwnerLimit": "Tu plan permite {limit} colaboradores. Elige quién sigue activo en Compartir y personas."
+      },
+      "MEMBER_SUSPENDED": {
+        "title": "Acceso cambiado a solo lectura",
+        "description": "Tu acceso a {resourceName} es de solo lectura porque el plan del propietario ya no cubre a todos los colaboradores."
+      },
+      "MEMBER_RESTORED": {
+        "title": "Acceso restaurado",
+        "description": "Has recuperado tu acceso completo a {resourceName}."
+      },
+      "MENTIONED": {
+        "title": "Te mencionaron",
+        "description": "{name} te mencionó en un comentario.",
+        "descriptionQuote": "{name} te mencionó en un comentario sobre «{quote}»."
+      },
+      "default": {
+        "title": "Notificación",
+        "description": "Tienes una notificación nueva."
+      }
+    },
+    "bell": {
+      "label": "Notificaciones",
+      "labelUnread": "Notificaciones ({count} sin leer)",
+      "title": "Notificaciones",
+      "newCount": "{count} nuevas",
+      "markAllReadTitle": "Marcar todas como leídas",
+      "markAllRead": "Marcar todas",
+      "settings": "Ajustes de notificaciones",
+      "empty": "Sin notificaciones",
+      "emptyHint": "Estás al día.",
+      "unread": "Sin leer",
+      "markRead": "Marcar como leída",
+      "dismiss": "Descartar",
+      "viewAll": "Ver todas las notificaciones y preferencias",
+      "allMarkedRead": "Todas las notificaciones marcadas como leídas",
+      "markAllFailed": "No se pudieron marcar todas como leídas"
+    },
+    "settings": {
+      "channelsTitle": "Canales de notificación",
+      "channelsDescription": "Elige qué eventos te avisan en la app y por correo. Los cambios se guardan automáticamente.",
+      "event": "Evento",
+      "inApp": "En la app",
+      "email": "Correo",
+      "inAppFor": "{label}: notificaciones en la app",
+      "emailFor": "{label}: notificaciones por correo",
+      "recentTitle": "Notificaciones recientes",
+      "unreadCount": "{count} sin leer",
+      "recentDescription": "Tus avisos recientes de actividad de la cuenta y de los espacios de trabajo.",
+      "filter": "Mostrar notificaciones",
+      "filterAll": "Todas",
+      "filterUnread": "Sin leer",
+      "markAllRead": "Marcar todas",
+      "markRead": "Marcar leída",
+      "unread": "Sin leer",
+      "dismiss": "Descartar",
+      "emptyTitle": "No se encontraron notificaciones",
+      "emptyUnread": "No tienes notificaciones sin leer.",
+      "emptyAll": "Las notificaciones aparecerán aquí cuando ocurra algo importante.",
+      "loadPrefsFailed": "No se pudieron cargar las preferencias de notificación",
+      "loadFailed": "No se pudieron cargar las notificaciones",
+      "saved": "Preferencia guardada",
+      "saveFailed": "No se pudo actualizar la preferencia de notificación",
+      "allMarkedRead": "Todas las notificaciones marcadas como leídas",
+      "markAllFailed": "No se pudieron marcar todas como leídas"
+    },
+    "page": {
+      "metaTitle": "Notificaciones — Ajustes",
+      "back": "Ajustes",
+      "eyebrow": "Preferencias",
+      "title": "Notificaciones",
+      "description": "Gestiona cómo y cuándo Klecx te avisa sobre colaboraciones, créditos y eventos de seguridad."
+    }
+  },
+  "Notes": {
+    "title": "Notas de Klecx",
+    "button": "Notas de Klecx ({count})",
+    "empty": "Aún no hay notas registradas. Escribe @klecx en cualquier comentario para enseñarle a Klecx para respuestas futuras.",
+    "warningBudget": "Las notas más antiguas ya no se envían a Klecx",
+    "viewInContext": "Ver en contexto",
+    "archive": "Archivar",
+    "restore": "Restaurar",
+    "delete": "Eliminar",
+    "archived": "Archivadas",
+    "active": "Activas",
+    "all": "Todas",
+    "chip": "Klecx recordará esto",
+    "loading": "Cargando notas…",
+    "noteArchived": "Nota archivada",
+    "noteRestored": "Nota restaurada",
+    "noteDeleted": "Nota eliminada",
+    "updateFailed": "No se pudo actualizar la nota",
+    "deleteFailed": "No se pudo eliminar la nota",
+    "unknownAuthor": "Antiguo miembro",
+    "filter": "Mostrar notas"
   }
 }
