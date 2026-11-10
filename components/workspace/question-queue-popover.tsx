@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api/client";
 import { useUiStore } from "@/lib/stores/ui";
+import { useThreadStackStore } from "@/lib/stores/thread-stack";
 import {
   Popover,
   PopoverContent,
@@ -298,7 +299,13 @@ function QuestionQueuePopoverInner({
                 <div
                   key={q.id}
                   data-testid={`queued-question-${q.id}`}
-                  className="rounded-lg border border-border/80 bg-surface-2/40 p-2.5 text-xs space-y-1.5 group"
+                  onClick={() => {
+                    if (editingId !== q.id) {
+                      useThreadStackStore.getState().open({ kind: "annotation", id: q.id });
+                      setIsOpen(false);
+                    }
+                  }}
+                  className="rounded-lg border border-border/80 bg-surface-2/40 p-2.5 text-xs space-y-1.5 group cursor-pointer hover:border-accent/50 transition-colors"
                 >
                   {/* Quoted passage snippet */}
                   <div className="border-l-2 border-accent/60 pl-2 text-[11px] italic text-subtle line-clamp-2">

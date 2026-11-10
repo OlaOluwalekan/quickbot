@@ -10,6 +10,7 @@ import { Gated } from "@/components/ui/gated";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { api } from "@/lib/api/client";
 import { useUiStore } from "@/lib/stores/ui";
+import { useThreadStackStore } from "@/lib/stores/thread-stack";
 import { selectionToAnchor, type Anchor } from "@/lib/annotations";
 import { MAX_ANNOTATION_DEPTH } from "@/lib/annotations/limits";
 import { MentionTextarea } from "./mention-textarea";
@@ -486,10 +487,10 @@ export function SelectionToolbar({
         setAskText("");
         askInputRef.current?.focus();
       } else {
-        // "now": the answer starts streaming right away. F2.4 shows it in the
-        // Ask column; until then the thread opens in the right panel.
+        // "now": open thread stack column and start answer streaming
         const created = res as { id?: string };
         if (created?.id) {
+          useThreadStackStore.getState().open({ kind: "annotation", id: created.id });
           void streamAskNowAnswer(created.id, changedDetail).then((ok) => {
             if (!ok) toast.error(t("askFailed"));
           });

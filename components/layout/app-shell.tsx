@@ -42,7 +42,7 @@ import {
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
 import { CommandPalette } from "./command-palette";
-import { RightPanel } from "@/components/annotations";
+import { AllAnnotationsDrawer } from "@/components/annotations";
 import { ClaimUsernameDialog } from "@/components/user/claim-username-dialog";
 import { ClaimUsernameBanner } from "@/components/user/claim-username-banner";
 import type {
@@ -436,8 +436,12 @@ export function AppShell({
         </main>
       </div>
 
-      {/* Right Panel Column (Step 6.4) */}
-      <RightPanel workspaceId={activeWorkspace?.id} />
+      {/* All Annotations Drawer (Step F2.4) */}
+      <AllAnnotationsDrawer
+        workspaceId={activeWorkspace?.id}
+        open={rightPanelOpen}
+        onOpenChange={setRightPanelOpen}
+      />
 
       {/* Command Palette (Ctrl/⌘ + K) */}
       <CommandPalette

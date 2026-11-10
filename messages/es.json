@@ -1294,6 +1294,19 @@
       "mentionSearching": "Buscando miembros…",
       "mentionEmpty": "No se encontraron miembros",
       "klecxNoted": "Klecx tomó nota"
+    },
+    "panel": {
+      "title": "Todas las anotaciones",
+      "tabComments": "Comentarios",
+      "tabAsks": "Preguntas",
+      "tabQueue": "Cola",
+      "filterThisResponse": "Esta respuesta",
+      "filterEntireWorkspace": "Todo el espacio",
+      "noComments": "No hay comentarios",
+      "noAsks": "No hay preguntas",
+      "noQueued": "No hay preguntas en cola",
+      "resolved": "Resuelto",
+      "unresolved": "Abierto"
     }
   },
   "Notifications": {
@@ -1515,5 +1528,28 @@
     "deleteFailed": "No se pudo eliminar la nota",
     "unknownAuthor": "Antiguo miembro",
     "filter": "Mostrar notas"
+  },
+  "Threads": {
+    "back": "Volver",
+    "main": "Conversación principal",
+    "breadcrumbMain": "Principal",
+    "spineLabel": "Volver al nivel {level}: «{quote}»",
+    "mainSpineLabel": "Conversación principal",
+    "resize": "Redimensionar columna",
+    "allAnnotations": "Todas las anotaciones",
+    "emptyState": "Sin anotaciones aún",
+    "emptyStateDescription": "Selecciona un pasaje para agregar comentarios o preguntas.",
+    "moreSpines": "+{count} más",
+    "hiddenLevels": "Niveles ocultos",
+    "replyPlaceholder": "Responder a este hilo...",
+    "followUpPlaceholder": "Hacer una pregunta de seguimiento...",
+    "send": "Enviar",
+    "resolve": "Resolver",
+    "unresolve": "Reabrir",
+    "delete": "Eliminar",
+    "visibility": "Visibilidad",
+    "workspaceVisible": "Visible para el espacio",
+    "privateVisible": "Privado para ti",
+    "close": "Cerrar"
   }
 }

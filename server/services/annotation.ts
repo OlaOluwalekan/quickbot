@@ -517,6 +517,74 @@ export async function getAnnotation(actor: Actor, annotationId: string) {
   return annot;
 }
 
+/**
+ * Loads the full ancestor chain from root to the given annotation in one query
+ * using a recursive CTE over parent_annotation_id capped at MAX_ANNOTATION_DEPTH.
+ * Returns annotations ordered by depth ASC (root at index 0 down to target).
+ */
+export async function getAnnotationChain(actor: Actor, annotationId: string) {
+  const target = await getAnnotation(actor, annotationId);
+
+  if (target.depth === 0 || !target.parentAnnotationId) {
+    return [target];
+  }
+
+  const rawRows = await db.$queryRaw<Array<{ id: string }>>`
+    WITH RECURSIVE chain AS (
+      SELECT
+        id,
+        parent_annotation_id,
+        0 AS step
+      FROM annotations
+      WHERE id = ${annotationId} AND deleted_at IS NULL
+
+      UNION ALL
+
+      SELECT
+        parent.id,
+        parent.parent_annotation_id,
+        c.step + 1 AS step
+      FROM annotations parent
+      INNER JOIN chain c ON parent.id = c.parent_annotation_id
+      WHERE parent.deleted_at IS NULL AND c.step < ${MAX_ANNOTATION_DEPTH}
+    )
+    SELECT id FROM chain;
+  `;
+
+  const chainIds = rawRows.map((r) => r.id);
+
+  const annotations = await db.annotation.findMany({
+    where: {
+      id: { in: chainIds },
+      deletedAt: null,
+    },
+    include: {
+      messages: {
+        orderBy: { createdAt: "asc" },
+        include: {
+          author: {
+            select: { id: true, name: true, email: true, image: true, username: true },
+          },
+        },
+      },
+      createdBy: {
+        select: { id: true, name: true, email: true, image: true, username: true },
+      },
+    },
+    orderBy: {
+      depth: "asc",
+    },
+  });
+
+  for (const a of annotations) {
+    if (a.visibility === "PRIVATE" && a.createdById !== actor.userId) {
+      throw Errors.notFound("Annotation");
+    }
+  }
+
+  return annotations;
+}
+
 /** The capability needed to create or change an annotation of this kind. */
 function annotationKindPermission(kind: string) {
   return kind === "COMMENT" ? "workspace.comment" : "workspace.ask";

@@ -1294,6 +1294,19 @@
       "mentionSearching": "Recherche de membres…",
       "mentionEmpty": "Aucun membre trouvé",
       "klecxNoted": "Klecx en a pris note"
+    },
+    "panel": {
+      "title": "Toutes les annotations",
+      "tabComments": "Commentaires",
+      "tabAsks": "Questions",
+      "tabQueue": "File d'attente",
+      "filterThisResponse": "Cette réponse",
+      "filterEntireWorkspace": "Tout l'espace",
+      "noComments": "Aucun commentaire",
+      "noAsks": "Aucune question",
+      "noQueued": "Aucune question en file d'attente",
+      "resolved": "Résolu",
+      "unresolved": "Ouvert"
     }
   },
   "Notifications": {
@@ -1515,5 +1528,28 @@
     "deleteFailed": "Impossible de supprimer la note",
     "unknownAuthor": "Ancien membre",
     "filter": "Afficher les notes"
+  },
+  "Threads": {
+    "back": "Retour",
+    "main": "Conversation principale",
+    "breadcrumbMain": "Principal",
+    "spineLabel": "Retour au niveau {level} : «{quote}»",
+    "mainSpineLabel": "Conversation principale",
+    "resize": "Redimensionner la colonne",
+    "allAnnotations": "Toutes les annotations",
+    "emptyState": "Aucune annotation",
+    "emptyStateDescription": "Sélectionnez un passage pour ajouter des commentaires ou questions.",
+    "moreSpines": "+{count} de plus",
+    "hiddenLevels": "Niveaux masqués",
+    "replyPlaceholder": "Répondre à ce fil...",
+    "followUpPlaceholder": "Poser une question de suivi...",
+    "send": "Envoyer",
+    "resolve": "Résoudre",
+    "unresolve": "Rouvrir",
+    "delete": "Supprimer",
+    "visibility": "Visibilité",
+    "workspaceVisible": "Visible par l'espace",
+    "privateVisible": "Privé pour vous",
+    "close": "Fermer"
   }
 }

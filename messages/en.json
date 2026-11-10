@@ -1294,6 +1294,19 @@
       "mentionSearching": "Searching members…",
       "mentionEmpty": "No members found",
       "klecxNoted": "Klecx noted this"
+    },
+    "panel": {
+      "title": "All annotations",
+      "tabComments": "Comments",
+      "tabAsks": "Asks",
+      "tabQueue": "Queue",
+      "filterThisResponse": "This response",
+      "filterEntireWorkspace": "Entire workspace",
+      "noComments": "No comments found",
+      "noAsks": "No asks found",
+      "noQueued": "No queued questions",
+      "resolved": "Resolved",
+      "unresolved": "Open"
     }
   },
   "Notifications": {
@@ -1515,5 +1528,28 @@
     "deleteFailed": "Couldn't delete the note",
     "unknownAuthor": "Former member",
     "filter": "Show notes"
+  },
+  "Threads": {
+    "back": "Back",
+    "main": "Main conversation",
+    "breadcrumbMain": "Main",
+    "spineLabel": "Back to level {level}: «{quote}»",
+    "mainSpineLabel": "Main conversation",
+    "resize": "Resize column",
+    "allAnnotations": "All annotations",
+    "emptyState": "No annotations yet",
+    "emptyStateDescription": "Select any passage to add comments or ask side questions.",
+    "moreSpines": "+{count} more",
+    "hiddenLevels": "Hidden levels",
+    "replyPlaceholder": "Reply to this thread...",
+    "followUpPlaceholder": "Ask a follow-up question...",
+    "send": "Send",
+    "resolve": "Resolve",
+    "unresolve": "Reopen",
+    "delete": "Delete",
+    "visibility": "Visibility",
+    "workspaceVisible": "Visible to workspace",
+    "privateVisible": "Private to you",
+    "close": "Close"
   }
 }
