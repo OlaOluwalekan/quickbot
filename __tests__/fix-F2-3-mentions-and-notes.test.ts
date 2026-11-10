@@ -186,7 +186,7 @@ describe("Fix F2.3 — Mentions, notifications and Klecx notes in the AI context
       expect(annot.visibility).toBe("WORKSPACE");
 
       // Verify WorkspaceNote created
-      const note = await db.workspaceNote.findUnique({
+      const note = await db.workspaceNote.findFirst({
         where: { annotationId: annot.id },
       });
       expect(note).not.toBeNull();
@@ -382,7 +382,7 @@ describe("Fix F2.3 — Mentions, notifications and Klecx notes in the AI context
         anchor: { exact: "fast reads", prefix: "", suffix: "" },
         text: "@klecx always use Redis for caching",
       });
-      const note = await db.workspaceNote.findUnique({
+      const note = await db.workspaceNote.findFirst({
         where: { annotationId: annot.id },
       });
       noteId = note!.id;
@@ -484,7 +484,7 @@ describe("Fix F2.3 — Mentions, notifications and Klecx notes in the AI context
       });
 
       await updateAnnotation(ownerActor, annot.id, { text: "prefer managed storage" });
-      let note = await db.workspaceNote.findUniqueOrThrow({
+      let note = await db.workspaceNote.findFirstOrThrow({
         where: { annotationId: annot.id },
       });
       expect(note.status).toBe("ARCHIVED");
@@ -492,17 +492,52 @@ describe("Fix F2.3 — Mentions, notifications and Klecx notes in the AI context
       await updateAnnotation(ownerActor, annot.id, {
         text: "@klecx prefer managed storage always",
       });
-      note = await db.workspaceNote.findUniqueOrThrow({
+      note = await db.workspaceNote.findFirstOrThrow({
         where: { annotationId: annot.id },
       });
       expect(note.status).toBe("ACTIVE");
       expect(note.instruction).toBe("prefer managed storage always");
 
       await updateAnnotation(ownerActor, annot.id, { visibility: "PRIVATE" });
-      note = await db.workspaceNote.findUniqueOrThrow({
+      note = await db.workspaceNote.findFirstOrThrow({
         where: { annotationId: annot.id },
       });
       expect(note.status).toBe("ARCHIVED");
+    });
+
+    it("a thread keeps one note per @klecx message", async () => {
+      const annot = await createAnnotation(ownerActor, versionId, {
+        kind: "COMMENT",
+        anchor: { exact: "Our app", prefix: "", suffix: "" },
+        text: "@klecx call it the platform",
+      });
+      const reply = await createAnnotationMessage(
+        ownerActor,
+        annot.id,
+        "@klecx and never abbreviate it"
+      );
+
+      const active = () =>
+        db.workspaceNote.findMany({
+          where: { annotationId: annot.id, status: "ACTIVE" },
+          orderBy: { createdAt: "asc" },
+        });
+
+      expect((await active()).map((n) => n.instruction)).toEqual([
+        "call it the platform",
+        "and never abbreviate it",
+      ]);
+      expect(await loadActiveNotes(workspace.id)).toContain("never abbreviate it");
+
+      // Removing @klecx from the comment archives only the comment's note.
+      await updateAnnotation(ownerActor, annot.id, { text: "call it the platform" });
+      const left = await active();
+      expect(left).toHaveLength(1);
+      expect(left[0]?.messageId).toBe(reply.id);
+
+      // Resolving the thread archives the rest.
+      await updateAnnotation(ownerActor, annot.id, { resolved: true });
+      expect(await active()).toHaveLength(0);
     });
 
     it("a reply in a comment thread notifies the mentioned member once", async () => {
@@ -577,7 +612,7 @@ describe("Fix F2.3 — Mentions, notifications and Klecx notes in the AI context
       expect(notified).toBe(0);
 
       // The author still asked Klecx to remember it.
-      const note = await db.workspaceNote.findUnique({ where: { annotationId: child.id } });
+      const note = await db.workspaceNote.findFirst({ where: { annotationId: child.id } });
       expect(note?.status).toBe("ACTIVE");
     });
   });

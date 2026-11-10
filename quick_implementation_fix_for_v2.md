@@ -532,7 +532,7 @@ enum NoteStatus { ACTIVE ARCHIVED }
 model WorkspaceNote {                          // "Klecx notes"
   id           String     @id @default(uuid(7))
   workspaceId  String     @map("workspace_id")
-  annotationId String     @unique @map("annotation_id")
+  annotationId String     @map("annotation_id")   // not unique since F2.3: one note per @klecx message (migration 20261110_notes_per_message)
   messageId    String     @unique @map("message_id")
   createdById  String     @map("created_by_id")
   quote        String     @db.Text            // anchorExact at creation

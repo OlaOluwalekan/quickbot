@@ -249,19 +249,21 @@ export async function syncMentionsAndNotes(
     await tx.annotationMention.deleteMany({ where: { id: { in: staleIds } } });
   }
 
+  // One note per message: a thread can hold several (the comment and each
+  // reply with @klecx). Editing a message updates or archives its own note.
   if (klecx) {
     const instruction = extractInstructionFromKlecx(text);
-    const existingNote = await tx.workspaceNote.findUnique({
-      where: { annotationId },
-      select: { id: true },
-    });
+    const existingNote = isNewMessage
+      ? null
+      : await tx.workspaceNote.findUnique({
+          where: { messageId },
+          select: { id: true },
+        });
 
     if (existingNote) {
-      // One note per annotation: the latest @klecx message replaces it.
       await tx.workspaceNote.update({
         where: { id: existingNote.id },
         data: {
-          messageId,
           quote: anchorExact,
           instruction,
           status: "ACTIVE",
@@ -293,7 +295,7 @@ export async function syncMentionsAndNotes(
   } else if (existingHasKlecx) {
     // `@klecx` was removed from the message that recorded the note.
     await tx.workspaceNote.updateMany({
-      where: { annotationId, messageId, status: "ACTIVE" },
+      where: { messageId, status: "ACTIVE" },
       data: { status: "ARCHIVED", archivedAt: new Date() },
     });
   }
@@ -344,8 +346,8 @@ export async function sendMentionNotifications(
 }
 
 /**
- * Archives the active WorkspaceNote of an annotation (on delete, resolve, or
- * when the annotation becomes private).
+ * Archives every active WorkspaceNote of an annotation (on delete, resolve,
+ * or when the annotation becomes private).
  */
 export async function archiveNoteForAnnotation(
   annotationId: string,
