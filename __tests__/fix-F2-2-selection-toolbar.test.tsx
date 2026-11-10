@@ -7,6 +7,7 @@ import { render, screen, fireEvent, waitFor, act } from "@testing-library/react"
 import { SelectionToolbar } from "@/components/annotations/selection-toolbar";
 import { MentionTextarea, renderMentions } from "@/components/annotations/mention-textarea";
 import { api } from "@/lib/api/client";
+import { toast } from "sonner";
 import { MAX_ANNOTATION_DEPTH } from "@/lib/annotations/limits";
 
 const MESSAGES: Record<string, string> = {
@@ -15,11 +16,9 @@ const MESSAGES: Record<string, string> = {
   ask: "Ask",
   askNow: "Ask now",
   addToQueue: "Add to queue",
-  addAndAnother: "Add & select another",
   mentionHint: "Type @ to mention a member or @klecx to have Klecx remember this.",
   klecxLabel: "Klecx",
   klecxDescription: "AI assistant · remembers this for future answers",
-  maxDepth: "Maximum thread depth ({depth}) reached. Promote this answer to a new workspace to continue.",
   commentPlaceholder: "Add a comment... (Enter to save, Esc to cancel)",
   askPlaceholder: "Ask a question about this selection...",
   commentAdded: "Comment added",
@@ -170,6 +169,36 @@ describe("Fix F2.2 — Selection Popover v2 & Mention Autocomplete", () => {
           })
         );
       });
+    });
+
+    it("shows the real queue size after Add to queue", async () => {
+      (api as jest.Mock)
+        .mockResolvedValueOnce({ id: "annot_q", kind: "ASK" })
+        // the workspace already has three other queued questions
+        .mockResolvedValueOnce([{}, {}, {}, {}]);
+      render(<SelectionToolbar />);
+
+      const textNode = responseRoot.querySelector("#resp_text")!.firstChild!;
+      mockSelection(textNode, 0, 21);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("action-ask")).toBeInTheDocument();
+      });
+      // Non-Apple platforms get Ctrl-based shortcut hints
+      expect(screen.getByTestId("action-ask")).toHaveTextContent("Ctrl+Alt+A");
+
+      fireEvent.click(screen.getByTestId("action-ask"));
+      fireEvent.change(screen.getByTestId("ask-input"), {
+        target: { value: "Why?" },
+      });
+      fireEvent.click(screen.getByTestId("action-add-to-queue"));
+
+      await waitFor(() => {
+        expect(toast.success).toHaveBeenCalledWith("Added to your queue (4)");
+      });
+      expect(api).toHaveBeenCalledWith(
+        "/api/v1/workspaces/ws_123/questions?state=QUEUED"
+      );
     });
 
     it("opens toolbar and targets ANNOTATION_MESSAGE when selection is inside Ask answer", async () => {

@@ -111,6 +111,12 @@ export function SelectionToolbar({
   const [announcement, setAnnouncement] = React.useState("");
 
   const [isCoarsePointer, setIsCoarsePointer] = React.useState(false);
+  // Shortcut modifier and hints follow the user's OS (⌘ on Apple devices,
+  // Ctrl elsewhere). Known only in the browser, so it starts as non-Mac.
+  const [isMac, setIsMac] = React.useState(false);
+  React.useEffect(() => {
+    setIsMac(/mac|iphone|ipad|ipod/i.test(navigator.platform || navigator.userAgent));
+  }, []);
 
   const popoverRef = React.useRef<HTMLDivElement>(null);
   const commentInputRef = React.useRef<HTMLTextAreaElement>(null);
@@ -332,9 +338,6 @@ export function SelectionToolbar({
         return;
       }
 
-      const isMac =
-        typeof navigator !== "undefined" &&
-        navigator.platform.toUpperCase().indexOf("MAC") >= 0;
       const mod = isMac ? e.metaKey : e.ctrlKey;
 
       if (mod && e.altKey) {
@@ -356,7 +359,7 @@ export function SelectionToolbar({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isVisible, mode, effectiveCanComment, effectiveCanAsk, isOutOfCredits, metadata]);
+  }, [isVisible, mode, effectiveCanComment, effectiveCanAsk, isOutOfCredits, metadata, isMac]);
 
   // Action 1: Save comment
   const handleSaveComment = async () => {
@@ -451,7 +454,20 @@ export function SelectionToolbar({
       };
 
       if (askMode === "queue") {
-        const nextCount = questionQueueCount + 1;
+        // Show the real queue size (it survives reloads and includes
+        // questions queued elsewhere). If it can't be loaded, fall back to
+        // the number added from this toolbar.
+        let nextCount = questionQueueCount + 1;
+        if (metadata.workspaceId) {
+          try {
+            const queued = await api<unknown[]>(
+              `/api/v1/workspaces/${metadata.workspaceId}/questions?state=QUEUED`
+            );
+            if (Array.isArray(queued)) nextCount = Math.max(queued.length, 1);
+          } catch {
+            // keep the local count
+          }
+        }
         setQuestionQueueCount(nextCount);
         toast.success(t("addedToQueue", { count: nextCount }));
         setAnnouncement(t("addedToQueueAnnouncement", { count: nextCount }));
@@ -569,7 +585,7 @@ export function SelectionToolbar({
                 <MessageSquare className="h-3.5 w-3.5" />
                 <span>{t("comment")}</span>
                 <kbd className="hidden sm:inline-block ml-1 text-[10px] text-fg-muted font-mono opacity-60">
-                  ⌥⌘M
+                  {isMac ? "⌥⌘M" : "Ctrl+Alt+M"}
                 </kbd>
               </Button>
             </Gated>
@@ -594,7 +610,7 @@ export function SelectionToolbar({
                 <HelpCircle className="h-3.5 w-3.5" />
                 <span>{t("ask")}</span>
                 <kbd className="hidden sm:inline-block ml-1 text-[10px] text-fg-muted font-mono opacity-60">
-                  ⌥⌘A
+                  {isMac ? "⌥⌘A" : "Ctrl+Alt+A"}
                 </kbd>
               </Button>
             </Gated>
@@ -725,7 +741,7 @@ export function SelectionToolbar({
               >
                 {t("addToQueue")}
                 <kbd className="hidden sm:inline-block ml-1 text-[9px] text-fg-muted font-mono opacity-60">
-                  ⌘↵
+                  {isMac ? "⌘↵" : "Ctrl+↵"}
                 </kbd>
               </Button>
               <Button
