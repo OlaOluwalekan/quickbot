@@ -470,7 +470,7 @@ describe("Context builder and system prompts (Step 2.3)", () => {
       });
 
       expect(result.system).toContain("Response language: de.");
-      expect(PROMPT_VERSION).toBe("2026-10-1");
+      expect(PROMPT_VERSION).toBe("2026-11-1"); // bumped in F2.3 (Klecx notes)
     });
   });
 
