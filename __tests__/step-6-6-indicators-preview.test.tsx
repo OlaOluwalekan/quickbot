@@ -475,7 +475,8 @@ describe("Step 6.6 — Indicators and Hover/Tap Previews in Workspace", () => {
       expect(dialog).toBeInTheDocument();
 
       // Checks reply content: author name and AI replied indicator
-      expect(screen.getByText("Bob")).toBeInTheDocument();
+      // F2.6: preview card lists multiple matching annotations (Bob authored two in this paragraph).
+      expect(screen.getAllByText("Bob").length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText(/AI replied/i)).toBeInTheDocument();
       expect(screen.getByText(/Can you elaborate on leader election latency/i)).toBeInTheDocument();
 

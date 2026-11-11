@@ -99,6 +99,9 @@ export async function listAnnotationsForResponse(
           author: {
             select: { id: true, name: true, email: true, image: true },
           },
+          mentions: {
+            select: { isKlecx: true },
+          },
         },
       },
       createdBy: {
@@ -156,6 +159,9 @@ export async function listAnnotationsForMessage(actor: Actor, messageId: string)
         include: {
           author: {
             select: { id: true, name: true, image: true },
+          },
+          mentions: {
+            select: { isKlecx: true },
           },
         },
       },

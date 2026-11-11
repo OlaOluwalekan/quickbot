@@ -21,16 +21,18 @@
   --switch-thumb: oklch(1 0 0);
   /* status */
   --success: oklch(0.62 0.15 150);
-  --warning: oklch(0.75 0.15 75);
+  --warning: oklch(0.58 0.16 65);
   --danger: oklch(0.58 0.2 25);
   --info: oklch(0.62 0.12 235);
   /* focus & overlays */
   --ring: oklch(0.58 0.17 270 / 0.55);
   --overlay: oklch(0.2 0.02 260 / 0.45);
-  /* highlight for annotations */
-  --mark-comment: oklch(0.9 0.12 95 / 0.55);
-  --mark-question: oklch(0.85 0.1 235 / 0.45);
-  --mark-reply: oklch(0.88 0.1 150 / 0.45);
+  /* highlight for annotations (WCAG-checked against --surface) */
+  --mark-comment: oklch(0.56 0.14 75);
+  --mark-question: color-mix(in oklch, var(--accent) 12%, transparent);
+  --mark-reply: color-mix(in oklch, var(--accent) 12%, transparent);
+  --mark-ask: color-mix(in oklch, var(--accent) 12%, transparent);
+  --mark-hover: color-mix(in oklch, var(--accent) 18%, transparent);
   /* shape + motion */
   --radius-sm: 6px;
   --radius: 10px;
@@ -82,6 +84,12 @@
   --accent-fg: oklch(0.15 0.02 270);
   --accent-soft: oklch(0.28 0.06 270);
   --switch-thumb: oklch(0.98 0.005 260);
+  --warning: oklch(0.78 0.15 75);
+  --mark-comment: oklch(0.80 0.14 82);
+  --mark-question: color-mix(in oklch, var(--accent) 12%, transparent);
+  --mark-reply: color-mix(in oklch, var(--accent) 12%, transparent);
+  --mark-ask: color-mix(in oklch, var(--accent) 12%, transparent);
+  --mark-hover: color-mix(in oklch, var(--accent) 18%, transparent);
   --ring: oklch(0.72 0.15 270 / 0.6);
   --overlay: oklch(0 0 0 / 0.6);
 }

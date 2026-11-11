@@ -50,13 +50,18 @@ export interface AnnotationMessageItem {
   generationId?: string | null;
   createdAt: string | Date;
   author?: AnnotationAuthor | null;
+  mentions?: Array<{ isKlecx?: boolean; userId?: string | null }>;
 }
 
 export interface AnnotationItem {
   id: string;
   workspaceId: string;
-  responseId: string;
-  versionId: string;
+  responseId?: string | null;
+  versionId?: string | null;
+  targetType?: "RESPONSE_VERSION" | "ANNOTATION_MESSAGE" | "DOCUMENT_REVISION";
+  targetMessageId?: string | null;
+  depth?: number;
+  authorType?: "USER" | "AI";
   kind: "COMMENT" | "ASK";
   questionState?: "NONE" | "QUEUED" | "ANSWERING" | "ANSWERED" | "FAILED" | "CANCELLED";
   visibility: "PRIVATE" | "WORKSPACE";
@@ -69,6 +74,8 @@ export interface AnnotationItem {
   updatedAt: string | Date;
   createdBy: AnnotationAuthor;
   messages: AnnotationMessageItem[];
+  note?: { id: string; status?: string } | null;
+  notes?: Array<{ id: string; status?: string }>;
 }
 
 export interface RightPanelProps {

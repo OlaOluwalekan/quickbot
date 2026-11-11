@@ -1,21 +1,26 @@
 /**
- * CSS Custom Highlight API and fallback overlay support for Klecx annotations (§6.1, §6.6).
+ * CSS Custom Highlight API and fallback overlay support for Klecx annotations (§6.1, §6.6, F2.6).
  *
- * Utilizes the CSS Custom Highlight API (`CSS.highlights.set(...)`) to paint high-performance,
- * zero-layout-shift highlights on response text without modifying React-managed DOM nodes.
- * Provides fallback rectangle computation for browsers lacking the Highlight API.
+ * Delegates global CSS.highlights range merging to `./highlight-registry` so
+ * multiple mounted AnnotationLayer instances coexist without overwriting one another.
  */
 
-import type { AnnotationKind } from "./anchor";
+import {
+  HIGHLIGHT_NAME_MAP,
+  HIGHLIGHT_PRIORITY_MAP,
+  isCustomHighlightSupported,
+  registerHighlightRanges,
+  unregisterHighlightOwner,
+  setHoverHighlightRange,
+  clearHoverHighlightRange,
+  type HighlightKind,
+} from "./highlight-registry";
 
-export const HIGHLIGHT_NAME_MAP: Record<AnnotationKind, string> = {
-  COMMENT: "annot-comment",
-  ASK: "annot-ask",
-};
-
-export const HIGHLIGHT_PRIORITY_MAP: Record<AnnotationKind, number> = {
-  ASK: 2,
-  COMMENT: 1,
+export {
+  HIGHLIGHT_NAME_MAP,
+  HIGHLIGHT_PRIORITY_MAP,
+  isCustomHighlightSupported,
+  type HighlightKind,
 };
 
 export interface HighlightRect {
@@ -26,115 +31,30 @@ export interface HighlightRect {
 }
 
 /**
- * Checks if the CSS Custom Highlight API is supported in the current environment.
- */
-export function isCustomHighlightSupported(): boolean {
-  return (
-    typeof CSS !== "undefined" &&
-    "highlights" in CSS &&
-    typeof (globalThis as unknown as { Highlight?: unknown }).Highlight ===
-      "function"
-  );
-}
-
-/**
- * Ranges registered per owner (one owner = one AnnotationLayer). The browser
- * has a single highlight per name for the whole page, so it is rebuilt from
- * every owner's ranges; one layer must not wipe the marks of another.
- */
-const DEFAULT_OWNER = "default";
-const rangesByOwner = new Map<string, Map<string, Range[]>>();
-
-function paintCustomHighlights(): void {
-  const HighlightCtor = (
-    globalThis as unknown as {
-      Highlight: new (...ranges: Range[]) => { priority?: number };
-    }
-  ).Highlight;
-
-  for (const kind of ["COMMENT", "ASK"] as AnnotationKind[]) {
-    const name = HIGHLIGHT_NAME_MAP[kind];
-    const ranges: Range[] = [];
-    rangesByOwner.forEach((byName) => {
-      ranges.push(...(byName.get(name) ?? []));
-    });
-
-    if (ranges.length > 0) {
-      const hl = new HighlightCtor(...ranges);
-      if (typeof hl === "object" && hl !== null) {
-        hl.priority = HIGHLIGHT_PRIORITY_MAP[kind] ?? 1;
-      }
-      CSS.highlights.set(name, hl as never);
-    } else {
-      CSS.highlights.delete(name);
-    }
-  }
-}
-
-/**
- * Registers the ranges of one owner with the CSS Custom Highlight API, by
- * annotation kind, with stacking priority ask (2) > comment (1). Replaces the
- * ranges this owner registered before; other owners keep theirs.
- * Returns `true` if highlights were successfully registered with the browser,
- * or `false` if the Custom Highlight API is unsupported.
+ * Registers the ranges of one owner with the shared highlight registry, by
+ * highlight kind, with stacking priority ask (2) / ai_review (2) > comment (1).
+ * Replaces the ranges this owner registered before; other owners keep theirs.
  */
 export function applyCustomHighlights(
-  groups: { kind: AnnotationKind; ranges: Range[] }[],
-  owner: string = DEFAULT_OWNER
+  groups: { kind: HighlightKind; ranges: Range[] }[],
+  owner?: string
 ): boolean {
-  if (!isCustomHighlightSupported()) {
-    return false;
-  }
-
-  const byName = new Map<string, Range[]>();
-  for (const group of groups) {
-    const name = HIGHLIGHT_NAME_MAP[group.kind];
-    if (!name) continue;
-    const existing = byName.get(name) ?? [];
-    existing.push(...group.ranges);
-    byName.set(name, existing);
-  }
-  rangesByOwner.set(owner, byName);
-
-  paintCustomHighlights();
-  return true;
+  return registerHighlightRanges(groups, owner);
 }
 
 /**
  * Sets or clears the hover highlight (`annot-hover`) for the given range,
- * setting high priority (10) so the hover underline is painted on top.
+ * setting high priority (10) so the hover background is painted on top.
  */
 export function setHoverHighlight(range: Range | null): boolean {
-  if (!isCustomHighlightSupported()) {
-    return false;
-  }
-
-  if (range) {
-    const HighlightCtor = (
-      globalThis as unknown as {
-        Highlight: new (...ranges: Range[]) => { priority?: number };
-      }
-    ).Highlight;
-    const hl = new HighlightCtor(range);
-    if (typeof hl === "object" && hl !== null) {
-      hl.priority = 10;
-    }
-    CSS.highlights.set("annot-hover", hl as never);
-  } else {
-    CSS.highlights.delete("annot-hover");
-  }
-
-  return true;
+  return setHoverHighlightRange(range);
 }
 
 /**
  * Clears the active hover highlight from CSS.highlights.
  */
 export function clearHoverHighlight(): void {
-  if (!isCustomHighlightSupported()) {
-    return;
-  }
-  CSS.highlights.delete("annot-hover");
+  clearHoverHighlightRange();
 }
 
 /**
@@ -142,20 +62,7 @@ export function clearHoverHighlight(): void {
  * Without an owner: removes every annotation highlight and the hover highlight.
  */
 export function clearCustomHighlights(owner?: string): void {
-  if (!isCustomHighlightSupported()) {
-    return;
-  }
-
-  if (owner !== undefined) {
-    if (rangesByOwner.delete(owner)) paintCustomHighlights();
-    return;
-  }
-
-  rangesByOwner.clear();
-  for (const name of Object.values(HIGHLIGHT_NAME_MAP)) {
-    CSS.highlights.delete(name);
-  }
-  CSS.highlights.delete("annot-hover");
+  unregisterHighlightOwner(owner);
 }
 
 /**

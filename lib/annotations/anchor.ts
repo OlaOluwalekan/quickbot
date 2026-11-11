@@ -267,13 +267,17 @@ export function sim(a: string, b: string): number {
  *   prefix and suffix context similarity.
  * - Returns `null` (DETACHED) if exact text is missing or context similarity is below threshold.
  */
-export function anchorToRange(root: HTMLElement, a: Anchor): Range | null {
+export function anchorToRange(
+  root: HTMLElement,
+  a: Anchor,
+  precomputed?: { nodes: Text[]; full: string }
+): Range | null {
   if (!a || !a.exact) return null;
 
-  const nodes = textNodes(root);
+  const nodes = precomputed?.nodes ?? textNodes(root);
   if (!nodes.length) return null;
 
-  const full = nodes.map((n) => n.data).join("");
+  const full = precomputed?.full ?? nodes.map((n) => n.data).join("");
 
   // 1. Fast path: text is still at the hinted start..end offsets
   if (
