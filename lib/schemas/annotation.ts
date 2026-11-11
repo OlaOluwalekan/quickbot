@@ -93,6 +93,7 @@ export type RunQuestionBatchInput = z.infer<typeof runQuestionBatchSchema>;
 export const promoteAnnotationSchema = z.object({
   messageId: z.string().min(1, "Message ID is required"),
   target: z.enum(["TIMELINE", "NEW_WORKSPACE"]),
+  projectId: z.string().min(1).nullable().optional(),
 });
 
 export type PromoteAnnotationInput = z.infer<typeof promoteAnnotationSchema>;

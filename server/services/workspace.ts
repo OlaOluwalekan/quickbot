@@ -8,7 +8,9 @@ import { toPage } from "@/server/http/pagination";
 import {
   requireProject,
   requireWorkspace,
+  resolveWorkspaceRole,
 } from "@/server/authz/access";
+import { MAX_ANNOTATION_DEPTH } from "@/lib/annotations/limits";
 import type {
   CreateWorkspaceInput,
   SearchWorkspacesQuery,
@@ -126,6 +128,94 @@ export async function createWorkspace(
   return ws;
 }
 
+export type WorkspaceSourceProvenance =
+  | { canAccess: false; removed: boolean }
+  | {
+      canAccess: true;
+      removed: false;
+      sourceWorkspaceId: string;
+      sourceWorkspaceTitle: string;
+      sourceAnnotationId: string | null;
+      threadParam: string | null;
+      annotationRemoved: boolean;
+    };
+
+async function resolveWorkspaceSourceProvenance(
+  actor: Actor,
+  sourceWorkspaceId: string | null,
+  sourceAnnotationId: string | null
+): Promise<WorkspaceSourceProvenance | null> {
+  if (!sourceWorkspaceId) return null;
+
+  const sourceWs = await db.workspace.findFirst({
+    where: { id: sourceWorkspaceId },
+    select: { id: true, title: true, deletedAt: true },
+  });
+
+  if (!sourceWs || sourceWs.deletedAt !== null) {
+    return { canAccess: false, removed: true };
+  }
+
+  const sourceAccess = await resolveWorkspaceRole(actor.userId, sourceWs.id);
+  if (!sourceAccess) {
+    // Do not leak the source workspace title or thread chain to non-members.
+    return { canAccess: false, removed: false };
+  }
+
+  let threadParam: string | null = null;
+  let annotationRemoved = false;
+
+  if (sourceAnnotationId) {
+    const chainRows = await db.$queryRaw<
+      Array<{
+        id: string;
+        depth: number;
+        visibility: string;
+        created_by_id: string;
+      }>
+    >`
+      WITH RECURSIVE chain AS (
+        SELECT id, parent_annotation_id, depth, visibility, created_by_id, 0 AS step
+        FROM annotations
+        WHERE id = ${sourceAnnotationId}
+          AND workspace_id = ${sourceWs.id}
+          AND deleted_at IS NULL
+
+        UNION ALL
+
+        SELECT parent.id, parent.parent_annotation_id, parent.depth, parent.visibility, parent.created_by_id, c.step + 1 AS step
+        FROM annotations parent
+        INNER JOIN chain c ON parent.id = c.parent_annotation_id
+        WHERE parent.deleted_at IS NULL AND c.step < ${MAX_ANNOTATION_DEPTH}
+      )
+      SELECT id, depth, visibility, created_by_id
+      FROM chain
+      ORDER BY depth ASC;
+    `;
+
+    const hasHidden = chainRows.some(
+      (r) => r.visibility === "PRIVATE" && r.created_by_id !== actor.userId
+    );
+    const hasTarget = chainRows.some((r) => r.id === sourceAnnotationId);
+
+    if (!hasTarget || hasHidden) {
+      annotationRemoved = true;
+    } else {
+      threadParam = chainRows.map((r) => r.id).join(",");
+    }
+  }
+
+  return {
+    canAccess: true,
+    removed: false,
+    sourceWorkspaceId: sourceWs.id,
+    sourceWorkspaceTitle: sourceWs.title,
+    sourceAnnotationId,
+    threadParam,
+    annotationRemoved,
+  };
+}
+
 export async function getWorkspace(actor: Actor, workspaceId: string) {
   const { role, capabilities } = await requireWorkspace(actor, workspaceId, "workspace.read");
 
@@ -148,13 +238,23 @@ export async function getWorkspace(actor: Actor, workspaceId: string) {
 
   if (!workspace) throw Errors.notFound("Workspace");
 
+  const [memberCount, sourceProvenance] = await Promise.all([
+    countWorkspaceMembers(workspaceId),
+    resolveWorkspaceSourceProvenance(
+      actor,
+      workspace.sourceWorkspaceId,
+      workspace.sourceAnnotationId
+    ),
+  ]);
+
   return {
     ...workspace,
     role,
     capabilities: Array.from(capabilities),
     // Effective headcount (owner + explicit + inherited project members);
     // `_count.members` would miss inherited access.
-    memberCount: await countWorkspaceMembers(workspaceId),
+    memberCount,
+    sourceProvenance,
   };
 }
 

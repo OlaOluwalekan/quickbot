@@ -7,6 +7,7 @@ import { logActivity } from "./activity";
 import { resolveAvatarUrl } from "@/lib/avatar";
 import { toPage } from "@/server/http/pagination";
 import { createAndStreamGeneration } from "./generation";
+import { MAX_ANNOTATION_DEPTH } from "@/lib/annotations/limits";
 import type {
   RegenerateResponseInput,
   CreateResponseEditInput,
@@ -17,6 +18,194 @@ export interface WorkspaceResponsesQuery {
   cursor?: string;
   limit?: number;
   view?: "original" | "edited";
+}
+
+export type SourceChainStep = {
+  id: string;
+  quote: string;
+  depth: number;
+};
+
+type ResponseSourceProvenance = {
+  sourceWorkspaceId: string | null;
+  sourceChain: SourceChainStep[] | null;
+  sourceRemoved: boolean;
+  sourceAccessible: boolean;
+};
+
+async function loadResponseProvenanceMap(
+  actor: Actor,
+  currentWorkspaceId: string,
+  annotationIds: string[]
+): Promise<Map<string, ResponseSourceProvenance>> {
+  const result = new Map<string, ResponseSourceProvenance>();
+  const uniqueIds = Array.from(new Set(annotationIds));
+  if (uniqueIds.length === 0) return result;
+
+  // Walk upward from each distinct sourceAnnotationId in a single SQL CTE.
+  type RawChainRow = {
+    leaf_id: string;
+    id: string;
+    workspace_id: string;
+    anchor_exact: string;
+    depth: number;
+    visibility: string;
+    created_by_id: string;
+    deleted_at: Date | null;
+    parent_annotation_id: string | null;
+  };
+
+  const rows = await db.$queryRaw<RawChainRow[]>`
+    WITH RECURSIVE chain AS (
+      SELECT
+        id AS leaf_id,
+        id,
+        workspace_id,
+        anchor_exact,
+        depth,
+        visibility,
+        created_by_id,
+        deleted_at,
+        parent_annotation_id,
+        0 AS step
+      FROM annotations
+      WHERE id = ANY(${uniqueIds}::text[])
+
+      UNION ALL
+
+      SELECT
+        c.leaf_id,
+        parent.id,
+        parent.workspace_id,
+        parent.anchor_exact,
+        parent.depth,
+        parent.visibility,
+        parent.created_by_id,
+        parent.deleted_at,
+        parent.parent_annotation_id,
+        c.step + 1 AS step
+      FROM annotations parent
+      INNER JOIN chain c ON parent.id = c.parent_annotation_id
+      WHERE c.step < ${MAX_ANNOTATION_DEPTH}
+    )
+    SELECT
+      leaf_id,
+      id,
+      workspace_id,
+      anchor_exact,
+      depth,
+      visibility,
+      created_by_id,
+      deleted_at,
+      parent_annotation_id
+    FROM chain
+    ORDER BY leaf_id ASC, depth ASC;
+  `;
+
+  const rowsByLeaf = new Map<string, RawChainRow[]>();
+  const otherWorkspaceIds = new Set<string>();
+  for (const row of rows) {
+    const list = rowsByLeaf.get(row.leaf_id) ?? [];
+    list.push(row);
+    rowsByLeaf.set(row.leaf_id, list);
+    if (row.workspace_id !== currentWorkspaceId) {
+      otherWorkspaceIds.add(row.workspace_id);
+    }
+  }
+
+  // Verify access for any annotation originating in a different workspace.
+  const accessibleOtherWs = new Map<string, boolean>();
+  if (otherWorkspaceIds.size > 0) {
+    const otherList = Array.from(otherWorkspaceIds);
+    const otherWsRows = await db.workspace.findMany({
+      where: { id: { in: otherList } },
+      select: { id: true, deletedAt: true },
+    });
+    const deletedSet = new Set(
+      otherWsRows.filter((w) => w.deletedAt !== null).map((w) => w.id)
+    );
+    const existingSet = new Set(otherWsRows.map((w) => w.id));
+
+    await Promise.all(
+      otherList.map(async (wsId) => {
+        if (!existingSet.has(wsId) || deletedSet.has(wsId)) {
+          accessibleOtherWs.set(wsId, false);
+          return;
+        }
+        const access = await resolveWorkspaceRole(actor.userId, wsId);
+        accessibleOtherWs.set(wsId, Boolean(access));
+      })
+    );
+  }
+
+  for (const leafId of uniqueIds) {
+    const chainRows = rowsByLeaf.get(leafId);
+    if (!chainRows || chainRows.length === 0) {
+      result.set(leafId, {
+        sourceWorkspaceId: null,
+        sourceChain: null,
+        sourceRemoved: true,
+        sourceAccessible: false,
+      });
+      continue;
+    }
+
+    const leaf = chainRows.find((r) => r.id === leafId);
+    const srcWsId = leaf?.workspace_id ?? chainRows[0]!.workspace_id;
+
+    // Check if source workspace itself is deleted or inaccessible
+    if (srcWsId !== currentWorkspaceId && !accessibleOtherWs.get(srcWsId)) {
+      const wsRow = await db.workspace.findFirst({
+        where: { id: srcWsId },
+        select: { deletedAt: true },
+      });
+      const wsRemoved = !wsRow || wsRow.deletedAt !== null;
+      result.set(leafId, {
+        sourceWorkspaceId: null,
+        sourceChain: null,
+        sourceRemoved: wsRemoved || !leaf || leaf.deleted_at !== null,
+        sourceAccessible: false,
+      });
+      continue;
+    }
+
+    const anyDeleted = chainRows.some((r) => r.deleted_at !== null);
+    if (anyDeleted || !leaf) {
+      result.set(leafId, {
+        sourceWorkspaceId: srcWsId,
+        sourceChain: null,
+        sourceRemoved: true,
+        sourceAccessible: false,
+      });
+      continue;
+    }
+
+    const anyPrivateHidden = chainRows.some(
+      (r) => r.visibility === "PRIVATE" && r.created_by_id !== actor.userId
+    );
+    if (anyPrivateHidden) {
+      result.set(leafId, {
+        sourceWorkspaceId: srcWsId,
+        sourceChain: null,
+        sourceRemoved: false,
+        sourceAccessible: false,
+      });
+      continue;
+    }
+
+    result.set(leafId, {
+      sourceWorkspaceId: srcWsId,
+      sourceChain: chainRows.map((r) => ({
+        id: r.id,
+        quote: r.anchor_exact,
+        depth: r.depth,
+      })),
+      sourceRemoved: false,
+      sourceAccessible: true,
+    });
+  }
+
+  return result;
 }
 
 /**
@@ -98,6 +287,14 @@ export async function listWorkspaceResponses(
     });
   }
 
+  const provenanceMap = await loadResponseProvenanceMap(
+    actor,
+    workspaceId,
+    responses
+      .map((r) => r.sourceAnnotationId)
+      .filter((id): id is string => typeof id === "string" && id.length > 0)
+  );
+
   const formatted = responses.map((r) => {
     const versionCount = r.versions.length;
     // activeVersion is either the explicit activeVersionId or the latest version
@@ -143,6 +340,14 @@ export async function listWorkspaceResponses(
     }
 
     const author = authorMap.get(r.createdById) ?? null;
+    const prov = r.sourceAnnotationId
+      ? provenanceMap.get(r.sourceAnnotationId) ?? {
+          sourceWorkspaceId: null,
+          sourceChain: null,
+          sourceRemoved: true,
+          sourceAccessible: false,
+        }
+      : null;
 
     return {
       id: r.id,
@@ -151,6 +356,12 @@ export async function listWorkspaceResponses(
       prompt: r.prompt,
       kind: r.kind,
       origin: r.origin,
+      quote: r.quote,
+      sourceAnnotationId: r.sourceAnnotationId,
+      sourceWorkspaceId: prov?.sourceWorkspaceId ?? null,
+      sourceChain: prov?.sourceChain ?? null,
+      sourceRemoved: prov?.sourceRemoved ?? false,
+      sourceAccessible: prov?.sourceAccessible ?? false,
       sortAt: r.sortAt,
       activeVersionId: r.activeVersionId,
       createdAt: r.createdAt,

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import {
   ChevronLeft,
@@ -70,6 +71,10 @@ export interface ResponseItemData {
   origin?: "DIRECT" | "PROMOTED" | string;
   quote?: string | null;
   sourceAnnotationId?: string | null;
+  sourceWorkspaceId?: string | null;
+  sourceChain?: Array<{ id: string; quote: string; depth: number }> | null;
+  sourceRemoved?: boolean;
+  sourceAccessible?: boolean;
   sortAt?: string | Date;
   response?: string;
   content?: string;
@@ -153,6 +158,7 @@ export function ResponseCard({
   const [copied, setCopied] = React.useState(false);
   const [lightboxOpen, setLightboxOpen] = React.useState(false);
   const [shareDialogOpen, setShareDialogOpen] = React.useState(false);
+  const [chainExpanded, setChainExpanded] = React.useState(false);
   // Public links require `workspace.share` (owner/admin); everyone else sees a disabled button
   const { data: workspace } = useWorkspace(userId, workspaceId);
   const canShare = workspace?.role === "OWNER" || workspace?.role === "ADMIN";
@@ -396,22 +402,108 @@ export function ResponseCard({
               data-testid="promoted-quote"
             >
               <p className="line-clamp-3 italic">“{response.quote}”</p>
-              <div className="mt-1 flex items-center gap-1.5 text-[11px] text-fg-subtle">
-                <span>From a question on passage</span>
-                {response.sourceAnnotationId && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (response.sourceAnnotationId) {
-                        void openAnnotationThread(response.sourceAnnotationId);
-                      }
-                    }}
-                    className="text-accent hover:underline font-medium cursor-pointer"
-                  >
-                    View annotation
-                  </button>
-                )}
-              </div>
+              {(() => {
+                const chain = response.sourceChain ?? null;
+                const hasNestedChain = Boolean(chain && chain.length > 1);
+                const level =
+                  chain && chain.length > 0
+                    ? chain[chain.length - 1]!.depth + 1
+                    : null;
+                const isCrossWorkspace =
+                  Boolean(response.sourceWorkspaceId) &&
+                  response.sourceWorkspaceId !== workspaceId;
+                const crossThreadHref =
+                  isCrossWorkspace && response.sourceWorkspaceId
+                    ? chain && chain.length > 0
+                      ? `/workspaces/${response.sourceWorkspaceId}?thread=${chain
+                          .map((s) => s.id)
+                          .join(",")}`
+                      : `/workspaces/${response.sourceWorkspaceId}`
+                    : null;
+
+                return (
+                  <div className="mt-1 space-y-1.5 text-[11px] text-fg-subtle">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {hasNestedChain ? (
+                        <button
+                          type="button"
+                          onClick={() => setChainExpanded((v) => !v)}
+                          aria-expanded={chainExpanded}
+                          data-testid="promoted-chain-toggle"
+                          className="inline-flex items-center gap-1 font-medium text-fg hover:text-accent cursor-pointer"
+                        >
+                          {chainExpanded ? (
+                            <ChevronDown className="h-3 w-3" />
+                          ) : (
+                            <ChevronRight className="h-3 w-3" />
+                          )}
+                          <span>From a side question</span>
+                          {level !== null && (
+                            <span
+                              className="rounded bg-surface-2 px-1 py-0.2 text-[10px] font-semibold text-fg-muted"
+                              data-testid="promoted-depth-badge"
+                            >
+                              L{level}
+                            </span>
+                          )}
+                        </button>
+                      ) : (
+                        <span>
+                          From a question on passage
+                          {level !== null ? ` · L${level}` : ""}
+                        </span>
+                      )}
+
+                      {response.sourceRemoved ? (
+                        <span
+                          className="text-muted font-medium"
+                          data-testid="source-removed-badge"
+                        >
+                          Source removed
+                        </span>
+                      ) : crossThreadHref && response.sourceAccessible ? (
+                        <Link
+                          href={crossThreadHref}
+                          className="text-accent hover:underline font-medium"
+                        >
+                          View annotation
+                        </Link>
+                      ) : (
+                        response.sourceAnnotationId &&
+                        response.sourceAccessible !== false && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (response.sourceAnnotationId) {
+                                void openAnnotationThread(response.sourceAnnotationId);
+                              }
+                            }}
+                            className="text-accent hover:underline font-medium cursor-pointer"
+                          >
+                            View annotation
+                          </button>
+                        )
+                      )}
+                    </div>
+
+                    {hasNestedChain && chainExpanded && chain && (
+                      <div
+                        data-testid="promoted-chain"
+                        className="flex flex-wrap items-center gap-1 rounded bg-surface-2/80 px-2 py-1 text-[11px] text-fg-muted"
+                      >
+                        {chain.map((step, i) => (
+                          <React.Fragment key={step.id}>
+                            {i > 0 && <span aria-hidden="true">›</span>}
+                            <span className="truncate max-w-[14rem]" title={step.quote}>
+                              “{step.quote}”
+                            </span>
+                          </React.Fragment>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           )}
           {response.attachments && response.attachments.length > 0 && (

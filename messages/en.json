@@ -1602,6 +1602,16 @@
     "delete": "Delete",
     "makeWorkspaceVisible": "Make visible to the workspace",
     "makePrivate": "Make private",
-    "threadActions": "Thread actions"
+    "threadActions": "Thread actions",
+    "addToTimeline": "Add to timeline",
+    "newWorkspace": "New workspace",
+    "addedToTimeline": "Added to timeline · View",
+    "startedWorkspace": "Started «{title}» · Open",
+    "startedAnotherWorkspace": "Started another workspace",
+    "workspaceRemoved": "Workspace removed",
+    "promoteFailed": "Could not promote this answer.",
+    "chooseWorkspaceLocation": "Where should the new workspace live?",
+    "standaloneWorkspace": "Standalone (no project)",
+    "loadingProjects": "Loading projects…"
   }
 }

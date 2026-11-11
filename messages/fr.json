@@ -1602,6 +1602,16 @@
     "delete": "Supprimer",
     "makeWorkspaceVisible": "Rendre visible pour l'espace de travail",
     "makePrivate": "Rendre privé",
-    "threadActions": "Actions du fil"
+    "threadActions": "Actions du fil",
+    "addToTimeline": "Ajouter à la chronologie",
+    "newWorkspace": "Nouvel espace de travail",
+    "addedToTimeline": "Ajouté · Voir",
+    "startedWorkspace": "Démarré « {title} » · Ouvrir",
+    "startedAnotherWorkspace": "Un autre espace a été démarré",
+    "workspaceRemoved": "Espace de travail supprimé",
+    "promoteFailed": "Impossible de promouvoir cette réponse.",
+    "chooseWorkspaceLocation": "Où créer le nouvel espace ?",
+    "standaloneWorkspace": "Autonome (sans projet)",
+    "loadingProjects": "Chargement des projets…"
   }
 }
