@@ -4,6 +4,7 @@ import * as React from "react";
 import { Layers, Loader2, Play, Trash2, Edit2, Check, X } from "lucide-react";
 import { useQuery, useQueryClient, QueryClientContext } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api/client";
 import { useUiStore } from "@/lib/stores/ui";
@@ -44,6 +45,7 @@ function QuestionQueuePopoverInner({
   className,
 }: QuestionQueuePopoverProps) {
   const queryClient = useQueryClient();
+  const tThreads = useTranslations("Threads");
   const [isOpen, setIsOpen] = React.useState(false);
   const [isRunning, setIsRunning] = React.useState(false);
   const [editingId, setEditingId] = React.useState<string | null>(null);
@@ -318,10 +320,10 @@ function QuestionQueuePopoverInner({
                     &ldquo;{q.anchorExact}&rdquo;
                   </div>
 
-                  {/* Nested depth indicator */}
-                  {q.depth !== undefined && q.depth > 0 && (
+                  {/* Where the question was asked, for questions inside an answer */}
+                  {typeof q.depth === "number" && q.depth > 0 && (
                     <div className="text-[10px] text-accent font-medium">
-                      in an answer · level {q.depth + 1}
+                      {tThreads("queueLevel", { level: q.depth + 1 })}
                     </div>
                   )}
 

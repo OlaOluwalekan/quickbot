@@ -7,6 +7,7 @@ import { db } from "@/server/db/client";
 import {
   createAnnotation,
   createAnnotationOnMessage,
+  listAnnotationsForMessage,
   streamAnnotationAnswer,
   setAnnotationCustomProviderForTesting,
 } from "@/server/services/annotation";
@@ -17,9 +18,8 @@ import {
 import {
   buildAskContext,
   windowTargetText,
-  MAX_TARGET_TOKENS,
 } from "@/server/ai/ask-context";
-import type { AiProvider, StreamEvent, GenerateRequest } from "@/server/ai/types";
+import type { AiProvider, StreamEvent, GenerateRequest, Msg } from "@/server/ai/types";
 import type { Actor } from "@/server/auth/session";
 
 class FakeAskProvider implements AiProvider {
@@ -28,7 +28,7 @@ class FakeAskProvider implements AiProvider {
   answerText = "This is a first-class Ask answer with citations.";
   shouldFail = false;
 
-  async *stream(req: GenerateRequest): AsyncIterable<StreamEvent> {
+  async *stream(): AsyncIterable<StreamEvent> {
     if (this.shouldFail) {
       throw new Error("Provider exploded");
     }
@@ -49,12 +49,14 @@ class FakeAskProvider implements AiProvider {
 class FakeBatchProvider implements AiProvider {
   id = "gemini" as const;
   answers: Array<{ id: string; answer: string }> = [];
+  lastRequest: GenerateRequest | null = null;
 
   constructor(answers: Array<{ id: string; answer: string }> = []) {
     this.answers = answers;
   }
 
   async *stream(req: GenerateRequest): AsyncIterable<StreamEvent> {
+    this.lastRequest = req;
     yield {
       type: "text_delta",
       text: JSON.stringify(this.answers),
@@ -81,9 +83,23 @@ async function drainStream(stream: ReadableStream<Uint8Array>) {
   return text;
 }
 
+/** Text of the n-th message of a built context. */
+function textOf(messages: Msg[], index = 0): string {
+  const part = messages[index]?.parts[0];
+  return part?.type === "text" ? part.text : "";
+}
+
+let keySeq = 0;
+/** A fresh idempotency key (every answer request needs one). */
+function key(label: string): string {
+  return `f25_${label}_${Date.now()}_${keySeq++}`;
+}
+
 describe("Fix F2.5 — Ask Answers as First-Class Responses & Context", () => {
   let owner: { id: string; email: string };
   let member: { id: string; email: string };
+  let outsider: { id: string; email: string };
+  let outsiderActor: Actor;
   let workspace: { id: string };
   let ownerActor: Actor;
   let memberActor: Actor;
@@ -113,6 +129,21 @@ describe("Fix F2.5 — Ask Answers as First-Class Responses & Context", () => {
         username: `f25member_${Date.now()}`,
       },
     });
+
+    outsider = await db.user.create({
+      data: {
+        id: crypto.randomUUID(),
+        email: `f25-outsider-${Date.now()}@example.com`,
+        name: "F25 Outsider",
+        username: `f25outsider_${Date.now()}`,
+      },
+    });
+    outsiderActor = {
+      userId: outsider.id,
+      sessionId: `sess_${outsider.id}`,
+      email: outsider.email,
+      role: "USER",
+    };
 
     ownerActor = {
       userId: owner.id,
@@ -249,7 +280,7 @@ describe("Fix F2.5 — Ask Answers as First-Class Responses & Context", () => {
       const ctx = await buildAskContext(annot.id, { language: "en", webSearch: true });
 
       expect(ctx.system).toContain("The user highlighted a passage in the text below and asked a side question.");
-      const userMessageText = ctx.messages[0].parts[0].type === "text" ? ctx.messages[0].parts[0].text : "";
+      const userMessageText = textOf(ctx.messages);
 
       // Contains version1 content and response1 prompt
       expect(userMessageText).toContain("PostgreSQL is a powerful open-source object-relational database system.");
@@ -273,7 +304,9 @@ describe("Fix F2.5 — Ask Answers as First-Class Responses & Context", () => {
       });
 
       // Stream root answer to produce an assistant message
-      const { stream } = await streamAnnotationAnswer(ownerActor, rootAnnot.id, {});
+      const { stream } = await streamAnnotationAnswer(ownerActor, rootAnnot.id, {
+        idempotencyKey: key("root"),
+      });
       await drainStream(stream);
 
       const assistantMsg = await db.annotationMessage.findFirst({
@@ -292,7 +325,7 @@ describe("Fix F2.5 — Ask Answers as First-Class Responses & Context", () => {
       expect(nestedAnnot.depth).toBe(1);
 
       const nestedCtx = await buildAskContext(nestedAnnot.id, { language: "en", webSearch: true });
-      const userMessageText = nestedCtx.messages[0].parts[0].type === "text" ? nestedCtx.messages[0].parts[0].text : "";
+      const userMessageText = textOf(nestedCtx.messages);
 
       // Contains the parent assistant answer and parent question
       expect(userMessageText).toContain(assistantMsg!.content);
@@ -322,7 +355,7 @@ describe("Fix F2.5 — Ask Answers as First-Class Responses & Context", () => {
       const { stream, messageId, annotationId } = await streamAnnotationAnswer(
         memberActor,
         annot.id,
-        { idempotencyKey: `test_stream_${Date.now()}` }
+        { idempotencyKey: key("stream") }
       );
 
       // Verify upfront assistant message existed
@@ -348,11 +381,121 @@ describe("Fix F2.5 — Ask Answers as First-Class Responses & Context", () => {
       expect(finalizedMsg?.thoughtSummary).toBe("Analyzing technical capabilities...");
       expect(finalizedMsg?.citations).toBeTruthy();
 
-      // Verify annotation questionState marked ANSWERED
+      expect(finalizedMsg?.modelKey).toBeTruthy();
+      expect(finalizedMsg?.citations).toEqual([
+        expect.objectContaining({ index: 1, url: "https://example.com/docs" }),
+      ]);
+      expect(sseText).toContain("event: thought");
+      expect(sseText).toContain("event: citation");
+
+      // An asked-now Ask stays out of the queue states.
       const updatedAnnot = await db.annotation.findUnique({
         where: { id: annotationId },
       });
-      expect(updatedAnnot?.questionState).toBe("ANSWERED");
+      expect(updatedAnnot?.questionState).toBe("NONE");
+
+      // Billed to the workspace owner, the member recorded as the actor.
+      const generation = await db.generation.findUnique({
+        where: { id: finalizedMsg!.generationId! },
+      });
+      const ownerAccount = await db.creditAccount.findUnique({
+        where: { userId: owner.id },
+      });
+      expect(generation?.kind).toBe("ANNOTATION_REPLY");
+      expect(generation?.status).toBe("COMPLETED");
+      expect(generation?.actorId).toBe(member.id);
+      expect(generation?.billedAccountId).toBe(ownerAccount?.id);
+
+      // Nothing is waiting any more: asking again is refused (no second answer).
+      await expect(
+        streamAnnotationAnswer(memberActor, annot.id, { idempotencyKey: key("again") })
+      ).rejects.toMatchObject({ status: 400 });
+      expect(
+        await db.annotationMessage.count({
+          where: { annotationId: annot.id, role: "ASSISTANT" },
+        })
+      ).toBe(1);
+    });
+
+    it("answers a follow-up with the thread so far, and refuses a repeated request", async () => {
+      const annot = await createAnnotation(memberActor, version1.id, {
+        kind: "ASK",
+        mode: "now",
+        anchor: { exact: "powerful open-source" },
+        text: "First question?",
+      });
+      fakeAskProvider.shouldFail = false;
+      fakeAskProvider.answerText = "First answer.";
+      await drainStream(
+        (await streamAnnotationAnswer(memberActor, annot.id, { idempotencyKey: key("first") }))
+          .stream
+      );
+
+      fakeAskProvider.answerText = "Second answer.";
+      const followUpKey = key("followup");
+      await drainStream(
+        (
+          await streamAnnotationAnswer(memberActor, annot.id, {
+            prompt: "And a follow-up?",
+            idempotencyKey: followUpKey,
+          })
+        ).stream
+      );
+
+      const thread = await db.annotationMessage.findMany({
+        where: { annotationId: annot.id },
+        orderBy: { createdAt: "asc" },
+      });
+      expect(thread.map((m) => [m.role, m.content])).toEqual([
+        ["USER", "First question?"],
+        ["ASSISTANT", "First answer."],
+        ["USER", "And a follow-up?"],
+        ["ASSISTANT", "Second answer."],
+      ]);
+
+      // The same request sent twice (network retry) doesn't add anything.
+      await expect(
+        streamAnnotationAnswer(memberActor, annot.id, {
+          prompt: "And a follow-up?",
+          idempotencyKey: followUpKey,
+        })
+      ).rejects.toMatchObject({ status: 409 });
+      expect(await db.annotationMessage.count({ where: { annotationId: annot.id } })).toBe(4);
+
+      // The context of the next turn holds the containing text once, then the thread.
+      const ctx = await buildAskContext(annot.id, { language: "en" });
+      expect(ctx.messages.map((m) => m.role)).toEqual([
+        "user",
+        "assistant",
+        "user",
+        "assistant",
+      ]);
+      expect(textOf(ctx.messages, 0)).toContain("First question?");
+      expect(textOf(ctx.messages, 2)).toBe("And a follow-up?");
+    });
+
+    it("is not available to people who can't see the thread", async () => {
+      const privateAsk = await createAnnotation(ownerActor, version1.id, {
+        kind: "ASK",
+        mode: "now",
+        anchor: { exact: "powerful open-source" },
+        text: "Owner's private question",
+      });
+
+      // Someone outside the workspace
+      await expect(
+        streamAnnotationAnswer(outsiderActor, privateAsk.id, { idempotencyKey: key("out") })
+      ).rejects.toMatchObject({ status: 404 });
+      // A member, but the thread is private to its author
+      await expect(
+        streamAnnotationAnswer(memberActor, privateAsk.id, { idempotencyKey: key("priv") })
+      ).rejects.toMatchObject({ status: 404 });
+
+      expect(
+        await db.annotationMessage.count({
+          where: { annotationId: privateAsk.id, role: "ASSISTANT" },
+        })
+      ).toBe(0);
     });
 
     it("marks message as FAILED when provider fails, allowing retry", async () => {
@@ -368,7 +511,7 @@ describe("Fix F2.5 — Ask Answers as First-Class Responses & Context", () => {
       const { stream, messageId } = await streamAnnotationAnswer(
         memberActor,
         annot.id,
-        { idempotencyKey: `test_fail_${Date.now()}` }
+        { idempotencyKey: key("fail") }
       );
 
       await drainStream(stream);
@@ -385,7 +528,7 @@ describe("Fix F2.5 — Ask Answers as First-Class Responses & Context", () => {
       const retryRes = await streamAnnotationAnswer(
         memberActor,
         annot.id,
-        { idempotencyKey: `test_retry_${Date.now()}` }
+        { idempotencyKey: key("retry") }
       );
 
       await drainStream(retryRes.stream);
@@ -395,6 +538,69 @@ describe("Fix F2.5 — Ask Answers as First-Class Responses & Context", () => {
       });
       expect(retryMsg?.status).toBe("COMPLETE");
       expect(retryMsg?.content).toBe("Recovered answer on retry.");
+
+      // The failed attempt is replaced, not kept next to the answer, and it
+      // was not charged.
+      const thread = await db.annotationMessage.findMany({
+        where: { annotationId: annot.id },
+        orderBy: { createdAt: "asc" },
+      });
+      expect(thread.map((m) => m.role)).toEqual(["USER", "ASSISTANT"]);
+      const failedGeneration = await db.generation.findUnique({
+        where: { id: (failedMsg!.generationId as string) },
+      });
+      expect(failedGeneration?.status).toBe("FAILED");
+      expect(failedGeneration?.chargedCredits).toBe(0);
+      // An error category is stored, never the provider's message.
+      expect(failedGeneration?.errorCode).toBe("unknown");
+    });
+  });
+
+  describe("listAnnotationsForMessage (highlights inside an Ask answer)", () => {
+    it("lists nested annotations to those who can see them, 404 for others", async () => {
+      const parent = await createAnnotation(ownerActor, version1.id, {
+        kind: "ASK",
+        mode: "now",
+        visibility: "WORKSPACE",
+        anchor: { exact: "database system" },
+        text: "Shared parent question",
+      });
+      fakeAskProvider.shouldFail = false;
+      fakeAskProvider.answerText = "A shared answer that members can annotate.";
+      const { stream, messageId } = await streamAnnotationAnswer(ownerActor, parent.id, {
+        idempotencyKey: key("shared"),
+      });
+      await drainStream(stream);
+
+      const memberPrivate = await createAnnotationOnMessage(memberActor, messageId, {
+        kind: "COMMENT",
+        anchor: { exact: "members can annotate" },
+        text: "Private note of the member",
+      });
+
+      const forMember = await listAnnotationsForMessage(memberActor, messageId);
+      expect(forMember.map((a) => a.id)).toEqual([memberPrivate.id]);
+      // The owner doesn't see the member's private annotation.
+      expect(await listAnnotationsForMessage(ownerActor, messageId)).toEqual([]);
+
+      await expect(
+        listAnnotationsForMessage(outsiderActor, messageId)
+      ).rejects.toMatchObject({ status: 404 });
+
+      // An answer of a private thread is only found by the thread's author.
+      const privateParent = await createAnnotation(ownerActor, version1.id, {
+        kind: "ASK",
+        mode: "now",
+        anchor: { exact: "database system" },
+        text: "Private parent question",
+      });
+      const privateAnswer = await streamAnnotationAnswer(ownerActor, privateParent.id, {
+        idempotencyKey: key("private"),
+      });
+      await drainStream(privateAnswer.stream);
+      await expect(
+        listAnnotationsForMessage(memberActor, privateAnswer.messageId)
+      ).rejects.toMatchObject({ status: 404 });
     });
   });
 
@@ -419,7 +625,9 @@ describe("Fix F2.5 — Ask Answers as First-Class Responses & Context", () => {
       });
       fakeAskProvider.shouldFail = false;
       fakeAskProvider.answerText = "Parent answer text for nested queue test.";
-      const parentStream = await streamAnnotationAnswer(ownerActor, parentAnnot.id, {});
+      const parentStream = await streamAnnotationAnswer(ownerActor, parentAnnot.id, {
+        idempotencyKey: key("parent"),
+      });
       await drainStream(parentStream.stream);
 
       const parentMsg = await db.annotationMessage.findFirst({
@@ -453,7 +661,25 @@ describe("Fix F2.5 — Ask Answers as First-Class Responses & Context", () => {
       );
 
       expect(batchResult.count).toBe(2);
+      const responsesBefore = await db.response.count({
+        where: { workspaceId: workspace.id },
+      });
       await drainStream(batchResult.stream);
+
+      // One request, two groups: each containing text is sent once.
+      const batchPrompt = textOf(batchProvider.lastRequest?.messages ?? []);
+      expect(batchPrompt.match(/=== CONTEXT ===/g)).toHaveLength(2);
+      expect(batchPrompt).toContain(
+        "PostgreSQL is a powerful open-source object-relational database system."
+      );
+      expect(batchPrompt).toContain("Parent answer text for nested queue test.");
+      expect(batchPrompt).toContain("Parent Q for batch test");
+      expect(batchPrompt).not.toContain("Redis");
+
+      // The main timeline is untouched.
+      expect(await db.response.count({ where: { workspaceId: workspace.id } })).toBe(
+        responsesBefore
+      );
 
       // Both should be marked ANSWERED
       const updatedQ1 = await db.annotation.findUnique({

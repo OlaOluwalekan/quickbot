@@ -10,7 +10,7 @@ import {
 } from "@/server/ai/context-builder";
 import { buildSystemPrompt, PROMPT_VERSION } from "@/server/ai/prompts/system";
 import {
-  buildAnnotationReplyPrompt,
+  buildAskUserMessage,
   buildBatchQuestionsPrompt,
   ANNOTATION_PROMPT_VERSION,
 } from "@/server/ai/prompts/annotation";
@@ -476,14 +476,18 @@ describe("Context builder and system prompts (Step 2.3)", () => {
 
   describe("6. Annotation prompt templates", () => {
     it("builds annotation reply and batch questions prompts with versioning", () => {
-      expect(ANNOTATION_PROMPT_VERSION).toBe("2026-10-1");
+      expect(ANNOTATION_PROMPT_VERSION).toBe("2026-11-1"); // bumped in F2.5 (focused Ask context)
 
-      const replyPrompt = buildAnnotationReplyPrompt({
-        highlightedText: "Crucial contract clause",
-        userComment: "What does this mean?",
+      const askMessage = buildAskUserMessage({
+        containingText: "The contract has a crucial contract clause about fees.",
+        anchorExact: "crucial contract clause",
+        question: "What does this mean?",
+        sourceDescription: "An earlier answer",
       });
-      expect(replyPrompt).toContain('"Crucial contract clause"');
-      expect(replyPrompt).toContain("What does this mean?");
+      expect(askMessage).toContain("An earlier answer");
+      expect(askMessage).toContain("The contract has a crucial contract clause about fees.");
+      expect(askMessage).toContain("Highlighted passage:\n«««\ncrucial contract clause\n»»»");
+      expect(askMessage).toContain("What does this mean?");
 
       const batchPrompt = buildBatchQuestionsPrompt([
         "What is the total cost?",

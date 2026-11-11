@@ -47,13 +47,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ThinkingPanel } from "./thinking-panel";
 import { AnswerBody } from "./answer-body";
 import { PromptAttachmentPreview } from "./prompt-attachment-preview";
-import { SourcesAccordion } from "./citations";
 import { EditResponse } from "./edit-response";
-import { Markdown } from "@/components/markdown";
-import { AnnotationLayer } from "@/components/annotations";
 import { ShareAndPeopleDialog } from "@/components/workspace/ShareAndPeopleDialog";
 import { useUiStore } from "@/lib/stores/ui";
 import { openAnnotationThread } from "@/lib/stores/thread-stack";
@@ -749,7 +745,6 @@ export function ResponseCard({
               depth={0}
               workspaceId={workspaceId}
               responseId={response.id}
-              versionId={activeVer?.id || response.activeVersionId || undefined}
               contentSource={viewMode === "original" ? "ORIGINAL" : (hasEdits ? "EDIT" : "ORIGINAL")}
               editRevision={
                 viewMode === "edited" && (activeVer?.latestEdit as { revision?: number } | null)?.revision !== undefined

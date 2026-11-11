@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { HIGHLIGHT_CSS } from "@/lib/annotations/highlight-styles";
 import QueryProvider from "@/components/providers/query-provider";
 import { SiteConfigProvider } from "@/components/providers/site-config-provider";
 import { ThemeProvider } from "next-themes";
@@ -99,6 +100,9 @@ export default async function RootLayout({
       suppressHydrationWarning
       className={`${inter.variable} ${jetbrainsMono.variable}`}
     >
+      <head>
+        <style dangerouslySetInnerHTML={{ __html: HIGHLIGHT_CSS }} />
+      </head>
       <body className="bg-bg text-fg font-sans antialiased">
         <NextIntlClientProvider locale={locale} messages={messages}>
           <SiteConfigProvider value={siteConfig}>

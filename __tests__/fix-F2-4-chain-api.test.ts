@@ -7,7 +7,7 @@ import { db } from "@/server/db/client";
 import {
   createAnnotation,
   createAnnotationOnMessage,
-  createAndStreamAnnotationReply,
+  streamAnnotationAnswer,
   getAnnotationChain,
   setAnnotationCustomProviderForTesting,
 } from "@/server/services/annotation";

@@ -15,53 +15,217 @@ export const MAX_TARGET_TOKENS = 12000;
 export const WINDOW_BEFORE_TOKENS = 6000;
 export const WINDOW_AFTER_TOKENS = 6000;
 
+/** Same ratio as `estimateTokens`: about 4 characters per token. */
+const CHARS_PER_TOKEN = 4;
+
 /**
- * Extracts markdown headings (# .. ######) as an outline.
+ * Extracts markdown headings (# .. ######) as an outline. Lines inside fenced
+ * code blocks are skipped (a `# comment` in code is not a heading).
  */
 export function extractHeadingOutline(markdown: string): string {
-  const matches = markdown.match(/^#{1,6}\s+.*$/gm);
-  return matches ? matches.join("\n") : "";
+  const headings: string[] = [];
+  let inFence = false;
+  for (const line of markdown.split("\n")) {
+    if (/^\s*(```|~~~)/.test(line)) {
+      inFence = !inFence;
+      continue;
+    }
+    if (!inFence && /^#{1,6}\s+\S/.test(line)) headings.push(line.trim());
+  }
+  return headings.join("\n");
+}
+
+/** True when the text is too long to be sent whole. */
+export function needsWindow(targetText: string): boolean {
+  return estimateTokens(targetText) > MAX_TARGET_TOKENS;
 }
 
 /**
  * Windows target text if it exceeds 12k tokens:
  * 6k tokens before and after the anchor + the document's heading outline.
+ *
+ * `anchorStart` (the saved offset of the highlight) picks the right occurrence
+ * when the passage appears more than once.
  */
 export function windowTargetText(
   targetText: string,
-  anchorExact: string
+  anchorExact: string,
+  anchorStart?: number | null
 ): string {
-  const totalTokens = estimateTokens(targetText);
-  if (totalTokens <= MAX_TARGET_TOKENS) {
+  if (!needsWindow(targetText)) {
     return targetText;
   }
 
-  const outline = extractHeadingOutline(targetText);
-  const anchorIdx = targetText.indexOf(anchorExact);
+  let anchorIdx = -1;
+  if (
+    typeof anchorStart === "number" &&
+    targetText.startsWith(anchorExact, anchorStart)
+  ) {
+    anchorIdx = anchorStart;
+  } else {
+    anchorIdx = targetText.indexOf(anchorExact);
+  }
+  // Passage not found (e.g. the text was edited since): keep the beginning.
+  const anchorFrom = anchorIdx === -1 ? 0 : anchorIdx;
+  const anchorTo = anchorIdx === -1 ? 0 : anchorIdx + anchorExact.length;
 
-  // 1 token approx 4 characters
-  const beforeChars = WINDOW_BEFORE_TOKENS * 4;
-  const afterChars = WINDOW_AFTER_TOKENS * 4;
-
-  const start = Math.max(0, (anchorIdx !== -1 ? anchorIdx : 0) - beforeChars);
+  const start = Math.max(0, anchorFrom - WINDOW_BEFORE_TOKENS * CHARS_PER_TOKEN);
   const end = Math.min(
     targetText.length,
-    (anchorIdx !== -1 ? anchorIdx + anchorExact.length : 0) + afterChars
+    anchorTo + WINDOW_AFTER_TOKENS * CHARS_PER_TOKEN
   );
 
-  const snippet = targetText.slice(start, end);
+  const outline = extractHeadingOutline(targetText);
   return [
     outline ? `Document Outline:\n${outline}` : "",
-    "[... preceding content truncated ...]",
-    snippet,
-    "[... following content truncated ...]",
+    start > 0 ? "[... preceding content truncated ...]" : "",
+    targetText.slice(start, end),
+    end < targetText.length ? "[... following content truncated ...]" : "",
   ]
     .filter(Boolean)
     .join("\n\n");
 }
 
+/**
+ * Relations needed to find the text an Ask's highlight sits in. Use it as the
+ * `include` of an annotation query, then call `loadAskTarget`.
+ */
+export const ASK_TARGET_INCLUDE = {
+  version: {
+    include: {
+      response: {
+        select: { id: true, prompt: true, deletedAt: true },
+      },
+    },
+  },
+  // Nested annotations sit on an ASSISTANT message of a parent thread.
+  targetMessage: {
+    include: {
+      annotation: {
+        select: {
+          id: true,
+          deletedAt: true,
+          messages: {
+            where: { role: "USER" as const },
+            orderBy: { createdAt: "asc" as const },
+            select: { content: true, createdAt: true },
+          },
+        },
+      },
+    },
+  },
+};
+
+interface AskTargetAnnotation {
+  id: string;
+  targetType: string;
+  anchorExact: string;
+  contentSource: string;
+  editRevision: number | null;
+  version: {
+    id: string;
+    content: string;
+    response: { prompt: string; deletedAt: Date | null };
+  } | null;
+  targetMessage: {
+    id: string;
+    content: string;
+    createdAt: Date;
+    annotation: {
+      deletedAt: Date | null;
+      messages: Array<{ content: string; createdAt: Date }>;
+    };
+  } | null;
+}
+
+export interface AskTarget {
+  /** Identifies the containing text; Asks with the same key share it. */
+  key: string;
+  /** The full text the highlight sits in (not windowed). */
+  text: string;
+  /** One line that says where the text comes from. */
+  description: string;
+}
+
+/**
+ * The text an Ask's highlight sits in, and where it comes from:
+ * - RESPONSE_VERSION: the version (or the edit the highlight was made on) +
+ *   the prompt that produced it.
+ * - ANNOTATION_MESSAGE: the parent answer + the question that produced it.
+ *
+ * Returns null when the target was deleted.
+ */
+export async function loadAskTarget(
+  annotation: AskTargetAnnotation
+): Promise<AskTarget | null> {
+  if (annotation.targetType === "RESPONSE_VERSION") {
+    const version = annotation.version;
+    if (!version || version.response.deletedAt !== null) return null;
+
+    let text = version.content;
+    let key = `version:${version.id}`;
+    if (annotation.contentSource === "EDIT") {
+      const edit = annotation.editRevision
+        ? await db.responseEdit.findUnique({
+            where: {
+              versionId_revision: {
+                versionId: version.id,
+                revision: annotation.editRevision,
+              },
+            },
+          })
+        : await db.responseEdit.findFirst({
+            where: { versionId: version.id },
+            orderBy: { revision: "desc" },
+          });
+      if (edit) {
+        text = edit.content;
+        key = `version:${version.id}:edit:${edit.revision}`;
+      }
+    }
+
+    return {
+      key,
+      text,
+      description: version.response.prompt
+        ? `This text answered the request: "${version.response.prompt}"`
+        : "An earlier answer",
+    };
+  }
+
+  if (annotation.targetType === "ANNOTATION_MESSAGE") {
+    const parent = annotation.targetMessage;
+    if (!parent || parent.annotation.deletedAt !== null) return null;
+
+    // The question that produced the parent answer: the last USER message
+    // written before it.
+    const asked = parent.annotation.messages.filter(
+      (m) => m.createdAt <= parent.createdAt
+    );
+    const question = asked[asked.length - 1]?.content ?? "";
+
+    return {
+      key: `message:${parent.id}`,
+      text: parent.content,
+      description: question
+        ? `This text answered the side question: "${question}"`
+        : "An earlier answer to a side question",
+    };
+  }
+
+  // DOCUMENT_REVISION: documents arrive with F3; until then only the quoted
+  // passage is known.
+  return {
+    key: `annotation:${annotation.id}`,
+    text: annotation.anchorExact,
+    description: "A passage of a document",
+  };
+}
+
 export interface BuildAskContextOptions {
+  /** Response language (already resolved); null = the default. */
   language: string | null;
+  /** Reserved for F4.1 (web search as a tool); not used yet. */
   webSearch?: boolean;
 }
 
@@ -70,8 +234,12 @@ export interface BuildAskContextOptions {
  * - Target text is only the containing text (version, parent answer, or document revision).
  * - Windowed to 12k tokens if larger (6k before/after anchor + heading outline).
  * - System = buildSystemPrompt + active notes + Ask instructions.
- * - Messages = containing text + highlighted passage + thread messages.
+ * - Messages = containing text + highlighted passage + first question, then
+ *   the rest of this thread (answers and follow-ups).
  * - Never loads other responses of the workspace.
+ *
+ * Answers that failed or are still being written are left out. The caller
+ * checks access; this function does not.
  */
 export async function buildAskContext(
   annotationId: string,
@@ -81,28 +249,7 @@ export async function buildAskContext(
     where: { id: annotationId, deletedAt: null },
     include: {
       messages: { orderBy: { createdAt: "asc" } },
-      version: {
-        include: {
-          response: {
-            select: { id: true, workspaceId: true, prompt: true, deletedAt: true },
-          },
-        },
-      },
-      targetMessage: {
-        include: {
-          annotation: {
-            select: {
-              id: true,
-              deletedAt: true,
-              messages: {
-                where: { role: "USER" },
-                orderBy: { createdAt: "asc" },
-                select: { content: true, createdAt: true },
-              },
-            },
-          },
-        },
-      },
+      ...ASK_TARGET_INCLUDE,
     },
   });
 
@@ -110,113 +257,72 @@ export async function buildAskContext(
     throw Errors.notFound("Annotation");
   }
 
-  let rawTargetText = "";
-  let sourceDescription: string | undefined;
-
-  if (annotation.targetType === "RESPONSE_VERSION") {
-    if (!annotation.version || annotation.version.response.deletedAt !== null) {
-      throw Errors.notFound("ResponseVersion");
-    }
-
-    rawTargetText = annotation.version.content;
-    if (annotation.contentSource === "EDIT") {
-      if (annotation.editRevision) {
-        const edit = await db.responseEdit.findUnique({
-          where: {
-            versionId_revision: {
-              versionId: annotation.version.id,
-              revision: annotation.editRevision,
-            },
-          },
-        });
-        if (edit) rawTargetText = edit.content;
-      } else {
-        const latestEdit = await db.responseEdit.findFirst({
-          where: { versionId: annotation.version.id },
-          orderBy: { revision: "desc" },
-        });
-        if (latestEdit) rawTargetText = latestEdit.content;
-      }
-    }
-
-    sourceDescription = annotation.version.response.prompt
-      ? `Original prompt: "${annotation.version.response.prompt}"`
-      : undefined;
-  } else if (annotation.targetType === "ANNOTATION_MESSAGE") {
-    const parentMsg = annotation.targetMessage;
-    if (!parentMsg || parentMsg.annotation.deletedAt !== null) {
-      throw Errors.notFound("AnnotationMessage");
-    }
-
-    rawTargetText = parentMsg.content;
-
-    // Find the question that produced the parent answer
-    const parentUserMsgs = parentMsg.annotation.messages || [];
-    const priorUserMsgs = parentUserMsgs.filter(
-      (m: { createdAt: Date }) => m.createdAt <= parentMsg.createdAt
-    );
-    const parentQuestion = priorUserMsgs.length
-      ? priorUserMsgs[priorUserMsgs.length - 1].content
-      : "";
-
-    sourceDescription = parentQuestion
-      ? `Parent answer to question: "${parentQuestion}"`
-      : "Parent answer";
-  } else if (annotation.targetType === "DOCUMENT_REVISION") {
-    // Document revisions (F3)
-    sourceDescription = "Document generated earlier";
-    rawTargetText = "Document content generated earlier";
-  } else {
-    rawTargetText = annotation.anchorExact;
+  const target = await loadAskTarget(annotation);
+  if (!target) {
+    throw Errors.notFound("Annotation");
   }
 
-  // Window target text if > 12k tokens
-  const containingText = windowTargetText(rawTargetText, annotation.anchorExact);
+  const containingText = windowTargetText(
+    target.text,
+    annotation.anchorExact,
+    annotation.anchorStart
+  );
 
-  // System prompt assembly
-  const baseSystem = buildSystemPrompt(opts.language || "en");
   const notesPrompt = await loadActiveNotes(annotation.workspaceId);
-  const system = [baseSystem, notesPrompt, ASK_SYSTEM_INSTRUCTION]
+  const system = [
+    buildSystemPrompt(opts.language || undefined),
+    notesPrompt,
+    ASK_SYSTEM_INSTRUCTION,
+  ]
     .filter(Boolean)
     .join("\n\n");
 
-  // Thread messages assembly
-  const messages: Msg[] = [];
-  const rawMsgs = annotation.messages || [];
-  const firstUserMsg = rawMsgs.find((m) => m.role === "USER");
-  const firstUserPrompt = firstUserMsg ? firstUserMsg.content : "";
+  const thread = annotation.messages.filter(
+    (m) =>
+      m.content.trim() &&
+      (m.role === "USER" || (m.role === "ASSISTANT" && m.status === "COMPLETE"))
+  );
+  const firstQuestion = thread.find((m) => m.role === "USER");
 
-  // The first user message embeds the containing text and highlighted passage
-  const firstUserText = buildAskUserMessage({
-    containingText,
-    anchorExact: annotation.anchorExact,
-    question: firstUserPrompt,
-    sourceDescription,
-  });
+  // The first user message carries the containing text and the passage.
+  const messages: Msg[] = [
+    {
+      role: "user",
+      parts: [
+        {
+          type: "text",
+          text: buildAskUserMessage({
+            containingText,
+            anchorExact: annotation.anchorExact,
+            question: firstQuestion?.content ?? "",
+            sourceDescription: target.description,
+          }),
+        },
+      ],
+    },
+  ];
 
-  messages.push({
-    role: "user",
-    parts: [{ type: "text", text: firstUserText }],
-  });
-
-  // Follow-up turns in this thread (excluding the initial user message)
-  const subsequentMsgs = rawMsgs.filter((m) => m.id !== firstUserMsg?.id);
-  for (const m of subsequentMsgs) {
-    if (m.role === "ASSISTANT" && m.content) {
-      messages.push({
-        role: "assistant",
-        parts: [{ type: "text", text: m.content }],
-      });
-    } else if (m.role === "USER" && m.content) {
-      messages.push({
-        role: "user",
-        parts: [{ type: "text", text: m.content }],
-      });
-    }
+  for (const m of thread) {
+    if (m.id === firstQuestion?.id) continue;
+    messages.push({
+      role: m.role === "ASSISTANT" ? "assistant" : "user",
+      parts: [{ type: "text", text: m.content }],
+    });
   }
 
-  return {
-    system,
-    messages,
-  };
+  return { system, messages };
+}
+
+/** Rough size of a built context, for the credit reservation. */
+export function estimateAskContextTokens(ctx: {
+  system: string;
+  messages: Msg[];
+}): number {
+  let tokens = estimateTokens(ctx.system);
+  for (const m of ctx.messages) {
+    for (const p of m.parts) {
+      if (p.type === "text") tokens += estimateTokens(p.text);
+    }
+  }
+  return tokens;
 }

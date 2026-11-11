@@ -93,10 +93,10 @@ export interface StreamAskAnswerOptions {
 /**
  * Asks the server to answer an Ask thread and publishes the answer to
  * `useAskStreamStore` chunk by chunk. Resolves to `true` when the answer was
- * saved. The stream is always read to the end (the server stops generating
- * when nobody reads).
+ * saved. The stream is read to the end.
  *
- * F2.5 endpoint: POST /api/v1/annotations/:id/answer
+ * - No prompt: POST /api/v1/annotations/:id/answer (Ask now, Retry).
+ * - With a prompt: POST /api/v1/annotations/:id/messages (follow-up).
  */
 export async function streamAskAnswer(
   annotationId: string,
@@ -115,15 +115,20 @@ export async function streamAskAnswer(
 
   let ok = false;
   try {
-    const res = await fetch(`/api/v1/annotations/${annotationId}/answer`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-idempotency-key":
-          options.idempotencyKey ?? `asknow_${annotationId}`,
-      },
-      body: JSON.stringify(options.prompt ? { prompt: options.prompt } : {}),
-    });
+    const res = await fetch(
+      `/api/v1/annotations/${annotationId}/${options.prompt ? "messages" : "answer"}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-idempotency-key":
+            options.idempotencyKey ?? `asknow_${annotationId}`,
+        },
+        body: JSON.stringify(
+          options.prompt ? { prompt: options.prompt, stream: true } : {}
+        ),
+      }
+    );
     if (!res.ok || !res.body) throw new Error("ask_stream_failed");
 
     let failed = false;
@@ -141,16 +146,18 @@ export async function streamAskAnswer(
         if (!event.data) return;
 
         try {
-          const payload = JSON.parse(event.data);
+          const payload = JSON.parse(event.data) as {
+            text?: string;
+            url?: string;
+          };
           if (event.event === "delta" && payload.text) {
             useAskStreamStore.getState().append(annotationId, payload.text);
-          } else if (
-            (event.event === "thought" || event.event === "thought_delta") &&
-            payload.text
-          ) {
+          } else if (event.event === "thought" && payload.text) {
             useAskStreamStore.getState().appendThought(annotationId, payload.text);
           } else if (event.event === "citation" && payload.url) {
-            useAskStreamStore.getState().addCitation(annotationId, payload);
+            useAskStreamStore
+              .getState()
+              .addCitation(annotationId, payload as CitationDto);
           }
         } catch {
           // Ignore a malformed chunk; the saved answer is loaded at the end.

@@ -24,7 +24,7 @@ export function buildAskUserMessage(params: AskUserMessageParams): string {
   const parts: string[] = [];
 
   if (params.sourceDescription) {
-    parts.push(`Context: ${params.sourceDescription}`);
+    parts.push(`Source: ${params.sourceDescription}`);
   }
 
   parts.push(`Containing text:\n«««\n${params.containingText}\n»»»`);
@@ -32,29 +32,6 @@ export function buildAskUserMessage(params: AskUserMessageParams): string {
   parts.push(`Question:\n${params.question}`);
 
   return parts.join("\n\n");
-}
-
-export interface AnnotationReplyContext {
-  highlightedText?: string;
-  exact?: string;
-  userComment?: string;
-  prompt?: string;
-  versionText?: string;
-  originalPrompt?: string;
-  sourceType?: "ORIGINAL" | `EDIT:${number}`;
-}
-
-export function buildAnnotationReplyPrompt(ctx: AnnotationReplyContext): string {
-  const exact = ctx.exact || ctx.highlightedText || "";
-  const userPrompt = ctx.prompt || ctx.userComment || "";
-  const source = ctx.versionText || "";
-
-  return buildAskUserMessage({
-    containingText: source,
-    anchorExact: exact,
-    question: userPrompt,
-    sourceDescription: ctx.originalPrompt ? `Original request: ${ctx.originalPrompt}` : undefined,
-  });
 }
 
 export function buildBatchQuestionsPrompt(questions: string[]): string {

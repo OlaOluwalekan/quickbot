@@ -22,14 +22,20 @@ import { streamAi, type AiProvider } from "@/server/ai";
 import { getCustomProvider } from "@/server/services/generation";
 import { estimateTokens } from "@/server/ai/context-builder";
 import { loadActiveNotes } from "@/server/ai/notes";
-import { windowTargetText } from "@/server/ai/ask-context";
+import {
+  ASK_TARGET_INCLUDE,
+  loadAskTarget,
+  needsWindow,
+  windowTargetText,
+  type AskTarget,
+} from "@/server/ai/ask-context";
+import { resolveEffectiveAiLanguage } from "@/lib/locale";
 import { buildSystemPrompt } from "@/server/ai/prompts/system";
 import {
   buildQuestionBatchPrompt,
   questionBatchResponseSchema,
   QUESTION_BATCH_PROMPT_VERSION,
   type TargetQuestionsGroup,
-  type VersionQuestionsGroup,
 } from "@/server/ai/prompts/question-batch";
 
 let customQuestionBatchProviderForTesting: AiProvider | null = null;
@@ -82,45 +88,18 @@ export async function runQuestionBatch(
     orderBy: { createdAt: "asc" },
     include: {
       messages: { orderBy: { createdAt: "asc" } },
-      version: {
-        include: {
-          response: {
-            select: { id: true, workspaceId: true, prompt: true, deletedAt: true },
-          },
-        },
-      },
-      targetMessage: {
-        include: {
-          annotation: {
-            select: {
-              deletedAt: true,
-              messages: {
-                where: { role: "USER" },
-                orderBy: { createdAt: "asc" },
-                select: { content: true, createdAt: true },
-              },
-            },
-          },
-        },
-      },
+      ...ASK_TARGET_INCLUDE,
     },
   });
 
-  // Drop any whose target (version or parent message) is soft-deleted
-  const validCandidates = candidateAnnotations.filter((a) => {
-    if (a.deletedAt !== null) return false;
-    if (a.targetType === "RESPONSE_VERSION" || a.versionId) {
-      return a.version && a.version.response && a.version.response.deletedAt === null;
-    }
-    if (a.targetType === "ANNOTATION_MESSAGE" || a.targetMessageId) {
-      return (
-        a.targetMessage &&
-        a.targetMessage.annotation &&
-        a.targetMessage.annotation.deletedAt === null
-      );
-    }
-    return true;
-  });
+  // The text each question's highlight sits in. Questions whose target was
+  // deleted are dropped.
+  const targets = new Map<string, AskTarget>();
+  for (const a of candidateAnnotations) {
+    const target = await loadAskTarget(a);
+    if (target) targets.set(a.id, target);
+  }
+  const validCandidates = candidateAnnotations.filter((a) => targets.has(a.id));
 
   if (validCandidates.length === 0) {
     throw Errors.badRequest("No queued questions available to run");
@@ -153,27 +132,6 @@ export async function runQuestionBatch(
     },
     include: {
       messages: { orderBy: { createdAt: "asc" } },
-      version: {
-        include: {
-          response: {
-            select: { id: true, workspaceId: true, prompt: true, deletedAt: true },
-          },
-        },
-      },
-      targetMessage: {
-        include: {
-          annotation: {
-            select: {
-              deletedAt: true,
-              messages: {
-                where: { role: "USER" },
-                orderBy: { createdAt: "asc" },
-                select: { content: true, createdAt: true },
-              },
-            },
-          },
-        },
-      },
     },
     orderBy: { createdAt: "asc" },
   });
@@ -185,57 +143,36 @@ export async function runQuestionBatch(
   // 4. Resolve workspace owner's credit account
   const { billedAccountId } = await resolveBilledAccount(wsAccess.ws);
 
-  // 5. Group questions by target (version, parent message, or document revision)
+  // 5. Group questions by target (version, parent answer, document revision):
+  // the containing text is sent once per group. A text that is too long to be
+  // sent whole is windowed around each question, so such questions get a group
+  // of their own.
   const targetMap = new Map<string, TargetQuestionsGroup>();
   for (const annot of claimedAnnotations) {
-    let targetKey = "";
-    let targetType = annot.targetType || "RESPONSE_VERSION";
-    let rawTargetText = "";
-    let sourceDesc = "";
+    const target = targets.get(annot.id);
+    if (!target) continue;
+    const windowed = needsWindow(target.text);
+    const targetKey = windowed ? `${target.key}#${annot.id}` : target.key;
 
-    if (targetType === "RESPONSE_VERSION" || annot.versionId) {
-      const v = annot.version;
-      if (!v) continue;
-      targetKey = `version:${v.id}`;
-      rawTargetText = v.content;
-      sourceDesc = v.response?.prompt
-        ? `Original Request: "${v.response.prompt}"`
-        : "Original Request";
-    } else if (targetType === "ANNOTATION_MESSAGE" || annot.targetMessageId) {
-      const tm = annot.targetMessage;
-      if (!tm) continue;
-      targetKey = `message:${tm.id}`;
-      rawTargetText = tm.content;
-      const priorUserMsgs = (tm.annotation.messages || []).filter(
-        (m: { createdAt: Date }) => m.createdAt <= tm.createdAt
-      );
-      const parentQ = priorUserMsgs.length
-        ? priorUserMsgs[priorUserMsgs.length - 1].content
-        : "";
-      sourceDesc = parentQ ? `Parent Answer to question: "${parentQ}"` : "Parent Answer";
-    } else {
-      targetKey = `target:${annot.id}`;
-      rawTargetText = annot.anchorExact;
-      sourceDesc = "Document content";
-    }
-
-    if (!targetMap.has(targetKey)) {
-      const containingText = windowTargetText(rawTargetText, annot.anchorExact);
-      targetMap.set(targetKey, {
+    let group = targetMap.get(targetKey);
+    if (!group) {
+      group = {
         targetKey,
-        targetType,
-        containingText,
-        sourceDescription: sourceDesc,
+        targetType: annot.targetType,
+        containingText: windowed
+          ? windowTargetText(target.text, annot.anchorExact, annot.anchorStart)
+          : target.text,
+        sourceDescription: target.description,
         questions: [],
-      });
+      };
+      targetMap.set(targetKey, group);
     }
 
     const userMsg = annot.messages.find((m) => m.role === "USER");
-    const questionText = userMsg ? userMsg.content : "";
-    targetMap.get(targetKey)!.questions.push({
+    group.questions.push({
       id: annot.id,
       passage: annot.anchorExact,
-      question: questionText.slice(0, 500),
+      question: (userMsg?.content ?? "").slice(0, 500),
     });
   }
   const groups = Array.from(targetMap.values());
@@ -345,7 +282,16 @@ export async function runQuestionBatch(
           encoder.encode(formatSSEEvent("status", { stage: "answering" }))
         );
 
-        const baseSystem = buildSystemPrompt("en");
+        const userPref = await db.userPreference.findUnique({
+          where: { userId: actor.userId },
+          select: { aiLanguage: true, uiLocale: true },
+        });
+        const baseSystem = buildSystemPrompt(
+          resolveEffectiveAiLanguage({
+            savedAiLanguage: userPref?.aiLanguage,
+            uiLocale: userPref?.uiLocale,
+          })
+        );
         const notesPrompt = await loadActiveNotes(workspaceId);
         const system = [baseSystem, notesPrompt].filter(Boolean).join("\n\n");
 

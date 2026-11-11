@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { isQueuedAsk } from "@/lib/annotations/anchor";
 import { HIGHLIGHT_NAME_MAP } from "@/lib/annotations/highlight";
+import { HIGHLIGHT_CSS } from "@/lib/annotations/highlight-styles";
 import { createAnnotationSchema } from "@/lib/schemas/annotation";
 
 const anchor = { exact: "some passage", prefix: "", suffix: "" };
@@ -16,11 +17,12 @@ describe("Step F2.1 — ASK kind (pure rules)", () => {
     expect(isQueuedAsk({ kind: "COMMENT", questionState: "QUEUED" })).toBe(false);
   });
 
-  it("every highlight name has a ::highlight() rule in globals.css", () => {
-    const css = fs.readFileSync(path.join(process.cwd(), "app/globals.css"), "utf8");
-    for (const name of Object.values(HIGHLIGHT_NAME_MAP)) {
-      expect(css).toContain(`::highlight(${name})`);
+  it("every highlight name has a ::highlight() rule, rendered by the root layout", () => {
+    for (const name of [...Object.values(HIGHLIGHT_NAME_MAP), "annot-hover"]) {
+      expect(HIGHLIGHT_CSS).toContain(`::highlight(${name})`);
     }
+    const layout = fs.readFileSync(path.join(process.cwd(), "app/layout.tsx"), "utf8");
+    expect(layout).toContain("HIGHLIGHT_CSS");
   });
 
   it("createAnnotationSchema: only COMMENT and ASK kinds are accepted", () => {

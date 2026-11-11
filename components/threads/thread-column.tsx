@@ -26,7 +26,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Markdown } from "@/components/markdown";
 import { AnswerBody } from "@/components/response/answer-body";
 import {
   MentionTextarea,
@@ -36,6 +35,7 @@ import { ThreadBreadcrumb, type BreadcrumbItem } from "./breadcrumb";
 import { api } from "@/lib/api/client";
 import { streamAskAnswer, useAskStreamStore } from "@/lib/stores/ask-stream";
 import { useThreadStackStore } from "@/lib/stores/thread-stack";
+import type { CitationDto } from "@/lib/api/sse";
 import { cn } from "@/lib/utils";
 
 export interface ThreadColumnProps {
@@ -69,10 +69,13 @@ interface AnnotationMessage {
   createdAt: string;
   author?: AnnotationAuthor | null;
   thoughtSummary?: string | null;
-  citations?: any;
+  citations?: CitationDto[] | null;
+  /** ASSISTANT messages: STREAMING while being written, then COMPLETE or FAILED. */
   status?: string;
-  modelKey?: string | null;
 }
+
+/** A STREAMING answer older than this was interrupted (same limit as the server). */
+const ANSWER_STALE_MS = 2 * 60 * 1000;
 
 interface AnnotationDetail {
   id: string;
@@ -109,6 +112,7 @@ export function ThreadColumn({
   const [annotation, setAnnotation] = React.useState<AnnotationDetail | null>(null);
   const [chain, setChain] = React.useState<AnnotationDetail[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [loadedAt, setLoadedAt] = React.useState(0);
   const [inputText, setInputText] = React.useState("");
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
@@ -133,6 +137,7 @@ export function ThreadColumn({
         const items = Array.isArray(list) ? list : [];
         setChain(items);
         setAnnotation(items[items.length - 1] ?? null);
+        setLoadedAt(Date.now());
         useThreadStackStore
           .getState()
           .rememberQuotes(items.map((a) => ({ id: a.id, quote: a.anchorExact })));
@@ -189,17 +194,41 @@ export function ThreadColumn({
     onBack();
   };
 
-  const messages = annotation?.messages ?? [];
+  // The server saves a placeholder ASSISTANT message while it writes an
+  // answer. A placeholder is never shown as a message: a failed (or
+  // interrupted) one becomes "could not be generated" + Retry, one that is
+  // being written becomes the live text or a spinner.
+  const allMessages = annotation?.messages ?? [];
+  const isDeadAnswer = (m: AnnotationMessage) =>
+    m.role === "ASSISTANT" &&
+    (m.status === "FAILED" ||
+      (m.status === "STREAMING" &&
+        loadedAt - new Date(m.createdAt).getTime() > ANSWER_STALE_MS));
+  const isPlaceholder = (m: AnnotationMessage) =>
+    m.role === "ASSISTANT" && (m.status === "FAILED" || m.status === "STREAMING");
+  const messages = allMessages.filter((m) => !isPlaceholder(m));
   const lastMessage = messages[messages.length - 1];
   const hasAnswer = messages.some((m) => m.role === "ASSISTANT");
   const isAsk = annotation?.kind === "ASK";
   const questionState = annotation?.questionState || "NONE";
-  // Asked now, question saved, but no answer stored and none on its way.
+  const answerFailed = stream?.status === "failed" || allMessages.some(isDeadAnswer);
+  // Being answered, but not by this tab (e.g. the page was reloaded meanwhile).
+  const answeringElsewhere =
+    !showLive && allMessages.some((m) => isPlaceholder(m) && !isDeadAnswer(m));
+  // A question is saved, but no answer is stored and none is on its way.
   const needsAnswer =
     isAsk &&
-    questionState === "NONE" &&
+    (questionState === "NONE" || questionState === "ANSWERED") &&
     lastMessage?.role === "USER" &&
-    !showLive;
+    !showLive &&
+    !answeringElsewhere;
+
+  // Wait for an answer that is written elsewhere.
+  React.useEffect(() => {
+    if (!answeringElsewhere) return;
+    const timer = setTimeout(() => void load(true), 4000);
+    return () => clearTimeout(timer);
+  }, [answeringElsewhere, loadedAt, load]);
 
   const handleAnswer = () => {
     if (!annotation) return;
@@ -329,8 +358,9 @@ export function ThreadColumn({
     /** Saved ASSISTANT message: its text can be annotated. */
     annotatableId?: string;
     thoughtSummary?: string | null;
-    citations?: any;
-    status?: string;
+    citations?: CitationDto[] | null;
+    /** The answer is still being written. */
+    live?: boolean;
   }) => {
     const isAssistant = msg.role === "ASSISTANT";
     const authorName = isAssistant
@@ -371,19 +401,24 @@ export function ThreadColumn({
 
         <div className="text-foreground/90 leading-relaxed break-words">
           {isAssistant ? (
-            <AnswerBody
-              content={msg.content}
-              thoughtSummary={msg.thoughtSummary}
-              citations={msg.citations}
-              status={msg.status}
-              onRetry={handleAnswer}
-              targetType="ANNOTATION_MESSAGE"
-              targetId={msg.annotatableId}
-              depth={annotation ? annotation.depth + 1 : 1}
-              workspaceId={workspaceId}
-              showCopyButton={true}
-              isStreaming={msg.status === "STREAMING"}
-            />
+            msg.live && !msg.content && !msg.thoughtSummary ? (
+              <span className="flex items-center gap-2 text-xs text-muted">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                {t("answering")}
+              </span>
+            ) : (
+              <AnswerBody
+                content={msg.content}
+                thoughtSummary={msg.thoughtSummary}
+                citations={msg.citations}
+                isStreaming={msg.live}
+                targetType="ANNOTATION_MESSAGE"
+                targetId={msg.annotatableId}
+                depth={annotation ? annotation.depth + 1 : 1}
+                workspaceId={workspaceId}
+                showCopyButton
+              />
+            )
           ) : (
             <RenderMentions text={msg.content} />
           )}
@@ -534,7 +569,6 @@ export function ThreadColumn({
                   annotatableId: msg.role === "ASSISTANT" ? msg.id : undefined,
                   thoughtSummary: msg.thoughtSummary,
                   citations: msg.citations,
-                  status: msg.status,
                 })
               )}
 
@@ -555,13 +589,14 @@ export function ThreadColumn({
                   content: stream?.text ?? "",
                   thoughtSummary: stream?.thoughtSummary,
                   citations: stream?.citations,
-                  status: "STREAMING",
+                  live: isStreaming,
                 })}
 
               {isAsk && questionState === "QUEUED" && (
                 <p className="text-xs text-muted">{t("queued")}</p>
               )}
-              {isAsk && questionState === "ANSWERING" && !hasAnswer && (
+              {((isAsk && questionState === "ANSWERING" && !hasAnswer) ||
+                answeringElsewhere) && (
                 <p className="flex items-center gap-2 text-xs text-muted">
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   {t("answering")}
@@ -573,8 +608,8 @@ export function ThreadColumn({
 
               {needsAnswer && (
                 <div className="flex flex-wrap items-center gap-2 text-xs" role="status">
-                  <span className={stream?.status === "failed" ? "text-danger" : "text-muted"}>
-                    {stream?.status === "failed" ? t("answerFailed") : t("noAnswerYet")}
+                  <span className={answerFailed ? "text-danger" : "text-muted"}>
+                    {answerFailed ? t("answerFailed") : t("noAnswerYet")}
                   </span>
                   {canAsk && (
                     <Button
@@ -585,7 +620,7 @@ export function ThreadColumn({
                       className="h-7 px-2.5 text-xs gap-1.5"
                     >
                       <RotateCcw className="w-3 h-3" />
-                      {stream?.status === "failed" ? t("retry") : t("answerNow")}
+                      {answerFailed ? t("retry") : t("answerNow")}
                     </Button>
                   )}
                 </div>

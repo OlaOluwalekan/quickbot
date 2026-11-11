@@ -240,7 +240,7 @@ describe("Fix F2.2 — Selection Popover v2 & Mention Autocomplete", () => {
       // "Ask now" starts the answer for the Ask it just created
       await waitFor(() => {
         expect(fetchMock).toHaveBeenCalledWith(
-          "/api/v1/annotations/annot_2/reply",
+          "/api/v1/annotations/annot_2/answer",
           expect.objectContaining({ method: "POST" })
         );
       });

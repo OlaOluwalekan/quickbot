@@ -44,8 +44,11 @@ function displayKind(a: Pick<AnnotationItem, "kind" | "questionState">): Display
 }
 
 export interface AnnotationLayerProps {
+  /** Main response: its annotations are loaded by response (and version). */
   responseId?: string;
   versionId?: string;
+  /** Ask answer: the annotations made on this ASSISTANT message are loaded. */
+  messageId?: string;
   content: string;
   annotations?: AnnotationItem[];
   children: React.ReactNode;
@@ -117,12 +120,15 @@ function truncateText(text: string, maxLen = 140): string {
 export function AnnotationLayer({
   responseId,
   versionId,
+  messageId,
   content,
   annotations: propAnnotations,
   children,
   className,
 }: AnnotationLayerProps) {
   const rootRef = React.useRef<HTMLDivElement>(null);
+  // Each layer owns its highlights; see lib/annotations/highlight.ts.
+  const highlightOwner = React.useId();
   const [internalAnnotations, setInternalAnnotations] = React.useState<AnnotationItem[]>([]);
   const [fallbackRects, setFallbackRects] = React.useState<
     Array<HighlightRect & { kind: "COMMENT" | "REPLY" | "QUESTION" }>
@@ -147,9 +153,11 @@ export function AnnotationLayer({
 
   // 1. Fetch annotations if not provided via props
   const fetchAnnotations = React.useCallback(async () => {
-    if (propAnnotations || !responseId) return;
+    if (propAnnotations || (!responseId && !messageId)) return;
     try {
-      const url = versionId
+      const url = messageId
+        ? `/api/v1/annotation-messages/${messageId}/annotations`
+        : versionId
         ? `/api/v1/responses/${responseId}/annotations?versionId=${versionId}`
         : `/api/v1/responses/${responseId}/annotations`;
       const res = await fetch(url);
@@ -165,7 +173,7 @@ export function AnnotationLayer({
     } catch {
       // Ignore network errors in polling
     }
-  }, [propAnnotations, responseId, versionId]);
+  }, [propAnnotations, responseId, versionId, messageId]);
 
   React.useEffect(() => {
     fetchAnnotations();
@@ -175,7 +183,9 @@ export function AnnotationLayer({
   React.useEffect(() => {
     const handleAnnotationChanged = (e: Event) => {
       const detail = (e as CustomEvent)?.detail;
-      if (!detail?.responseId || detail.responseId === responseId) {
+      // A layer on an Ask answer can't tell from the event whether it is
+      // concerned, so it always reloads.
+      if (messageId || !detail?.responseId || detail.responseId === responseId) {
         fetchAnnotations();
       }
     };
@@ -183,7 +193,7 @@ export function AnnotationLayer({
     return () => {
       window.removeEventListener("annotation-changed", handleAnnotationChanged);
     };
-  }, [responseId, fetchAnnotations]);
+  }, [responseId, messageId, fetchAnnotations]);
 
   const annotations = propAnnotations ?? internalAnnotations;
 
@@ -255,10 +265,13 @@ export function AnnotationLayer({
     setFallbackRects(fallbackList);
 
     // Apply CSS Custom Highlights with stacking priority: ask > comment
-    applyCustomHighlights([
-      { kind: "COMMENT", ranges: commentRanges },
-      { kind: "ASK", ranges: [...questionRanges, ...replyRanges] },
-    ]);
+    applyCustomHighlights(
+      [
+        { kind: "COMMENT", ranges: commentRanges },
+        { kind: "ASK", ranges: [...questionRanges, ...replyRanges] },
+      ],
+      highlightOwner
+    );
 
     // Compute gutter dot positions
     const rootRect =
@@ -298,15 +311,15 @@ export function AnnotationLayer({
     });
 
     setGutterDots(dots);
-  }, [annotations]);
+  }, [annotations, highlightOwner]);
 
   // Recompute when annotations or content change
   React.useEffect(() => {
     computeRanges();
     return () => {
-      clearCustomHighlights();
+      clearCustomHighlights(highlightOwner);
     };
-  }, [computeRanges, content]);
+  }, [computeRanges, content, highlightOwner]);
 
   // Recompute on container resize (ResizeObserver)
   React.useEffect(() => {
@@ -427,7 +440,7 @@ export function AnnotationLayer({
       if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
       if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
       clearHoverHighlight();
-      clearCustomHighlights();
+      clearCustomHighlights(highlightOwner);
     };
   }, []);
 

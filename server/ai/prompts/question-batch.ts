@@ -6,39 +6,25 @@ export interface QuestionBatchItem {
   question: string;
 }
 
-export interface VersionQuestionsGroup {
-  versionId: string;
-  versionNumber?: number;
-  versionContent: string;
-  originalPrompt: string;
-  questions: QuestionBatchItem[];
-}
-
 export interface TargetQuestionsGroup {
   targetKey: string;
-  targetType: "RESPONSE_VERSION" | "ANNOTATION_MESSAGE" | "DOCUMENT_REVISION" | string;
+  targetType: "RESPONSE_VERSION" | "ANNOTATION_MESSAGE" | "DOCUMENT_REVISION";
   sourceDescription?: string;
   containingText: string;
   questions: QuestionBatchItem[];
 }
 
 export function buildQuestionBatchPrompt(
-  groups: Array<TargetQuestionsGroup | VersionQuestionsGroup>
+  groups: TargetQuestionsGroup[]
 ): string {
   let prompt = `You are an AI assistant answering a batch of questions that the user asked about highlighted passages from earlier text.\n\n`;
 
   prompt += `Here are the context targets and the specific questions asked for each:\n\n`;
 
   for (const group of groups) {
-    const isVersionGroup = "versionContent" in group;
-    const content = isVersionGroup ? group.versionContent : group.containingText;
-    const desc = isVersionGroup
-      ? `Original Request: ${group.originalPrompt}`
-      : (group.sourceDescription || "Target Context");
-
     prompt += `=== CONTEXT ===\n`;
-    prompt += `${desc}\n\n`;
-    prompt += `Containing Text:\n«««\n${content}\n»»»\n\n`;
+    prompt += `Source: ${group.sourceDescription || "An earlier text"}\n\n`;
+    prompt += `Containing Text:\n«««\n${group.containingText}\n»»»\n\n`;
     prompt += `Questions on this context:\n`;
     for (const q of group.questions) {
       prompt += `- [Question ID: ${q.id}]\n`;
