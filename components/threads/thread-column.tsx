@@ -27,6 +27,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Markdown } from "@/components/markdown";
+import { AnswerBody } from "@/components/response/answer-body";
 import {
   MentionTextarea,
   RenderMentions,
@@ -67,6 +68,10 @@ interface AnnotationMessage {
   content: string;
   createdAt: string;
   author?: AnnotationAuthor | null;
+  thoughtSummary?: string | null;
+  citations?: any;
+  status?: string;
+  modelKey?: string | null;
 }
 
 interface AnnotationDetail {
@@ -323,6 +328,9 @@ export function ThreadColumn({
     author?: AnnotationAuthor | null;
     /** Saved ASSISTANT message: its text can be annotated. */
     annotatableId?: string;
+    thoughtSummary?: string | null;
+    citations?: any;
+    status?: string;
   }) => {
     const isAssistant = msg.role === "ASSISTANT";
     const authorName = isAssistant
@@ -363,27 +371,19 @@ export function ThreadColumn({
 
         <div className="text-foreground/90 leading-relaxed break-words">
           {isAssistant ? (
-            msg.annotatableId && annotation ? (
-              <div
-                className="max-w-none"
-                data-annot-root="true"
-                data-annot-target-type="ANNOTATION_MESSAGE"
-                data-annot-target-id={msg.annotatableId}
-                data-annot-depth={annotation.depth + 1}
-                data-workspace-id={workspaceId}
-              >
-                <Markdown content={msg.content} />
-              </div>
-            ) : msg.content ? (
-              <div className="max-w-none" aria-live="off">
-                <Markdown content={msg.content} />
-              </div>
-            ) : (
-              <span className="flex items-center gap-2 text-xs text-muted">
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                {t("answering")}
-              </span>
-            )
+            <AnswerBody
+              content={msg.content}
+              thoughtSummary={msg.thoughtSummary}
+              citations={msg.citations}
+              status={msg.status}
+              onRetry={handleAnswer}
+              targetType="ANNOTATION_MESSAGE"
+              targetId={msg.annotatableId}
+              depth={annotation ? annotation.depth + 1 : 1}
+              workspaceId={workspaceId}
+              showCopyButton={true}
+              isStreaming={msg.status === "STREAMING"}
+            />
           ) : (
             <RenderMentions text={msg.content} />
           )}
@@ -532,6 +532,9 @@ export function ThreadColumn({
                   createdAt: msg.createdAt,
                   author: msg.author,
                   annotatableId: msg.role === "ASSISTANT" ? msg.id : undefined,
+                  thoughtSummary: msg.thoughtSummary,
+                  citations: msg.citations,
+                  status: msg.status,
                 })
               )}
 
@@ -550,6 +553,9 @@ export function ThreadColumn({
                   key: "streaming-answer",
                   role: "ASSISTANT",
                   content: stream?.text ?? "",
+                  thoughtSummary: stream?.thoughtSummary,
+                  citations: stream?.citations,
+                  status: "STREAMING",
                 })}
 
               {isAsk && questionState === "QUEUED" && (

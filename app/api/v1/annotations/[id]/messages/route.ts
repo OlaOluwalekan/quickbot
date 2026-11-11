@@ -2,7 +2,7 @@ import { route } from "@/server/http/route";
 import { z } from "zod";
 import {
   createAnnotationMessage,
-  createAndStreamAnnotationReply,
+  streamAnnotationAnswer,
 } from "@/server/services/annotation";
 
 const messageBodySchema = z.object({
@@ -28,7 +28,7 @@ export const POST = route({
         req.headers.get("idempotency-key") ||
         crypto.randomUUID();
 
-      const { stream } = await createAndStreamAnnotationReply(
+      const { stream } = await streamAnnotationAnswer(
         actor,
         params.id as string,
         {

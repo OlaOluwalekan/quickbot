@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { createParser } from "eventsource-parser";
+import type { CitationDto } from "@/lib/api/sse";
 
 /**
  * Live state of Ask answers that are being generated, keyed by annotation id.
@@ -10,6 +11,10 @@ export interface AskStream {
   status: "streaming" | "done" | "failed";
   /** The answer text received so far. */
   text: string;
+  /** Streaming or complete thought summary */
+  thoughtSummary?: string;
+  /** Citations collected during generation */
+  citations?: CitationDto[];
   /** A follow-up question that was sent with this request (not saved yet). */
   question?: string;
 }
@@ -18,6 +23,8 @@ interface AskStreamState {
   streams: Record<string, AskStream>;
   set: (annotationId: string, stream: AskStream) => void;
   append: (annotationId: string, text: string) => void;
+  appendThought: (annotationId: string, text: string) => void;
+  addCitation: (annotationId: string, citation: CitationDto) => void;
   clear: (annotationId: string) => void;
 }
 
@@ -33,6 +40,35 @@ export const useAskStreamStore = create<AskStreamState>((set) => ({
         streams: {
           ...state.streams,
           [annotationId]: { ...current, text: current.text + text },
+        },
+      };
+    }),
+  appendThought: (annotationId, text) =>
+    set((state) => {
+      const current = state.streams[annotationId];
+      if (!current) return state;
+      return {
+        streams: {
+          ...state.streams,
+          [annotationId]: {
+            ...current,
+            thoughtSummary: (current.thoughtSummary || "") + text,
+          },
+        },
+      };
+    }),
+  addCitation: (annotationId, citation) =>
+    set((state) => {
+      const current = state.streams[annotationId];
+      if (!current) return state;
+      const existing = current.citations || [];
+      return {
+        streams: {
+          ...state.streams,
+          [annotationId]: {
+            ...current,
+            citations: [...existing, citation],
+          },
         },
       };
     }),
@@ -60,7 +96,7 @@ export interface StreamAskAnswerOptions {
  * saved. The stream is always read to the end (the server stops generating
  * when nobody reads).
  *
- * Interim endpoint: F2.5 replaces `/reply` with `/annotations/:id/answer`.
+ * F2.5 endpoint: POST /api/v1/annotations/:id/answer
  */
 export async function streamAskAnswer(
   annotationId: string,
@@ -72,12 +108,14 @@ export async function streamAskAnswer(
   store.set(annotationId, {
     status: "streaming",
     text: "",
+    thoughtSummary: "",
+    citations: [],
     question: options.prompt,
   });
 
   let ok = false;
   try {
-    const res = await fetch(`/api/v1/annotations/${annotationId}/reply`, {
+    const res = await fetch(`/api/v1/annotations/${annotationId}/answer`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -100,11 +138,19 @@ export async function streamAskAnswer(
           finished = true;
           return;
         }
-        if (event.event !== "delta" || !event.data) return;
+        if (!event.data) return;
+
         try {
-          const payload = JSON.parse(event.data) as { text?: string };
-          if (payload.text) {
+          const payload = JSON.parse(event.data);
+          if (event.event === "delta" && payload.text) {
             useAskStreamStore.getState().append(annotationId, payload.text);
+          } else if (
+            (event.event === "thought" || event.event === "thought_delta") &&
+            payload.text
+          ) {
+            useAskStreamStore.getState().appendThought(annotationId, payload.text);
+          } else if (event.event === "citation" && payload.url) {
+            useAskStreamStore.getState().addCitation(annotationId, payload);
           }
         } catch {
           // Ignore a malformed chunk; the saved answer is loaded at the end.
@@ -128,6 +174,8 @@ export async function streamAskAnswer(
   useAskStreamStore.getState().set(annotationId, {
     status: ok ? "done" : "failed",
     text: current?.text ?? "",
+    thoughtSummary: current?.thoughtSummary,
+    citations: current?.citations,
     question: current?.question,
   });
 

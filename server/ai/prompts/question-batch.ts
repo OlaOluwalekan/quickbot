@@ -1,4 +1,4 @@
-export const QUESTION_BATCH_PROMPT_VERSION = "2026-10-1";
+export const QUESTION_BATCH_PROMPT_VERSION = "2026-11-1";
 
 export interface QuestionBatchItem {
   id: string;
@@ -14,16 +14,32 @@ export interface VersionQuestionsGroup {
   questions: QuestionBatchItem[];
 }
 
-export function buildQuestionBatchPrompt(groups: VersionQuestionsGroup[]): string {
-  let prompt = `You are an AI assistant answering a batch of questions that the user asked about highlighted passages from earlier responses.\n\n`;
+export interface TargetQuestionsGroup {
+  targetKey: string;
+  targetType: "RESPONSE_VERSION" | "ANNOTATION_MESSAGE" | "DOCUMENT_REVISION" | string;
+  sourceDescription?: string;
+  containingText: string;
+  questions: QuestionBatchItem[];
+}
 
-  prompt += `Here are the context responses and the specific questions asked for each:\n\n`;
+export function buildQuestionBatchPrompt(
+  groups: Array<TargetQuestionsGroup | VersionQuestionsGroup>
+): string {
+  let prompt = `You are an AI assistant answering a batch of questions that the user asked about highlighted passages from earlier text.\n\n`;
+
+  prompt += `Here are the context targets and the specific questions asked for each:\n\n`;
 
   for (const group of groups) {
-    prompt += `=== RESPONSE CONTEXT ===\n`;
-    prompt += `Original User Request:\n${group.originalPrompt}\n\n`;
-    prompt += `Full Response Body:\n${group.versionContent}\n\n`;
-    prompt += `Questions on this response:\n`;
+    const isVersionGroup = "versionContent" in group;
+    const content = isVersionGroup ? group.versionContent : group.containingText;
+    const desc = isVersionGroup
+      ? `Original Request: ${group.originalPrompt}`
+      : (group.sourceDescription || "Target Context");
+
+    prompt += `=== CONTEXT ===\n`;
+    prompt += `${desc}\n\n`;
+    prompt += `Containing Text:\n«««\n${content}\n»»»\n\n`;
+    prompt += `Questions on this context:\n`;
     for (const q of group.questions) {
       prompt += `- [Question ID: ${q.id}]\n`;
       prompt += `  Highlighted Passage: «${q.passage}»\n`;
@@ -32,7 +48,7 @@ export function buildQuestionBatchPrompt(groups: VersionQuestionsGroup[]): strin
   }
 
   prompt += `Instructions:
-1. Answer each question clearly and concisely based on its highlighted passage and response context.
+1. Answer each question clearly and concisely based on its highlighted passage and context.
 2. Return a valid JSON array of objects with exactly two properties: "id" (the Question ID) and "answer" (your concise response).
 3. Do not include markdown code block wrapper or any surrounding text. Return ONLY the raw JSON array.
 4. Output format:

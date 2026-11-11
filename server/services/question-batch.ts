@@ -22,10 +22,13 @@ import { streamAi, type AiProvider } from "@/server/ai";
 import { getCustomProvider } from "@/server/services/generation";
 import { estimateTokens } from "@/server/ai/context-builder";
 import { loadActiveNotes } from "@/server/ai/notes";
+import { windowTargetText } from "@/server/ai/ask-context";
+import { buildSystemPrompt } from "@/server/ai/prompts/system";
 import {
   buildQuestionBatchPrompt,
   questionBatchResponseSchema,
   QUESTION_BATCH_PROMPT_VERSION,
+  type TargetQuestionsGroup,
   type VersionQuestionsGroup,
 } from "@/server/ai/prompts/question-batch";
 
@@ -86,17 +89,38 @@ export async function runQuestionBatch(
           },
         },
       },
+      targetMessage: {
+        include: {
+          annotation: {
+            select: {
+              deletedAt: true,
+              messages: {
+                where: { role: "USER" },
+                orderBy: { createdAt: "asc" },
+                select: { content: true, createdAt: true },
+              },
+            },
+          },
+        },
+      },
     },
   });
 
-  // Drop any whose version or response is soft-deleted
-  const validCandidates = candidateAnnotations.filter(
-    (a) =>
-      a.version &&
-      a.version.response &&
-      a.version.response.deletedAt === null &&
-      a.deletedAt === null
-  );
+  // Drop any whose target (version or parent message) is soft-deleted
+  const validCandidates = candidateAnnotations.filter((a) => {
+    if (a.deletedAt !== null) return false;
+    if (a.targetType === "RESPONSE_VERSION" || a.versionId) {
+      return a.version && a.version.response && a.version.response.deletedAt === null;
+    }
+    if (a.targetType === "ANNOTATION_MESSAGE" || a.targetMessageId) {
+      return (
+        a.targetMessage &&
+        a.targetMessage.annotation &&
+        a.targetMessage.annotation.deletedAt === null
+      );
+    }
+    return true;
+  });
 
   if (validCandidates.length === 0) {
     throw Errors.badRequest("No queued questions available to run");
@@ -136,6 +160,20 @@ export async function runQuestionBatch(
           },
         },
       },
+      targetMessage: {
+        include: {
+          annotation: {
+            select: {
+              deletedAt: true,
+              messages: {
+                where: { role: "USER" },
+                orderBy: { createdAt: "asc" },
+                select: { content: true, createdAt: true },
+              },
+            },
+          },
+        },
+      },
     },
     orderBy: { createdAt: "asc" },
   });
@@ -147,29 +185,60 @@ export async function runQuestionBatch(
   // 4. Resolve workspace owner's credit account
   const { billedAccountId } = await resolveBilledAccount(wsAccess.ws);
 
-  // 5. Group questions by version
-  const versionMap = new Map<string, VersionQuestionsGroup>();
+  // 5. Group questions by target (version, parent message, or document revision)
+  const targetMap = new Map<string, TargetQuestionsGroup>();
   for (const annot of claimedAnnotations) {
-    const vId = annot.versionId;
-    if (!vId || !annot.version) continue;
-    if (!versionMap.has(vId)) {
-      versionMap.set(vId, {
-        versionId: vId,
-        versionNumber: annot.version.number,
-        versionContent: annot.version.content,
-        originalPrompt: annot.version.response.prompt,
+    let targetKey = "";
+    let targetType = annot.targetType || "RESPONSE_VERSION";
+    let rawTargetText = "";
+    let sourceDesc = "";
+
+    if (targetType === "RESPONSE_VERSION" || annot.versionId) {
+      const v = annot.version;
+      if (!v) continue;
+      targetKey = `version:${v.id}`;
+      rawTargetText = v.content;
+      sourceDesc = v.response?.prompt
+        ? `Original Request: "${v.response.prompt}"`
+        : "Original Request";
+    } else if (targetType === "ANNOTATION_MESSAGE" || annot.targetMessageId) {
+      const tm = annot.targetMessage;
+      if (!tm) continue;
+      targetKey = `message:${tm.id}`;
+      rawTargetText = tm.content;
+      const priorUserMsgs = (tm.annotation.messages || []).filter(
+        (m: { createdAt: Date }) => m.createdAt <= tm.createdAt
+      );
+      const parentQ = priorUserMsgs.length
+        ? priorUserMsgs[priorUserMsgs.length - 1].content
+        : "";
+      sourceDesc = parentQ ? `Parent Answer to question: "${parentQ}"` : "Parent Answer";
+    } else {
+      targetKey = `target:${annot.id}`;
+      rawTargetText = annot.anchorExact;
+      sourceDesc = "Document content";
+    }
+
+    if (!targetMap.has(targetKey)) {
+      const containingText = windowTargetText(rawTargetText, annot.anchorExact);
+      targetMap.set(targetKey, {
+        targetKey,
+        targetType,
+        containingText,
+        sourceDescription: sourceDesc,
         questions: [],
       });
     }
+
     const userMsg = annot.messages.find((m) => m.role === "USER");
     const questionText = userMsg ? userMsg.content : "";
-    versionMap.get(vId)!.questions.push({
+    targetMap.get(targetKey)!.questions.push({
       id: annot.id,
       passage: annot.anchorExact,
       question: questionText.slice(0, 500),
     });
   }
-  const groups = Array.from(versionMap.values());
+  const groups = Array.from(targetMap.values());
 
   // 6. Credit estimation & reservation
   const ownerEntitlements = await getEntitlements(wsAccess.ws.ownerId);
@@ -187,8 +256,8 @@ export async function runQuestionBatch(
   let estimatedInputTokens = 500;
   for (const group of groups) {
     estimatedInputTokens +=
-      estimateTokens(group.versionContent) +
-      estimateTokens(group.originalPrompt);
+      estimateTokens(group.containingText) +
+      estimateTokens(group.sourceDescription || "");
     for (const q of group.questions) {
       estimatedInputTokens +=
         estimateTokens(q.passage) + estimateTokens(q.question);
@@ -276,12 +345,14 @@ export async function runQuestionBatch(
           encoder.encode(formatSSEEvent("status", { stage: "answering" }))
         );
 
+        const baseSystem = buildSystemPrompt("en");
         const notesPrompt = await loadActiveNotes(workspaceId);
+        const system = [baseSystem, notesPrompt].filter(Boolean).join("\n\n");
 
         const aiStream = streamAi(
           {
             modelKey,
-            system: notesPrompt ?? undefined,
+            system,
             messages: [
               {
                 role: "user",
@@ -353,6 +424,8 @@ export async function runQuestionBatch(
                 role: "ASSISTANT",
                 content: answer,
                 generationId: `${generationId}:${annot.id}`,
+                status: "COMPLETE",
+                modelKey,
               },
             });
 

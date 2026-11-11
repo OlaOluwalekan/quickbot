@@ -18,8 +18,10 @@ import { Button } from "@/components/ui/button";
 export interface QueuedQuestion {
   id: string;
   workspaceId: string;
-  responseId: string;
-  versionId: string;
+  responseId?: string | null;
+  versionId?: string | null;
+  targetType?: string;
+  depth?: number;
   kind: "ASK";
   questionState: "NONE" | "QUEUED" | "ANSWERING" | "ANSWERED" | "CANCELLED" | "FAILED";
   anchorExact: string;
@@ -315,6 +317,13 @@ function QuestionQueuePopoverInner({
                   <div className="border-l-2 border-accent/60 pl-2 text-[11px] italic text-subtle line-clamp-2">
                     &ldquo;{q.anchorExact}&rdquo;
                   </div>
+
+                  {/* Nested depth indicator */}
+                  {q.depth !== undefined && q.depth > 0 && (
+                    <div className="text-[10px] text-accent font-medium">
+                      in an answer · level {q.depth + 1}
+                    </div>
+                  )}
 
                   {/* Question content / Edit mode */}
                   {isEditing ? (

@@ -48,6 +48,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ThinkingPanel } from "./thinking-panel";
+import { AnswerBody } from "./answer-body";
 import { PromptAttachmentPreview } from "./prompt-attachment-preview";
 import { SourcesAccordion } from "./citations";
 import { EditResponse } from "./edit-response";
@@ -615,11 +616,6 @@ export function ResponseCard({
             </div>
           </div>
 
-          {/* Thinking Panel (if summary present) */}
-          {activeVer?.thoughtSummary && !isEditing && (
-            <ThinkingPanel thoughtSummary={activeVer.thoughtSummary} />
-          )}
-
           {/* Card Body: Text Content, Image, or Inline Editor */}
           {isEditing && !isImageResponse ? (
             <EditResponse
@@ -744,41 +740,23 @@ export function ResponseCard({
               )}
             </div>
           ) : (
-            <div className="space-y-3">
-              <div
-                className="leading-relaxed select-text"
-                data-annot-root="true"
-                data-annot-target-type="RESPONSE_VERSION"
-                data-annot-target-id={activeVer?.id || response.activeVersionId || undefined}
-                data-annot-depth="0"
-                data-response-id={response.id}
-                data-version-id={activeVer?.id || response.activeVersionId || undefined}
-                data-content-source={viewMode === "original" ? "ORIGINAL" : (hasEdits ? "EDIT" : "ORIGINAL")}
-                data-edit-revision={
-                  viewMode === "edited" && (activeVer?.latestEdit as { revision?: number } | null)?.revision !== undefined
-                    ? String((activeVer?.latestEdit as { revision?: number } | null)?.revision)
-                    : undefined
-                }
-              >
-                <AnnotationLayer
-                  responseId={response.id}
-                  versionId={activeVer?.id || response.activeVersionId || undefined}
-                  content={displayedContent}
-                >
-                  <Markdown
-                    content={displayedContent}
-                    citations={activeCitations}
-                  />
-                </AnnotationLayer>
-              </div>
-
-              {activeCitations.length > 0 && (
-                <SourcesAccordion
-                  citations={activeCitations}
-                  label={t("sources")}
-                />
-              )}
-
+            <AnswerBody
+              content={displayedContent}
+              thoughtSummary={activeVer?.thoughtSummary}
+              citations={activeCitations}
+              targetType="RESPONSE_VERSION"
+              targetId={activeVer?.id || response.activeVersionId || undefined}
+              depth={0}
+              workspaceId={workspaceId}
+              responseId={response.id}
+              versionId={activeVer?.id || response.activeVersionId || undefined}
+              contentSource={viewMode === "original" ? "ORIGINAL" : (hasEdits ? "EDIT" : "ORIGINAL")}
+              editRevision={
+                viewMode === "edited" && (activeVer?.latestEdit as { revision?: number } | null)?.revision !== undefined
+                  ? (activeVer?.latestEdit as { revision?: number } | null)?.revision
+                  : undefined
+              }
+            >
               {response.generatedDocuments &&
                 response.generatedDocuments.length > 0 && (
                   <div className="flex flex-wrap gap-2 pt-1">
@@ -800,13 +778,7 @@ export function ResponseCard({
                     ))}
                   </div>
                 )}
-              {false && (
-                <SourcesAccordion
-                  citations={activeCitations}
-                  label={t("sources")}
-                />
-              )}
-            </div>
+            </AnswerBody>
           )}
 
           {/* Card Footer Actions (Desktop & Mobile) */}

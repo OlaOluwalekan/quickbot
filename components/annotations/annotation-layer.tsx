@@ -44,7 +44,7 @@ function displayKind(a: Pick<AnnotationItem, "kind" | "questionState">): Display
 }
 
 export interface AnnotationLayerProps {
-  responseId: string;
+  responseId?: string;
   versionId?: string;
   content: string;
   annotations?: AnnotationItem[];
