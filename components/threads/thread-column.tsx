@@ -35,7 +35,8 @@ import {
   RenderMentions,
 } from "@/components/annotations/mention-textarea";
 import { ThreadBreadcrumb, type BreadcrumbItem } from "./breadcrumb";
-import { api } from "@/lib/api/client";
+import { api, ApiClientError } from "@/lib/api/client";
+import { Gated } from "@/components/ui/gated";
 import { streamAskAnswer, useAskStreamStore } from "@/lib/stores/ask-stream";
 import { useThreadStackStore } from "@/lib/stores/thread-stack";
 import type { CitationDto } from "@/lib/api/sse";
@@ -52,6 +53,8 @@ export interface ThreadColumnProps {
   canComment?: boolean;
   /** Caller may ask follow-ups in Ask threads (server re-checks). */
   canAsk?: boolean;
+  /** Caller may add Ask answers to the timeline (server re-checks). */
+  canPromoteToTimeline?: boolean;
   onBack: () => void;
   onCloseAll: () => void;
   onNavigate: (index: number) => void;
@@ -118,6 +121,7 @@ export function ThreadColumn({
   currentUserId,
   canComment = true,
   canAsk = true,
+  canPromoteToTimeline = true,
   onBack,
   onCloseAll,
   onNavigate,
@@ -437,9 +441,15 @@ export function ThreadColumn({
         );
       }
     } catch (err) {
-      const message =
-        err instanceof Error && err.message ? err.message : t("promoteFailed");
-      toast.error(message);
+      // Server messages are not translated: show our own text.
+      const forbidden = err instanceof ApiClientError && err.status === 403;
+      toast.error(
+        forbidden
+          ? target === "NEW_WORKSPACE"
+            ? t("promoteProjectForbidden")
+            : t("promoteForbidden")
+          : t("promoteFailed")
+      );
     } finally {
       setPromotingKey((cur) => (cur === key ? null : cur));
     }
@@ -573,22 +583,33 @@ export function ThreadColumn({
                               <span>{t("addedToTimeline")}</span>
                             </a>
                           ) : (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              disabled={timelineBusy}
-                              data-testid={`btn-promote-timeline-${msgId}`}
-                              onClick={() => void handlePromote(msgId, "TIMELINE")}
-                              className="h-6 px-2 text-[11px] gap-1 text-foreground hover:text-accent"
+                            <Gated
+                              reason={
+                                canPromoteToTimeline
+                                  ? null
+                                  : {
+                                      code: "no_permission",
+                                      capability: t("capAddToTimeline"),
+                                    }
+                              }
                             >
-                              {timelineBusy ? (
-                                <Loader2 className="h-3 w-3 animate-spin" />
-                              ) : (
-                                <History className="h-3 w-3" />
-                              )}
-                              <span>{t("addToTimeline")}</span>
-                            </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                disabled={timelineBusy}
+                                data-testid={`btn-promote-timeline-${msgId}`}
+                                onClick={() => void handlePromote(msgId, "TIMELINE")}
+                                className="h-6 px-2 text-[11px] gap-1 text-foreground hover:text-accent"
+                              >
+                                {timelineBusy ? (
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                ) : (
+                                  <History className="h-3 w-3" />
+                                )}
+                                <span>{t("addToTimeline")}</span>
+                              </Button>
+                            </Gated>
                           )}
 
                           {workspacePromo ? (
@@ -617,7 +638,7 @@ export function ThreadColumn({
                                   {t("startedWorkspace", {
                                     title:
                                       workspacePromo.destinationWorkspaceTitle ||
-                                      "Workspace",
+                                      t("untitledWorkspace"),
                                   })}
                                 </span>
                               </Link>

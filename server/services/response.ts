@@ -115,6 +115,7 @@ async function loadResponseProvenanceMap(
 
   // Verify access for any annotation originating in a different workspace.
   const accessibleOtherWs = new Map<string, boolean>();
+  const removedOtherWs = new Set<string>();
   if (otherWorkspaceIds.size > 0) {
     const otherList = Array.from(otherWorkspaceIds);
     const otherWsRows = await db.workspace.findMany({
@@ -130,6 +131,7 @@ async function loadResponseProvenanceMap(
       otherList.map(async (wsId) => {
         if (!existingSet.has(wsId) || deletedSet.has(wsId)) {
           accessibleOtherWs.set(wsId, false);
+          removedOtherWs.add(wsId);
           return;
         }
         const access = await resolveWorkspaceRole(actor.userId, wsId);
@@ -155,11 +157,7 @@ async function loadResponseProvenanceMap(
 
     // Check if source workspace itself is deleted or inaccessible
     if (srcWsId !== currentWorkspaceId && !accessibleOtherWs.get(srcWsId)) {
-      const wsRow = await db.workspace.findFirst({
-        where: { id: srcWsId },
-        select: { deletedAt: true },
-      });
-      const wsRemoved = !wsRow || wsRow.deletedAt !== null;
+      const wsRemoved = removedOtherWs.has(srcWsId);
       result.set(leafId, {
         sourceWorkspaceId: null,
         sourceChain: null,

@@ -437,20 +437,22 @@ export function ResponseCard({
                           ) : (
                             <ChevronRight className="h-3 w-3" />
                           )}
-                          <span>From a side question</span>
+                          <span>{t("promoted.fromSideQuestion")}</span>
                           {level !== null && (
                             <span
                               className="rounded bg-surface-2 px-1 py-0.2 text-[10px] font-semibold text-fg-muted"
                               data-testid="promoted-depth-badge"
                             >
-                              L{level}
+                              {t("promoted.level", { level })}
                             </span>
                           )}
                         </button>
                       ) : (
                         <span>
-                          From a question on passage
-                          {level !== null ? ` · L${level}` : ""}
+                          {t("promoted.fromPassage")}
+                          {level !== null
+                            ? ` · ${t("promoted.level", { level })}`
+                            : ""}
                         </span>
                       )}
 
@@ -459,14 +461,14 @@ export function ResponseCard({
                           className="text-muted font-medium"
                           data-testid="source-removed-badge"
                         >
-                          Source removed
+                          {t("promoted.sourceRemoved")}
                         </span>
                       ) : crossThreadHref && response.sourceAccessible ? (
                         <Link
                           href={crossThreadHref}
                           className="text-accent hover:underline font-medium"
                         >
-                          View annotation
+                          {t("promoted.viewAnnotation")}
                         </Link>
                       ) : (
                         response.sourceAnnotationId &&
@@ -480,7 +482,7 @@ export function ResponseCard({
                             }}
                             className="text-accent hover:underline font-medium cursor-pointer"
                           >
-                            View annotation
+                            {t("promoted.viewAnnotation")}
                           </button>
                         )
                       )}
@@ -594,7 +596,7 @@ export function ResponseCard({
                       className="bg-accent-soft text-accent border-accent/30 text-xs font-medium cursor-help"
                       data-testid="promoted-badge"
                     >
-                      Promoted
+                      {t("promoted.badge")}
                     </Badge>
                   </TooltipTrigger>
                   <TooltipContent>

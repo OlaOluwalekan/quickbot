@@ -196,13 +196,19 @@ async function resolveWorkspaceSourceProvenance(
     const hasHidden = chainRows.some(
       (r) => r.visibility === "PRIVATE" && r.created_by_id !== actor.userId
     );
-    const hasTarget = chainRows.some((r) => r.id === sourceAnnotationId);
+    // The chain is complete when it holds the question and reaches level 1.
+    // A deleted question or ancestor cuts it short.
+    const isComplete =
+      chainRows.some((r) => r.id === sourceAnnotationId) &&
+      chainRows[0]?.depth === 0;
 
-    if (!hasTarget || hasHidden) {
+    if (!isComplete) {
       annotationRemoved = true;
-    } else {
+    } else if (!hasHidden) {
       threadParam = chainRows.map((r) => r.id).join(",");
     }
+    // A private thread of someone else still exists: link to the workspace
+    // only, without saying the question was removed.
   }
 
   return {

@@ -25,8 +25,37 @@ jest.mock("next/navigation", () => ({
 jest.mock("next-intl", () => ({
   useFormatter: () => ({ relativeTime: () => "" }),
   useNow: () => new Date(),
-  useTranslations: () => (key: string, values?: Record<string, unknown>) =>
-    values?.title ? `${key}:${values.title}` : key,
+  useTranslations: () => {
+    const t = (key: string, values?: Record<string, unknown>) =>
+      values?.title
+        ? `${key}:${values.title}`
+        : values?.level
+          ? `${key}:${values.level}`
+          : key;
+    // Rich text: render the <link> chunk with the title inside.
+    t.rich = (
+      key: string,
+      values: {
+        title?: string;
+        link?: (chunks: React.ReactNode) => React.ReactNode;
+      }
+    ) => (
+      <>
+        {key} {values.link ? values.link(values.title) : values.title}
+      </>
+    );
+    return t;
+  },
+}));
+
+jest.mock("../components/ui/gated", () => ({
+  Gated: ({
+    reason,
+    children,
+  }: {
+    reason: { code: string } | null;
+    children: React.ReactElement;
+  }) => (reason ? <span data-testid={`gated-${reason.code}`}>{children}</span> : children),
 }));
 
 jest.mock("../lib/api/client", () => ({ api: jest.fn() }));
@@ -103,8 +132,8 @@ describe("F2.7 — Promotion & provenance UI", () => {
       />
     );
 
-    expect(screen.getByTestId("promoted-badge")).toHaveTextContent("Promoted");
-    expect(screen.getByTestId("promoted-depth-badge")).toHaveTextContent("L3");
+    expect(screen.getByTestId("promoted-badge")).toHaveTextContent("promoted.badge");
+    expect(screen.getByTestId("promoted-depth-badge")).toHaveTextContent("promoted.level:3");
     expect(screen.getByTestId("promoted-quote")).toHaveTextContent(
       "a new term starts"
     );
@@ -120,7 +149,7 @@ describe("F2.7 — Promotion & provenance UI", () => {
     expect(chain).toHaveTextContent("a new term starts");
 
     // Clicking "View annotation" opens the thread stack
-    fireEvent.click(screen.getByRole("button", { name: /View annotation/i }));
+    fireEvent.click(screen.getByRole("button", { name: "promoted.viewAnnotation" }));
     expect(mockOpenAnnotationThread).toHaveBeenCalledWith("l3_id");
   });
 
@@ -146,9 +175,9 @@ describe("F2.7 — Promotion & provenance UI", () => {
     );
 
     expect(screen.getByTestId("source-removed-badge")).toHaveTextContent(
-      "Source removed"
+      "promoted.sourceRemoved"
     );
-    expect(screen.queryByText("View annotation")).toBeNull();
+    expect(screen.queryByText("promoted.viewAnnotation")).toBeNull();
     expect(screen.getByTestId("promoted-quote")).toHaveTextContent(
       "deleted source passage"
     );
@@ -189,7 +218,7 @@ describe("F2.7 — Promotion & provenance UI", () => {
       "href",
       "/workspaces/ws_origin?thread=l1_id,l2_id"
     );
-    expect(link).toHaveTextContent("«Original Research»");
+    expect(link).toHaveTextContent("Original Research");
 
     rerender(
       <QueryClientProvider client={new QueryClient()}>
@@ -211,7 +240,7 @@ describe("F2.7 — Promotion & provenance UI", () => {
     );
 
     expect(screen.getByTestId("workspace-provenance-inaccessible")).toHaveTextContent(
-      "Started from a side question in a workspace you can’t access"
+      "provenance.sourceInaccessible"
     );
     expect(screen.queryByTestId("workspace-provenance-link")).toBeNull();
 
@@ -235,7 +264,7 @@ describe("F2.7 — Promotion & provenance UI", () => {
     );
 
     expect(screen.getByTestId("workspace-provenance-removed")).toHaveTextContent(
-      "Started from a side question · source removed"
+      "provenance.sourceRemoved"
     );
   });
 
@@ -344,5 +373,51 @@ describe("F2.7 — Promotion & provenance UI", () => {
         "/workspaces/ws_target_new"
       );
     });
+  });
+
+  it("disables Add to timeline with a reason for members who can't generate", async () => {
+    const annotation = {
+      id: "l1_id",
+      workspaceId: "ws_1",
+      kind: "ASK",
+      depth: 0,
+      anchorExact: "election",
+      visibility: "WORKSPACE",
+      questionState: "ANSWERED",
+      createdById: "user_2",
+      messages: [
+        { id: "m_u1", role: "USER", content: "Why?", createdAt: new Date().toISOString() },
+        {
+          id: "m_a1",
+          role: "ASSISTANT",
+          content: "Because of timeouts.",
+          status: "COMPLETE",
+          createdAt: new Date().toISOString(),
+        },
+      ],
+      promotions: [],
+    };
+    apiMock.mockImplementation(async (url: string) =>
+      url === "/api/v1/annotations/l1_id/chain" ? [annotation] : []
+    );
+
+    render(
+      <ThreadColumn
+        id="l1_id"
+        index={1}
+        width={420}
+        workspaceId="ws_1"
+        currentUserId="user_1"
+        canPromoteToTimeline={false}
+        onBack={jest.fn()}
+        onCloseAll={jest.fn()}
+        onNavigate={jest.fn()}
+      />
+    );
+
+    const tlBtn = await screen.findByTestId("btn-promote-timeline-m_a1");
+    expect(screen.getByTestId("gated-no_permission")).toContainElement(tlBtn);
+    // Starting a new workspace only needs read access to the source.
+    expect(screen.getByTestId("btn-promote-workspace-m_a1")).toBeInTheDocument();
   });
 });

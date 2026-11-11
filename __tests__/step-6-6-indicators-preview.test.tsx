@@ -16,7 +16,7 @@ import {
 } from "@/lib/annotations/highlight";
 import { useUiStore } from "@/lib/stores/ui";
 import { useThreadStackStore } from "@/lib/stores/thread-stack";
-import type { AnnotationItem } from "@/components/annotations/right-panel";
+import type { AnnotationItem } from "@/components/annotations/types";
 
 // Mock Highlight constructor and CSS.highlights
 class MockHighlight {

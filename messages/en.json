@@ -538,7 +538,15 @@
     "shareNoPermission": "Only workspace owners and admins can create public links",
     "exportSoon": "Exporting will be available in Phase 5",
     "sources": "Sources",
-    "downloadImage": "Download image"
+    "downloadImage": "Download image",
+    "promoted": {
+      "badge": "Promoted",
+      "fromSideQuestion": "From a side question",
+      "fromPassage": "From a question on a passage",
+      "level": "L{level}",
+      "sourceRemoved": "Source removed",
+      "viewAnnotation": "View annotation"
+    }
   },
   "Marketing": {
     "nav": {
@@ -1612,6 +1620,16 @@
     "promoteFailed": "Could not promote this answer.",
     "chooseWorkspaceLocation": "Where should the new workspace live?",
     "standaloneWorkspace": "Standalone (no project)",
-    "loadingProjects": "Loading projects…"
+    "loadingProjects": "Loading projects…",
+    "promoteForbidden": "You do not have permission to add answers to the timeline.",
+    "promoteProjectForbidden": "You do not have permission to create workspaces in that project.",
+    "capAddToTimeline": "add answers to the timeline",
+    "untitledWorkspace": "Untitled workspace",
+    "provenance": {
+      "startedFrom": "Started from a side question in <link>«{title}»</link>",
+      "questionRemoved": "the side question was removed",
+      "sourceRemoved": "Started from a side question. The source workspace was removed.",
+      "sourceInaccessible": "Started from a side question in a workspace you can't access"
+    }
   }
 }

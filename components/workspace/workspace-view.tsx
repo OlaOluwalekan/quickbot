@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { ArrowUpLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { useUiStore } from "@/lib/stores/ui";
 import {
@@ -57,6 +58,7 @@ export function WorkspaceView({
   actor,
 }: WorkspaceViewProps) {
   const router = useRouter();
+  const tThreads = useTranslations("Threads");
   const queryClient = useQueryClient();
   const setCurrentPageTitle = useUiStore((s) => s.setCurrentPageTitle);
   const setCurrentPageId = useUiStore((s) => s.setCurrentPageId);
@@ -428,6 +430,11 @@ export function WorkspaceView({
       queryKey: ["workspaces", workspace.id, "questions", "QUEUED"],
     });
   };
+  const sourceProvenance = workspace.sourceProvenance;
+  // Adding an answer to the timeline needs the same right as generating.
+  const canPromoteToTimeline = workspace.capabilities
+    ? workspace.capabilities.includes("workspace.generate")
+    : undefined;
   const canComment = workspace.capabilities
     ? workspace.capabilities.includes("workspace.comment")
     : undefined;
@@ -442,41 +449,53 @@ export function WorkspaceView({
       currentUserId={actor.userId}
       canComment={canComment}
       canAsk={canAsk}
+      canPromoteToTimeline={canPromoteToTimeline}
       className="flex-1 h-full w-full"
     >
       <div className="flex-1 flex flex-col h-full w-full overflow-hidden bg-bg">
-        {workspace.sourceProvenance && (
+        {sourceProvenance && (
           <div
             data-testid="workspace-provenance-banner"
             className="border-b border-border/60 bg-surface-2/60 px-4 sm:px-6 py-2 text-xs text-muted shrink-0"
           >
             <div className="max-w-4xl mx-auto flex flex-wrap items-center gap-1.5">
               <ArrowUpLeft className="h-3.5 w-3.5 text-subtle shrink-0" />
-              {workspace.sourceProvenance.canAccess ? (
+              {sourceProvenance.canAccess ? (
                 <>
-                  <span>Started from a side question in</span>
-                  <Link
-                    href={
-                      workspace.sourceProvenance.threadParam
-                        ? `/workspaces/${workspace.sourceProvenance.sourceWorkspaceId}?thread=${workspace.sourceProvenance.threadParam}`
-                        : `/workspaces/${workspace.sourceProvenance.sourceWorkspaceId}`
-                    }
-                    className="font-medium text-accent hover:underline"
-                    data-testid="workspace-provenance-link"
-                  >
-                    «{workspace.sourceProvenance.sourceWorkspaceTitle}»
-                  </Link>
-                  {workspace.sourceProvenance.annotationRemoved && (
-                    <span className="text-subtle">· annotation removed</span>
+                  <span>
+                    {tThreads.rich("provenance.startedFrom", {
+                      title: sourceProvenance.sourceWorkspaceTitle,
+                      link: (chunks) => (
+                        <Link
+                          href={
+                            sourceProvenance.threadParam
+                              ? `/workspaces/${sourceProvenance.sourceWorkspaceId}?thread=${sourceProvenance.threadParam}`
+                              : `/workspaces/${sourceProvenance.sourceWorkspaceId}`
+                          }
+                          className="font-medium text-accent hover:underline"
+                          data-testid="workspace-provenance-link"
+                        >
+                          {chunks}
+                        </Link>
+                      ),
+                    })}
+                  </span>
+                  {sourceProvenance.annotationRemoved && (
+                    <span
+                      className="text-subtle"
+                      data-testid="workspace-provenance-annotation-removed"
+                    >
+                      · {tThreads("provenance.questionRemoved")}
+                    </span>
                   )}
                 </>
-              ) : workspace.sourceProvenance.removed ? (
+              ) : sourceProvenance.removed ? (
                 <span data-testid="workspace-provenance-removed">
-                  Started from a side question · source removed
+                  {tThreads("provenance.sourceRemoved")}
                 </span>
               ) : (
                 <span data-testid="workspace-provenance-inaccessible">
-                  Started from a side question in a workspace you can’t access
+                  {tThreads("provenance.sourceInaccessible")}
                 </span>
               )}
             </div>

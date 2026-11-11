@@ -36,6 +36,8 @@ export interface ThreadStackLayoutProps {
   currentUserId?: string;
   canComment?: boolean;
   canAsk?: boolean;
+  /** Caller may add Ask answers to the timeline (server re-checks). */
+  canPromoteToTimeline?: boolean;
   /** The main conversation (column 0). It stays mounted while it is a spine. */
   children: React.ReactNode;
   className?: string;
@@ -46,6 +48,7 @@ export function ThreadStackLayout({
   currentUserId,
   canComment,
   canAsk,
+  canPromoteToTimeline,
   children,
   className,
 }: ThreadStackLayoutProps) {
@@ -171,6 +174,7 @@ export function ThreadStackLayout({
     currentUserId,
     canComment,
     canAsk,
+    canPromoteToTimeline,
     onBack: back,
     onCloseAll: closeAll,
     onNavigate: goTo,
