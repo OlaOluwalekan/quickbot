@@ -1293,7 +1293,29 @@
       "mentionListLabel": "Personas que puedes mencionar",
       "mentionSearching": "Buscando miembros…",
       "mentionEmpty": "No se encontraron miembros",
-      "klecxNoted": "Klecx tomó nota"
+      "klecxNoted": "Klecx tomó nota",
+      "mentionLoading": "Cargando…",
+      "mentionNotMember": "No es miembro de este espacio de trabajo"
+    },
+    "preview": {
+      "ariaLabel": "Vista previa de la anotación",
+      "gutterLabel": "{count, plural, one {# anotación en este párrafo} other {# anotaciones en este párrafo}}",
+      "klecxNoted": "Klecx tomó nota",
+      "klecxAuthor": "Klecx",
+      "member": "Miembro",
+      "aiReview": "Revisión de IA",
+      "aiReplied": "La IA respondió",
+      "justNow": "ahora mismo",
+      "view": "Ver",
+      "viewBy": "Ver la anotación de {name}",
+      "viewAll": "Ver todas en el panel ({count})",
+      "state": {
+        "QUEUED": "En cola",
+        "ANSWERING": "Respondiendo",
+        "ANSWERED": "Respondida",
+        "FAILED": "Sin respuesta",
+        "CANCELLED": "Cancelada"
+      }
     },
     "panel": {
       "title": "Todas las anotaciones",

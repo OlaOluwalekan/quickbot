@@ -62,7 +62,7 @@ export async function loadActiveNotes(
   budgetTokens: number = NOTES_DEFAULT_BUDGET_TOKENS
 ): Promise<string | null> {
   const notes = await db.workspaceNote.findMany({
-    where: { workspaceId, status: "ACTIVE" },
+    where: { workspaceId, status: "ACTIVE", deletedAt: null },
     orderBy: { createdAt: "desc" },
     take: NOTES_MAX_LOADED,
     select: { quote: true, instruction: true },

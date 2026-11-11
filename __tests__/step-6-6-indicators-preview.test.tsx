@@ -27,6 +27,30 @@ class MockHighlight {
   }
 }
 
+jest.mock("next-intl", () => {
+  const actual = jest.requireActual("next-intl");
+  const en = jest.requireActual("../messages/en.json");
+  return {
+    ...actual,
+    useTranslations: (namespace?: string) =>
+      actual.createTranslator({ locale: "en", messages: en, namespace }),
+    useFormatter: () => actual.createFormatter({ locale: "en" }),
+    useNow: () => new Date(),
+  };
+});
+
+// jsdom has no PointerEvent: without it pointer events carry no coordinates.
+if (typeof window.PointerEvent === "undefined") {
+  class PointerEventPolyfill extends MouseEvent {
+    pointerType: string;
+    constructor(type: string, init: PointerEventInit = {}) {
+      super(type, init);
+      this.pointerType = init.pointerType ?? "mouse";
+    }
+  }
+  (window as unknown as { PointerEvent: unknown }).PointerEvent = PointerEventPolyfill;
+}
+
 describe("Step 6.6 — Indicators and Hover/Tap Previews in Workspace", () => {
   let highlightsMap: Map<string, MockHighlight>;
 
@@ -295,7 +319,7 @@ describe("Step 6.6 — Indicators and Hover/Tap Previews in Workspace", () => {
       // Preview dialog opens
       const dialog = screen.getByRole("dialog", { name: /annotation preview/i });
       expect(dialog).toBeInTheDocument();
-      expect(screen.getByText("View more")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "View" })).toBeInTheDocument();
     });
 
     it("opens preview popover on Enter key down on a gutter dot", () => {
@@ -358,8 +382,8 @@ describe("Step 6.6 — Indicators and Hover/Tap Previews in Workspace", () => {
       // Pointer moves over text
       act(() => {
         fireEvent.pointerMove(container.firstChild as HTMLElement, {
-          clientX: 50,
-          clientY: 50,
+          clientX: 150,
+          clientY: 110,
         });
       });
 
@@ -404,7 +428,7 @@ describe("Step 6.6 — Indicators and Hover/Tap Previews in Workspace", () => {
 
       // Pointer move
       act(() => {
-        fireEvent.pointerMove(container.firstChild as HTMLElement, { clientX: 50, clientY: 50 });
+        fireEvent.pointerMove(container.firstChild as HTMLElement, { clientX: 150, clientY: 110 });
         jest.advanceTimersByTime(100);
       });
 
@@ -475,12 +499,13 @@ describe("Step 6.6 — Indicators and Hover/Tap Previews in Workspace", () => {
       expect(dialog).toBeInTheDocument();
 
       // Checks reply content: author name and AI replied indicator
-      expect(screen.getByText("Bob")).toBeInTheDocument();
+      // F2.6: preview card lists multiple matching annotations (Bob authored two in this paragraph).
+      expect(screen.getAllByText("Bob").length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText(/AI replied/i)).toBeInTheDocument();
       expect(screen.getByText(/Can you elaborate on leader election latency/i)).toBeInTheDocument();
 
       // Click "View more"
-      const viewMoreBtn = screen.getByRole("button", { name: /view more/i });
+      const viewMoreBtn = screen.getByRole("button", { name: "View" });
       act(() => {
         fireEvent.click(viewMoreBtn);
       });
@@ -514,7 +539,7 @@ describe("Step 6.6 — Indicators and Hover/Tap Previews in Workspace", () => {
 
       const dialog = screen.getByRole("dialog", { name: /annotation preview/i });
       expect(dialog).toBeInTheDocument();
-      expect(screen.getByText("QUEUED")).toBeInTheDocument();
+      expect(screen.getByText("Queued")).toBeInTheDocument();
       expect(screen.getByText(/What happens when network partitions occur/i)).toBeInTheDocument();
     });
   });

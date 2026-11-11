@@ -420,7 +420,7 @@ export function ThreadColumn({
               />
             )
           ) : (
-            <RenderMentions text={msg.content} />
+            <RenderMentions text={msg.content} workspaceId={workspaceId} />
           )}
         </div>
       </div>

@@ -14,6 +14,9 @@ jest.mock("next/navigation", () => ({
 }));
 
 jest.mock("next-intl", () => ({
+  // Used by the annotation preview card inside AnswerBody (F2.6).
+  useFormatter: () => ({ relativeTime: () => "" }),
+  useNow: () => new Date(),
   useTranslations: () => (key: string) => key,
 }));
 

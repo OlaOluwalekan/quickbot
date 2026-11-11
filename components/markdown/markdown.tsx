@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import ReactMarkdown from "react-markdown";
+import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
@@ -76,8 +76,27 @@ function replaceTextCitationMarkers(
   return node;
 }
 
-function createMarkdownComponents(citationsByIndex: Map<number, CitationDto>) {
-  return {
+/**
+ * react-markdown gives every custom component a `node` prop (the parsed
+ * element). None of ours uses it, and they pass the props they don't know on
+ * to the HTML element, where it showed up as `node="[object Object]"` on every
+ * heading, paragraph, list, link, table and code block. It is dropped here.
+ */
+function withoutNode<P extends object>(
+  Component: React.ComponentType<P>
+): React.ComponentType<P & { node?: unknown }> {
+  function MarkdownElement(props: P & { node?: unknown }) {
+    const rest: Record<string, unknown> = { ...props };
+    delete rest.node;
+    return <Component {...(rest as P)} />;
+  }
+  return MarkdownElement;
+}
+
+function createMarkdownComponents(
+  citationsByIndex: Map<number, CitationDto>
+): Components {
+  const components = {
     a: SafeLink,
     img: SafeImage,
     pre: CodeBlock,
@@ -227,6 +246,13 @@ function createMarkdownComponents(citationsByIndex: Map<number, CitationDto>) {
       </p>
     ),
   };
+
+  return Object.fromEntries(
+    Object.entries(components).map(([tag, Component]) => [
+      tag,
+      withoutNode(Component as React.ComponentType<object>),
+    ])
+  ) as Components;
 }
 
 /**

@@ -40,6 +40,8 @@ model User {
   role                 UserRole          @default(USER)
   createdAt            DateTime          @default(now())
   updatedAt            DateTime          @updatedAt
+  /// Soft delete: the account is marked, the row stays (see server/services/account-deletion.ts).
+  deletedAt            DateTime?         @map("deleted_at")
   sessions             Session[]
   accounts             Account[]
   projects             Project[]
@@ -70,6 +72,7 @@ model User {
   receivedTransfers    OwnershipTransfer[] @relation("TransfersReceived")
   memberLimitGrace     MemberLimitGrace?
   annotationMentions   AnnotationMention[]
+  workspaceNotes       WorkspaceNote[]     @relation("WorkspaceNoteCreator")
 
   @@map("users")
 }
@@ -576,6 +579,8 @@ model Annotation {
   targetMessage      AnnotationMessage?  @relation("AnnotationsOnMessage", fields: [targetMessageId], references: [id], onDelete: Cascade)
   parent             Annotation?         @relation("AnnotationChildren", fields: [parentAnnotationId], references: [id], onDelete: Cascade)
   children           Annotation[]        @relation("AnnotationChildren")
+  root               Annotation?         @relation("AnnotationRoot", fields: [rootAnnotationId], references: [id], onDelete: Cascade)
+  descendants        Annotation[]        @relation("AnnotationRoot")
   messages           AnnotationMessage[] @relation("AnnotationThreadMessages")
   promotions         Promotion[]
   notes              WorkspaceNote[]
@@ -606,6 +611,7 @@ model AnnotationMessage {
   promotions     Promotion[]
   annotationsOn  Annotation[]        @relation("AnnotationsOnMessage")
   mentions       AnnotationMention[]
+  note           WorkspaceNote?
 
   @@index([annotationId, createdAt])
   @@map("annotation_messages")
@@ -641,8 +647,15 @@ model WorkspaceNote {
   status       NoteStatus @default(ACTIVE)
   createdAt    DateTime   @default(now()) @map("created_at")
   archivedAt   DateTime?  @map("archived_at")
+  /// Set when the author's account is deleted (soft delete). A deleted note is hidden everywhere.
+  deletedAt    DateTime?  @map("deleted_at")
   workspace    Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   annotation   Annotation @relation(fields: [annotationId], references: [id], onDelete: Cascade)
+  // The note goes with the message that recorded it. Accounts are soft-deleted
+  // (User.deletedAt), which soft-deletes the author's notes; the cascade only
+  // matters if a user row is ever removed for good.
+  message      AnnotationMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  createdBy    User       @relation("WorkspaceNoteCreator", fields: [createdById], references: [id], onDelete: Cascade)
 
   @@index([workspaceId, status, createdAt])
   @@index([annotationId])

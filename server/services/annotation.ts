@@ -99,7 +99,14 @@ export async function listAnnotationsForResponse(
           author: {
             select: { id: true, name: true, email: true, image: true },
           },
+          mentions: {
+            select: { isKlecx: true },
+          },
         },
+      },
+      notes: {
+        where: { deletedAt: null },
+        select: { id: true, status: true },
       },
       createdBy: {
         select: { id: true, name: true, email: true, image: true },
@@ -157,7 +164,14 @@ export async function listAnnotationsForMessage(actor: Actor, messageId: string)
           author: {
             select: { id: true, name: true, image: true },
           },
+          mentions: {
+            select: { isKlecx: true },
+          },
         },
+      },
+      notes: {
+        where: { deletedAt: null },
+        select: { id: true, status: true },
       },
       createdBy: {
         select: { id: true, name: true, image: true },

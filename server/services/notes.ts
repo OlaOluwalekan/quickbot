@@ -29,7 +29,7 @@ export async function listWorkspaceNotes(
   const canComment = capabilities.has("workspace.comment");
 
   const all = await db.workspaceNote.findMany({
-    where: { workspaceId },
+    where: { workspaceId, deletedAt: null },
     orderBy: { createdAt: "desc" },
     select: {
       id: true,
@@ -88,7 +88,8 @@ async function requireManageableNote(actor: Actor, noteId: string) {
     include: { annotation: { select: { deletedAt: true } } },
   });
 
-  if (!note) {
+  // A note of a deleted account is gone for everyone.
+  if (!note || note.deletedAt !== null) {
     throw Errors.notFound("Note");
   }
 
