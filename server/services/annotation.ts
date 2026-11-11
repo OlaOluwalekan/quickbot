@@ -8,6 +8,7 @@ import {
   resolveWorkspaceRole,
 } from "@/server/authz/access";
 import { logActivity } from "./activity";
+import { quoteIsFromSource } from "@/lib/annotations/quote-match";
 import {
   syncMentionsAndNotes,
   sendMentionNotifications,
@@ -389,7 +390,8 @@ export async function listWorkspaceQuestions(
 /**
  * Creates a new annotation and its initial USER message on a response version.
  * Requires `workspace.comment` (COMMENT) or `workspace.ask` (QUESTION).
- * Validates that `anchor.exact` is a true substring of the version text.
+ * Validates that `anchor.exact` is a passage of the version text. The passage
+ * is the rendered text, the version text is markdown: see `locateQuote`.
  */
 export async function createAnnotation(
   actor: Actor,
@@ -416,7 +418,7 @@ export async function createAnnotation(
     annotationKindPermission(input.kind)
   );
 
-  // Re-check anchor.exact substring on server against stored text
+  // Re-check on the server that the passage comes from the stored text
   let targetContent = version.content;
   if (input.contentSource === "EDIT") {
     if (input.editRevision) {
@@ -443,7 +445,7 @@ export async function createAnnotation(
     }
   }
 
-  if (!targetContent.includes(input.anchor.exact)) {
+  if (!quoteIsFromSource(targetContent, input.anchor.exact)) {
     throw Errors.badRequest(
       "Selected text is not a substring of the response content"
     );
@@ -535,7 +537,7 @@ export async function createAnnotation(
 /**
  * Creates a new annotation and its initial USER message on an ASSISTANT annotation message.
  * Requires workspace.comment (COMMENT) or workspace.ask (ASK).
- * Validates that anchor.exact is a true substring of the message text,
+ * Validates that anchor.exact is a passage of the message text (`locateQuote`),
  * and ensures that depth does not exceed MAX_ANNOTATION_DEPTH.
  */
 export async function createAnnotationOnMessage(
@@ -590,7 +592,7 @@ export async function createAnnotationOnMessage(
     throw Errors.badRequest("Maximum annotation depth exceeded");
   }
 
-  if (!message.content.includes(input.anchor.exact)) {
+  if (!quoteIsFromSource(message.content, input.anchor.exact)) {
     throw Errors.badRequest(
       "Selected text is not a substring of the message content"
     );
