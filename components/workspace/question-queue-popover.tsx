@@ -4,6 +4,7 @@ import * as React from "react";
 import { Layers, Loader2, Play, Trash2, Edit2, Check, X } from "lucide-react";
 import { useQuery, useQueryClient, QueryClientContext } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api/client";
 import { useUiStore } from "@/lib/stores/ui";
@@ -18,8 +19,10 @@ import { Button } from "@/components/ui/button";
 export interface QueuedQuestion {
   id: string;
   workspaceId: string;
-  responseId: string;
-  versionId: string;
+  responseId?: string | null;
+  versionId?: string | null;
+  targetType?: string;
+  depth?: number;
   kind: "ASK";
   questionState: "NONE" | "QUEUED" | "ANSWERING" | "ANSWERED" | "CANCELLED" | "FAILED";
   anchorExact: string;
@@ -42,6 +45,7 @@ function QuestionQueuePopoverInner({
   className,
 }: QuestionQueuePopoverProps) {
   const queryClient = useQueryClient();
+  const tThreads = useTranslations("Threads");
   const [isOpen, setIsOpen] = React.useState(false);
   const [isRunning, setIsRunning] = React.useState(false);
   const [editingId, setEditingId] = React.useState<string | null>(null);
@@ -315,6 +319,13 @@ function QuestionQueuePopoverInner({
                   <div className="border-l-2 border-accent/60 pl-2 text-[11px] italic text-subtle line-clamp-2">
                     &ldquo;{q.anchorExact}&rdquo;
                   </div>
+
+                  {/* Where the question was asked, for questions inside an answer */}
+                  {typeof q.depth === "number" && q.depth > 0 && (
+                    <div className="text-[10px] text-accent font-medium">
+                      {tThreads("queueLevel", { level: q.depth + 1 })}
+                    </div>
+                  )}
 
                   {/* Question content / Edit mode */}
                   {isEditing ? (

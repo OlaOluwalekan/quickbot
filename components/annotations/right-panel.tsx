@@ -374,13 +374,13 @@ export function RightPanel({
     );
 
     try {
-      const res = await fetch(`/api/v1/annotations/${annotationId}/reply`, {
+      const res = await fetch(`/api/v1/annotations/${annotationId}/messages`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "x-idempotency-key": `reply_${annotationId}_${Date.now()}`,
         },
-        body: JSON.stringify({ prompt: promptText }),
+        body: JSON.stringify({ prompt: promptText, stream: true }),
       });
 
       if (!res.ok || !res.body) {

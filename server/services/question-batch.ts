@@ -23,10 +23,19 @@ import { getCustomProvider } from "@/server/services/generation";
 import { estimateTokens } from "@/server/ai/context-builder";
 import { loadActiveNotes } from "@/server/ai/notes";
 import {
+  ASK_TARGET_INCLUDE,
+  loadAskTarget,
+  needsWindow,
+  windowTargetText,
+  type AskTarget,
+} from "@/server/ai/ask-context";
+import { resolveEffectiveAiLanguage } from "@/lib/locale";
+import { buildSystemPrompt } from "@/server/ai/prompts/system";
+import {
   buildQuestionBatchPrompt,
   questionBatchResponseSchema,
   QUESTION_BATCH_PROMPT_VERSION,
-  type VersionQuestionsGroup,
+  type TargetQuestionsGroup,
 } from "@/server/ai/prompts/question-batch";
 
 let customQuestionBatchProviderForTesting: AiProvider | null = null;
@@ -79,24 +88,18 @@ export async function runQuestionBatch(
     orderBy: { createdAt: "asc" },
     include: {
       messages: { orderBy: { createdAt: "asc" } },
-      version: {
-        include: {
-          response: {
-            select: { id: true, workspaceId: true, prompt: true, deletedAt: true },
-          },
-        },
-      },
+      ...ASK_TARGET_INCLUDE,
     },
   });
 
-  // Drop any whose version or response is soft-deleted
-  const validCandidates = candidateAnnotations.filter(
-    (a) =>
-      a.version &&
-      a.version.response &&
-      a.version.response.deletedAt === null &&
-      a.deletedAt === null
-  );
+  // The text each question's highlight sits in. Questions whose target was
+  // deleted are dropped.
+  const targets = new Map<string, AskTarget>();
+  for (const a of candidateAnnotations) {
+    const target = await loadAskTarget(a);
+    if (target) targets.set(a.id, target);
+  }
+  const validCandidates = candidateAnnotations.filter((a) => targets.has(a.id));
 
   if (validCandidates.length === 0) {
     throw Errors.badRequest("No queued questions available to run");
@@ -129,13 +132,6 @@ export async function runQuestionBatch(
     },
     include: {
       messages: { orderBy: { createdAt: "asc" } },
-      version: {
-        include: {
-          response: {
-            select: { id: true, workspaceId: true, prompt: true, deletedAt: true },
-          },
-        },
-      },
     },
     orderBy: { createdAt: "asc" },
   });
@@ -147,29 +143,39 @@ export async function runQuestionBatch(
   // 4. Resolve workspace owner's credit account
   const { billedAccountId } = await resolveBilledAccount(wsAccess.ws);
 
-  // 5. Group questions by version
-  const versionMap = new Map<string, VersionQuestionsGroup>();
+  // 5. Group questions by target (version, parent answer, document revision):
+  // the containing text is sent once per group. A text that is too long to be
+  // sent whole is windowed around each question, so such questions get a group
+  // of their own.
+  const targetMap = new Map<string, TargetQuestionsGroup>();
   for (const annot of claimedAnnotations) {
-    const vId = annot.versionId;
-    if (!vId || !annot.version) continue;
-    if (!versionMap.has(vId)) {
-      versionMap.set(vId, {
-        versionId: vId,
-        versionNumber: annot.version.number,
-        versionContent: annot.version.content,
-        originalPrompt: annot.version.response.prompt,
+    const target = targets.get(annot.id);
+    if (!target) continue;
+    const windowed = needsWindow(target.text);
+    const targetKey = windowed ? `${target.key}#${annot.id}` : target.key;
+
+    let group = targetMap.get(targetKey);
+    if (!group) {
+      group = {
+        targetKey,
+        targetType: annot.targetType,
+        containingText: windowed
+          ? windowTargetText(target.text, annot.anchorExact, annot.anchorStart)
+          : target.text,
+        sourceDescription: target.description,
         questions: [],
-      });
+      };
+      targetMap.set(targetKey, group);
     }
+
     const userMsg = annot.messages.find((m) => m.role === "USER");
-    const questionText = userMsg ? userMsg.content : "";
-    versionMap.get(vId)!.questions.push({
+    group.questions.push({
       id: annot.id,
       passage: annot.anchorExact,
-      question: questionText.slice(0, 500),
+      question: (userMsg?.content ?? "").slice(0, 500),
     });
   }
-  const groups = Array.from(versionMap.values());
+  const groups = Array.from(targetMap.values());
 
   // 6. Credit estimation & reservation
   const ownerEntitlements = await getEntitlements(wsAccess.ws.ownerId);
@@ -187,8 +193,8 @@ export async function runQuestionBatch(
   let estimatedInputTokens = 500;
   for (const group of groups) {
     estimatedInputTokens +=
-      estimateTokens(group.versionContent) +
-      estimateTokens(group.originalPrompt);
+      estimateTokens(group.containingText) +
+      estimateTokens(group.sourceDescription || "");
     for (const q of group.questions) {
       estimatedInputTokens +=
         estimateTokens(q.passage) + estimateTokens(q.question);
@@ -276,12 +282,23 @@ export async function runQuestionBatch(
           encoder.encode(formatSSEEvent("status", { stage: "answering" }))
         );
 
+        const userPref = await db.userPreference.findUnique({
+          where: { userId: actor.userId },
+          select: { aiLanguage: true, uiLocale: true },
+        });
+        const baseSystem = buildSystemPrompt(
+          resolveEffectiveAiLanguage({
+            savedAiLanguage: userPref?.aiLanguage,
+            uiLocale: userPref?.uiLocale,
+          })
+        );
         const notesPrompt = await loadActiveNotes(workspaceId);
+        const system = [baseSystem, notesPrompt].filter(Boolean).join("\n\n");
 
         const aiStream = streamAi(
           {
             modelKey,
-            system: notesPrompt ?? undefined,
+            system,
             messages: [
               {
                 role: "user",
@@ -353,6 +370,8 @@ export async function runQuestionBatch(
                 role: "ASSISTANT",
                 content: answer,
                 generationId: `${generationId}:${annot.id}`,
+                status: "COMPLETE",
+                modelKey,
               },
             });
 

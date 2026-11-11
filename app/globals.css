@@ -186,16 +186,8 @@
   view-transition-name: first-prompt;
 }
 
-/* Step 6.1 CSS Custom Highlight API rules */
-::highlight(annot-comment) {
-  background-color: var(--mark-comment);
-}
-::highlight(annot-ask) {
-  background-color: var(--mark-reply);
-}
-::highlight(annot-hover) {
-  text-decoration: underline 2px solid var(--accent);
-}
+/* The annotation highlight rules (CSS Custom Highlight API) are in
+   lib/annotations/highlight-styles.ts, rendered by app/layout.tsx. */
 
   @media (prefers-reduced-motion: reduce) {
     ::view-transition-group(*),

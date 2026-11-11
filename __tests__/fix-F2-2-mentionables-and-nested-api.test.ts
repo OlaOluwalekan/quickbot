@@ -7,7 +7,7 @@ import { db } from "@/server/db/client";
 import {
   createAnnotation,
   createAnnotationOnMessage,
-  createAndStreamAnnotationReply,
+  streamAnnotationAnswer,
   setAnnotationCustomProviderForTesting,
 } from "@/server/services/annotation";
 import type { AiProvider, StreamEvent } from "@/server/ai/types";
@@ -413,7 +413,7 @@ describe("Fix F2.2 — Mentionables & Nested Annotation API", () => {
         text: "How does it compare to Paxos?",
       });
 
-      const { stream } = await createAndStreamAnnotationReply(ownerActor, ask.id, {
+      const { stream } = await streamAnnotationAnswer(ownerActor, ask.id, {
         idempotencyKey: `asknow_${ask.id}`,
       });
       await drain(stream);
@@ -424,7 +424,7 @@ describe("Fix F2.2 — Mentionables & Nested Annotation API", () => {
 
       // Already answered: a second prompt-less call is refused.
       await expect(
-        createAndStreamAnnotationReply(ownerActor, ask.id, {
+        streamAnnotationAnswer(ownerActor, ask.id, {
           idempotencyKey: `asknow_again_${ask.id}`,
         })
       ).rejects.toMatchObject({ status: 400 });
@@ -438,7 +438,7 @@ describe("Fix F2.2 — Mentionables & Nested Annotation API", () => {
         text: "What is this?",
       });
 
-      const { stream } = await createAndStreamAnnotationReply(ownerActor, ask.id, {
+      const { stream } = await streamAnnotationAnswer(ownerActor, ask.id, {
         idempotencyKey: `asknow_${ask.id}`,
       });
       await drain(stream);
@@ -454,11 +454,15 @@ describe("Fix F2.2 — Mentionables & Nested Annotation API", () => {
         text: "Later",
       });
       await expect(
-        createAndStreamAnnotationReply(ownerActor, queued.id, {})
+        streamAnnotationAnswer(ownerActor, queued.id, {
+          idempotencyKey: `queued_${queued.id}`,
+        })
       ).rejects.toMatchObject({ status: 400 });
 
       await expect(
-        createAndStreamAnnotationReply(memberActor, queued.id, {})
+        streamAnnotationAnswer(memberActor, queued.id, {
+          idempotencyKey: `queued_member_${queued.id}`,
+        })
       ).rejects.toMatchObject({ status: 404 });
     });
   });

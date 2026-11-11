@@ -10,13 +10,11 @@ import {
   archiveNoteForAnnotation,
   type SyncMentionsResult,
 } from "./mentions";
-import { loadActiveNotes } from "@/server/ai/notes";
 import { resolveBilledAccount, reserveForWorkspaceGeneration } from "./billing-owner";
 import type { Actor } from "@/server/auth/session";
 import type {
   CreateAnnotationInput,
   UpdateAnnotationInput,
-  ReplyAnnotationInput,
   PromoteAnnotationInput,
 } from "@/lib/schemas/annotation";
 import {
@@ -30,12 +28,15 @@ import {
   ModelKey,
 } from "@/server/ai/registry";
 import { getEntitlements } from "@/server/billing/entitlements";
-import { getProvider, streamAi, type AiProvider } from "@/server/ai";
+import { streamAi, type AiProvider } from "@/server/ai";
+import { AiError } from "@/server/ai/types";
+import { resolveEffectiveAiLanguage } from "@/lib/locale";
 import { getCustomProvider } from "@/server/services/generation";
+import { ANNOTATION_PROMPT_VERSION } from "@/server/ai/prompts/annotation";
 import {
-  buildAnnotationReplyPrompt,
-  ANNOTATION_PROMPT_VERSION,
-} from "@/server/ai/prompts/annotation";
+  buildAskContext,
+  estimateAskContextTokens,
+} from "@/server/ai/ask-context";
 import { MAX_ANNOTATION_DEPTH } from "@/lib/annotations/limits";
 import { estimateTokens } from "@/server/ai/context-builder";
 
@@ -44,6 +45,15 @@ let customAnnotationProviderForTesting: AiProvider | null = null;
 export function setAnnotationCustomProviderForTesting(provider: AiProvider | null) {
   customAnnotationProviderForTesting = provider;
 }
+
+/** A source saved with an Ask answer (same shape as response citations). */
+type AnswerCitation = {
+  index: number;
+  url: string;
+  title: string | null;
+  snippet: string | null;
+  source: string;
+};
 
 function formatSSEEvent(event: string, data: unknown): string {
   return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
@@ -93,6 +103,64 @@ export async function listAnnotationsForResponse(
       },
       createdBy: {
         select: { id: true, name: true, email: true, image: true },
+      },
+    },
+    orderBy: { createdAt: "asc" },
+  });
+}
+
+/**
+ * Lists the annotations made on one ASSISTANT message of an Ask thread
+ * (nested annotations), visible to the calling actor: `WORKSPACE` ones and the
+ * caller's own `PRIVATE` ones. A message of a private thread is only found by
+ * that thread's author.
+ */
+export async function listAnnotationsForMessage(actor: Actor, messageId: string) {
+  const message = await db.annotationMessage.findUnique({
+    where: { id: messageId },
+    select: {
+      id: true,
+      annotation: {
+        select: {
+          workspaceId: true,
+          deletedAt: true,
+          visibility: true,
+          createdById: true,
+        },
+      },
+    },
+  });
+
+  if (!message || message.annotation.deletedAt !== null) {
+    throw Errors.notFound("AnnotationMessage");
+  }
+
+  await requireWorkspace(actor, message.annotation.workspaceId, "workspace.read");
+
+  if (
+    message.annotation.visibility === "PRIVATE" &&
+    message.annotation.createdById !== actor.userId
+  ) {
+    throw Errors.notFound("AnnotationMessage");
+  }
+
+  return db.annotation.findMany({
+    where: {
+      targetMessageId: messageId,
+      deletedAt: null,
+      OR: [{ visibility: "WORKSPACE" }, { createdById: actor.userId }],
+    },
+    include: {
+      messages: {
+        orderBy: { createdAt: "asc" },
+        include: {
+          author: {
+            select: { id: true, name: true, image: true },
+          },
+        },
+      },
+      createdBy: {
+        select: { id: true, name: true, image: true },
       },
     },
     orderBy: { createdAt: "asc" },
@@ -813,235 +881,153 @@ export async function createAnnotationMessage(
   return createdMsg;
 }
 
+/** A STREAMING answer older than this was interrupted (the route runs for 60 s at most). */
+const ANSWER_STALE_MS = 2 * 60 * 1000;
+
 /**
- * Streams an AI reply for an annotation thread (Step 6.4):
- * - Creates annotation (kind ASK, asked now) if called for a new passage selection.
- * - Adds user prompt as USER AnnotationMessage.
- * - Streams assistant completion via SSE without modifying main response timeline.
- * - Saves completed assistant message as ASSISTANT AnnotationMessage with generationId.
- * - Bills credits to workspace owner with calling actor recorded.
+ * Streams an AI answer for an Ask thread (Step F2.5).
+ *
+ * - Without `prompt`: answers the question that is waiting (right after
+ *   "Ask now", or Retry after a failure). Refused when nothing is waiting, so
+ *   a repeated call can't produce (and bill) a second answer.
+ * - With `prompt`: a follow-up. The USER message is saved, then answered.
+ *
+ * The ASSISTANT message is created with status STREAMING before the stream
+ * starts and finalized with content, thoughtSummary, citations and status
+ * COMPLETE (or FAILED). Context comes from `buildAskContext` (only the text
+ * the highlight sits in). Model: the owner's best allowed text model. Billed
+ * to the workspace owner, actor recorded.
+ *
+ * The answer is written to the end even if the reader goes away, so closing
+ * the column doesn't lose (or leave half-saved) an answer.
  */
-export async function createAndStreamAnnotationReply(
+export async function streamAnnotationAnswer(
   actor: Actor,
-  annotationIdOrNew: string,
-  input: ReplyAnnotationInput,
+  annotationId: string,
+  input: {
+    prompt?: string;
+    idempotencyKey: string;
+  },
   options: { providerInstance?: AiProvider } = {}
 ): Promise<{
   stream: ReadableStream<Uint8Array>;
   generationId: string;
   annotationId: string;
+  messageId: string;
 }> {
-  let effectivePrompt = (input.prompt || input.content || "").trim();
-  const idempotencyKey = input.idempotencyKey || crypto.randomUUID();
+  const idempotencyKey = input.idempotencyKey;
+  const followUp = input.prompt?.trim() || "";
 
-  let targetAnnotation: any;
-  let targetVersion: any;
-  let workspaceId: string;
-  // The text the highlight sits in, and the prompt that produced that text.
-  let sourceText: string;
-  let sourcePrompt: string;
+  const targetAnnotation = await db.annotation.findUnique({
+    where: { id: annotationId, deletedAt: null },
+    include: {
+      messages: { orderBy: { createdAt: "asc" } },
+    },
+  });
 
-  if (annotationIdOrNew === "new") {
-    if (!effectivePrompt) {
-      throw Errors.badRequest("Prompt cannot be empty");
-    }
-    if (!input.anchor || !input.versionId) {
-      throw Errors.badRequest(
-        "Anchor and versionId are required to start a new reply thread"
-      );
-    }
-
-    targetVersion = await db.responseVersion.findUnique({
-      where: { id: input.versionId },
-      include: {
-        response: {
-          select: { id: true, workspaceId: true, prompt: true, deletedAt: true },
-        },
-      },
-    });
-
-    if (!targetVersion || targetVersion.response.deletedAt !== null) {
-      throw Errors.notFound("ResponseVersion");
-    }
-
-    workspaceId = targetVersion.response.workspaceId;
-
-    // Enforce workspace.ask permission upfront
-    const access = await requireWorkspace(actor, workspaceId, "workspace.ask");
-
-    // Re-check substring
-    let targetContent = targetVersion.content;
-    if (input.contentSource === "EDIT") {
-      if (input.editRevision) {
-        const edit = await db.responseEdit.findUnique({
-          where: {
-            versionId_revision: {
-              versionId: targetVersion.id,
-              revision: input.editRevision,
-            },
-          },
-        });
-        if (edit) targetContent = edit.content;
-      } else {
-        const latestEdit = await db.responseEdit.findFirst({
-          where: { versionId: targetVersion.id },
-          orderBy: { revision: "desc" },
-        });
-        if (latestEdit) targetContent = latestEdit.content;
-      }
-    }
-
-    if (!targetContent.includes(input.anchor.exact)) {
-      throw Errors.badRequest(
-        "Selected text is not a substring of the response content"
-      );
-    }
-
-    // Create Annotation (kind ASK, asked now) + initial USER message
-    targetAnnotation = await db.annotation.create({
-      data: {
-        workspaceId,
-        responseId: targetVersion.response.id,
-        versionId: targetVersion.id,
-        contentSource: input.contentSource ?? "ORIGINAL",
-        editRevision: input.editRevision ?? null,
-        createdById: actor.userId,
-        kind: "ASK",
-        questionState: "NONE",
-        visibility: "PRIVATE",
-        anchorExact: input.anchor.exact,
-        anchorPrefix: input.anchor.prefix ?? "",
-        anchorSuffix: input.anchor.suffix ?? "",
-        anchorStart: input.anchor.start ?? null,
-        anchorEnd: input.anchor.end ?? null,
-        messages: {
-          create: [
-            {
-              role: "USER",
-              content: effectivePrompt,
-              authorId: actor.userId,
-            },
-          ],
-        },
-      },
-      include: {
-        messages: { orderBy: { createdAt: "asc" } },
-      },
-    });
-    sourceText = targetVersion.content;
-    sourcePrompt = targetVersion.response.prompt;
-  } else {
-    // Existing annotation thread
-    targetAnnotation = await db.annotation.findUnique({
-      where: { id: annotationIdOrNew, deletedAt: null },
-      include: {
-        messages: { orderBy: { createdAt: "asc" } },
-        version: {
-          include: {
-            response: {
-              select: { id: true, workspaceId: true, prompt: true, deletedAt: true },
-            },
-          },
-        },
-        // Nested annotations sit on an ASSISTANT message of a parent thread.
-        targetMessage: {
-          include: {
-            annotation: {
-              select: {
-                deletedAt: true,
-                messages: {
-                  where: { role: "USER" },
-                  orderBy: { createdAt: "asc" },
-                  select: { content: true, createdAt: true },
-                },
-              },
-            },
-          },
-        },
-      },
-    });
-
-    if (!targetAnnotation) {
-      throw Errors.notFound("Annotation");
-    }
-
-    workspaceId = targetAnnotation.workspaceId;
-
-    // Enforce workspace.ask
-    await requireWorkspace(actor, workspaceId, "workspace.ask");
-
-    if (
-      targetAnnotation.visibility === "PRIVATE" &&
-      targetAnnotation.createdById !== actor.userId
-    ) {
-      throw Errors.notFound("Annotation");
-    }
-
-    if (targetAnnotation.kind !== "ASK") {
-      throw Errors.badRequest("Only Ask threads can be answered");
-    }
-
-    targetVersion = targetAnnotation.version;
-    const parentMessage = targetAnnotation.targetMessage;
-    if (targetVersion && targetVersion.response.deletedAt === null) {
-      sourceText = targetVersion.content;
-      sourcePrompt = targetVersion.response.prompt;
-    } else if (parentMessage && parentMessage.annotation.deletedAt === null) {
-      sourceText = parentMessage.content;
-      // The question that produced the parent answer: the last USER message
-      // written before it.
-      const asked = parentMessage.annotation.messages.filter(
-        (m: { createdAt: Date }) => m.createdAt <= parentMessage.createdAt
-      );
-      sourcePrompt = asked.length ? asked[asked.length - 1].content : "";
-    } else {
-      throw Errors.notFound("Annotation");
-    }
-
-    if (effectivePrompt) {
-      // Follow-up: add the user message to the thread
-      await db.annotationMessage.create({
-        data: {
-          annotationId: targetAnnotation.id,
-          role: "USER",
-          content: effectivePrompt,
-          authorId: actor.userId,
-        },
-      });
-    } else {
-      // "Ask now": answer the question the thread was created with. Only
-      // valid while that question is still unanswered and not queued.
-      const msgs = targetAnnotation.messages as Array<{ role: string; content: string }>;
-      const last = msgs[msgs.length - 1];
-      if (
-        targetAnnotation.questionState !== "NONE" ||
-        !last ||
-        last.role !== "USER"
-      ) {
-        throw Errors.badRequest("This thread has no unanswered question");
-      }
-      effectivePrompt = last.content;
-    }
+  if (!targetAnnotation) {
+    throw Errors.notFound("Annotation");
   }
 
-  // Resolve billing account = workspace owner's credit account
+  const workspaceId = targetAnnotation.workspaceId;
   const wsAccess = await requireWorkspace(actor, workspaceId, "workspace.ask");
-  const { billedAccountId } = await resolveBilledAccount(wsAccess.ws);
 
-  // Idempotency & Generation creation
+  if (
+    targetAnnotation.visibility === "PRIVATE" &&
+    targetAnnotation.createdById !== actor.userId
+  ) {
+    throw Errors.notFound("Annotation");
+  }
+
+  if (targetAnnotation.kind !== "ASK") {
+    throw Errors.badRequest("Only Ask threads can be answered");
+  }
+
+  // Queued questions are answered by the queue run, not here.
+  if (
+    targetAnnotation.questionState !== "NONE" &&
+    targetAnnotation.questionState !== "ANSWERED"
+  ) {
+    throw Errors.badRequest("This question is in the queue");
+  }
+
+  // A repeated request (same key) must not start a second answer.
+  const sameRequest = await db.generation.findUnique({
+    where: {
+      actorId_idempotencyKey: { actorId: actor.userId, idempotencyKey },
+    },
+    select: { id: true },
+  });
+  if (sameRequest) {
+    throw Errors.conflict("This request was already sent", "duplicate_request");
+  }
+
+  // Answers that failed, or were interrupted, are replaced by the new one.
+  const staleBefore = Date.now() - ANSWER_STALE_MS;
+  const isDead = (m: { role: string; status: string; createdAt: Date }) =>
+    m.role === "ASSISTANT" &&
+    (m.status === "FAILED" ||
+      (m.status === "STREAMING" && m.createdAt.getTime() < staleBefore));
+  const deadIds = targetAnnotation.messages.filter(isDead).map((m) => m.id);
+  const thread = targetAnnotation.messages.filter((m) => !isDead(m));
+  const last = thread[thread.length - 1];
+
+  if (last?.role === "ASSISTANT" && last.status === "STREAMING") {
+    throw Errors.conflict(
+      "An answer is already being written",
+      "answer_in_progress"
+    );
+  }
+  if (!followUp && last?.role !== "USER") {
+    throw Errors.badRequest("This thread has no unanswered question");
+  }
+
+  const { billedAccountId } = await resolveBilledAccount(wsAccess.ws);
   const ownerEntitlements = await getEntitlements(wsAccess.ws.ownerId);
-  const modelKey = (input.modelKey || "text-economy") as ModelKey;
+
+  // The workspace owner's best allowed text model (never chosen by the client).
+  const modelKey: ModelKey = ownerEntitlements.models.includes("text-standard")
+    ? "text-standard"
+    : "text-economy";
   const model = getModel(modelKey);
   try {
     assertModelAccess(modelKey, ownerEntitlements.plan);
   } catch (err: unknown) {
     throw Errors.forbidden(
-      err instanceof Error ? err.message : `Model '${modelKey}' is not available on your current plan.`
+      err instanceof Error
+        ? err.message
+        : `Model '${modelKey}' is not available on your current plan.`
     );
   }
-  const generationId = crypto.randomUUID();
 
-  const estimatedInputTokens = estimateTokens(effectivePrompt) + 500;
+  if (deadIds.length > 0) {
+    await db.annotationMessage.deleteMany({ where: { id: { in: deadIds } } });
+  }
+  if (followUp) {
+    await db.annotationMessage.create({
+      data: {
+        annotationId: targetAnnotation.id,
+        role: "USER",
+        content: followUp,
+        authorId: actor.userId,
+      },
+    });
+  }
+
+  // Built before anything is reserved: its size is what gets billed.
+  const userPref = await db.userPreference.findUnique({
+    where: { userId: actor.userId },
+    select: { aiLanguage: true, uiLocale: true },
+  });
+  const askContext = await buildAskContext(targetAnnotation.id, {
+    language: resolveEffectiveAiLanguage({
+      savedAiLanguage: userPref?.aiLanguage,
+      uiLocale: userPref?.uiLocale,
+    }),
+  });
+
+  const generationId = crypto.randomUUID();
+  const estimatedInputTokens = estimateAskContextTokens(askContext);
   const reserveAmount = creditsFor(modelKey, {
     inputTokens: estimatedInputTokens,
     outputTokens: 800,
@@ -1071,18 +1057,21 @@ export async function createAndStreamAnnotationReply(
       modelKey,
       providerModelId: model.providerModelId,
       promptVersion: ANNOTATION_PROMPT_VERSION,
-      idempotencyKey: idempotencyKey,
+      idempotencyKey,
       reservedCredits: reserveAmount,
       startedAt: new Date(),
     },
   });
 
-  // Construct prompt
-  const fullPrompt = buildAnnotationReplyPrompt({
-    exact: targetAnnotation.anchorExact,
-    versionText: sourceText,
-    originalPrompt: sourcePrompt,
-    prompt: effectivePrompt,
+  const assistantMessage = await db.annotationMessage.create({
+    data: {
+      annotationId: targetAnnotation.id,
+      role: "ASSISTANT",
+      content: "",
+      generationId,
+      status: "STREAMING",
+      modelKey,
+    },
   });
 
   const encoder = new TextEncoder();
@@ -1094,42 +1083,43 @@ export async function createAndStreamAnnotationReply(
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
+      // The reader may be gone (column closed); keep answering anyway.
+      let readerGone = false;
+      const send = (event: string, data: unknown) => {
+        if (readerGone) return;
+        try {
+          controller.enqueue(encoder.encode(formatSSEEvent(event, data)));
+        } catch {
+          readerGone = true;
+        }
+      };
+      const close = () => {
+        try {
+          controller.close();
+        } catch {
+          // already closed or cancelled
+        }
+      };
+
       let fullAssistantText = "";
+      let fullThoughtText = "";
+      const citations: AnswerCitation[] = [];
+      let usage: { inputTokens: number; outputTokens: number } | null = null;
 
       try {
-        controller.enqueue(
-          encoder.encode(
-            formatSSEEvent("started", {
-              generationId,
-              annotationId: targetAnnotation.id,
-            })
-          )
-        );
-        controller.enqueue(
-          encoder.encode(formatSSEEvent("status", { stage: "queued" }))
-        );
-        controller.enqueue(
-          encoder.encode(
-            formatSSEEvent("status", { stage: "preparing", truncated: false })
-          )
-        );
-        controller.enqueue(
-          encoder.encode(formatSSEEvent("status", { stage: "writing" }))
-        );
-
-        const notesPrompt = await loadActiveNotes(workspaceId);
+        send("started", {
+          generationId,
+          annotationId: targetAnnotation.id,
+          messageId: assistantMessage.id,
+        });
+        send("status", { stage: "writing" });
 
         const aiStream = streamAi(
           {
             modelKey,
-            system: notesPrompt ?? undefined,
-            messages: [
-              {
-                role: "user",
-                parts: [{ type: "text", text: fullPrompt }],
-              },
-            ],
-            thinking: { summaries: false },
+            system: askContext.system,
+            messages: askContext.messages,
+            thinking: { summaries: true },
           },
           {
             userPlan: ownerEntitlements.plan,
@@ -1140,27 +1130,47 @@ export async function createAndStreamAnnotationReply(
         for await (const chunk of aiStream) {
           if (chunk.type === "text_delta" && chunk.text) {
             fullAssistantText += chunk.text;
-            controller.enqueue(
-              encoder.encode(formatSSEEvent("delta", { text: chunk.text }))
-            );
+            send("delta", { text: chunk.text });
+          } else if (chunk.type === "thought_delta" && chunk.text) {
+            fullThoughtText += chunk.text;
+            send("thought", { text: chunk.text });
+          } else if (chunk.type === "citation") {
+            if (!chunk.url || citations.some((c) => c.url === chunk.url)) continue;
+            const citation: AnswerCitation = {
+              index: citations.length + 1,
+              url: chunk.url,
+              title: chunk.title ?? null,
+              snippet: chunk.snippet ?? null,
+              source: chunk.source ?? "MODEL_PROVIDED",
+            };
+            citations.push(citation);
+            send("citation", citation);
+          } else if (chunk.type === "usage") {
+            usage = {
+              inputTokens: chunk.inputTokens,
+              outputTokens: chunk.outputTokens,
+            };
           }
         }
 
-        // Save completed assistant message to thread
-        await db.annotationMessage.create({
+        if (!fullAssistantText.trim()) {
+          throw new Error("empty_answer");
+        }
+
+        await db.annotationMessage.update({
+          where: { id: assistantMessage.id },
           data: {
-            annotationId: targetAnnotation.id,
-            role: "ASSISTANT",
             content: fullAssistantText,
-            generationId,
+            thoughtSummary: fullThoughtText || null,
+            citations: citations.length > 0 ? citations : undefined,
+            status: "COMPLETE",
           },
         });
 
         // Settle credits
-        const outputTokens = estimateTokens(fullAssistantText);
         const chargedCredits = creditsFor(modelKey, {
-          inputTokens: estimatedInputTokens,
-          outputTokens,
+          inputTokens: usage?.inputTokens || estimatedInputTokens,
+          outputTokens: usage?.outputTokens || estimateTokens(fullAssistantText),
         });
         await settle(billedAccountId, generationId, chargedCredits, settleKey);
 
@@ -1173,47 +1183,45 @@ export async function createAndStreamAnnotationReply(
           },
         });
 
-        controller.enqueue(
-          encoder.encode(formatSSEEvent("status", { stage: "complete" }))
-        );
-        controller.enqueue(
-          encoder.encode(
-            formatSSEEvent("done", {
-              generationId,
-              annotationId: targetAnnotation.id,
-            })
-          )
-        );
-        controller.close();
+        send("status", { stage: "complete" });
+        send("completed", {
+          annotationId: targetAnnotation.id,
+          messageId: assistantMessage.id,
+        });
+        send("done", { generationId, annotationId: targetAnnotation.id });
+        close();
       } catch (err: unknown) {
-        console.error("[Annotation Reply Stream Error]:", err);
+        if (process.env.NODE_ENV !== "test") {
+          console.error(
+            "[Annotation Answer Stream Error]:",
+            err instanceof Error ? err.name : "unknown"
+          );
+        }
+        const errorCode =
+          err instanceof AiError ? err.category : "reply_stream_failed";
         try {
+          await db.annotationMessage.update({
+            where: { id: assistantMessage.id },
+            data: { status: "FAILED" },
+          });
           await release(billedAccountId, generationId, releaseKey);
           await db.generation.update({
             where: { id: generationId },
-            data: {
-              status: "FAILED",
-              finishedAt: new Date(),
-              errorCode: "reply_stream_failed",
-            },
+            data: { status: "FAILED", finishedAt: new Date(), errorCode },
           });
         } catch {
           // Ignore secondary cleanup error
         }
 
-        controller.enqueue(
-          encoder.encode(formatSSEEvent("status", { stage: "failed" }))
-        );
-        controller.enqueue(
-          encoder.encode(
-            formatSSEEvent("error", {
-              code: "reply_error",
-              message:
-                err instanceof Error ? err.message : "Annotation reply failed",
-            })
-          )
-        );
-        controller.close();
+        send("status", { stage: "failed" });
+        send("error", {
+          code: "reply_error",
+          message:
+            err instanceof AiError
+              ? err.safeMessage
+              : "The answer could not be generated",
+        });
+        close();
       }
     },
   });
@@ -1222,6 +1230,7 @@ export async function createAndStreamAnnotationReply(
     stream,
     generationId,
     annotationId: targetAnnotation.id,
+    messageId: assistantMessage.id,
   };
 }
 

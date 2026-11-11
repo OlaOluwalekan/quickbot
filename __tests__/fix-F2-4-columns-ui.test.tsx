@@ -182,7 +182,7 @@ describe("F2.4 — Ask answer streaming", () => {
       expect.objectContaining({ status: "done", text: "Hello world" })
     );
     expect(global.fetch).toHaveBeenCalledWith(
-      "/api/v1/annotations/ask_1/reply",
+      "/api/v1/annotations/ask_1/answer",
       expect.objectContaining({ method: "POST" })
     );
     expect(changed).toHaveBeenCalled();

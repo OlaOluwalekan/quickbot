@@ -11,7 +11,8 @@ import {
   StreamEvent,
 } from "@/server/ai/types";
 import { setAnnotationCustomProviderForTesting } from "@/server/services/annotation";
-import { POST as replyRoute } from "@/app/api/v1/annotations/[id]/reply/route";
+import { POST as createAnnotationRoute } from "@/app/api/v1/response-versions/[id]/annotations/route";
+import { POST as answerRoute } from "@/app/api/v1/annotations/[id]/answer/route";
 import { POST as messagesRoute } from "@/app/api/v1/annotations/[id]/messages/route";
 import { GET as workspaceAnnotationsRoute } from "@/app/api/v1/workspaces/[id]/annotations/route";
 import { useUiStore } from "@/lib/stores/ui";
@@ -45,6 +46,45 @@ class FakeAnnotationReplyProvider implements AiProvider {
       estimated: false,
     };
   }
+}
+
+/**
+ * "Ask now" as the app does it since F2.5: create the Ask, then ask for its
+ * answer (POST /annotations/:id/answer). Returns the response of the step
+ * that failed, or of the answer.
+ */
+async function askNow(
+  versionId: string,
+  anchor: { exact: string; prefix?: string; suffix?: string },
+  text: string,
+  idempotencyKey: string
+): Promise<Response> {
+  const createRes = await createAnnotationRoute(
+    new NextRequest(
+      `http://localhost/api/v1/response-versions/${versionId}/annotations`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: "ASK", mode: "now", anchor, text }),
+      }
+    ),
+    { params: Promise.resolve({ id: versionId }) }
+  );
+  if (createRes.status >= 300) return createRes;
+  const created = await createRes.json();
+  const id = (created.data ?? created).id as string;
+
+  return answerRoute(
+    new NextRequest(`http://localhost/api/v1/annotations/${id}/answer`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-idempotency-key": idempotencyKey,
+      },
+      body: JSON.stringify({}),
+    }),
+    { params: Promise.resolve({ id }) }
+  );
 }
 
 async function readStream(stream: ReadableStream<Uint8Array>): Promise<string> {
@@ -163,24 +203,12 @@ describe("Step 6.4 — Right panel and reply flow", () => {
     expect(initialResponseCount).toBe(1);
 
     const idempotencyKey = `reply_test_${Date.now()}`;
-    const req = new NextRequest("http://localhost/api/v1/annotations/new/reply", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-idempotency-key": idempotencyKey,
-      },
-      body: JSON.stringify({
-        anchor: {
-          exact: "coordinator failure",
-          prefix: "can block on ",
-          suffix: ".",
-        },
-        versionId,
-        prompt: "Why can it block on coordinator failure?",
-      }),
-    });
-
-    const res = await replyRoute(req, { params: Promise.resolve({ id: "new" }) });
+    const res = await askNow(
+      versionId,
+      { exact: "coordinator failure", prefix: "can block on ", suffix: "." },
+      "Why can it block on coordinator failure?",
+      idempotencyKey
+    );
     expect(res.status).toBe(200);
     expect(res.headers.get("Content-Type")).toContain("text/event-stream");
 
@@ -216,24 +244,16 @@ describe("Step 6.4 — Right panel and reply flow", () => {
     mockActorId = editorId; // Editor has workspace.generate
 
     const idempotencyKey = `collab_reply_${Date.now()}`;
-    const req = new NextRequest("http://localhost/api/v1/annotations/new/reply", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-idempotency-key": idempotencyKey,
+    const res = await askNow(
+      versionId,
+      {
+        exact: "atomic commitment",
+        prefix: "Two-phase commit is an ",
+        suffix: " protocol.",
       },
-      body: JSON.stringify({
-        anchor: {
-          exact: "atomic commitment",
-          prefix: "Two-phase commit is an ",
-          suffix: " protocol.",
-        },
-        versionId,
-        prompt: "What does atomic commitment mean here?",
-      }),
-    });
-
-    const res = await replyRoute(req, { params: Promise.resolve({ id: "new" }) });
+      "What does atomic commitment mean here?",
+      idempotencyKey
+    );
     expect(res.status).toBe(200);
 
     const sseBody = await readStream(res.body!);
@@ -256,18 +276,12 @@ describe("Step 6.4 — Right panel and reply flow", () => {
   it("3. User without generate permission (e.g. commenter or viewer) is forbidden (403)", async () => {
     mockActorId = commenterId; // Commenter cannot generate
 
-    const req = new NextRequest("http://localhost/api/v1/annotations/new/reply", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        idempotencyKey: `fail_${Date.now()}`,
-        anchor: { exact: "atomic commitment" },
-        versionId,
-        prompt: "Try to generate reply",
-      }),
-    });
-
-    const res = await replyRoute(req, { params: Promise.resolve({ id: "new" }) });
+    const res = await askNow(
+      versionId,
+      { exact: "atomic commitment" },
+      "Try to generate reply",
+      `fail_${Date.now()}`
+    );
     expect(res.status).toBe(403);
   });
 
@@ -286,7 +300,7 @@ describe("Step 6.4 — Right panel and reply flow", () => {
     });
 
     const req = new NextRequest(
-      `http://localhost/api/v1/annotations/${existing!.id}/reply`,
+      `http://localhost/api/v1/annotations/${existing!.id}/messages`,
       {
         method: "POST",
         headers: {
@@ -295,11 +309,12 @@ describe("Step 6.4 — Right panel and reply flow", () => {
         },
         body: JSON.stringify({
           prompt: "How can 3PC mitigate this?",
+          stream: true,
         }),
       }
     );
 
-    const res = await replyRoute(req, { params: Promise.resolve({ id: existing!.id }) });
+    const res = await messagesRoute(req, { params: Promise.resolve({ id: existing!.id }) });
     expect(res.status).toBe(200);
 
     const sseBody = await readStream(res.body!);

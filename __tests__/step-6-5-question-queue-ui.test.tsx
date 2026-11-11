@@ -26,6 +26,12 @@ jest.mock("../lib/stores/ui", () => ({
 }));
 
 // Mock sonner toast
+jest.mock("next-intl", () => ({
+  useTranslations:
+    () => (key: string, values?: Record<string, string | number>) =>
+      values ? `${key}:${Object.values(values).join(",")}` : key,
+}));
+
 jest.mock("sonner", () => ({
   toast: {
     success: jest.fn(),
@@ -109,6 +115,20 @@ describe("Step 6.5 — QuestionQueuePopover UI", () => {
         createdAt: new Date().toISOString(),
         messages: [{ id: "m-1", role: "USER", content: "Is this tested?", createdAt: new Date().toISOString() }],
       },
+      // F2.5: a question asked inside an Ask answer shows its level.
+      {
+        id: "q-2",
+        workspaceId: "ws-123",
+        responseId: null,
+        versionId: null,
+        targetType: "ANNOTATION_MESSAGE",
+        depth: 1,
+        kind: "ASK",
+        questionState: "QUEUED",
+        anchorExact: "nested passage",
+        createdAt: new Date().toISOString(),
+        messages: [{ id: "m-2", role: "USER", content: "A nested one?", createdAt: new Date().toISOString() }],
+      },
     ];
 
     mockApi.mockResolvedValue(mockQuestions);
@@ -116,7 +136,7 @@ describe("Step 6.5 — QuestionQueuePopover UI", () => {
     renderWithClient(<QuestionQueuePopover workspaceId="ws-123" />);
 
     await waitFor(() => {
-      expect(screen.getByTestId("composer-queue-badge")).toHaveTextContent("1");
+      expect(screen.getByTestId("composer-queue-badge")).toHaveTextContent("2");
     });
 
     // Click button to open popover
@@ -127,7 +147,10 @@ describe("Step 6.5 — QuestionQueuePopover UI", () => {
       expect(screen.getByText("passage snippet for testing", { exact: false })).toBeInTheDocument();
       expect(screen.getByText("Is this tested?")).toBeInTheDocument();
       expect(screen.getByTestId("composer-queue-ask-all")).toBeInTheDocument();
-      expect(screen.getByText("Ask all (1)")).toBeInTheDocument();
+      expect(screen.getByText("Ask all (2)")).toBeInTheDocument();
+      // Only the nested question carries a level label.
+      expect(screen.getAllByText(/^queueLevel/)).toHaveLength(1);
+      expect(screen.getByText("queueLevel:2")).toBeInTheDocument();
       expect(screen.getByText(/credits/i)).toBeInTheDocument();
     });
   });
