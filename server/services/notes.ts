@@ -29,7 +29,7 @@ export async function listWorkspaceNotes(
   const canComment = capabilities.has("workspace.comment");
 
   const all = await db.workspaceNote.findMany({
-    where: { workspaceId },
+    where: { workspaceId, deletedAt: null },
     orderBy: { createdAt: "desc" },
     select: {
       id: true,
@@ -49,13 +49,7 @@ export async function listWorkspaceNotes(
 
   // No email here: every workspace reader can open this list.
   const authors = await db.user.findMany({
-    where: {
-      id: {
-        in: Array.from(
-          new Set(notes.flatMap((n) => (n.createdById ? [n.createdById] : [])))
-        ),
-      },
-    },
+    where: { id: { in: Array.from(new Set(notes.map((n) => n.createdById))) } },
     select: { id: true, name: true, username: true, image: true },
   });
   const authorMap = new Map(authors.map((a) => [a.id, a]));
@@ -63,7 +57,7 @@ export async function listWorkspaceNotes(
   return {
     overBudget,
     notes: notes.map((n) => {
-      const author = n.createdById ? authorMap.get(n.createdById) : undefined;
+      const author = authorMap.get(n.createdById);
       return {
         id: n.id,
         annotationId: n.annotationId,
@@ -94,7 +88,8 @@ async function requireManageableNote(actor: Actor, noteId: string) {
     include: { annotation: { select: { deletedAt: true } } },
   });
 
-  if (!note) {
+  // A note of a deleted account is gone for everyone.
+  if (!note || note.deletedAt !== null) {
     throw Errors.notFound("Note");
   }
 

@@ -105,6 +105,7 @@ export async function listAnnotationsForResponse(
         },
       },
       notes: {
+        where: { deletedAt: null },
         select: { id: true, status: true },
       },
       createdBy: {
@@ -169,6 +170,7 @@ export async function listAnnotationsForMessage(actor: Actor, messageId: string)
         },
       },
       notes: {
+        where: { deletedAt: null },
         select: { id: true, status: true },
       },
       createdBy: {

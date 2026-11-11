@@ -5,7 +5,9 @@
  * - the annotation lists carry each annotation's Klecx notes (id + status),
  *   so the gutter mark follows the note (an archived note has no mark);
  * - foreign keys on `workspace_notes.message_id`, `workspace_notes.created_by_id`
- *   and `annotations.root_annotation_id` (migration 20261111_annotation_foreign_keys).
+ *   and `annotations.root_annotation_id` (migration 20261111_annotation_foreign_keys);
+ * - deleting an account is a soft delete that also soft-deletes the notes that
+ *   person wrote (migration 20261111_soft_delete_users_and_notes).
  */
 
 import crypto from "node:crypto";
@@ -21,6 +23,8 @@ import {
   listWorkspaceNotes,
   updateWorkspaceNoteStatus,
 } from "@/server/services/notes";
+import { softDeleteUser } from "@/server/services/account-deletion";
+import { loadActiveNotes } from "@/server/ai/notes";
 import type { Actor } from "@/server/auth/session";
 
 import { Resend } from "resend";
@@ -224,36 +228,6 @@ describe("Fix F2.6 — notes on annotation lists and annotation foreign keys", (
       expect(await db.workspaceNote.findUnique({ where: { id: note.id } })).toBeNull();
     });
 
-    it("keeps a note when its author's account is deleted", async () => {
-      const annot = await createAnnotation(ownerActor, versionId, {
-        kind: "COMMENT",
-        visibility: "WORKSPACE",
-        anchor: { exact: "three times", prefix: "", suffix: "" },
-        text: "How many?",
-      });
-      const reply = await createAnnotationMessage(
-        leaverActor,
-        annot.id,
-        "@klecx say up to three times"
-      );
-      const note = await db.workspaceNote.findUniqueOrThrow({
-        where: { messageId: reply.id },
-      });
-      expect(note.createdById).toBe(leaverActor.userId);
-
-      await db.notification.deleteMany({ where: { userId: leaverActor.userId } });
-      await db.activityLog.deleteMany({ where: { actorId: leaverActor.userId } });
-      await db.user.delete({ where: { id: leaverActor.userId } });
-
-      const kept = await db.workspaceNote.findUniqueOrThrow({ where: { id: note.id } });
-      expect(kept.createdById).toBeNull();
-
-      const listed = await listWorkspaceNotes(ownerActor, workspaceId);
-      const row = listed.notes.find((n) => n.id === note.id)!;
-      expect(row.instruction).toBe("say up to three times");
-      expect(row.author).toEqual({ name: null, username: null, image: null });
-    });
-
     it("refuses a note whose message does not exist", async () => {
       const annot = await db.annotation.findFirstOrThrow({ where: { workspaceId } });
       await expect(
@@ -286,6 +260,95 @@ describe("Fix F2.6 — notes on annotation lists and annotation foreign keys", (
           },
         })
       ).rejects.toThrow();
+    });
+  });
+
+  describe("soft delete of an account and its notes", () => {
+    let annotationId: string;
+    let leaverNoteId: string;
+    let memberNoteId: string;
+    let firstDeletedAt: Date;
+
+    beforeAll(async () => {
+      const annot = await createAnnotation(ownerActor, versionId, {
+        kind: "COMMENT",
+        visibility: "WORKSPACE",
+        anchor: { exact: "three times", prefix: "", suffix: "" },
+        text: "How many?",
+      });
+      annotationId = annot.id;
+      const leaverReply = await createAnnotationMessage(
+        leaverActor,
+        annot.id,
+        "@klecx say up to three times"
+      );
+      const memberReply = await createAnnotationMessage(
+        memberActor,
+        annot.id,
+        "@klecx spell numbers out"
+      );
+      leaverNoteId = (
+        await db.workspaceNote.findUniqueOrThrow({ where: { messageId: leaverReply.id } })
+      ).id;
+      memberNoteId = (
+        await db.workspaceNote.findUniqueOrThrow({ where: { messageId: memberReply.id } })
+      ).id;
+    });
+
+    it("marks the account and its notes as deleted without removing any row", async () => {
+      expect(await loadActiveNotes(workspaceId)).toContain("say up to three times");
+
+      const result = await softDeleteUser(leaverActor.userId);
+      firstDeletedAt = result.deletedAt;
+      expect(result.notesDeleted).toBe(1);
+
+      const user = await db.user.findUniqueOrThrow({ where: { id: leaverActor.userId } });
+      expect(user.deletedAt).toEqual(firstDeletedAt);
+      expect(user.email).toBe(leaverActor.email);
+
+      const note = await db.workspaceNote.findUniqueOrThrow({ where: { id: leaverNoteId } });
+      expect(note.deletedAt).toEqual(firstDeletedAt);
+      expect(note.createdById).toBe(leaverActor.userId);
+      expect(note.instruction).toBe("say up to three times");
+    });
+
+    it("leaves the notes of other people alone", async () => {
+      const note = await db.workspaceNote.findUniqueOrThrow({ where: { id: memberNoteId } });
+      expect(note.deletedAt).toBeNull();
+    });
+
+    it("hides a deleted note from the notes list, the annotation mark and the prompt", async () => {
+      const listed = await listWorkspaceNotes(ownerActor, workspaceId);
+      const ids = listed.notes.map((n) => n.id);
+      expect(ids).not.toContain(leaverNoteId);
+      expect(ids).toContain(memberNoteId);
+
+      const annotations = await listAnnotationsForResponse(ownerActor, responseId);
+      expect(annotations.find((a) => a.id === annotationId)!.notes).toEqual([
+        { id: memberNoteId, status: "ACTIVE" },
+      ]);
+
+      const prompt = await loadActiveNotes(workspaceId);
+      expect(prompt).not.toContain("say up to three times");
+      expect(prompt).toContain("spell numbers out");
+    });
+
+    it("answers 404 when someone tries to manage a deleted note", async () => {
+      await expect(
+        updateWorkspaceNoteStatus(ownerActor, leaverNoteId, "ARCHIVED")
+      ).rejects.toMatchObject({ status: 404 });
+    });
+
+    it("keeps the first deletion date when called again", async () => {
+      const again = await softDeleteUser(leaverActor.userId);
+      expect(again.deletedAt).toEqual(firstDeletedAt);
+      expect(again.notesDeleted).toBe(0);
+    });
+
+    it("answers 404 for an account that does not exist", async () => {
+      await expect(softDeleteUser(crypto.randomUUID())).rejects.toMatchObject({
+        status: 404,
+      });
     });
   });
 });
