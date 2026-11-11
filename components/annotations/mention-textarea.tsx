@@ -4,6 +4,11 @@ import * as React from "react";
 import { useTranslations } from "next-intl";
 import Logo from "@/components/logo/Logo";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api/client";
 
@@ -366,14 +371,125 @@ MentionTextarea.displayName = "MentionTextarea";
 // `@` must start a word, so e-mail addresses are left alone.
 const MENTION_SPLIT_RE = /(?<=^|[\s(])(@[a-zA-Z][a-zA-Z0-9_]{2,29})\b/g;
 
+// One lookup per workspace + username for the lifetime of the page.
+const mentionProfiles = new Map<string, Promise<MentionItem | null>>();
+
+function loadMentionProfile(
+  workspaceId: string,
+  username: string
+): Promise<MentionItem | null> {
+  const key = `${workspaceId}:${username.toLowerCase()}`;
+  let pending = mentionProfiles.get(key);
+  if (!pending) {
+    pending = api<MentionItem[]>(
+      `/api/v1/workspaces/${workspaceId}/mentionables?q=${encodeURIComponent(username)}`
+    )
+      .then(
+        (items) =>
+          (items || []).find(
+            (i) =>
+              i.kind === "user" &&
+              i.username?.toLowerCase() === username.toLowerCase()
+          ) ?? null
+      )
+      .catch(() => {
+        // Not cached, so the next hover tries again.
+        mentionProfiles.delete(key);
+        return null;
+      });
+    mentionProfiles.set(key, pending);
+  }
+  return pending;
+}
+
+/**
+ * `@username` in a saved comment: a highlighted chip with a small profile
+ * card (avatar, name, username) on hover and on keyboard focus (F2.2).
+ * The profile is loaded the first time the card opens.
+ */
+function MentionChip({
+  username,
+  workspaceId,
+  focusable,
+}: {
+  username: string;
+  workspaceId?: string;
+  focusable: boolean;
+}) {
+  const t = useTranslations("Annotations.toolbar");
+  const [open, setOpen] = React.useState(false);
+  // undefined = not loaded yet, null = not a member (any more)
+  const [profile, setProfile] = React.useState<MentionItem | null | undefined>(
+    undefined
+  );
+
+  React.useEffect(() => {
+    if (!open || !workspaceId || profile !== undefined) return;
+    let active = true;
+    loadMentionProfile(workspaceId, username).then((p) => {
+      if (active) setProfile(p);
+    });
+    return () => {
+      active = false;
+    };
+  }, [open, workspaceId, username, profile]);
+
+  const chip = (
+    <span
+      data-mention={username}
+      tabIndex={workspaceId && focusable ? 0 : undefined}
+      className="text-accent font-medium rounded-sm focus-visible:outline-2 focus-visible:outline-ring"
+    >
+      @{username}
+    </span>
+  );
+
+  if (!workspaceId) return chip;
+
+  const name = profile?.displayName || profile?.username || username;
+
+  return (
+    <Tooltip open={open} onOpenChange={setOpen}>
+      <TooltipTrigger asChild>{chip}</TooltipTrigger>
+      <TooltipContent
+        data-testid="mention-hovercard"
+        className="flex max-w-60 items-center gap-2 px-2.5 py-2 font-normal"
+      >
+        {profile === undefined ? (
+          <span className="text-fg-muted">{t("mentionLoading")}</span>
+        ) : profile === null ? (
+          <span className="text-fg-muted">{t("mentionNotMember")}</span>
+        ) : (
+          <>
+            <Avatar className="border-border h-7 w-7 shrink-0 border">
+              {profile.avatarUrl && <AvatarImage src={profile.avatarUrl} alt="" />}
+              <AvatarFallback className="bg-surface-2 text-[11px] font-medium">
+                {name.slice(0, 1).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <span className="min-w-0">
+              <span className="text-fg block truncate font-medium">{name}</span>
+              <span className="text-fg-muted block truncate text-[11px]">
+                @{profile.username}
+              </span>
+            </span>
+          </>
+        )}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
 /**
  * Renders plain text with mention tokens converted into rich spans/chips.
  * - `@klecx` -> accent chip with `klecxNotedLabel` ("Klecx noted this")
- * - `@username` -> highlighted span
+ * - `@username` -> highlighted chip; with a `workspaceId` it shows a profile
+ *   card on hover/focus (`focusable: false` when the text sits inside a button)
  */
 export function renderMentions(
   text: string,
-  klecxNotedLabel: string
+  klecxNotedLabel: string,
+  options: { workspaceId?: string; focusable?: boolean } = {}
 ): React.ReactNode {
   if (!text) return null;
 
@@ -396,13 +512,12 @@ export function renderMentions(
     }
 
     return (
-      <span
+      <MentionChip
         key={index}
-        data-mention={part.slice(1)}
-        className="text-accent font-medium"
-      >
-        {part}
-      </span>
+        username={part.slice(1)}
+        workspaceId={options.workspaceId}
+        focusable={options.focusable ?? true}
+      />
     );
   });
 }
@@ -410,12 +525,20 @@ export function renderMentions(
 export function RenderMentions({
   text,
   className,
+  workspaceId,
+  focusable = true,
 }: {
   text: string;
   className?: string;
+  /** Needed for the profile card of `@name` chips. */
+  workspaceId?: string;
+  /** Set to false when the text is rendered inside a button. */
+  focusable?: boolean;
 }) {
   const t = useTranslations("Annotations.toolbar");
   return (
-    <span className={className}>{renderMentions(text, t("klecxNoted"))}</span>
+    <span className={className}>
+      {renderMentions(text, t("klecxNoted"), { workspaceId, focusable })}
+    </span>
   );
 }

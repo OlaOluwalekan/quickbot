@@ -33,11 +33,21 @@ import { useThreadStackStore } from "@/lib/stores/thread-stack";
 import { useUiStore } from "@/lib/stores/ui";
 import type { AnnotationItem } from "@/components/annotations/right-panel";
 
-jest.mock("next-intl", () => ({
-  useTranslations:
-    () => (key: string, values?: Record<string, string | number>) =>
-      values ? `${key}:${Object.values(values).join(",")}` : key,
-}));
+// The preview card is read in English; other components show their keys.
+jest.mock("next-intl", () => {
+  const actual = jest.requireActual("next-intl");
+  const en = jest.requireActual("../messages/en.json");
+  return {
+    ...actual,
+    useTranslations: (namespace?: string) =>
+      namespace === "Annotations.preview"
+        ? actual.createTranslator({ locale: "en", messages: en, namespace })
+        : (key: string, values?: Record<string, string | number>) =>
+            values ? `${key}:${Object.values(values).join(",")}` : key,
+    useFormatter: () => actual.createFormatter({ locale: "en" }),
+    useNow: () => new Date(),
+  };
+});
 
 jest.mock("next/navigation", () => ({
   usePathname: () => "/workspaces/ws_1",
@@ -48,6 +58,18 @@ jest.mock("next/navigation", () => ({
 jest.mock("../lib/api/client", () => ({
   api: jest.fn().mockResolvedValue([]),
 }));
+
+// jsdom has no PointerEvent: without it pointer events carry no coordinates.
+if (typeof window.PointerEvent === "undefined") {
+  class PointerEventPolyfill extends MouseEvent {
+    pointerType: string;
+    constructor(type: string, init: PointerEventInit = {}) {
+      super(type, init);
+      this.pointerType = init.pointerType ?? "mouse";
+    }
+  }
+  (window as unknown as { PointerEvent: unknown }).PointerEvent = PointerEventPolyfill;
+}
 
 class MockHighlight {
   public ranges: Range[];
@@ -319,7 +341,7 @@ describe("Step F2.6 — Indicators, hover View, and default-closed workspace", (
       fireEvent.focus(screen.getByTestId("gutter-dot"));
     });
     act(() => {
-      fireEvent.click(screen.getByRole("button", { name: /view more/i }));
+      fireEvent.click(screen.getByRole("button", { name: "View" }));
     });
     expect(useThreadStackStore.getState().stack).toEqual([
       { kind: "annotation", id: "l1_annot" },
@@ -345,7 +367,7 @@ describe("Step F2.6 — Indicators, hover View, and default-closed workspace", (
       fireEvent.focus(screen.getByTestId("gutter-dot"));
     });
     act(() => {
-      fireEvent.click(screen.getByRole("button", { name: /view more/i }));
+      fireEvent.click(screen.getByRole("button", { name: "View" }));
     });
     expect(useThreadStackStore.getState().stack).toEqual([
       { kind: "annotation", id: "l1_annot" },
@@ -372,7 +394,7 @@ describe("Step F2.6 — Indicators, hover View, and default-closed workspace", (
       fireEvent.focus(screen.getByTestId("gutter-dot"));
     });
     act(() => {
-      fireEvent.click(screen.getByRole("button", { name: /view more/i }));
+      fireEvent.click(screen.getByRole("button", { name: "View" }));
     });
     expect(useThreadStackStore.getState().stack).toEqual([
       { kind: "annotation", id: "l1_annot" },
@@ -504,6 +526,183 @@ describe("Step F2.6 — Indicators, hover View, and default-closed workspace", (
 
     expect(highlightsMap.get("annot-comment")?.ranges).toHaveLength(50);
     expect(highlightsMap.get("annot-ask")?.ranges).toHaveLength(50);
+  });
+
+  describe("preview card: when and where it opens", () => {
+    const text = "Raft keeps a replicated log consistent across servers.";
+    const LINE = { top: 100, left: 100, bottom: 120, right: 200, width: 100, height: 20 };
+    let originalRects: typeof Range.prototype.getClientRects;
+
+    function hoverSetup() {
+      const annot = makeAnnot({ id: "c_hover", anchorExact: "replicated log" });
+      const view = render(
+        <AnnotationLayer responseId="resp_1" versionId="ver_1" content={text} annotations={[annot]}>
+          <p>{text}</p>
+        </AnnotationLayer>
+      );
+      const textNode = view.container.querySelector("p")!.firstChild as Text;
+      // The browser answers with the *nearest* text position, wherever the pointer is.
+      (document as unknown as { caretPositionFromPoint: unknown }).caretPositionFromPoint =
+        () => ({ offsetNode: textNode, offset: text.indexOf("replicated") + 2 });
+      return view.container.firstChild as HTMLElement;
+    }
+
+    function moveTo(root: HTMLElement, clientX: number, clientY: number) {
+      act(() => {
+        fireEvent.pointerMove(root, { clientX, clientY });
+        jest.advanceTimersByTime(400);
+      });
+    }
+
+    beforeEach(() => {
+      jest.useFakeTimers();
+      originalRects = Range.prototype.getClientRects;
+      Range.prototype.getClientRects = () =>
+        [{ ...LINE, x: LINE.left, y: LINE.top, toJSON: () => ({}) }] as unknown as DOMRectList;
+    });
+
+    afterEach(() => {
+      jest.clearAllTimers();
+      jest.useRealTimers();
+      Range.prototype.getClientRects = originalRects;
+      delete (document as unknown as { caretPositionFromPoint?: unknown }).caretPositionFromPoint;
+    });
+
+    it("opens when the pointer is on the highlighted text", () => {
+      const root = hoverSetup();
+      moveTo(root, 150, 110);
+      expect(screen.getByRole("dialog", { name: "Annotation preview" })).toBeInTheDocument();
+    });
+
+    it("stays closed when the pointer is in empty space next to the highlight", () => {
+      const root = hoverSetup();
+      moveTo(root, 420, 110);
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      moveTo(root, 150, 300);
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+
+    it("opens again when the pointer leaves the card and goes back onto the same passage", () => {
+      const root = hoverSetup();
+      moveTo(root, 150, 110);
+      const card = screen.getByRole("dialog", { name: "Annotation preview" });
+
+      act(() => {
+        fireEvent.pointerEnter(card);
+        fireEvent.pointerLeave(card);
+      });
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+      moveTo(root, 152, 110);
+      expect(screen.getByRole("dialog", { name: "Annotation preview" })).toBeInTheDocument();
+    });
+
+    it("stays closed after Escape while the pointer rests on the passage", () => {
+      const root = hoverSetup();
+      moveTo(root, 150, 110);
+      act(() => {
+        fireEvent.keyDown(window, { key: "Escape" });
+      });
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+      moveTo(root, 152, 110);
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+
+    it("moves the focus into the card on Enter and back to the gutter dot on Escape", () => {
+      hoverSetup();
+      const dot = screen.getByTestId("gutter-dot");
+      act(() => {
+        dot.focus();
+      });
+      expect(screen.getByRole("dialog", { name: "Annotation preview" })).toBeInTheDocument();
+      expect(document.activeElement).toBe(dot);
+
+      act(() => {
+        fireEvent.keyDown(dot, { key: "Enter" });
+      });
+      act(() => {
+        jest.advanceTimersByTime(50);
+      });
+      expect(document.activeElement).toBe(screen.getByRole("button", { name: "View" }));
+
+      act(() => {
+        fireEvent.keyDown(window, { key: "Escape" });
+      });
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(document.activeElement).toBe(dot);
+    });
+  });
+
+  it("re-anchors highlights when the text nodes are replaced after the first paint", async () => {
+    const code = "const retries = 3;";
+    function LateHighlightedCode() {
+      const [html, setHtml] = React.useState<string | null>(null);
+      return (
+        <pre>
+          <button type="button" data-annot-ignore="true" onClick={() => setHtml(`<span>const</span> retries = 3;`)}>
+            highlight
+          </button>
+          {html ? <code dangerouslySetInnerHTML={{ __html: html }} /> : <code>{code}</code>}
+        </pre>
+      );
+    }
+
+    render(
+      <AnnotationLayer
+        responseId="resp_1"
+        versionId="ver_1"
+        content={code}
+        annotations={[makeAnnot({ id: "c_code", anchorExact: "retries = 3" })]}
+      >
+        <LateHighlightedCode />
+      </AnnotationLayer>
+    );
+    const before = highlightsMap.get("annot-comment")!.ranges[0]!;
+    expect(before.toString()).toBe("retries = 3");
+
+    // What a syntax highlighter does: it swaps the text for coloured spans.
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "highlight" }));
+      await new Promise((resolve) => setTimeout(resolve, 60));
+    });
+
+    const after = highlightsMap.get("annot-comment")!.ranges[0]!;
+    expect(after).not.toBe(before);
+    expect(after.collapsed).toBe(false);
+    expect(after.toString()).toBe("retries = 3");
+  });
+
+  it("shows no Klecx mark when the note of the annotation was archived", () => {
+    const text = "Always enforce idempotency keys on retries.";
+    render(
+      <AnnotationLayer
+        responseId="resp_1"
+        versionId="ver_1"
+        content={text}
+        annotations={[
+          makeAnnot({
+            id: "c_archived",
+            anchorExact: "idempotency keys",
+            notes: [{ id: "note_1", status: "ARCHIVED" }],
+            messages: [
+              {
+                id: "m_archived",
+                role: "USER",
+                content: "@klecx Remember idempotency keys.",
+                createdAt: new Date().toISOString(),
+                mentions: [{ isKlecx: true }],
+              },
+            ],
+          }),
+        ]}
+      >
+        <p>{text}</p>
+      </AnnotationLayer>
+    );
+
+    expect(screen.getByTestId("gutter-dot")).toBeInTheDocument();
+    expect(screen.queryByTestId("gutter-klecx-mark")).not.toBeInTheDocument();
   });
 
   it("keeps workspace default-closed on load (no column, no drawer, even with stale storage)", () => {

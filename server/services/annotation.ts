@@ -104,6 +104,9 @@ export async function listAnnotationsForResponse(
           },
         },
       },
+      notes: {
+        select: { id: true, status: true },
+      },
       createdBy: {
         select: { id: true, name: true, email: true, image: true },
       },
@@ -164,6 +167,9 @@ export async function listAnnotationsForMessage(actor: Actor, messageId: string)
             select: { isKlecx: true },
           },
         },
+      },
+      notes: {
+        select: { id: true, status: true },
       },
       createdBy: {
         select: { id: true, name: true, image: true },

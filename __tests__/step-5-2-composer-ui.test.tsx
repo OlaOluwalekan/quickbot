@@ -6,6 +6,9 @@ import { ResponseCard, type ResponseItemData } from "@/components/response/respo
 
 // Mock next-intl
 jest.mock("next-intl", () => ({
+  // Used by the annotation preview card inside AnswerBody (F2.6).
+  useFormatter: () => ({ relativeTime: () => "" }),
+  useNow: () => new Date(),
   useTranslations: () => (key: string, params?: Record<string, any>) => {
     const messages: Record<string, string> = {
       attachFile: "Attach files",

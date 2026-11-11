@@ -1293,7 +1293,29 @@
       "mentionListLabel": "People you can mention",
       "mentionSearching": "Searching members…",
       "mentionEmpty": "No members found",
-      "klecxNoted": "Klecx noted this"
+      "klecxNoted": "Klecx noted this",
+      "mentionLoading": "Loading…",
+      "mentionNotMember": "Not a member of this workspace"
+    },
+    "preview": {
+      "ariaLabel": "Annotation preview",
+      "gutterLabel": "{count, plural, one {# annotation on this paragraph} other {# annotations on this paragraph}}",
+      "klecxNoted": "Klecx noted this",
+      "klecxAuthor": "Klecx",
+      "member": "Member",
+      "aiReview": "AI review",
+      "aiReplied": "AI replied",
+      "justNow": "just now",
+      "view": "View",
+      "viewBy": "View annotation by {name}",
+      "viewAll": "View all in drawer ({count})",
+      "state": {
+        "QUEUED": "Queued",
+        "ANSWERING": "Answering",
+        "ANSWERED": "Answered",
+        "FAILED": "Not answered",
+        "CANCELLED": "Cancelled"
+      }
     },
     "panel": {
       "title": "All annotations",

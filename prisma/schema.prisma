@@ -70,6 +70,7 @@ model User {
   receivedTransfers    OwnershipTransfer[] @relation("TransfersReceived")
   memberLimitGrace     MemberLimitGrace?
   annotationMentions   AnnotationMention[]
+  workspaceNotes       WorkspaceNote[]     @relation("WorkspaceNoteCreator")
 
   @@map("users")
 }
@@ -576,6 +577,8 @@ model Annotation {
   targetMessage      AnnotationMessage?  @relation("AnnotationsOnMessage", fields: [targetMessageId], references: [id], onDelete: Cascade)
   parent             Annotation?         @relation("AnnotationChildren", fields: [parentAnnotationId], references: [id], onDelete: Cascade)
   children           Annotation[]        @relation("AnnotationChildren")
+  root               Annotation?         @relation("AnnotationRoot", fields: [rootAnnotationId], references: [id], onDelete: Cascade)
+  descendants        Annotation[]        @relation("AnnotationRoot")
   messages           AnnotationMessage[] @relation("AnnotationThreadMessages")
   promotions         Promotion[]
   notes              WorkspaceNote[]
@@ -606,6 +609,7 @@ model AnnotationMessage {
   promotions     Promotion[]
   annotationsOn  Annotation[]        @relation("AnnotationsOnMessage")
   mentions       AnnotationMention[]
+  note           WorkspaceNote?
 
   @@index([annotationId, createdAt])
   @@map("annotation_messages")
@@ -635,7 +639,7 @@ model WorkspaceNote {
   workspaceId  String     @map("workspace_id")
   annotationId String     @map("annotation_id")
   messageId    String     @unique @map("message_id")
-  createdById  String     @map("created_by_id")
+  createdById  String?    @map("created_by_id")
   quote        String     @db.Text
   instruction  String     @db.Text
   status       NoteStatus @default(ACTIVE)
@@ -643,6 +647,9 @@ model WorkspaceNote {
   archivedAt   DateTime?  @map("archived_at")
   workspace    Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   annotation   Annotation @relation(fields: [annotationId], references: [id], onDelete: Cascade)
+  // The note goes with the message that recorded it; it outlives its author's account.
+  message      AnnotationMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  createdBy    User?      @relation("WorkspaceNoteCreator", fields: [createdById], references: [id], onDelete: SetNull)
 
   @@index([workspaceId, status, createdAt])
   @@index([annotationId])

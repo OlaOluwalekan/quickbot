@@ -250,7 +250,11 @@ export function AllAnnotationsDrawer({
                         </span>
                         <span className="block text-foreground/90 line-clamp-2">
                           {item.kind === "COMMENT" ? (
-                            <RenderMentions text={item.messages[0]?.content || ""} />
+                            <RenderMentions
+                              text={item.messages[0]?.content || ""}
+                              workspaceId={workspaceId}
+                              focusable={false}
+                            />
                           ) : (
                             item.messages[0]?.content
                           )}

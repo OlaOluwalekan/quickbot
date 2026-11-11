@@ -49,7 +49,13 @@ export async function listWorkspaceNotes(
 
   // No email here: every workspace reader can open this list.
   const authors = await db.user.findMany({
-    where: { id: { in: Array.from(new Set(notes.map((n) => n.createdById))) } },
+    where: {
+      id: {
+        in: Array.from(
+          new Set(notes.flatMap((n) => (n.createdById ? [n.createdById] : [])))
+        ),
+      },
+    },
     select: { id: true, name: true, username: true, image: true },
   });
   const authorMap = new Map(authors.map((a) => [a.id, a]));
@@ -57,7 +63,7 @@ export async function listWorkspaceNotes(
   return {
     overBudget,
     notes: notes.map((n) => {
-      const author = authorMap.get(n.createdById);
+      const author = n.createdById ? authorMap.get(n.createdById) : undefined;
       return {
         id: n.id,
         annotationId: n.annotationId,

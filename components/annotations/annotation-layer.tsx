@@ -10,6 +10,7 @@ import {
   Clock,
   Bot,
 } from "lucide-react";
+import { useFormatter, useNow, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -43,19 +44,11 @@ function isAiReview(a: Pick<AnnotationItem, "authorType">): boolean {
 }
 
 function hasKlecxNote(a: Pick<AnnotationItem, "note" | "notes" | "messages">): boolean {
-  if (a.note && (!a.note.status || a.note.status === "ACTIVE")) {
-    return true;
-  }
-  if (a.notes && a.notes.some((n) => !n.status || n.status === "ACTIVE")) {
-    return true;
-  }
-  return Boolean(
-    a.messages?.some(
-      (m) =>
-        m.mentions?.some((x) => x.isKlecx) ||
-        /(?:^|[\s(])@klecx\b/i.test(m.content)
-    )
-  );
+  const active = (n: { status?: string }) => !n.status || n.status === "ACTIVE";
+  // The server sends the notes of the annotation: an archived note has no mark.
+  if (a.notes) return a.notes.some(active);
+  if (a.note) return active(a.note);
+  return Boolean(a.messages?.some((m) => m.mentions?.some((x) => x.isKlecx)));
 }
 
 function displayKind(
@@ -112,6 +105,22 @@ interface ActiveAnnotationItem {
   blockEl?: HTMLElement | null;
 }
 
+/**
+ * What the preview card is attached to: the line of the highlight that is
+ * under the pointer (`offsetX` = pointer position inside that line), or the
+ * gutter dot that opened it.
+ */
+type PreviewAnchor =
+  | { type: "line"; rectIndex: number; offsetX: number }
+  | { type: "dot"; el: HTMLElement };
+
+interface ActivePreview {
+  annotation: AnnotationItem;
+  range: Range;
+  allMatching: AnnotationItem[];
+  anchor: PreviewAnchor;
+}
+
 interface GutterDot {
   id: string;
   top: number;
@@ -122,20 +131,17 @@ interface GutterDot {
   firstRange: Range;
 }
 
-function formatRelativeTime(raw?: string | Date | null): string {
-  if (!raw) return "";
-  try {
-    const d = new Date(raw);
-    const now = Date.now();
-    const diff = Math.floor((now - d.getTime()) / 1000);
-    if (diff < 60) return "just now";
-    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-    return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-  } catch {
-    return "";
-  }
-}
+const EMPTY_RECT = {
+  top: 0,
+  left: 0,
+  bottom: 0,
+  right: 0,
+  width: 0,
+  height: 0,
+  x: 0,
+  y: 0,
+  toJSON: () => ({}),
+} as DOMRect;
 
 function getSafeRangeRect(
   range?: Range | null,
@@ -153,17 +159,94 @@ function getSafeRangeRect(
       if (r) return r;
     } catch {}
   }
+  return EMPTY_RECT;
+}
+
+/** The boxes a highlight is painted in: one per line (and per inline element). */
+function rangeLineRects(range: Range): DOMRect[] {
+  if (typeof range.getClientRects !== "function") return [];
+  try {
+    return Array.from(range.getClientRects()).filter(
+      (r) => r.width > 0 && r.height > 0
+    );
+  } catch {
+    return [];
+  }
+}
+
+const HIT_SLOP = 2;
+
+/**
+ * Index of the smallest box of `range` that contains the point, `null` when
+ * the point is on none of them, or -1 when the range has no boxes to test
+ * (no layout). The caret lookup alone is not enough: it returns the *nearest*
+ * text position, so empty space next to a highlight would also match.
+ */
+function hitLineRect(range: Range, x: number, y: number): number | null {
+  const rects = rangeLineRects(range);
+  if (rects.length === 0) return -1;
+  let best: number | null = null;
+  let bestArea = Infinity;
+  rects.forEach((r, i) => {
+    if (
+      x >= r.left - HIT_SLOP &&
+      x <= r.right + HIT_SLOP &&
+      y >= r.top - HIT_SLOP &&
+      y <= r.bottom + HIT_SLOP
+    ) {
+      const area = r.width * r.height;
+      if (area < bestArea) {
+        best = i;
+        bestArea = area;
+      }
+    }
+  });
+  return best;
+}
+
+/** Where the preview card points at, measured now (it follows scrolling). */
+function previewAnchorRect(
+  preview: ActivePreview,
+  rootEl: HTMLElement | null
+): DOMRect {
+  if (preview.anchor.type === "dot") {
+    return getSafeRangeRect(null, preview.anchor.el);
+  }
+  const line = rangeLineRects(preview.range)[preview.anchor.rectIndex];
+  if (!line) return getSafeRangeRect(preview.range, rootEl);
+  const x = Math.min(
+    line.right,
+    Math.max(line.left, line.left + preview.anchor.offsetX)
+  );
   return {
-    top: 0,
-    left: 0,
-    bottom: 0,
-    right: 0,
+    x,
+    y: line.top,
+    left: x,
+    right: x,
+    top: line.top,
+    bottom: line.bottom,
     width: 0,
-    height: 0,
-    x: 0,
-    y: 0,
-    toJSON: () => {},
+    height: line.height,
+    toJSON: () => ({}),
   } as DOMRect;
+}
+
+/** True when a DOM change happened only inside UI that is not annotatable text. */
+function isIgnoredMutation(m: MutationRecord): boolean {
+  const ignored = (n: Node | null): boolean => {
+    const el = n && n.nodeType === 1 ? (n as Element) : n?.parentElement;
+    return Boolean(el?.closest("[data-annot-ignore]"));
+  };
+  if (ignored(m.target)) return true;
+  if (m.type !== "childList") return false;
+  const changed = [...Array.from(m.addedNodes), ...Array.from(m.removedNodes)];
+  return (
+    changed.length > 0 &&
+    changed.every(
+      (n) =>
+        n.nodeType === 1 && (n as Element).hasAttribute("data-annot-ignore")
+    )
+  );
 }
 
 function truncateText(text: string, maxLen = 140): string {
@@ -178,19 +261,27 @@ function firstLineText(annot: AnnotationItem, maxLen = 140): string {
   return truncateText(firstLine, maxLen);
 }
 
-function authorLabel(annot: AnnotationItem): string {
-  if (isAiReview(annot)) {
-    return annot.createdBy?.name || "Klecx AI";
-  }
+function authorLabel(
+  annot: AnnotationItem,
+  labels: { klecx: string; member: string }
+): string {
+  if (isAiReview(annot)) return labels.klecx;
   const msgAuthor = annot.messages?.[0]?.author;
   return (
     msgAuthor?.name ||
     msgAuthor?.email ||
     annot.createdBy?.name ||
     annot.createdBy?.email ||
-    "User"
+    labels.member
   );
 }
+
+const DISPLAY_PRIORITY: Record<DisplayKind, number> = {
+  REPLY: 4,
+  QUESTION: 3,
+  AI_REVIEW: 2,
+  COMMENT: 1,
+};
 
 function renderKindIcon(dk: DisplayKind, className = "h-3.5 w-3.5 text-accent") {
   if (dk === "AI_REVIEW") return <Bot className={cn("h-3.5 w-3.5 text-warning", className)} />;
@@ -200,6 +291,13 @@ function renderKindIcon(dk: DisplayKind, className = "h-3.5 w-3.5 text-accent") 
 }
 
 const PREVIEW_LIMIT = 5;
+const QUESTION_STATES = new Set([
+  "QUEUED",
+  "ANSWERING",
+  "ANSWERED",
+  "FAILED",
+  "CANCELLED",
+]);
 
 export function AnnotationLayer({
   responseId,
@@ -210,7 +308,11 @@ export function AnnotationLayer({
   children,
   className,
 }: AnnotationLayerProps) {
+  const t = useTranslations("Annotations.preview");
+  const format = useFormatter();
+  const now = useNow();
   const rootRef = React.useRef<HTMLDivElement>(null);
+  const cardRef = React.useRef<HTMLDivElement>(null);
   // Each layer owns its highlights; see lib/annotations/highlight-registry.ts.
   const highlightOwner = React.useId();
   const [internalAnnotations, setInternalAnnotations] = React.useState<
@@ -222,17 +324,20 @@ export function AnnotationLayer({
   const [gutterDots, setGutterDots] = React.useState<GutterDot[]>([]);
 
   // Hover & Popover state
-  const [activePreview, setActivePreview] = React.useState<{
-    annotation: AnnotationItem;
-    range: Range;
-    allMatching: AnnotationItem[];
-    anchorRect?: DOMRect | null;
-  } | null>(null);
+  const [activePreview, setActivePreview] = React.useState<ActivePreview | null>(
+    null
+  );
 
   const activeRangeItemsRef = React.useRef<ActiveAnnotationItem[]>([]);
   const hoverTimerRef = React.useRef<NodeJS.Timeout | null>(null);
   const dismissTimerRef = React.useRef<NodeJS.Timeout | null>(null);
-  const pendingHoverIdRef = React.useRef<string | null>(null);
+  // The passage(s) the pointer is on. While it stays on them the card is not
+  // opened again, so a card closed with Escape or a click does not come back.
+  const pendingHoverKeyRef = React.useRef<string | null>(null);
+  // Set when the card was opened from a gutter dot with the keyboard or a
+  // click: focus then moves into the card, and back to the dot on Escape.
+  const focusCardRef = React.useRef(false);
+  const skipDotFocusRef = React.useRef(false);
   const rafIdRef = React.useRef<number | null>(null);
   const isOverPopoverRef = React.useRef(false);
 
@@ -443,8 +548,46 @@ export function AnnotationLayer({
     return () => ro.disconnect();
   }, [computeRanges]);
 
+  // Recompute when the text nodes are replaced after the first paint (syntax
+  // highlighting of code blocks, late-loading content). A Range whose nodes
+  // were removed collapses, which silently drops its highlight and preview.
+  React.useEffect(() => {
+    const rootEl = rootRef.current;
+    if (!rootEl || typeof MutationObserver === "undefined") return;
+
+    let frame: number | null = null;
+    const mo = new MutationObserver((mutations) => {
+      if (mutations.every(isIgnoredMutation)) return;
+      if (frame !== null) return;
+      frame = requestAnimationFrame(() => {
+        frame = null;
+        computeRanges();
+      });
+    });
+    mo.observe(rootEl, { childList: true, characterData: true, subtree: true });
+    return () => {
+      mo.disconnect();
+      if (frame !== null) cancelAnimationFrame(frame);
+    };
+  }, [computeRanges]);
+
+  const closePreview = React.useCallback(() => {
+    setActivePreview(null);
+    clearHoverHighlight();
+  }, []);
+
+  const scheduleDismiss = () => {
+    if (isOverPopoverRef.current) return;
+    if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
+    dismissTimerRef.current = setTimeout(() => {
+      if (!isOverPopoverRef.current) closePreview();
+    }, 150);
+  };
+
   // 3. Hover detection (pointermove, 250ms debounce, throttled via requestAnimationFrame)
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    // Hovering is for a mouse or pen; touch uses the gutter dots.
+    if (e.pointerType === "touch") return;
     if (rafIdRef.current) {
       cancelAnimationFrame(rafIdRef.current);
     }
@@ -452,99 +595,120 @@ export function AnnotationLayer({
     const clientY = e.clientY;
 
     rafIdRef.current = requestAnimationFrame(() => {
+      rafIdRef.current = null;
       const rootEl = rootRef.current;
       if (!rootEl) return;
 
       const caret = getPointCaret(document, clientX, clientY);
-      if (!caret) return;
 
-      const matches: { annot: AnnotationItem; range: Range }[] = [];
-      for (const item of activeRangeItemsRef.current) {
-        if (isPointInRange(item.range, caret.node, caret.offset)) {
-          matches.push({ annot: item.annot, range: item.range });
+      const matches: { annot: AnnotationItem; range: Range; rectIndex: number }[] = [];
+      if (caret) {
+        for (const item of activeRangeItemsRef.current) {
+          if (!isPointInRange(item.range, caret.node, caret.offset)) continue;
+          const rectIndex = hitLineRect(item.range, clientX, clientY);
+          if (rectIndex === null) continue;
+          matches.push({ annot: item.annot, range: item.range, rectIndex });
         }
       }
 
       if (matches.length > 0) {
-        const PRIORITY: Record<DisplayKind, number> = {
-          REPLY: 4,
-          QUESTION: 3,
-          AI_REVIEW: 2,
-          COMMENT: 1,
-        };
         matches.sort(
           (a, b) =>
-            (PRIORITY[displayKind(b.annot)] ?? 0) -
-            (PRIORITY[displayKind(a.annot)] ?? 0)
+            (DISPLAY_PRIORITY[displayKind(b.annot)] ?? 0) -
+            (DISPLAY_PRIORITY[displayKind(a.annot)] ?? 0)
         );
         const topMatch = matches[0]!;
+        const hoverKey = matches.map((m) => m.annot.id).join("|");
 
-        if (pendingHoverIdRef.current === topMatch.annot.id) {
+        if (dismissTimerRef.current) {
+          clearTimeout(dismissTimerRef.current);
+          dismissTimerRef.current = null;
+        }
+        if (pendingHoverKeyRef.current === hoverKey) {
           return;
         }
 
         if (hoverTimerRef.current) {
           clearTimeout(hoverTimerRef.current);
         }
-        pendingHoverIdRef.current = topMatch.annot.id;
+        pendingHoverKeyRef.current = hoverKey;
 
         hoverTimerRef.current = setTimeout(() => {
-          const rect = getSafeRangeRect(topMatch.range, rootEl);
+          hoverTimerRef.current = null;
+          const line =
+            topMatch.rectIndex >= 0
+              ? rangeLineRects(topMatch.range)[topMatch.rectIndex]
+              : undefined;
+          focusCardRef.current = false;
           setActivePreview({
             annotation: topMatch.annot,
             range: topMatch.range,
             allMatching: matches.map((m) => m.annot),
-            anchorRect: rect,
+            anchor: {
+              type: "line",
+              rectIndex: line ? topMatch.rectIndex : -1,
+              offsetX: line ? clientX - line.left : 0,
+            },
           });
           setHoverHighlight(topMatch.range);
         }, 250);
       } else {
-        pendingHoverIdRef.current = null;
+        pendingHoverKeyRef.current = null;
         if (hoverTimerRef.current) {
           clearTimeout(hoverTimerRef.current);
           hoverTimerRef.current = null;
         }
-
-        if (!isOverPopoverRef.current && activePreview) {
-          if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
-          dismissTimerRef.current = setTimeout(() => {
-            if (!isOverPopoverRef.current) {
-              setActivePreview(null);
-              clearHoverHighlight();
-            }
-          }, 150);
-        }
+        scheduleDismiss();
       }
     });
   };
 
   const handlePointerLeave = () => {
-    pendingHoverIdRef.current = null;
+    pendingHoverKeyRef.current = null;
+    if (rafIdRef.current) {
+      cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = null;
+    }
     if (hoverTimerRef.current) {
       clearTimeout(hoverTimerRef.current);
       hoverTimerRef.current = null;
     }
-    if (!isOverPopoverRef.current && activePreview) {
-      if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
-      dismissTimerRef.current = setTimeout(() => {
-        if (!isOverPopoverRef.current) {
-          setActivePreview(null);
-          clearHoverHighlight();
-        }
-      }, 150);
-    }
+    scheduleDismiss();
   };
 
-  // Keyboard Escape listener
+  // Escape closes the card. When it was opened from a gutter dot and used
+  // with the keyboard, the focus goes back to the dot (without opening the
+  // card again).
+  const handleEscape = React.useCallback(() => {
+    if (!activePreview) return;
+    if (
+      activePreview.anchor.type === "dot" &&
+      cardRef.current?.contains(document.activeElement)
+    ) {
+      skipDotFocusRef.current = true;
+      activePreview.anchor.el.focus();
+    }
+    closePreview();
+  }, [activePreview, closePreview]);
+
   React.useEffect(() => {
+    if (!activePreview) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && activePreview) {
-        setActivePreview(null);
-        clearHoverHighlight();
-      }
+      if (e.key === "Escape") handleEscape();
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [activePreview, handleEscape]);
+
+  // A card opened from a gutter dot with Enter, Space or a click takes the
+  // focus, so its "View" buttons can be reached without a mouse.
+  React.useEffect(() => {
+    if (!activePreview || !focusCardRef.current) return;
+    focusCardRef.current = false;
+    const frame = requestAnimationFrame(() => {
+      cardRef.current?.querySelector<HTMLElement>("button")?.focus();
+    });
+    return () => cancelAnimationFrame(frame);
   }, [activePreview]);
 
   // Clean up timers on unmount
@@ -558,9 +722,9 @@ export function AnnotationLayer({
     };
   }, [highlightOwner]);
 
-  // 4. Action: "View" / "View more" opens the annotation's column right after
-  // the column this text sits in (0 = main conversation, 1 = L1, 2 = L2...).
-  const handleViewMore = (annot: AnnotationItem) => {
+  // 4. Action: "View" opens the annotation's column right after the column
+  // this text sits in (0 = main conversation, 1 = L1, 2 = L2...).
+  const handleView = (annot: AnnotationItem) => {
     const columnAttr = rootRef.current
       ?.closest("[data-thread-column-index]")
       ?.getAttribute("data-thread-column-index");
@@ -568,28 +732,66 @@ export function AnnotationLayer({
     const store = useThreadStackStore.getState();
     store.rememberQuotes([{ id: annot.id, quote: annot.anchorExact }]);
     store.open({ kind: "annotation", id: annot.id }, { fromIndex });
-    setActivePreview(null);
-    clearHoverHighlight();
+    closePreview();
   };
 
   const handleViewAllInDrawer = () => {
     useUiStore.getState().setRightPanelOpen(true);
-    setActivePreview(null);
-    clearHoverHighlight();
+    closePreview();
   };
 
-  // 5. Gutter dot click / focus / keyboard activator
-  const handleGutterDotActivate = (dot: GutterDot) => {
-    const annot = dot.annotations[0]!;
-    const rect = getSafeRangeRect(dot.firstRange, rootRef.current);
+  // 5. Gutter dot: focus or hover shows the card; Enter, Space or a click
+  // also moves the focus into it.
+  const handleGutterDotActivate = (
+    dot: GutterDot,
+    el: HTMLElement,
+    moveFocus: boolean
+  ) => {
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
+    if (dismissTimerRef.current) {
+      clearTimeout(dismissTimerRef.current);
+      dismissTimerRef.current = null;
+    }
+    focusCardRef.current = moveFocus;
     setActivePreview({
-      annotation: annot,
+      annotation: dot.annotations[0]!,
       range: dot.firstRange,
       allMatching: dot.annotations,
-      anchorRect: rect,
+      anchor: { type: "dot", el },
     });
     setHoverHighlight(dot.firstRange);
   };
+
+  // The card is positioned against a virtual element measured on demand, so
+  // it stays on the hovered line while the page or a column scrolls.
+  const anchorRef = React.useMemo(
+    () => ({
+      current: {
+        getBoundingClientRect: () =>
+          activePreview
+            ? previewAnchorRect(activePreview, rootRef.current)
+            : EMPTY_RECT,
+        get contextElement() {
+          return rootRef.current ?? undefined;
+        },
+      },
+    }),
+    [activePreview]
+  );
+
+  const authorLabels = { klecx: t("klecxAuthor"), member: t("member") };
+  const relativeTime = (raw?: string | Date | null): string => {
+    if (!raw) return "";
+    const d = new Date(raw);
+    if (Number.isNaN(d.getTime())) return "";
+    if (now.getTime() - d.getTime() < 60_000) return t("justNow");
+    return format.relativeTime(d, now);
+  };
+  const stateLabel = (state: string): string =>
+    QUESTION_STATES.has(state) ? t(`state.${state}`) : state;
 
   const targetAnnot = activePreview?.annotation;
   const kind = targetAnnot ? displayKind(targetAnnot) : undefined;
@@ -603,7 +805,9 @@ export function AnnotationLayer({
       ? targetAnnot.messages[0]
       : null;
   const commentText = commentMessage?.content || targetAnnot?.anchorExact || "";
-  const authorName = targetAnnot ? authorLabel(targetAnnot) : "User";
+  const authorName = targetAnnot
+    ? authorLabel(targetAnnot, authorLabels)
+    : authorLabels.member;
 
   const replyUserMsg =
     targetAnnot?.messages?.find((m) => m.role === "USER") ||
@@ -670,15 +874,21 @@ export function AnnotationLayer({
               tabIndex={0}
               data-annot-ignore="true"
               data-testid="gutter-dot"
-              aria-label={`${dot.count} annotation${dot.count > 1 ? "s" : ""} on this paragraph`}
+              aria-label={t("gutterLabel", { count: dot.count })}
               className="pointer-events-auto absolute -right-2 sm:-right-4 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full bg-surface border border-border shadow-sm hover:border-accent hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent transition-all cursor-pointer"
               style={{ top: `${dot.top}px` }}
-              onClick={() => handleGutterDotActivate(dot)}
-              onFocus={() => handleGutterDotActivate(dot)}
+              onClick={(e) => handleGutterDotActivate(dot, e.currentTarget, true)}
+              onFocus={(e) => {
+                if (skipDotFocusRef.current) {
+                  skipDotFocusRef.current = false;
+                  return;
+                }
+                handleGutterDotActivate(dot, e.currentTarget, false);
+              }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
-                  handleGutterDotActivate(dot);
+                  handleGutterDotActivate(dot, e.currentTarget, true);
                 }
               }}
             >
@@ -695,7 +905,7 @@ export function AnnotationLayer({
               {dot.hasKlecxNote && (
                 <span
                   data-testid="gutter-klecx-mark"
-                  title="Klecx noted this"
+                  title={t("klecxNoted")}
                   className="absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-surface border border-accent/40 text-accent shadow-xs"
                 >
                   <KlecxLogoDot className="h-2 w-2" />
@@ -710,47 +920,45 @@ export function AnnotationLayer({
       <Popover
         open={!!activePreview}
         onOpenChange={(open) => {
-          if (!open) {
-            setActivePreview(null);
-            clearHoverHighlight();
-          }
+          if (!open) closePreview();
         }}
       >
-        {/* Invisible positioning anchor */}
-        <PopoverAnchor asChild>
-          <div
-            style={
-              activePreview?.anchorRect
-                ? {
-                    position: "fixed",
-                    top: activePreview.anchorRect.top,
-                    left: activePreview.anchorRect.left,
-                    width: Math.max(1, activePreview.anchorRect.width),
-                    height: Math.max(1, activePreview.anchorRect.height),
-                    pointerEvents: "none",
-                  }
-                : { display: "none" }
-            }
-          />
-        </PopoverAnchor>
+        <PopoverAnchor virtualRef={anchorRef} />
 
         <PopoverContent
+          ref={cardRef}
           role="dialog"
-          aria-label="Annotation preview"
+          aria-label={t("ariaLabel")}
           side="top"
-          align="start"
+          align={activePreview?.anchor.type === "dot" ? "end" : "center"}
           sideOffset={8}
+          collisionPadding={8}
+          hideWhenDetached
           onOpenAutoFocus={(e) => e.preventDefault()}
+          onCloseAutoFocus={(e) => e.preventDefault()}
+          onEscapeKeyDown={handleEscape}
+          onInteractOutside={(e) => {
+            // Going from one gutter dot to the next shows the next card; it
+            // must not be closed by the focus leaving this one.
+            const target = e.target as Element | null;
+            if (
+              target?.closest?.('[data-testid="gutter-dot"]') &&
+              rootRef.current?.contains(target)
+            ) {
+              e.preventDefault();
+            }
+          }}
           onPointerEnter={() => {
             isOverPopoverRef.current = true;
             if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
           }}
           onPointerLeave={() => {
             isOverPopoverRef.current = false;
-            setActivePreview(null);
-            clearHoverHighlight();
+            // Free the passage, so going back onto it shows the card again.
+            pendingHoverKeyRef.current = null;
+            closePreview();
           }}
-          className="z-50 w-72 rounded-xl border border-border bg-surface p-3 text-fg shadow-md outline-none animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
+          className="z-50 w-72 max-w-[calc(100vw-16px)] max-h-[var(--radix-popover-content-available-height)] overflow-y-auto rounded-xl border border-border bg-surface p-3 text-fg shadow-md outline-none animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
         >
           {targetAnnot && (
             <div className="space-y-2.5 text-xs">
@@ -768,7 +976,7 @@ export function AnnotationLayer({
                       <Bot className="h-3.5 w-3.5 shrink-0 text-warning" />
                       <span className="truncate max-w-[110px]">{authorName}</span>
                       <span className="inline-flex items-center gap-1 text-[10px] text-warning bg-surface-2 px-1.5 py-0.5 rounded border border-border font-medium">
-                        AI review
+                        {t("aiReview")}
                       </span>
                     </>
                   )}
@@ -777,7 +985,7 @@ export function AnnotationLayer({
                       <CornerDownRight className="h-3.5 w-3.5 shrink-0 text-accent" />
                       <span className="truncate max-w-[110px]">{authorName}</span>
                       <span className="inline-flex items-center gap-1 text-[10px] text-accent bg-accent-soft px-1.5 py-0.5 rounded font-medium">
-                        <Sparkles className="h-2.5 w-2.5" /> AI replied
+                        <Sparkles className="h-2.5 w-2.5" /> {t("aiReplied")}
                       </span>
                     </>
                   )}
@@ -787,7 +995,7 @@ export function AnnotationLayer({
                       <span className="truncate max-w-[90px]">{authorName}</span>
                       {targetAnnot.questionState && (
                         <span className="text-[10px] uppercase font-semibold text-fg-muted bg-surface-2 px-1.5 py-0.5 rounded border border-border">
-                          {targetAnnot.questionState}
+                          {stateLabel(targetAnnot.questionState)}
                         </span>
                       )}
                     </>
@@ -796,7 +1004,9 @@ export function AnnotationLayer({
                     <span
                       data-testid="preview-klecx-badge"
                       className="inline-flex items-center gap-0.5 text-[10px] text-accent bg-accent-soft px-1 py-0.5 rounded font-medium shrink-0"
-                      title="Klecx noted this"
+                      title={t("klecxNoted")}
+                      aria-label={t("klecxNoted")}
+                      role="img"
                     >
                       <KlecxLogoDot className="h-2 w-2" />
                     </span>
@@ -804,7 +1014,7 @@ export function AnnotationLayer({
                 </div>
                 <div className="flex items-center gap-1 text-[11px] text-fg-subtle shrink-0">
                   <Clock className="h-3 w-3" />
-                  <span>{formatRelativeTime(targetAnnot.createdAt)}</span>
+                  <span>{relativeTime(targetAnnot.createdAt)}</span>
                 </div>
               </div>
 
@@ -841,7 +1051,7 @@ export function AnnotationLayer({
                             <span>{truncateText(qMsg, 60)}</span>
                             {q.questionState && (
                               <span className="ml-1 text-[9px] uppercase px-1 py-0.2 bg-surface-2 rounded text-fg-subtle">
-                                {q.questionState}
+                                {stateLabel(q.questionState)}
                               </span>
                             )}
                           </li>
@@ -860,16 +1070,16 @@ export function AnnotationLayer({
                 </div>
               )}
 
-              {/* Primary "View more" button */}
+              {/* Primary "View" button */}
               <div className="pt-1 border-t border-border flex items-center justify-end">
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   className="h-7 px-2.5 text-xs text-accent hover:text-accent-hover hover:bg-accent-soft gap-1"
-                  onClick={() => handleViewMore(targetAnnot)}
+                  onClick={() => handleView(targetAnnot)}
                 >
-                  <span>View more</span>
+                  <span>{t("view")}</span>
                   <ArrowRight className="h-3 w-3" />
                 </Button>
               </div>
@@ -882,7 +1092,7 @@ export function AnnotationLayer({
                 >
                   {extraAnnotations.map((item) => {
                     const dk = displayKind(item);
-                    const name = authorLabel(item);
+                    const name = authorLabel(item, authorLabels);
                     return (
                       <div
                         key={item.id}
@@ -897,7 +1107,7 @@ export function AnnotationLayer({
                               <KlecxLogoDot className="h-2 w-2 text-accent shrink-0" />
                             )}
                             <span className="text-[10px] text-fg-subtle shrink-0">
-                              {formatRelativeTime(item.createdAt)}
+                              {relativeTime(item.createdAt)}
                             </span>
                           </div>
                           <p className="text-[11px] text-fg-muted truncate">
@@ -908,11 +1118,11 @@ export function AnnotationLayer({
                           type="button"
                           variant="ghost"
                           size="sm"
-                          aria-label={`View annotation by ${name}`}
+                          aria-label={t("viewBy", { name })}
                           className="h-6 px-2 text-[11px] text-accent hover:text-accent-hover hover:bg-accent-soft shrink-0"
-                          onClick={() => handleViewMore(item)}
+                          onClick={() => handleView(item)}
                         >
-                          View
+                          {t("view")}
                         </Button>
                       </div>
                     );
@@ -926,7 +1136,9 @@ export function AnnotationLayer({
                       className="w-full h-7 text-[11px] text-fg-muted hover:text-fg"
                       onClick={handleViewAllInDrawer}
                     >
-                      View all in drawer ({activePreview?.allMatching.length})
+                      {t("viewAll", {
+                        count: activePreview?.allMatching.length ?? 0,
+                      })}
                     </Button>
                   )}
                 </div>
