@@ -107,7 +107,7 @@ describe("Step F3.1 — Add documents to the workspace (upload -> extract -> ren
       expect(txtRes.truncated).toBe(false);
     });
 
-    it("converts .docx HTML with headings, bold, tables, and strips scripts/raw HTML", async () => {
+    it("converts .docx HTML with headings, bold and a table that has a header row", async () => {
       const spy = jest.spyOn(mammoth, "convertToHtml").mockResolvedValueOnce({
         value:
           "<h1>Product Spec</h1><p>This is <strong>important</strong> text.</p>" +
@@ -125,12 +125,60 @@ describe("Step F3.1 — Add documents to the workspace (upload -> extract -> ren
 
       expect(res.markdown).toContain("# Product Spec");
       expect(res.markdown).toContain("**important**");
-      expect(res.markdown).toContain("| Feature | Status |");
-      expect(res.markdown).toContain("| Upload | Ready |");
-      expect(res.markdown).toContain("[Image: Architecture diagram]");
+      expect(res.markdown).toContain("| Feature | Status |\n| --- | --- |\n| Upload | Ready |");
+      // The picture is not imported: its description stays as an image with no address.
+      expect(res.markdown).toContain("![Architecture diagram]()");
       expect(res.markdown).not.toContain("<script>");
       expect(res.markdown).not.toContain("alert('xss')");
       expect(res.markdown).not.toContain("data:image/png");
+
+      spy.mockRestore();
+    });
+
+    it("converts a Word table (no header row, paragraphs in cells, merged cells) into a GFM table", async () => {
+      // What mammoth really produces for a Word table: <td><p>…</p></td>, no <th>.
+      const spy = jest.spyOn(mammoth, "convertToHtml").mockResolvedValueOnce({
+        value:
+          "<table>" +
+          "<tr><td><p>Name</p></td><td><p>Role</p></td><td><p>Notes</p></td></tr>" +
+          "<tr><td><p>Ada</p></td><td><p>Owner</p><p>Signs | approves</p></td><td><p><strong>x</strong></p></td></tr>" +
+          '<tr><td colspan="2"><p>Merged</p></td><td><p>y</p></td></tr>' +
+          '<tr><td rowspan="2"><p>Tall</p></td><td><p>b1</p></td><td><p>c1</p></td></tr>' +
+          "<tr><td><p>b2</p></td><td><p>c2</p></td></tr>" +
+          "</table>",
+        messages: [],
+      });
+
+      const res = await documentToMarkdown(Buffer.from("fake-docx"), "", "table.docx");
+
+      expect(res.markdown).toBe(
+        [
+          "| Name | Role | Notes |",
+          "| --- | --- | --- |",
+          "| Ada | Owner<br>Signs \\| approves | **x** |",
+          "| Merged |   | y |",
+          "| Tall | b1 | c1 |",
+          "|   | b2 | c2 |",
+        ].join("\n")
+      );
+      expect(res.markdown).not.toContain("<table");
+      expect(res.markdown).not.toContain("<td");
+
+      spy.mockRestore();
+    });
+
+    it("keeps text that looks like HTML as text in a .docx", async () => {
+      const spy = jest.spyOn(mammoth, "convertToHtml").mockResolvedValueOnce({
+        value: "<p>Use the &lt;script&gt; tag when a &lt; b, and write &amp;amp; for &amp;.</p>",
+        messages: [],
+      });
+
+      const res = await documentToMarkdown(Buffer.from("fake-docx"), "", "tags.docx");
+
+      // Escaped, so the document view shows the characters instead of running a tag.
+      expect(res.markdown).toContain("\\<script>");
+      expect(res.markdown).toContain("a \\< b");
+      expect(res.markdown).toContain("\\&amp;");
 
       spy.mockRestore();
     });
@@ -161,11 +209,14 @@ describe("Step F3.1 — Add documents to the workspace (upload -> extract -> ren
       mockUnpdfState.numPages = 101;
       await expect(
         documentToMarkdown(Buffer.from("%PDF-1.4 big"), "application/pdf", "huge.pdf")
-      ).rejects.toThrow(/PDF exceeds maximum allowed page count of 100 pages/);
+      ).rejects.toMatchObject({
+        code: "document_page_limit",
+        details: { maxPages: 100, pageCount: 101 },
+      });
       mockUnpdfState.numPages = 2;
     });
 
-    it("converts .csv up to 200 rows into a GFM Markdown table and appends row note when > 200 rows", async () => {
+    it("converts .csv up to 200 rows into a GFM Markdown table and reports the total row count", async () => {
       const header = "id,name,role";
       const rows = Array.from(
         { length: 205 },
@@ -180,7 +231,8 @@ describe("Step F3.1 — Add documents to the workspace (upload -> extract -> ren
       expect(res.markdown).toContain("| 1 | User 1 | Member |");
       expect(res.markdown).toContain("| 200 | User 200 | Member |");
       expect(res.markdown).not.toContain("| 201 | User 201 | Member |");
-      expect(res.markdown).toContain("Showing 200 of 205 rows.");
+      // The note about hidden rows is shown by the composer, not written into the document.
+      expect(res.markdown).not.toContain("Showing");
     });
   });
 

@@ -23,11 +23,18 @@ import {
   Sparkles,
   Square,
 } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { QueryClientContext } from "@tanstack/react-query";
 import { useUiStore } from "@/lib/stores/ui";
 import { useGenerationStore } from "@/lib/stores/generation";
-import { api } from "@/lib/api/client";
+import { api, ApiClientError } from "@/lib/api/client";
+import {
+  MAX_CSV_ROWS,
+  WORKSPACE_DOCUMENT_ACCEPT,
+  isPdfFile,
+  isWorkspaceDocumentFile,
+} from "@/lib/documents/workspace-document-types";
 import { uploadAttachment } from "@/lib/api/attachments";
 import { navigateWithTransition } from "@/lib/navigation/view-transition";
 import { CLIENT_MODELS, type ClientModelOption } from "@/lib/ai/client-models";
@@ -298,16 +305,11 @@ export function Composer({
       setPendingDropFiles([]);
 
       for (const f of files) {
-        const isSupportedDoc =
-          /\.(pdf|txt|md|markdown|csv|docx)$/i.test(f.name) ||
-          [
-            "application/pdf",
-            "text/plain",
-            "text/markdown",
-            "text/csv",
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-          ].includes(f.type);
-        if (!isSupportedDoc) {
+        if (isPdfFile(f)) {
+          setCreationError(tDocs("errors.pdfNotSupported"));
+          return;
+        }
+        if (!isWorkspaceDocumentFile(f)) {
           setCreationError(tDocs("errors.unsupported"));
           return;
         }
@@ -336,10 +338,25 @@ export function Composer({
 
         for (const file of files) {
           const attId = await uploadAttachment(file, targetWsId);
-          await api(`/api/v1/workspaces/${targetWsId}/documents`, {
+          const added = await api<{
+            truncated?: boolean;
+            totalRows?: number | null;
+          }>(`/api/v1/workspaces/${targetWsId}/documents`, {
             method: "POST",
             body: { attachmentId: attId },
           });
+          // Part of the file was left out: say so, it isn't visible otherwise.
+          if (added?.truncated) {
+            toast.warning(
+              typeof added.totalRows === "number" &&
+                added.totalRows > MAX_CSV_ROWS
+                ? tDocs("csvRowsNote", {
+                    shown: MAX_CSV_ROWS,
+                    total: added.totalRows,
+                  })
+                : tDocs("truncatedNote", { name: file.name })
+            );
+          }
         }
 
         window.dispatchEvent(
@@ -353,9 +370,21 @@ export function Composer({
           navigateWithTransition(router, `/workspaces/${targetWsId}`);
         }
       } catch (err: unknown) {
-        const msg =
-          err instanceof Error ? err.message : tDocs("errors.uploadFailed");
-        setCreationError(msg);
+        // Codes sent by the documents endpoint; anything else keeps the
+        // server's own message (plan limits, file checks).
+        const code = err instanceof ApiClientError ? err.code : null;
+        const known: Record<string, string> = {
+          document_type_unsupported: tDocs("errors.unsupported"),
+          document_page_limit: tDocs("errors.pageLimit"),
+          document_unreadable: tDocs("errors.unreadable"),
+          document_empty: tDocs("errors.empty"),
+          document_timeout: tDocs("errors.timeout"),
+        };
+        setCreationError(
+          (code && known[code]) ||
+            (err instanceof ApiClientError && err.message) ||
+            tDocs("errors.uploadFailed")
+        );
       } finally {
         setIsAddingDocument(false);
       }
@@ -579,19 +608,10 @@ export function Composer({
         setIsDragging(false);
         const files = Array.from(e.dataTransfer.files);
         if (files.length === 0) return;
+        // Only files that can become a document get the choice; a PDF or an
+        // image is attached to the message directly.
         const allDocs =
-          mode !== "image" &&
-          files.every(
-            (f) =>
-              /\.(pdf|txt|md|markdown|csv|docx)$/i.test(f.name) ||
-              [
-                "application/pdf",
-                "text/plain",
-                "text/markdown",
-                "text/csv",
-                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-              ].includes(f.type)
-          );
+          mode !== "image" && files.every((f) => isWorkspaceDocumentFile(f));
         if (allDocs) {
           setPendingDropFiles(files);
         } else {
@@ -672,7 +692,8 @@ export function Composer({
             {pendingDropFiles.length > 0 && (
               <button
                 type="button"
-                aria-label="Cancel drop"
+                aria-label={tDocs("cancelDrop")}
+                title={tDocs("cancelDrop")}
                 onClick={() => setPendingDropFiles([])}
                 className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-muted hover:text-fg hover:bg-surface-2"
               >
@@ -941,7 +962,7 @@ export function Composer({
                 e.target.value = "";
               }
             }}
-            accept=".pdf,.txt,.md,.markdown,.csv,.docx,application/pdf,text/plain,text/markdown,text/csv,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            accept={WORKSPACE_DOCUMENT_ACCEPT}
             className="hidden"
             aria-hidden="true"
             data-testid="composer-document-input"

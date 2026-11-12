@@ -17,7 +17,7 @@ const ALLOWED_HOSTS = new Set([
   "avatars.githubusercontent.com",
 ]);
 
-function isAllowedImageSrc(src?: string): boolean {
+export function isAllowedImageSrc(src?: string): boolean {
   if (!src) return false;
 
   // Allow local blob URLs (previews) and inline data image URIs

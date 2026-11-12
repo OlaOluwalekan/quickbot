@@ -50,16 +50,25 @@ function formatFileSize(bytes?: number | null): string {
   return `${mb.toFixed(1)} MB`;
 }
 
-function getDocumentIcon(mime?: string, name?: string) {
+/** File-type icon. Declared outside the card so it isn't re-created on each render. */
+function DocumentIcon({
+  mime,
+  name,
+  className,
+}: {
+  mime?: string;
+  name?: string;
+  className?: string;
+}) {
   const lowerMime = (mime || "").toLowerCase();
   const lowerName = (name || "").toLowerCase();
   if (lowerMime === "text/csv" || lowerName.endsWith(".csv")) {
-    return FileSpreadsheet;
+    return <FileSpreadsheet className={className} />;
   }
   if (lowerMime === "application/pdf" || lowerName.endsWith(".pdf")) {
-    return FileType;
+    return <FileType className={className} />;
   }
-  return FileText;
+  return <FileText className={className} />;
 }
 
 export function DocumentCard({
@@ -84,7 +93,9 @@ export function DocumentCard({
     activeVer?.content ?? response.content ?? response.response ?? "";
 
   const docName =
-    response.uploadedAttachment?.originalName || response.prompt || "Document";
+    response.uploadedAttachment?.originalName ||
+    response.prompt ||
+    t("fallbackName");
   const docMime = response.uploadedAttachment?.mime || "";
   const docBytes = response.uploadedAttachment?.bytes;
   const attachmentId = response.uploadedAttachment?.id;
@@ -93,15 +104,12 @@ export function DocumentCard({
     docMime.toLowerCase() === "application/pdf" ||
     docName.toLowerCase().endsWith(".pdf");
 
-  // Detect PDF page count from response metadata or --- page dividers
-  const pageCount = React.useMemo(() => {
-    if (typeof response.pageCount === "number" && response.pageCount > 0) {
-      return response.pageCount;
-    }
-    if (!isPdf) return null;
-    const segments = displayedContent.split(/\n\n---\n\n/);
-    return segments.length > 1 ? segments.length : 1;
-  }, [response.pageCount, isPdf, displayedContent]);
+  // Only known right after the upload (it isn't stored). A "---" in the text
+  // is a horizontal rule, not a page break, so it is never counted.
+  const pageCount =
+    typeof response.pageCount === "number" && response.pageCount > 0
+      ? response.pageCount
+      : null;
 
   const isLongDocument = React.useMemo(() => {
     if (displayedContent.length > COLLAPSE_CHAR_THRESHOLD) return true;
@@ -132,7 +140,7 @@ export function DocumentCard({
         window.open(res.url, "_blank", "noopener,noreferrer");
       }
     } catch {
-      toast.error(t("errors.uploadFailed"));
+      toast.error(t("errors.downloadFailed"));
     } finally {
       setDownloading(false);
     }
@@ -149,7 +157,6 @@ export function DocumentCard({
     [createEditMutation, response.id]
   );
 
-  const Icon = getDocumentIcon(docMime, docName);
   const sizeLabel = formatFileSize(docBytes);
   const formattedDate = React.useMemo(() => {
     if (!response.createdAt) return null;
@@ -179,7 +186,7 @@ export function DocumentCard({
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 pb-3 mb-4">
         <div className="flex flex-wrap items-center gap-2 min-w-0">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-info/10 text-info">
-            <Icon className="h-4 w-4" />
+            <DocumentIcon mime={docMime} name={docName} className="h-4 w-4" />
           </div>
 
           <Badge
@@ -280,6 +287,7 @@ export function DocumentCard({
               responseId={response.id}
               workspaceId={workspaceId}
               content={displayedContent}
+              variant="document"
             />
           </div>
 
@@ -333,7 +341,7 @@ export function DocumentCard({
             ) : (
               <Copy className="h-3.5 w-3.5" />
             )}
-            <span>Copy</span>
+            <span>{t("copy")}</span>
           </Button>
 
           <Button
@@ -348,17 +356,20 @@ export function DocumentCard({
             <span>{t("edit")}</span>
           </Button>
 
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => onReviewDocument?.(response.id)}
-            className="h-7 gap-1.5 px-2 text-xs text-muted hover:text-fg"
-            data-testid="ask-klecx-review-btn"
-          >
-            <Sparkles className="h-3.5 w-3.5 text-accent" />
-            <span>{t("askKlecxReview")}</span>
-          </Button>
+          {/* The AI review arrives with F3.3: no button until it does something. */}
+          {onReviewDocument && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => onReviewDocument(response.id)}
+              className="h-7 gap-1.5 px-2 text-xs text-muted hover:text-fg"
+              data-testid="ask-klecx-review-btn"
+            >
+              <Sparkles className="h-3.5 w-3.5 text-accent" />
+              <span>{t("askKlecxReview")}</span>
+            </Button>
+          )}
 
           <Button
             type="button"

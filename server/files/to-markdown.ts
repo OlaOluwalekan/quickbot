@@ -1,11 +1,31 @@
+import "server-only";
 import mammoth from "mammoth";
 import TurndownService from "turndown";
-import { gfm } from "turndown-plugin-gfm";
+import { strikethrough } from "turndown-plugin-gfm";
+import { MAX_CSV_ROWS } from "@/lib/documents/workspace-document-types";
+
+export { MAX_CSV_ROWS };
 
 export const MAX_EXTRACTED_CHARS = 200_000;
 export const MAX_PDF_PAGES = 100;
 export const EXTRACTION_TIMEOUT_MS = 10_000;
-export const MAX_CSV_ROWS = 200;
+
+export type DocumentExtractionErrorCode =
+  | "document_page_limit"
+  | "document_type_unsupported"
+  | "document_timeout";
+
+/** A failure the person can act on. `message` is for logs and tests only. */
+export class DocumentExtractionError extends Error {
+  constructor(
+    public code: DocumentExtractionErrorCode,
+    message: string,
+    public details?: Record<string, number>
+  ) {
+    super(message);
+    this.name = "DocumentExtractionError";
+  }
+}
 
 export interface DocumentToMarkdownOptions {
   maxPages?: number;
@@ -148,12 +168,10 @@ function csvToMarkdown(csvText: string): {
   const dividerLine = `| ${Array.from({ length: colCount }, () => "---").join(" | ")} |`;
   const visibleRows = dataRows.slice(0, MAX_CSV_ROWS).map(normalizeRow);
 
+  // The caller tells the person how many rows were left out (`totalRows`):
+  // a sentence written here would become part of their document.
   const lines = [headerLine, dividerLine, ...visibleRows];
   const isTruncated = totalRows > MAX_CSV_ROWS;
-
-  if (isTruncated) {
-    lines.push("", `Showing ${MAX_CSV_ROWS} of ${totalRows} rows.`);
-  }
 
   return {
     markdown: lines.join("\n"),
@@ -162,29 +180,96 @@ function csvToMarkdown(csvText: string): {
   };
 }
 
-function sanitizeMarkdownHtml(md: string): string {
-  // Remove dangerous HTML blocks completely
-  let cleaned = md
-    .replace(/<(script|style|iframe|object|embed|noscript)\b[^>]*>[\s\S]*?<\/\1>/gi, "")
-    .replace(/<(script|style|iframe|object|embed|noscript)\b[^>]*\/?>/gi, "");
-
-  // Strip any remaining raw HTML tags while keeping inner text
-  cleaned = cleaned.replace(/<\/?[a-zA-Z][^>\n]*>/g, "");
-  return cleaned;
+/** Minimal DOM surface of the nodes turndown hands to a rule. */
+interface HtmlNode {
+  nodeName: string;
+  innerHTML: string;
+  childNodes: ArrayLike<HtmlNode>;
+  getAttribute(name: string): string | null;
 }
 
-async function docxToMarkdown(buf: Buffer): Promise<string> {
-  const result = await mammoth.convertToHtml(
-    { buffer: buf },
-    {
-      convertImage: mammoth.images.imgElement(async (image) => {
-        // Ignore binary image payload, preserve alt text only
-        const alt = (image as { altText?: string }).altText || "";
-        return { src: "", alt };
-      }),
-    }
+function childElements(node: HtmlNode, names: string[]): HtmlNode[] {
+  return Array.from(node.childNodes).filter((child) =>
+    names.includes(child.nodeName)
   );
+}
 
+function tableRows(table: HtmlNode): HtmlNode[] {
+  const rows: HtmlNode[] = [];
+  for (const child of Array.from(table.childNodes)) {
+    if (child.nodeName === "TR") rows.push(child);
+    else if (["THEAD", "TBODY", "TFOOT"].includes(child.nodeName)) {
+      rows.push(...childElements(child, ["TR"]));
+    }
+  }
+  return rows;
+}
+
+function spanOf(cell: HtmlNode, attribute: "colspan" | "rowspan"): number {
+  const value = Number.parseInt(cell.getAttribute(attribute) ?? "1", 10);
+  return Number.isFinite(value) && value > 1 ? Math.min(value, 50) : 1;
+}
+
+/**
+ * Turns an HTML table into a GFM table.
+ *
+ * Word tables have no header row and their cells hold paragraphs, so the
+ * stock GFM plugin leaves them as raw HTML. Here the first row becomes the
+ * header, paragraphs inside a cell are joined with `<br>`, and merged cells
+ * are spread over the columns they cover so the columns stay aligned.
+ */
+function tableToMarkdown(
+  table: HtmlNode,
+  cellToMarkdown: (html: string) => string
+): string {
+  const grid: string[][] = [];
+  // Columns still covered by a cell merged down from an earlier row.
+  const carried: number[] = [];
+
+  for (const row of tableRows(table)) {
+    const line: string[] = [];
+    let column = 0;
+    const skipCarried = () => {
+      while ((carried[column] ?? 0) > 0) {
+        carried[column]!--;
+        line.push("");
+        column++;
+      }
+    };
+
+    for (const cell of childElements(row, ["TD", "TH"])) {
+      skipCarried();
+      const text = cellToMarkdown(cell.innerHTML)
+        .replace(/\|/g, "\\|")
+        .trim()
+        .replace(/\n+/g, "<br>");
+      const colspan = spanOf(cell, "colspan");
+      const rowspan = spanOf(cell, "rowspan");
+      for (let i = 0; i < colspan; i++) {
+        line.push(i === 0 ? text : "");
+        if (rowspan > 1) carried[column] = rowspan - 1;
+        column++;
+      }
+    }
+    skipCarried();
+    if (line.length > 0) grid.push(line);
+  }
+
+  if (grid.length === 0) return "";
+
+  const width = Math.max(...grid.map((line) => line.length));
+  const toLine = (cells: string[]) =>
+    `| ${Array.from({ length: width }, (_, i) => cells[i] || " ").join(" | ")} |`;
+
+  const [header, ...body] = grid;
+  return [
+    toLine(header!),
+    `| ${Array.from({ length: width }, () => "---").join(" | ")} |`,
+    ...body.map(toLine),
+  ].join("\n");
+}
+
+function createDocxTurndown(): TurndownService {
   const turndown = new TurndownService({
     headingStyle: "atx",
     codeBlockStyle: "fenced",
@@ -193,22 +278,63 @@ async function docxToMarkdown(buf: Buffer): Promise<string> {
     strongDelimiter: "**",
   });
 
-  turndown.use(gfm);
+  turndown.use(strikethrough);
   turndown.remove(["script", "style", "iframe", "object", "embed", "noscript"]);
 
-  // Replace images with alt-text placeholder or omit if no alt text
-  turndown.addRule("ignoreBinaryImages", {
+  // The document's own text must stay text: "<b>" typed in Word is not a tag
+  // and "&amp;" is not an entity once the Markdown is rendered.
+  const escapeMarkdown = turndown.escape.bind(turndown);
+  turndown.escape = (text: string) =>
+    escapeMarkdown(text)
+      .replace(/</g, "\\<")
+      .replace(/&(?=#?\w+;)/g, "\\&");
+
+  // The picture itself is not imported. Its description is kept as an image
+  // with no address, which the document view shows as a placeholder box.
+  turndown.addRule("imagePlaceholder", {
     filter: "img",
     replacement: (_content, node) => {
-      const alt = (node as { getAttribute?: (k: string) => string | null })
-        .getAttribute?.("alt")
-        ?.trim();
-      return alt ? `[Image: ${alt}]` : "";
+      const alt = ((node as unknown as HtmlNode).getAttribute("alt") ?? "")
+        .replace(/\s+/g, " ")
+        .replace(/[[\]\\]/g, "\\$&")
+        .trim();
+      return `![${alt}]()`;
     },
   });
 
-  const rawMd = turndown.turndown(result.value || "");
-  return sanitizeMarkdownHtml(stripControlChars(rawMd)).trim();
+  turndown.addRule("table", {
+    filter: "table",
+    replacement: (_content, node) => {
+      const markdown = tableToMarkdown(node as unknown as HtmlNode, (html) =>
+        // A table inside a cell can't be a table in Markdown: keep its text.
+        createDocxTurndown()
+          .addRule("nestedTable", {
+            filter: "table",
+            replacement: (content) => content,
+          })
+          .turndown(html)
+      );
+      return markdown ? `\n\n${markdown}\n\n` : "";
+    },
+  });
+
+  return turndown;
+}
+
+async function docxToMarkdown(buf: Buffer): Promise<string> {
+  const result = await mammoth.convertToHtml(
+    { buffer: buf },
+    {
+      convertImage: mammoth.images.imgElement(async (image) => {
+        // The image bytes are dropped; only the description is kept.
+        const alt = (image as { altText?: string }).altText || "";
+        return { src: "", alt };
+      }),
+    }
+  );
+
+  const rawMd = createDocxTurndown().turndown(result.value || "");
+  return stripControlChars(rawMd).trim();
 }
 
 export async function documentToMarkdown(
@@ -227,7 +353,12 @@ export async function documentToMarkdown(
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeoutPromise = new Promise<never>((_, reject) => {
     timer = setTimeout(() => {
-      reject(new Error(`Document extraction timed out after ${timeoutMs}ms`));
+      reject(
+        new DocumentExtractionError(
+          "document_timeout",
+          `Document extraction timed out after ${timeoutMs}ms`
+        )
+      );
     }, timeoutMs);
   });
 
@@ -271,8 +402,10 @@ export async function documentToMarkdown(
       pageCount = pdf.numPages;
 
       if (pageCount > maxPages) {
-        throw new Error(
-          `PDF exceeds maximum allowed page count of ${maxPages} pages (has ${pageCount})`
+        throw new DocumentExtractionError(
+          "document_page_limit",
+          `PDF exceeds maximum allowed page count of ${maxPages} pages (has ${pageCount})`,
+          { maxPages, pageCount }
         );
       }
 
@@ -287,7 +420,10 @@ export async function documentToMarkdown(
 
       rawMarkdown = joinedPages.join("\n\n---\n\n");
     } else {
-      throw new Error(`Unsupported document type for Markdown extraction: ${mime}`);
+      throw new DocumentExtractionError(
+        "document_type_unsupported",
+        `Unsupported document type for Markdown extraction: ${mime}`
+      );
     }
 
     let truncated = csvTruncated;

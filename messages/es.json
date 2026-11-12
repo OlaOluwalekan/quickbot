@@ -1652,7 +1652,17 @@
     "errors": {
       "uploadFailed": "No se pudo añadir el documento al espacio de trabajo.",
       "pageLimit": "Este PDF supera el límite de 100 páginas.",
-      "unsupported": "Solo se pueden añadir archivos MD, TXT, DOCX, PDF y CSV como documentos del espacio de trabajo."
-    }
+      "unsupported": "Solo se pueden añadir archivos MD, TXT, DOCX y CSV como documentos del espacio de trabajo.",
+      "downloadFailed": "No se pudo descargar el archivo original.",
+      "pdfNotSupported": "Todavía no se pueden añadir PDF como documentos del espacio de trabajo. Adjunta el PDF a un mensaje.",
+      "unreadable": "No se pudo leer este archivo. Puede estar dañado o protegido con contraseña.",
+      "empty": "No se encontró texto en este archivo.",
+      "timeout": "El archivo tardó demasiado en procesarse. Prueba con un archivo más pequeño."
+    },
+    "copy": "Copiar",
+    "cancelDrop": "Cancelar",
+    "imagePlaceholder": "Imagen",
+    "fallbackName": "Documento",
+    "truncatedNote": "{name} es muy largo: solo se añadió la primera parte."
   }
 }

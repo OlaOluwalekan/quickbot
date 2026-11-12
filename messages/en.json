@@ -1652,7 +1652,17 @@
     "errors": {
       "uploadFailed": "Failed to add document to workspace.",
       "pageLimit": "This PDF exceeds the 100-page limit.",
-      "unsupported": "Only MD, TXT, DOCX, PDF, and CSV files can be added as workspace documents."
-    }
+      "unsupported": "Only MD, TXT, DOCX and CSV files can be added as workspace documents.",
+      "downloadFailed": "The original file couldn't be downloaded.",
+      "pdfNotSupported": "PDFs can't be added as workspace documents yet. Attach the PDF to a message instead.",
+      "unreadable": "This file couldn't be read. It may be damaged or password-protected.",
+      "empty": "No text was found in this file.",
+      "timeout": "This file took too long to process. Try a smaller file."
+    },
+    "copy": "Copy",
+    "cancelDrop": "Cancel",
+    "imagePlaceholder": "Image",
+    "fallbackName": "Document",
+    "truncatedNote": "{name} is very long: only the first part was added."
   }
 }

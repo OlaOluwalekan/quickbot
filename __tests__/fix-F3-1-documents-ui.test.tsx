@@ -211,4 +211,52 @@ describe("Step F3.1 UI — DocumentCard & Composer document upload", () => {
       );
     });
   });
+
+  it("attaches a dropped PDF to the message without offering to add it as a document", async () => {
+    mockUploadAttachment.mockClear();
+    mockApi.mockClear();
+    renderWithProviders(<Composer workspaceId="ws-123" />);
+
+    const composerRegion = screen.getByRole("region", { name: "Composer" });
+    const pdfFile = new File(["%PDF-1.4"], "Paper.pdf", {
+      type: "application/pdf",
+    });
+    fireEvent.drop(composerRegion, { dataTransfer: { files: [pdfFile] } });
+
+    // No choice: a PDF can only be attached to a message.
+    expect(screen.queryByTestId("drop-add-to-workspace")).toBeNull();
+
+    // Picking a PDF through "Add to workspace as a document" explains why not.
+    fireEvent.change(screen.getByTestId("composer-document-input"), {
+      target: { files: [pdfFile] },
+    });
+    expect(
+      await screen.findByText(
+        "PDFs can't be added as workspace documents yet. Attach the PDF to a message instead."
+      )
+    ).toBeInTheDocument();
+    expect(mockApi).not.toHaveBeenCalledWith(
+      "/api/v1/workspaces/ws-123/documents",
+      expect.anything()
+    );
+  });
+
+  it("has no review button until the AI review exists (F3.3)", () => {
+    renderWithProviders(
+      <DocumentCard
+        response={{
+          id: "resp-doc-9",
+          workspaceId: "ws-123",
+          prompt: "Notes.md",
+          kind: "DOCUMENT",
+          content: "# Notes",
+          activeVersionId: "ver-9",
+        }}
+        workspaceId="ws-123"
+        userId="user-1"
+      />
+    );
+    expect(screen.queryByTestId("ask-klecx-review-btn")).toBeNull();
+    expect(screen.getByTestId("document-copy-btn")).toHaveTextContent("Copy");
+  });
 });

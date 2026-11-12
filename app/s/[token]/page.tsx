@@ -19,6 +19,7 @@ import { limit, resolveClientIp } from "@/server/http/rate-limit";
 import { env } from "@/server/env";
 import { ApiError } from "@/server/http/errors";
 import { Markdown } from "@/components/markdown";
+import { getTranslations } from "next-intl/server";
 import { Button } from "@/components/ui/button";
 
 export const dynamic = "force-dynamic";
@@ -51,6 +52,7 @@ export default async function PublicSharePage({
   params: Promise<{ token: string }>;
 }) {
   const { token } = await params;
+  const tDocs = await getTranslations("Documents");
 
   // Same validated IP resolution as the API route (only trusts proxy headers when TRUST_PROXY=true)
   const ip = resolveClientIp({ headers: await headers() }, env.TRUST_PROXY);
@@ -152,14 +154,14 @@ export default async function PublicSharePage({
                     <div className="flex flex-wrap items-center gap-2 border-b border-border/60 pb-3">
                       <FileText className="h-4 w-4 text-info shrink-0" />
                       <span className="inline-flex items-center rounded-md bg-info/10 px-2 py-0.5 text-xs font-medium text-info">
-                        Uploaded document
+                        {tDocs("uploadedBadge")}
                       </span>
                       <span className="text-sm font-semibold text-fg truncate">
                         {res.uploadedDocument?.originalName || res.prompt}
                       </span>
                     </div>
                     <div className="overflow-x-auto leading-relaxed">
-                      <Markdown content={res.content} />
+                      <Markdown content={res.content} variant="document" />
                     </div>
                   </div>
                 ) : (

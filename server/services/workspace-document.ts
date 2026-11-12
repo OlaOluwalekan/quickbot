@@ -1,3 +1,4 @@
+import "server-only";
 import crypto from "node:crypto";
 import { db } from "@/server/db/client";
 import type { Actor } from "@/server/auth/session";
@@ -6,7 +7,11 @@ import { Errors } from "@/server/http/errors";
 import { limit } from "@/server/http/rate-limit";
 import { getStorageProvider } from "@/server/storage";
 import type { StorageResourceType } from "@/server/storage/types";
-import { documentToMarkdown } from "@/server/files/to-markdown";
+import {
+  documentToMarkdown,
+  DocumentExtractionError,
+} from "@/server/files/to-markdown";
+import { isWorkspaceDocumentFile } from "@/lib/documents/workspace-document-types";
 import { logActivity } from "@/server/services/activity";
 
 export async function addDocumentToWorkspace(
@@ -51,9 +56,17 @@ export async function addDocumentToWorkspace(
     throw Errors.badRequest("Attachment is not ready yet");
   }
 
-  if (attachment.kind !== "DOCUMENT") {
+  // Error codes below are translated by the composer (`Documents.errors.*`).
+  if (
+    attachment.kind !== "DOCUMENT" ||
+    !isWorkspaceDocumentFile({
+      name: attachment.originalName,
+      type: attachment.mime,
+    })
+  ) {
     throw Errors.badRequest(
-      "Only document attachments (MD, TXT, DOCX, PDF, CSV) can be added to the workspace as documents"
+      "Only MD, TXT, DOCX and CSV files can be added to the workspace as documents",
+      "document_type_unsupported"
     );
   }
 
@@ -72,9 +85,11 @@ export async function addDocumentToWorkspace(
     buffer = await storage.downloadBuffer(attachment.providerId, {
       resourceType: attachment.resourceType as StorageResourceType,
     });
-  } catch (err) {
+  } catch {
+    // The storage error can name internal paths: it is not sent to the client.
     throw Errors.badRequest(
-      `Failed to read attachment from storage: ${err instanceof Error ? err.message : String(err)}`
+      "The file could not be read from storage",
+      "document_unreadable"
     );
   }
 
@@ -86,8 +101,21 @@ export async function addDocumentToWorkspace(
       attachment.originalName
     );
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    throw Errors.badRequest(message);
+    if (err instanceof DocumentExtractionError) {
+      throw Errors.badRequest(err.message, err.code, err.details);
+    }
+    // A parser error (corrupt or password-protected file).
+    throw Errors.badRequest(
+      "The file could not be read as a document",
+      "document_unreadable"
+    );
+  }
+
+  if (!extracted.markdown.trim()) {
+    throw Errors.badRequest(
+      "No text was found in this file",
+      "document_empty"
+    );
   }
 
   const responseId = crypto.randomUUID();

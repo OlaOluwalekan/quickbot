@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Markdown } from "@/components/markdown";
+import { Markdown, type MarkdownVariant } from "@/components/markdown";
 import { ThinkingPanel } from "./thinking-panel";
 import { SourcesAccordion } from "./citations";
 import { AnnotationLayer } from "@/components/annotations/annotation-layer";
@@ -29,6 +29,8 @@ export interface AnswerBodyProps {
   contentSource?: "ORIGINAL" | "EDIT";
   editRevision?: number;
   showCopyButton?: boolean;
+  /** "document" for the text of an uploaded document (see Markdown). */
+  variant?: MarkdownVariant;
   className?: string;
   /** Extra content under the sources (e.g. generated documents). */
   children?: React.ReactNode;
@@ -52,6 +54,7 @@ export function AnswerBody({
   contentSource = "ORIGINAL",
   editRevision,
   showCopyButton = false,
+  variant,
   className,
   children,
 }: AnswerBodyProps) {
@@ -72,7 +75,7 @@ export function AnswerBody({
     }
   };
 
-  const text = <Markdown content={content} citations={sources} />;
+  const text = <Markdown content={content} citations={sources} variant={variant} />;
 
   return (
     <div className={cn("space-y-3", className)}>

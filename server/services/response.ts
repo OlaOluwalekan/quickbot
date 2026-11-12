@@ -552,6 +552,14 @@ export async function regenerateResponse(
   // Authorization check upfront
   await requireWorkspace(actor, targetResponse.workspaceId, "workspace.regenerate");
 
+  // An uploaded document has no prompt to run again.
+  if (targetResponse.kind === "DOCUMENT") {
+    throw Errors.badRequest(
+      "An uploaded document can't be regenerated",
+      "document_not_regenerable"
+    );
+  }
+
   const isImageTurn = targetResponse.kind === "IMAGE";
   const defaultModelKey = isImageTurn ? "image-standard" : "text-economy";
   const priorHadGrounding = Boolean(
