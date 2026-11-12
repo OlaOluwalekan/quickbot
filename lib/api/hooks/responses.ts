@@ -15,10 +15,23 @@ import type {
   SetActiveVersionInput,
 } from "@/lib/schemas/response";
 
+export interface SourceChainStepDto {
+  id: string;
+  quote: string;
+  depth: number;
+}
+
 export interface ResponseItemDto {
   id: string;
   chatId: string;
   prompt: string;
+  origin?: "DIRECT" | "PROMOTED" | string;
+  quote?: string | null;
+  sourceAnnotationId?: string | null;
+  sourceWorkspaceId?: string | null;
+  sourceChain?: SourceChainStepDto[] | null;
+  sourceRemoved?: boolean;
+  sourceAccessible?: boolean;
   response: string;
   originalResponse?: string;
   isEdited?: boolean;

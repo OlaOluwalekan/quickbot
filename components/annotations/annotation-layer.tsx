@@ -32,7 +32,7 @@ import {
   type HighlightRect,
   type HighlightKind,
 } from "@/lib/annotations/highlight";
-import type { AnnotationItem } from "./right-panel";
+import type { AnnotationItem } from "./types";
 import { cn } from "@/lib/utils";
 
 /**

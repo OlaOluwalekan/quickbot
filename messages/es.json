@@ -538,7 +538,15 @@
     "shareNoPermission": "Solo los propietarios y administradores del espacio de trabajo pueden crear enlaces públicos",
     "exportSoon": "Exporting will be available in Phase 5",
     "sources": "Fuentes",
-    "downloadImage": "Descargar imagen"
+    "downloadImage": "Descargar imagen",
+    "promoted": {
+      "badge": "Promovida",
+      "fromSideQuestion": "De una pregunta secundaria",
+      "fromPassage": "De una pregunta sobre un pasaje",
+      "level": "N{level}",
+      "sourceRemoved": "Origen eliminado",
+      "viewAnnotation": "Ver anotación"
+    }
   },
   "Marketing": {
     "nav": {
@@ -1602,6 +1610,26 @@
     "delete": "Eliminar",
     "makeWorkspaceVisible": "Hacer visible para el espacio de trabajo",
     "makePrivate": "Hacer privado",
-    "threadActions": "Acciones del hilo"
+    "threadActions": "Acciones del hilo",
+    "addToTimeline": "Añadir a la línea temporal",
+    "newWorkspace": "Nuevo espacio de trabajo",
+    "addedToTimeline": "Añadido · Ver",
+    "startedWorkspace": "Iniciado «{title}» · Abrir",
+    "startedAnotherWorkspace": "Otro espacio de trabajo iniciado",
+    "workspaceRemoved": "Espacio de trabajo eliminado",
+    "promoteFailed": "No se pudo promover esta respuesta.",
+    "chooseWorkspaceLocation": "¿Dónde debería crearse?",
+    "standaloneWorkspace": "Independiente (sin proyecto)",
+    "loadingProjects": "Cargando proyectos…",
+    "promoteForbidden": "No tienes permiso para añadir respuestas a la línea temporal.",
+    "promoteProjectForbidden": "No tienes permiso para crear espacios de trabajo en ese proyecto.",
+    "capAddToTimeline": "añadir respuestas a la línea temporal",
+    "untitledWorkspace": "Espacio de trabajo sin título",
+    "provenance": {
+      "startedFrom": "Iniciado a partir de una pregunta secundaria en <link>«{title}»</link>",
+      "questionRemoved": "la pregunta secundaria se eliminó",
+      "sourceRemoved": "Iniciado a partir de una pregunta secundaria. El espacio de trabajo de origen se eliminó.",
+      "sourceInaccessible": "Iniciado a partir de una pregunta secundaria en un espacio de trabajo al que no tienes acceso"
+    }
   }
 }

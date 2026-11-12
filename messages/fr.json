@@ -538,7 +538,15 @@
     "shareNoPermission": "Seuls les propriétaires et administrateurs de l'espace de travail peuvent créer des liens publics",
     "exportSoon": "Exporting will be available in Phase 5",
     "sources": "Sources",
-    "downloadImage": "Télécharger l'image"
+    "downloadImage": "Télécharger l'image",
+    "promoted": {
+      "badge": "Promue",
+      "fromSideQuestion": "Issue d'une question annexe",
+      "fromPassage": "Issue d'une question sur un passage",
+      "level": "N{level}",
+      "sourceRemoved": "Source supprimée",
+      "viewAnnotation": "Voir l'annotation"
+    }
   },
   "Marketing": {
     "nav": {
@@ -1602,6 +1610,26 @@
     "delete": "Supprimer",
     "makeWorkspaceVisible": "Rendre visible pour l'espace de travail",
     "makePrivate": "Rendre privé",
-    "threadActions": "Actions du fil"
+    "threadActions": "Actions du fil",
+    "addToTimeline": "Ajouter à la chronologie",
+    "newWorkspace": "Nouvel espace de travail",
+    "addedToTimeline": "Ajouté · Voir",
+    "startedWorkspace": "Démarré « {title} » · Ouvrir",
+    "startedAnotherWorkspace": "Un autre espace a été démarré",
+    "workspaceRemoved": "Espace de travail supprimé",
+    "promoteFailed": "Impossible de promouvoir cette réponse.",
+    "chooseWorkspaceLocation": "Où créer le nouvel espace ?",
+    "standaloneWorkspace": "Autonome (sans projet)",
+    "loadingProjects": "Chargement des projets…",
+    "promoteForbidden": "Vous n'avez pas la permission d'ajouter des réponses à la chronologie.",
+    "promoteProjectForbidden": "Vous n'avez pas la permission de créer des espaces de travail dans ce projet.",
+    "capAddToTimeline": "ajouter des réponses à la chronologie",
+    "untitledWorkspace": "Espace de travail sans titre",
+    "provenance": {
+      "startedFrom": "Démarré à partir d'une question annexe dans <link>« {title} »</link>",
+      "questionRemoved": "la question annexe a été supprimée",
+      "sourceRemoved": "Démarré à partir d'une question annexe. L'espace de travail d'origine a été supprimé.",
+      "sourceInaccessible": "Démarré à partir d'une question annexe dans un espace de travail auquel vous n'avez pas accès"
+    }
   }
 }

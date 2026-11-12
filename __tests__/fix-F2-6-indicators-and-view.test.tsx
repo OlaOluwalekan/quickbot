@@ -31,7 +31,7 @@ import { ThreadStackLayout } from "@/components/threads/thread-stack-layout";
 import { AllAnnotationsDrawer } from "@/components/annotations/all-annotations-drawer";
 import { useThreadStackStore } from "@/lib/stores/thread-stack";
 import { useUiStore } from "@/lib/stores/ui";
-import type { AnnotationItem } from "@/components/annotations/right-panel";
+import type { AnnotationItem } from "@/components/annotations/types";
 
 // The preview card is read in English; other components show their keys.
 jest.mock("next-intl", () => {

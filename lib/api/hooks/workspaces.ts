@@ -13,6 +13,18 @@ import type {
   UpdateWorkspaceInput,
 } from "@/lib/schemas/workspace";
 
+export type WorkspaceSourceProvenanceDto =
+  | { canAccess: false; removed: boolean }
+  | {
+      canAccess: true;
+      removed: false;
+      sourceWorkspaceId: string;
+      sourceWorkspaceTitle: string;
+      sourceAnnotationId: string | null;
+      threadParam: string | null;
+      annotationRemoved: boolean;
+    };
+
 export interface WorkspaceDto {
   id: string;
   title: string;
@@ -25,6 +37,7 @@ export interface WorkspaceDto {
   role?: "OWNER" | "ADMIN" | "EDITOR" | "COMMENTER" | "VIEWER";
   /** Caller's capabilities on this workspace (server-computed, UI gating only). */
   capabilities?: string[];
+  sourceProvenance?: WorkspaceSourceProvenanceDto | null;
   createdAt: string;
   updatedAt: string;
 }

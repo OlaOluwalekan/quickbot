@@ -1,7 +1,10 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
+import { ArrowUpLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { useUiStore } from "@/lib/stores/ui";
 import {
@@ -24,6 +27,13 @@ export interface WorkspaceViewProps {
     id: string;
     prompt: string;
     kind?: "TEXT" | "IMAGE";
+    origin?: "DIRECT" | "PROMOTED" | string;
+    quote?: string | null;
+    sourceAnnotationId?: string | null;
+    sourceWorkspaceId?: string | null;
+    sourceChain?: Array<{ id: string; quote: string; depth: number }> | null;
+    sourceRemoved?: boolean;
+    sourceAccessible?: boolean;
     content?: string;
     createdAt?: string | Date;
     citations?: CitationDto[];
@@ -40,23 +50,7 @@ export interface WorkspaceViewProps {
   actor: Actor;
 }
 
-const EMPTY_INITIAL_RESPONSES: Array<{
-  id: string;
-  prompt: string;
-  kind?: "TEXT" | "IMAGE";
-  content?: string;
-  createdAt?: string | Date;
-  citations?: CitationDto[];
-  attachments?: Array<{
-    id: string;
-    kind: string;
-    originalName: string;
-    mime: string;
-    bytes: number;
-    width?: number | null;
-    height?: number | null;
-  }>;
-}> = [];
+const EMPTY_INITIAL_RESPONSES: NonNullable<WorkspaceViewProps["initialResponses"]> = [];
 
 export function WorkspaceView({
   workspace,
@@ -64,6 +58,7 @@ export function WorkspaceView({
   actor,
 }: WorkspaceViewProps) {
   const router = useRouter();
+  const tThreads = useTranslations("Threads");
   const queryClient = useQueryClient();
   const setCurrentPageTitle = useUiStore((s) => s.setCurrentPageTitle);
   const setCurrentPageId = useUiStore((s) => s.setCurrentPageId);
@@ -73,6 +68,21 @@ export function WorkspaceView({
     setCurrentPageId(workspace.id);
     setCurrentPageTitle(workspace.title || "Workspace");
   }, [workspace.id, workspace.title, setCurrentPageId, setCurrentPageTitle]);
+
+  // Refresh timeline when a side question is promoted to this workspace.
+  React.useEffect(() => {
+    const onChanged = (e: Event) => {
+      const detail = (e as CustomEvent<{ workspaceId?: string }>).detail;
+      if (detail?.workspaceId && detail.workspaceId !== workspace.id) return;
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.responses.all(actor.userId, workspace.id),
+      });
+    };
+    window.addEventListener("workspace-responses-changed", onChanged);
+    return () => {
+      window.removeEventListener("workspace-responses-changed", onChanged);
+    };
+  }, [workspace.id, actor.userId, queryClient]);
 
   // Query responses reactively with TanStack Query
   const { data: responsesData, refetch: refetchResponses } = useResponses(
@@ -101,6 +111,13 @@ export function WorkspaceView({
         return items.map((r) => {
           const raw = r as unknown as {
             kind?: string;
+            origin?: string;
+            quote?: string | null;
+            sourceAnnotationId?: string | null;
+            sourceWorkspaceId?: string | null;
+            sourceChain?: Array<{ id: string; quote: string; depth: number }> | null;
+            sourceRemoved?: boolean;
+            sourceAccessible?: boolean;
             versionCount?: number;
             activeVersion?: {
               id: string;
@@ -142,6 +159,13 @@ export function WorkspaceView({
             workspaceId: workspace.id,
             prompt: r.prompt,
             kind: (raw.kind as "TEXT" | "IMAGE") || "TEXT",
+            origin: raw.origin,
+            quote: raw.quote ?? null,
+            sourceAnnotationId: raw.sourceAnnotationId ?? null,
+            sourceWorkspaceId: raw.sourceWorkspaceId ?? null,
+            sourceChain: raw.sourceChain ?? null,
+            sourceRemoved: Boolean(raw.sourceRemoved),
+            sourceAccessible: Boolean(raw.sourceAccessible),
             content: effectiveContent,
             response: effectiveContent,
             versionCount: raw.versionCount || 1,
@@ -174,6 +198,13 @@ export function WorkspaceView({
       workspaceId: workspace.id,
       prompt: r.prompt,
       kind: r.kind || ("TEXT" as const),
+      origin: r.origin,
+      quote: r.quote ?? null,
+      sourceAnnotationId: r.sourceAnnotationId ?? null,
+      sourceWorkspaceId: r.sourceWorkspaceId ?? null,
+      sourceChain: r.sourceChain ?? null,
+      sourceRemoved: Boolean(r.sourceRemoved),
+      sourceAccessible: Boolean(r.sourceAccessible),
       content: r.content || "",
       response: r.content || "",
       versionCount: 1,
@@ -399,6 +430,11 @@ export function WorkspaceView({
       queryKey: ["workspaces", workspace.id, "questions", "QUEUED"],
     });
   };
+  const sourceProvenance = workspace.sourceProvenance;
+  // Adding an answer to the timeline needs the same right as generating.
+  const canPromoteToTimeline = workspace.capabilities
+    ? workspace.capabilities.includes("workspace.generate")
+    : undefined;
   const canComment = workspace.capabilities
     ? workspace.capabilities.includes("workspace.comment")
     : undefined;
@@ -413,9 +449,59 @@ export function WorkspaceView({
       currentUserId={actor.userId}
       canComment={canComment}
       canAsk={canAsk}
+      canPromoteToTimeline={canPromoteToTimeline}
       className="flex-1 h-full w-full"
     >
       <div className="flex-1 flex flex-col h-full w-full overflow-hidden bg-bg">
+        {sourceProvenance && (
+          <div
+            data-testid="workspace-provenance-banner"
+            className="border-b border-border/60 bg-surface-2/60 px-4 sm:px-6 py-2 text-xs text-muted shrink-0"
+          >
+            <div className="max-w-4xl mx-auto flex flex-wrap items-center gap-1.5">
+              <ArrowUpLeft className="h-3.5 w-3.5 text-subtle shrink-0" />
+              {sourceProvenance.canAccess ? (
+                <>
+                  <span>
+                    {tThreads.rich("provenance.startedFrom", {
+                      title: sourceProvenance.sourceWorkspaceTitle,
+                      link: (chunks) => (
+                        <Link
+                          href={
+                            sourceProvenance.threadParam
+                              ? `/workspaces/${sourceProvenance.sourceWorkspaceId}?thread=${sourceProvenance.threadParam}`
+                              : `/workspaces/${sourceProvenance.sourceWorkspaceId}`
+                          }
+                          className="font-medium text-accent hover:underline"
+                          data-testid="workspace-provenance-link"
+                        >
+                          {chunks}
+                        </Link>
+                      ),
+                    })}
+                  </span>
+                  {sourceProvenance.annotationRemoved && (
+                    <span
+                      className="text-subtle"
+                      data-testid="workspace-provenance-annotation-removed"
+                    >
+                      · {tThreads("provenance.questionRemoved")}
+                    </span>
+                  )}
+                </>
+              ) : sourceProvenance.removed ? (
+                <span data-testid="workspace-provenance-removed">
+                  {tThreads("provenance.sourceRemoved")}
+                </span>
+              ) : (
+                <span data-testid="workspace-provenance-inaccessible">
+                  {tThreads("provenance.sourceInaccessible")}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Response Timeline List */}
         <ResponseList
           workspaceId={workspace.id}

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import {
   ArrowLeft,
   Home,
@@ -14,6 +15,8 @@ import {
   MessageSquare,
   RotateCcw,
   Sparkles,
+  History,
+  ExternalLink,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -32,7 +35,8 @@ import {
   RenderMentions,
 } from "@/components/annotations/mention-textarea";
 import { ThreadBreadcrumb, type BreadcrumbItem } from "./breadcrumb";
-import { api } from "@/lib/api/client";
+import { api, ApiClientError } from "@/lib/api/client";
+import { Gated } from "@/components/ui/gated";
 import { streamAskAnswer, useAskStreamStore } from "@/lib/stores/ask-stream";
 import { useThreadStackStore } from "@/lib/stores/thread-stack";
 import type { CitationDto } from "@/lib/api/sse";
@@ -49,6 +53,8 @@ export interface ThreadColumnProps {
   canComment?: boolean;
   /** Caller may ask follow-ups in Ask threads (server re-checks). */
   canAsk?: boolean;
+  /** Caller may add Ask answers to the timeline (server re-checks). */
+  canPromoteToTimeline?: boolean;
   onBack: () => void;
   onCloseAll: () => void;
   onNavigate: (index: number) => void;
@@ -77,6 +83,18 @@ interface AnnotationMessage {
 /** A STREAMING answer older than this was interrupted (same limit as the server). */
 const ANSWER_STALE_MS = 2 * 60 * 1000;
 
+interface PromotionItem {
+  id: string;
+  annotationId: string;
+  messageId: string;
+  target: "TIMELINE" | "NEW_WORKSPACE";
+  destinationResponseId?: string | null;
+  destinationWorkspaceId?: string | null;
+  destinationWorkspaceTitle?: string | null;
+  destinationAccessible?: boolean;
+  destinationRemoved?: boolean;
+}
+
 interface AnnotationDetail {
   id: string;
   workspaceId: string;
@@ -89,6 +107,7 @@ interface AnnotationDetail {
   createdById: string;
   createdBy?: AnnotationAuthor | null;
   messages: AnnotationMessage[];
+  promotions?: PromotionItem[];
 }
 
 const composerInputClass =
@@ -102,6 +121,7 @@ export function ThreadColumn({
   currentUserId,
   canComment = true,
   canAsk = true,
+  canPromoteToTimeline = true,
   onBack,
   onCloseAll,
   onNavigate,
@@ -115,6 +135,13 @@ export function ThreadColumn({
   const [loadedAt, setLoadedAt] = React.useState(0);
   const [inputText, setInputText] = React.useState("");
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [promotingKey, setPromotingKey] = React.useState<string | null>(null);
+  const [localPromotions, setLocalPromotions] = React.useState<PromotionItem[]>([]);
+  const [pickerMsgId, setPickerMsgId] = React.useState<string | null>(null);
+  const [projectsList, setProjectsList] = React.useState<
+    Array<{ id: string; name: string }> | null
+  >(null);
+  const [isLoadingProjects, setIsLoadingProjects] = React.useState(false);
 
   const stream = useAskStreamStore((s) => s.streams[id]);
   const isStreaming = stream?.status === "streaming";
@@ -331,6 +358,103 @@ export function ThreadColumn({
     [chain]
   );
 
+  const promotionsByKey = React.useMemo(() => {
+    const map = new Map<string, PromotionItem>();
+    for (const p of annotation?.promotions ?? []) {
+      map.set(`${p.messageId}:${p.target}`, p);
+    }
+    for (const p of localPromotions) {
+      if (!annotation || p.annotationId === annotation.id) {
+        map.set(`${p.messageId}:${p.target}`, p);
+      }
+    }
+    return map;
+  }, [annotation, localPromotions]);
+
+  const openWorkspacePicker = async (messageId: string) => {
+    if (pickerMsgId === messageId) {
+      setPickerMsgId(null);
+      return;
+    }
+    setPickerMsgId(messageId);
+    if (projectsList !== null || isLoadingProjects) return;
+    setIsLoadingProjects(true);
+    try {
+      const res = await api<{ items?: Array<{ id: string; name: string }> }>(
+        "/api/v1/projects?limit=50"
+      );
+      setProjectsList(Array.isArray(res?.items) ? res.items : []);
+    } catch {
+      setProjectsList([]);
+    } finally {
+      setIsLoadingProjects(false);
+    }
+  };
+
+  const handlePromote = async (
+    messageId: string,
+    target: "TIMELINE" | "NEW_WORKSPACE",
+    projectId?: string | null
+  ) => {
+    if (!annotation) return;
+    const key = `${messageId}:${target}`;
+    if (promotingKey === key) return;
+    setPromotingKey(key);
+    if (target === "NEW_WORKSPACE") {
+      setPickerMsgId(null);
+    }
+    try {
+      const created = await api<PromotionItem>(
+        `/api/v1/annotations/${annotation.id}/promote`,
+        {
+          method: "POST",
+          json: {
+            messageId,
+            target,
+            ...(target === "NEW_WORKSPACE" && projectId ? { projectId } : {}),
+          },
+        }
+      );
+      setLocalPromotions((prev) => {
+        const rest = prev.filter(
+          (p) => !(p.messageId === messageId && p.target === target)
+        );
+        return [...rest, created];
+      });
+      setAnnotation((prev) => {
+        if (!prev) return prev;
+        const rest = (prev.promotions ?? []).filter(
+          (p) => !(p.messageId === messageId && p.target === target)
+        );
+        return { ...prev, promotions: [...rest, created] };
+      });
+      window.dispatchEvent(
+        new CustomEvent("annotation-changed", {
+          detail: { annotationId: annotation.id },
+        })
+      );
+      if (target === "TIMELINE") {
+        window.dispatchEvent(
+          new CustomEvent("workspace-responses-changed", {
+            detail: { workspaceId },
+          })
+        );
+      }
+    } catch (err) {
+      // Server messages are not translated: show our own text.
+      const forbidden = err instanceof ApiClientError && err.status === 403;
+      toast.error(
+        forbidden
+          ? target === "NEW_WORKSPACE"
+            ? t("promoteProjectForbidden")
+            : t("promoteForbidden")
+          : t("promoteFailed")
+      );
+    } finally {
+      setPromotingKey((cur) => (cur === key ? null : cur));
+    }
+  };
+
   const isResolved = Boolean(annotation?.resolvedAt);
   const isAuthor = annotation?.createdById === currentUserId;
   const showComposer =
@@ -417,7 +541,172 @@ export function ThreadColumn({
                 depth={annotation ? annotation.depth + 1 : 1}
                 workspaceId={workspaceId}
                 showCopyButton
-              />
+              >
+                {!msg.live &&
+                  msg.annotatableId &&
+                  annotation?.kind === "ASK" &&
+                  msg.content.trim().length > 0 && (() => {
+                    const msgId = msg.annotatableId;
+                    const timelinePromo = promotionsByKey.get(`${msgId}:TIMELINE`);
+                    const workspacePromo = promotionsByKey.get(`${msgId}:NEW_WORKSPACE`);
+                    const timelineBusy = promotingKey === `${msgId}:TIMELINE`;
+                    const workspaceBusy = promotingKey === `${msgId}:NEW_WORKSPACE`;
+                    const showPicker = pickerMsgId === msgId;
+
+                    return (
+                      <div
+                        className="mt-2.5 pt-2 border-t border-border/60 space-y-2"
+                        data-testid={`message-promotions-${msgId}`}
+                      >
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {timelinePromo ? (
+                            <a
+                              href={`#response-${timelinePromo.destinationResponseId ?? ""}`}
+                              data-testid={`chip-view-timeline-${msgId}`}
+                              onClick={(e) => {
+                                const destId = timelinePromo.destinationResponseId;
+                                if (!destId) return;
+                                e.preventDefault();
+                                onCloseAll();
+                                setTimeout(() => {
+                                  document
+                                    .getElementById(`response-${destId}`)
+                                    ?.scrollIntoView({
+                                      behavior: "smooth",
+                                      block: "center",
+                                    });
+                                }, 50);
+                              }}
+                              className="inline-flex h-6 items-center gap-1 rounded-md border border-accent/30 bg-accent-soft px-2 text-[11px] font-medium text-accent hover:bg-accent/20 transition-colors cursor-pointer"
+                            >
+                              <Check className="h-3 w-3" />
+                              <span>{t("addedToTimeline")}</span>
+                            </a>
+                          ) : (
+                            <Gated
+                              reason={
+                                canPromoteToTimeline
+                                  ? null
+                                  : {
+                                      code: "no_permission",
+                                      capability: t("capAddToTimeline"),
+                                    }
+                              }
+                            >
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                disabled={timelineBusy}
+                                data-testid={`btn-promote-timeline-${msgId}`}
+                                onClick={() => void handlePromote(msgId, "TIMELINE")}
+                                className="h-6 px-2 text-[11px] gap-1 text-foreground hover:text-accent"
+                              >
+                                {timelineBusy ? (
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                ) : (
+                                  <History className="h-3 w-3" />
+                                )}
+                                <span>{t("addToTimeline")}</span>
+                              </Button>
+                            </Gated>
+                          )}
+
+                          {workspacePromo ? (
+                            workspacePromo.destinationRemoved ? (
+                              <span
+                                data-testid={`chip-workspace-removed-${msgId}`}
+                                className="inline-flex h-6 items-center gap-1 rounded-md border border-border bg-surface-2 px-2 text-[11px] text-muted"
+                              >
+                                {t("workspaceRemoved")}
+                              </span>
+                            ) : workspacePromo.destinationAccessible === false ? (
+                              <span
+                                data-testid={`chip-workspace-inaccessible-${msgId}`}
+                                className="inline-flex h-6 items-center gap-1 rounded-md border border-border bg-surface-2 px-2 text-[11px] text-muted"
+                              >
+                                {t("startedAnotherWorkspace")}
+                              </span>
+                            ) : (
+                              <Link
+                                href={`/workspaces/${workspacePromo.destinationWorkspaceId ?? ""}`}
+                                data-testid={`chip-open-workspace-${msgId}`}
+                                className="inline-flex h-6 items-center gap-1 rounded-md border border-border bg-surface-2 px-2 text-[11px] font-medium text-foreground hover:text-accent transition-colors"
+                              >
+                                <ExternalLink className="h-3 w-3 text-accent" />
+                                <span className="truncate max-w-[14rem]">
+                                  {t("startedWorkspace", {
+                                    title:
+                                      workspacePromo.destinationWorkspaceTitle ||
+                                      t("untitledWorkspace"),
+                                  })}
+                                </span>
+                              </Link>
+                            )
+                          ) : (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              disabled={workspaceBusy}
+                              data-testid={`btn-promote-workspace-${msgId}`}
+                              onClick={() => void openWorkspacePicker(msgId)}
+                              className="h-6 px-2 text-[11px] gap-1 text-foreground hover:text-accent"
+                            >
+                              {workspaceBusy ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <ExternalLink className="h-3 w-3" />
+                              )}
+                              <span>{t("newWorkspace")}</span>
+                            </Button>
+                          )}
+                        </div>
+
+                        {showPicker && !workspacePromo && (
+                          <div
+                            data-testid={`promote-project-picker-${msgId}`}
+                            className="rounded-md border border-border bg-surface-2/80 p-2 space-y-1.5 text-xs"
+                          >
+                            <p className="text-[11px] font-medium text-muted">
+                              {t("chooseWorkspaceLocation")}
+                            </p>
+                            <div className="flex flex-col gap-1">
+                              <button
+                                type="button"
+                                data-testid={`promote-project-standalone-${msgId}`}
+                                onClick={() =>
+                                  void handlePromote(msgId, "NEW_WORKSPACE", null)
+                                }
+                                className="text-left rounded px-2 py-1 hover:bg-surface text-foreground cursor-pointer"
+                              >
+                                {t("standaloneWorkspace")}
+                              </button>
+                              {isLoadingProjects && (
+                                <span className="px-2 py-1 text-[11px] text-muted">
+                                  {t("loadingProjects")}
+                                </span>
+                              )}
+                              {(projectsList ?? []).map((proj) => (
+                                <button
+                                  key={proj.id}
+                                  type="button"
+                                  data-testid={`promote-project-${proj.id}`}
+                                  onClick={() =>
+                                    void handlePromote(msgId, "NEW_WORKSPACE", proj.id)
+                                  }
+                                  className="text-left rounded px-2 py-1 hover:bg-surface text-foreground truncate cursor-pointer"
+                                >
+                                  {proj.name}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+              </AnswerBody>
             )
           ) : (
             <RenderMentions text={msg.content} workspaceId={workspaceId} />

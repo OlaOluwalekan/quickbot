@@ -9,6 +9,7 @@ import {
   buildAskUserMessage,
 } from "./prompts/annotation";
 import { estimateTokens } from "./context-builder";
+import { locateQuote } from "@/lib/annotations/quote-match";
 import type { Msg } from "./types";
 
 export const MAX_TARGET_TOKENS = 12000;
@@ -56,18 +57,16 @@ export function windowTargetText(
     return targetText;
   }
 
-  let anchorIdx = -1;
-  if (
+  // The saved offset counts rendered characters, so it only helps when the
+  // text has no markdown before the passage. Otherwise search for the passage.
+  const located =
     typeof anchorStart === "number" &&
     targetText.startsWith(anchorExact, anchorStart)
-  ) {
-    anchorIdx = anchorStart;
-  } else {
-    anchorIdx = targetText.indexOf(anchorExact);
-  }
+      ? { start: anchorStart, end: anchorStart + anchorExact.length }
+      : locateQuote(targetText, anchorExact);
   // Passage not found (e.g. the text was edited since): keep the beginning.
-  const anchorFrom = anchorIdx === -1 ? 0 : anchorIdx;
-  const anchorTo = anchorIdx === -1 ? 0 : anchorIdx + anchorExact.length;
+  const anchorFrom = located?.start ?? 0;
+  const anchorTo = located?.end ?? 0;
 
   const start = Math.max(0, anchorFrom - WINDOW_BEFORE_TOKENS * CHARS_PER_TOKEN);
   const end = Math.min(

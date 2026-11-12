@@ -149,31 +149,35 @@ model Project {
 }
 
 model Workspace {
-  id             String            @id @default(uuid(7))
-  ownerId        String
-  projectId      String?
-  title          String
-  titleSource    TitleSource       @default(AUTO)
-  archivedAt     DateTime?
-  deletedAt      DateTime?
-  lastActivityAt DateTime          @default(now())
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
-  owner          User              @relation(fields: [ownerId], references: [id], onDelete: Restrict)
-  project        Project?          @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  members        WorkspaceMember[]
-  responses      Response[]
-  generations    Generation[]
-  attachments    Attachment[]
-  annotations    Annotation[]
-  invitations    Invitation[]
-  activityLogs   ActivityLog[]
-  shareLinks     ShareLink[]
-  ownershipTransfers   OwnershipTransfer[]
-  notes          WorkspaceNote[]
+  id                 String            @id @default(uuid(7))
+  ownerId            String
+  projectId          String?
+  sourceWorkspaceId  String?           @map("source_workspace_id")
+  sourceAnnotationId String?           @map("source_annotation_id")
+  sourceMessageId    String?           @map("source_message_id")
+  title              String
+  titleSource        TitleSource       @default(AUTO)
+  archivedAt         DateTime?
+  deletedAt          DateTime?
+  lastActivityAt     DateTime          @default(now())
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  owner              User              @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  project            Project?          @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  members            WorkspaceMember[]
+  responses          Response[]
+  generations        Generation[]
+  attachments        Attachment[]
+  annotations        Annotation[]
+  invitations        Invitation[]
+  activityLogs       ActivityLog[]
+  shareLinks         ShareLink[]
+  ownershipTransfers OwnershipTransfer[]
+  notes              WorkspaceNote[]
 
   @@index([ownerId, deletedAt, lastActivityAt(sort: Desc)])
   @@index([projectId, deletedAt])
+  @@index([sourceWorkspaceId])
   @@map("workspaces")
 }
 

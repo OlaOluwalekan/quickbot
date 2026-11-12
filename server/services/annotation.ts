@@ -2,8 +2,13 @@ import "server-only";
 import crypto from "node:crypto";
 import { db } from "@/server/db/client";
 import { Errors } from "@/server/http/errors";
-import { requireWorkspace } from "@/server/authz/access";
+import {
+  requireProject,
+  requireWorkspace,
+  resolveWorkspaceRole,
+} from "@/server/authz/access";
 import { logActivity } from "./activity";
+import { quoteIsFromSource } from "@/lib/annotations/quote-match";
 import {
   syncMentionsAndNotes,
   sendMentionNotifications,
@@ -59,6 +64,106 @@ function formatSSEEvent(event: string, data: unknown): string {
   return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
 }
 
+type PromotionRowLike = {
+  id: string;
+  annotationId: string;
+  messageId: string;
+  target: "TIMELINE" | "NEW_WORKSPACE";
+  destinationResponseId: string | null;
+  destinationWorkspaceId: string | null;
+  createdById: string;
+  createdAt: Date;
+};
+
+type EnrichedPromotion<T extends PromotionRowLike> = T & {
+  destinationWorkspaceTitle: string | null;
+  destinationAccessible: boolean;
+  destinationRemoved: boolean;
+};
+
+/**
+ * Resolves destination workspace titles/accessibility for promotions without
+ * leaking titles of workspaces the actor cannot read.
+ */
+async function enrichPromotionsForActor<T extends PromotionRowLike>(
+  actorId: string,
+  promotions: T[]
+): Promise<Array<EnrichedPromotion<T>>> {
+  const newWsIds = Array.from(
+    new Set(
+      promotions
+        .filter((p) => p.target === "NEW_WORKSPACE" && p.destinationWorkspaceId)
+        .map((p) => p.destinationWorkspaceId as string)
+    )
+  );
+
+  const wsMeta = new Map<
+    string,
+    { title: string | null; accessible: boolean; removed: boolean }
+  >();
+
+  if (newWsIds.length > 0) {
+    const rows = await db.workspace.findMany({
+      where: { id: { in: newWsIds } },
+      select: { id: true, title: true, deletedAt: true },
+    });
+    const rowById = new Map(rows.map((r) => [r.id, r]));
+
+    await Promise.all(
+      newWsIds.map(async (wsId) => {
+        const row = rowById.get(wsId);
+        if (!row || row.deletedAt !== null) {
+          wsMeta.set(wsId, { title: null, accessible: false, removed: true });
+          return;
+        }
+        const access = await resolveWorkspaceRole(actorId, wsId);
+        if (!access) {
+          wsMeta.set(wsId, { title: null, accessible: false, removed: false });
+          return;
+        }
+        wsMeta.set(wsId, { title: row.title, accessible: true, removed: false });
+      })
+    );
+  }
+
+  return promotions.map((p) => {
+    if (p.target !== "NEW_WORKSPACE" || !p.destinationWorkspaceId) {
+      return {
+        ...p,
+        destinationWorkspaceTitle: null,
+        destinationAccessible: true,
+        destinationRemoved: false,
+      };
+    }
+    const meta = wsMeta.get(p.destinationWorkspaceId) ?? {
+      title: null,
+      accessible: false,
+      removed: true,
+    };
+    return {
+      ...p,
+      destinationWorkspaceTitle: meta.title,
+      destinationAccessible: meta.accessible,
+      destinationRemoved: meta.removed,
+    };
+  });
+}
+
+async function attachPromotionsMetadata<
+  T extends { promotions?: PromotionRowLike[] },
+>(actorId: string, annotations: T[]): Promise<T[]> {
+  const flatPromotions = annotations.flatMap((a) => a.promotions ?? []);
+  if (flatPromotions.length === 0) return annotations;
+
+  const enriched = await enrichPromotionsForActor(actorId, flatPromotions);
+  const byId = new Map(enriched.map((p) => [p.id, p]));
+
+  return annotations.map((a) => ({
+    ...a,
+    promotions: (a.promotions ?? []).map((p) => byId.get(p.id) ?? p),
+  }));
+}
+
 /**
  * Lists annotations for a response visible to the calling actor:
  * - Includes all `WORKSPACE`-visibility annotations
@@ -82,7 +187,7 @@ export async function listAnnotationsForResponse(
 
   await requireWorkspace(actor, response.workspaceId, "workspace.read");
 
-  return db.annotation.findMany({
+  const rows = await db.annotation.findMany({
     where: {
       responseId,
       deletedAt: null,
@@ -108,12 +213,17 @@ export async function listAnnotationsForResponse(
         where: { deletedAt: null },
         select: { id: true, status: true },
       },
+      promotions: {
+        orderBy: { createdAt: "asc" },
+      },
       createdBy: {
         select: { id: true, name: true, email: true, image: true },
       },
     },
     orderBy: { createdAt: "asc" },
   });
+
+  return attachPromotionsMetadata(actor.userId, rows);
 }
 
 /**
@@ -151,7 +261,7 @@ export async function listAnnotationsForMessage(actor: Actor, messageId: string)
     throw Errors.notFound("AnnotationMessage");
   }
 
-  return db.annotation.findMany({
+  const rows = await db.annotation.findMany({
     where: {
       targetMessageId: messageId,
       deletedAt: null,
@@ -173,12 +283,17 @@ export async function listAnnotationsForMessage(actor: Actor, messageId: string)
         where: { deletedAt: null },
         select: { id: true, status: true },
       },
+      promotions: {
+        orderBy: { createdAt: "asc" },
+      },
       createdBy: {
         select: { id: true, name: true, image: true },
       },
     },
     orderBy: { createdAt: "asc" },
   });
+
+  return attachPromotionsMetadata(actor.userId, rows);
 }
 
 /**
@@ -190,7 +305,7 @@ export async function listWorkspaceAnnotations(
 ) {
   await requireWorkspace(actor, workspaceId, "workspace.read");
 
-  return db.annotation.findMany({
+  const rows = await db.annotation.findMany({
     where: {
       workspaceId,
       deletedAt: null,
@@ -208,6 +323,9 @@ export async function listWorkspaceAnnotations(
           },
         },
       },
+      promotions: {
+        orderBy: { createdAt: "asc" },
+      },
       createdBy: {
         select: { id: true, name: true, email: true, image: true },
       },
@@ -221,6 +339,8 @@ export async function listWorkspaceAnnotations(
     },
     orderBy: { createdAt: "desc" },
   });
+
+  return attachPromotionsMetadata(actor.userId, rows);
 }
 
 /**
@@ -270,7 +390,8 @@ export async function listWorkspaceQuestions(
 /**
  * Creates a new annotation and its initial USER message on a response version.
  * Requires `workspace.comment` (COMMENT) or `workspace.ask` (QUESTION).
- * Validates that `anchor.exact` is a true substring of the version text.
+ * Validates that `anchor.exact` is a passage of the version text. The passage
+ * is the rendered text, the version text is markdown: see `locateQuote`.
  */
 export async function createAnnotation(
   actor: Actor,
@@ -297,7 +418,7 @@ export async function createAnnotation(
     annotationKindPermission(input.kind)
   );
 
-  // Re-check anchor.exact substring on server against stored text
+  // Re-check on the server that the passage comes from the stored text
   let targetContent = version.content;
   if (input.contentSource === "EDIT") {
     if (input.editRevision) {
@@ -324,7 +445,7 @@ export async function createAnnotation(
     }
   }
 
-  if (!targetContent.includes(input.anchor.exact)) {
+  if (!quoteIsFromSource(targetContent, input.anchor.exact)) {
     throw Errors.badRequest(
       "Selected text is not a substring of the response content"
     );
@@ -416,7 +537,7 @@ export async function createAnnotation(
 /**
  * Creates a new annotation and its initial USER message on an ASSISTANT annotation message.
  * Requires workspace.comment (COMMENT) or workspace.ask (ASK).
- * Validates that anchor.exact is a true substring of the message text,
+ * Validates that anchor.exact is a passage of the message text (`locateQuote`),
  * and ensures that depth does not exceed MAX_ANNOTATION_DEPTH.
  */
 export async function createAnnotationOnMessage(
@@ -471,7 +592,7 @@ export async function createAnnotationOnMessage(
     throw Errors.badRequest("Maximum annotation depth exceeded");
   }
 
-  if (!message.content.includes(input.anchor.exact)) {
+  if (!quoteIsFromSource(message.content, input.anchor.exact)) {
     throw Errors.badRequest(
       "Selected text is not a substring of the message content"
     );
@@ -580,6 +701,9 @@ export async function getAnnotation(actor: Actor, annotationId: string) {
           },
         },
       },
+      promotions: {
+        orderBy: { createdAt: "asc" },
+      },
       createdBy: {
         select: { id: true, name: true, email: true, image: true },
       },
@@ -596,7 +720,8 @@ export async function getAnnotation(actor: Actor, annotationId: string) {
     throw Errors.notFound("Annotation");
   }
 
-  return annot;
+  const [enriched] = await attachPromotionsMetadata(actor.userId, [annot]);
+  return enriched ?? annot;
 }
 
 /**
@@ -641,6 +766,9 @@ export async function getAnnotationChain(actor: Actor, annotationId: string) {
         orderBy: { createdAt: "asc" },
         include: { author: { select: author } },
       },
+      promotions: {
+        orderBy: { createdAt: "asc" },
+      },
       createdBy: { select: author },
     },
     orderBy: { depth: "asc" },
@@ -653,7 +781,7 @@ export async function getAnnotationChain(actor: Actor, annotationId: string) {
     }
   }
 
-  return annotations;
+  return attachPromotionsMetadata(actor.userId, annotations);
 }
 
 /** The capability needed to create or change an annotation of this kind. */
@@ -1248,11 +1376,110 @@ export async function streamAnnotationAnswer(
   };
 }
 
+type CitationLike = {
+  index?: number;
+  url?: string;
+  title?: string | null;
+  snippet?: string | null;
+  source?: string;
+};
+
+function normalizeCitationSource(
+  source: string | undefined
+): "GROUNDING" | "ATTACHMENT" | "MODEL_PROVIDED" {
+  if (source === "ATTACHMENT" || source === "MODEL_PROVIDED") return source;
+  return "GROUNDING";
+}
+
+async function createPromotedResponseInTx(
+  tx: Parameters<Parameters<typeof db.$transaction>[0]>[0],
+  params: {
+    workspaceId: string;
+    responseCreatedById: string;
+    versionCreatedById: string;
+    promptText: string;
+    annotation: { id: string; anchorExact: string };
+    message: {
+      id: string;
+      content: string;
+      thoughtSummary: string | null;
+      citations: unknown;
+      modelKey: string | null;
+      createdAt: Date;
+    };
+  }
+) {
+  const response = await tx.response.create({
+    data: {
+      workspaceId: params.workspaceId,
+      createdById: params.responseCreatedById,
+      origin: "PROMOTED",
+      prompt: params.promptText,
+      quote: params.annotation.anchorExact,
+      sourceAnnotationId: params.annotation.id,
+      sortAt: params.message.createdAt,
+      kind: "TEXT",
+    },
+  });
+
+  const modelKey = params.message.modelKey ?? "promoted";
+  const version = await tx.responseVersion.create({
+    data: {
+      responseId: response.id,
+      number: 1,
+      status: "COMPLETE",
+      content: params.message.content,
+      thoughtSummary: params.message.thoughtSummary ?? null,
+      modelKey,
+      providerModelId: modelKey,
+      promptVersion: "v1",
+      sourceMessageId: params.message.id,
+      createdById: params.versionCreatedById,
+    },
+  });
+
+  if (Array.isArray(params.message.citations)) {
+    const raw = params.message.citations as CitationLike[];
+    const seenIndices = new Set<number>();
+    const validCitations = raw.filter(
+      (c): c is CitationLike & { index: number; url: string } => {
+        if (typeof c?.index !== "number" || typeof c?.url !== "string") {
+          return false;
+        }
+        if (seenIndices.has(c.index)) return false;
+        seenIndices.add(c.index);
+        return true;
+      }
+    );
+    if (validCitations.length > 0) {
+      await tx.citation.createMany({
+        data: validCitations.map((c) => ({
+          versionId: version.id,
+          index: c.index,
+          url: c.url,
+          title: typeof c.title === "string" ? c.title : null,
+          snippet: typeof c.snippet === "string" ? c.snippet : null,
+          source: normalizeCitationSource(c.source),
+        })),
+      });
+    }
+  }
+
+  await tx.response.update({
+    where: { id: response.id },
+    data: { activeVersionId: version.id },
+  });
+
+  return response;
+}
+
 /**
- * Promotes an AI-answered side-thread message into:
+ * Promotes an AI-answered side-thread message at any depth into:
  * - TIMELINE: Adds to workspace history as a promoted Response at original sortAt date.
  *             Requires workspace.generate permission (no credits charged).
- * - NEW_WORKSPACE: Creates a new workspace owned by caller with only this promoted Response.
+ * - NEW_WORKSPACE: Creates a new workspace owned by caller (optionally inside a project
+ *                  where caller has workspace.generate) with only this promoted Response
+ *                  and provenance back to the source workspace/annotation/message.
  *                  Requires workspace.read permission on source workspace.
  * Idempotent by [messageId, target].
  */
@@ -1272,11 +1499,21 @@ export async function promoteAnnotation(
     throw Errors.notFound("Annotation");
   }
 
-  // Permission check
+  // Permission check on source workspace & private thread ownership
   if (input.target === "TIMELINE") {
     await requireWorkspace(actor, annotation.workspaceId, "workspace.generate");
   } else {
     await requireWorkspace(actor, annotation.workspaceId, "workspace.read");
+  }
+
+  if (annotation.visibility === "PRIVATE" && annotation.createdById !== actor.userId) {
+    throw Errors.notFound("Annotation");
+  }
+
+  const targetProjectId =
+    input.target === "NEW_WORKSPACE" ? (input.projectId ?? null) : null;
+  if (targetProjectId) {
+    await requireProject(actor, targetProjectId, "workspace.generate");
   }
 
   const message = annotation.messages.find((m) => m.id === input.messageId);
@@ -1297,6 +1534,17 @@ export async function promoteAnnotation(
     annotation.messages.find((m) => m.role === "USER")?.content ||
     annotation.anchorExact;
 
+  const returnEnriched = async (
+    promo: PromotionRowLike,
+    alreadyPromoted: boolean
+  ) => {
+    const [enriched] = await enrichPromotionsForActor(actor.userId, [promo]);
+    return {
+      ...enriched,
+      alreadyPromoted,
+    };
+  };
+
   // Fast-path idempotency check
   const existing = await db.promotion.findUnique({
     where: {
@@ -1308,14 +1556,11 @@ export async function promoteAnnotation(
   });
 
   if (existing) {
-    return {
-      ...existing,
-      alreadyPromoted: true,
-    };
+    return returnEnriched(existing, true);
   }
 
   try {
-    return await db.$transaction(async (tx) => {
+    const result = await db.$transaction(async (tx) => {
       // Check again inside transaction to prevent race conditions
       const existingInTx = await tx.promotion.findUnique({
         where: {
@@ -1327,43 +1572,17 @@ export async function promoteAnnotation(
       });
 
       if (existingInTx) {
-        return {
-          ...existingInTx,
-          alreadyPromoted: true,
-        };
+        return { promo: existingInTx, alreadyPromoted: true };
       }
 
       if (input.target === "TIMELINE") {
-        const response = await tx.response.create({
-          data: {
-            workspaceId: annotation.workspaceId,
-            createdById: annotation.createdById, // annotation author
-            origin: "PROMOTED",
-            prompt: promptText,
-            quote: annotation.anchorExact,
-            sourceAnnotationId: annotation.id,
-            sortAt: message.createdAt, // lands in timeline by original creation date
-            kind: "TEXT",
-          },
-        });
-
-        const version = await tx.responseVersion.create({
-          data: {
-            responseId: response.id,
-            number: 1,
-            status: "COMPLETE",
-            content: message.content,
-            modelKey: "promoted",
-            providerModelId: "promoted",
-            promptVersion: "v1",
-            sourceMessageId: message.id,
-            createdById: actor.userId,
-          },
-        });
-
-        await tx.response.update({
-          where: { id: response.id },
-          data: { activeVersionId: version.id },
+        const response = await createPromotedResponseInTx(tx, {
+          workspaceId: annotation.workspaceId,
+          responseCreatedById: annotation.createdById,
+          versionCreatedById: actor.userId,
+          promptText,
+          annotation,
+          message,
         });
 
         const promotion = await tx.promotion.create({
@@ -1377,50 +1596,28 @@ export async function promoteAnnotation(
           },
         });
 
-        return {
-          ...promotion,
-          alreadyPromoted: false,
-        };
+        return { promo: promotion, alreadyPromoted: false };
       } else {
         // NEW_WORKSPACE: owned by caller, title = first 60 chars of question
         const title = promptText.trim().slice(0, 60) || "New Workspace";
         const workspace = await tx.workspace.create({
           data: {
             ownerId: actor.userId,
+            projectId: targetProjectId,
             title,
-          },
-        });
-
-        const response = await tx.response.create({
-          data: {
-            workspaceId: workspace.id,
-            createdById: actor.userId,
-            origin: "PROMOTED",
-            prompt: promptText,
-            quote: annotation.anchorExact,
+            sourceWorkspaceId: annotation.workspaceId,
             sourceAnnotationId: annotation.id,
-            sortAt: message.createdAt,
-            kind: "TEXT",
-          },
-        });
-
-        const version = await tx.responseVersion.create({
-          data: {
-            responseId: response.id,
-            number: 1,
-            status: "COMPLETE",
-            content: message.content,
-            modelKey: "promoted",
-            providerModelId: "promoted",
-            promptVersion: "v1",
             sourceMessageId: message.id,
-            createdById: actor.userId,
           },
         });
 
-        await tx.response.update({
-          where: { id: response.id },
-          data: { activeVersionId: version.id },
+        const response = await createPromotedResponseInTx(tx, {
+          workspaceId: workspace.id,
+          responseCreatedById: actor.userId,
+          versionCreatedById: actor.userId,
+          promptText,
+          annotation,
+          message,
         });
 
         const promotion = await tx.promotion.create({
@@ -1434,15 +1631,14 @@ export async function promoteAnnotation(
           },
         });
 
-        return {
-          ...promotion,
-          alreadyPromoted: false,
-        };
+        return { promo: promotion, alreadyPromoted: false };
       }
     });
+
+    return returnEnriched(result.promo, result.alreadyPromoted);
   } catch (err: unknown) {
     if ((err as { code?: string })?.code === "P2002") {
-      const existing = await db.promotion.findUnique({
+      const existingOnConflict = await db.promotion.findUnique({
         where: {
           messageId_target: {
             messageId: input.messageId,
@@ -1450,11 +1646,8 @@ export async function promoteAnnotation(
           },
         },
       });
-      if (existing) {
-        return {
-          ...existing,
-          alreadyPromoted: true,
-        };
+      if (existingOnConflict) {
+        return returnEnriched(existingOnConflict, true);
       }
     }
     throw err;
