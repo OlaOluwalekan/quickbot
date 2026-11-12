@@ -17,6 +17,8 @@ export EMAIL_FROM="Klecx <ci@example.com>"
 
 npx prisma validate
 npx prisma migrate deploy
+# Fails when schema.prisma has a change that no migration makes.
+npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code
 npm run lint
 npm run check:tokens
 npm run typecheck
