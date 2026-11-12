@@ -1631,5 +1631,28 @@
       "sourceRemoved": "Started from a side question. The source workspace was removed.",
       "sourceInaccessible": "Started from a side question in a workspace you can't access"
     }
+  },
+  "Documents": {
+    "uploadedBadge": "Uploaded document",
+    "addToWorkspace": "Add to workspace as a document",
+    "attachToMessage": "Attach to message",
+    "dropChoose": "Choose how to add this file",
+    "showFull": "Show full document",
+    "showLess": "Collapse document",
+    "downloadOriginal": "Download original",
+    "pdfLayoutNote": "PDF layout (columns, tables) may not be preserved.",
+    "csvRowsNote": "Showing {shown} of {total} rows.",
+    "edit": "Edit",
+    "askKlecxReview": "Ask Klecx to review",
+    "share": "Share",
+    "delete": "Delete",
+    "pagesCount": "{count, plural, one {# page} other {# pages}}",
+    "addingDocument": "Adding {name} to workspace…",
+    "addedDocument": "Added {name} to workspace",
+    "errors": {
+      "uploadFailed": "Failed to add document to workspace.",
+      "pageLimit": "This PDF exceeds the 100-page limit.",
+      "unsupported": "Only MD, TXT, DOCX, PDF, and CSV files can be added as workspace documents."
+    }
   }
 }

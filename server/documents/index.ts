@@ -530,8 +530,14 @@ export async function exportWorkspaceDocument(
     select: {
       id: true,
       prompt: true,
+      kind: true,
       activeVersionId: true,
       createdAt: true,
+      uploadedAttachment: {
+        select: {
+          originalName: true,
+        },
+      },
       versions: {
         orderBy: { number: "asc" },
         select: {
@@ -569,6 +575,8 @@ export async function exportWorkspaceDocument(
       return {
         prompt: r.prompt,
         content,
+        kind: r.kind,
+        documentName: r.uploadedAttachment?.originalName || r.prompt,
         modelKey: activeVer.modelKey,
         versionNumber: activeVer.number,
         createdAt: activeVer.createdAt ?? r.createdAt,

@@ -1631,5 +1631,28 @@
       "sourceRemoved": "Démarré à partir d'une question annexe. L'espace de travail d'origine a été supprimé.",
       "sourceInaccessible": "Démarré à partir d'une question annexe dans un espace de travail auquel vous n'avez pas accès"
     }
+  },
+  "Documents": {
+    "uploadedBadge": "Document importé",
+    "addToWorkspace": "Ajouter à l'espace de travail comme document",
+    "attachToMessage": "Joindre au message",
+    "dropChoose": "Choisissez comment ajouter ce fichier",
+    "showFull": "Afficher le document complet",
+    "showLess": "Réduire le document",
+    "downloadOriginal": "Télécharger l'original",
+    "pdfLayoutNote": "La mise en page du PDF (colonnes, tableaux) peut ne pas être conservée.",
+    "csvRowsNote": "Affichage de {shown} sur {total} lignes.",
+    "edit": "Modifier",
+    "askKlecxReview": "Demander à Klecx de relire",
+    "share": "Partager",
+    "delete": "Supprimer",
+    "pagesCount": "{count, plural, one {# page} other {# pages}}",
+    "addingDocument": "Ajout de {name} à l'espace de travail…",
+    "addedDocument": "{name} ajouté à l'espace de travail",
+    "errors": {
+      "uploadFailed": "Impossible d'ajouter le document à l'espace de travail.",
+      "pageLimit": "Ce PDF dépasse la limite de 100 pages.",
+      "unsupported": "Seuls les fichiers MD, TXT, DOCX, PDF et CSV peuvent être ajoutés comme documents."
+    }
   }
 }

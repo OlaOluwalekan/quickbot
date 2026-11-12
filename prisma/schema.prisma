@@ -271,11 +271,13 @@ model CreditLedger {
 enum ResponseKind {
   TEXT
   IMAGE
+  DOCUMENT
 }
 
 enum ResponseOrigin {
   DIRECT
   PROMOTED
+  UPLOAD
 }
 
 enum VersionStatus {
@@ -285,23 +287,25 @@ enum VersionStatus {
 }
 
 model Response {
-  id              String            @id @default(uuid(7))
-  workspaceId     String            @map("workspace_id")
-  createdById     String            @map("created_by_id")
-  prompt          String            @db.Text
-  kind            ResponseKind      @default(TEXT)
-  origin          ResponseOrigin    @default(DIRECT)
-  sortAt          DateTime          @default(now()) @map("sort_at")
-  activeVersionId String?           @unique @map("active_version_id")
-  deletedAt       DateTime?         @map("deleted_at")
-  createdAt       DateTime          @default(now()) @map("created_at")
-  workspace       Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  versions        ResponseVersion[]
-  attachments     Attachment[]
-  annotations     Annotation[]
-  shareLinks      ShareLink[]
-  quote           String?           @db.Text
-  sourceAnnotationId String?        @map("source_annotation_id")
+  id                   String            @id @default(uuid(7))
+  workspaceId          String            @map("workspace_id")
+  createdById          String            @map("created_by_id")
+  prompt               String            @db.Text
+  kind                 ResponseKind      @default(TEXT)
+  origin               ResponseOrigin    @default(DIRECT)
+  sortAt               DateTime          @default(now()) @map("sort_at")
+  activeVersionId      String?           @unique @map("active_version_id")
+  uploadedAttachmentId String?           @unique @map("uploaded_attachment_id")
+  deletedAt            DateTime?         @map("deleted_at")
+  createdAt            DateTime          @default(now()) @map("created_at")
+  workspace            Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  versions             ResponseVersion[]
+  attachments          Attachment[]
+  uploadedAttachment   Attachment?       @relation("UploadedDocumentResponse", fields: [uploadedAttachmentId], references: [id], onDelete: SetNull)
+  annotations          Annotation[]
+  shareLinks           ShareLink[]
+  quote                String?           @db.Text
+  sourceAnnotationId   String?           @map("source_annotation_id")
 
   @@index([workspaceId, deletedAt, sortAt, id])
   @@map("responses")
@@ -468,6 +472,7 @@ model Attachment {
   avatarUser User?      @relation("UserAvatarAttachment")
   workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   response  Response?  @relation(fields: [responseId], references: [id], onDelete: SetNull)
+  uploadedDocumentResponse Response? @relation("UploadedDocumentResponse")
 
   @@index([workspaceId, createdAt])
   @@index([ownerId])

@@ -147,6 +147,23 @@ export default async function PublicSharePage({
                 id={`response-${res.id}`}
                 className="space-y-4"
               >
+                {res.kind === "DOCUMENT" ? (
+                  <div className="rounded-2xl border border-border border-l-4 border-l-info bg-surface p-4 sm:p-6 text-sm sm:text-base text-fg shadow-2xs space-y-4">
+                    <div className="flex flex-wrap items-center gap-2 border-b border-border/60 pb-3">
+                      <FileText className="h-4 w-4 text-info shrink-0" />
+                      <span className="inline-flex items-center rounded-md bg-info/10 px-2 py-0.5 text-xs font-medium text-info">
+                        Uploaded document
+                      </span>
+                      <span className="text-sm font-semibold text-fg truncate">
+                        {res.uploadedDocument?.originalName || res.prompt}
+                      </span>
+                    </div>
+                    <div className="overflow-x-auto leading-relaxed">
+                      <Markdown content={res.content} />
+                    </div>
+                  </div>
+                ) : (
+                  <>
                 {/* Prompt Bubble */}
                 <div className="flex justify-end">
                   <div className="max-w-2xl rounded-2xl border border-border bg-surface-2 px-4 py-3 text-sm sm:text-base text-fg shadow-2xs space-y-2.5">
@@ -290,6 +307,8 @@ export default async function PublicSharePage({
                     )}
                   </div>
                 </div>
+                  </>
+                )}
               </article>
             ))}
           </div>

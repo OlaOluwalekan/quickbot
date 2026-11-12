@@ -234,6 +234,16 @@ export async function listWorkspaceResponses(
     }),
     orderBy: [{ sortAt: "asc" }, { id: "asc" }],
     include: {
+      uploadedAttachment: {
+        select: {
+          id: true,
+          originalName: true,
+          mime: true,
+          bytes: true,
+          createdAt: true,
+          deletedAt: true,
+        },
+      },
       attachments: {
         where: {
           deletedAt: null,
@@ -368,6 +378,16 @@ export async function listWorkspaceResponses(
       author: author ? { name: author.name, avatarUrl: author.avatarUrl ?? undefined } : undefined,
       attachments: (r.attachments ?? []).filter((a) => a.kind !== "GENERATED_DOCUMENT"),
       generatedDocuments: (r.attachments ?? []).filter((a) => a.kind === "GENERATED_DOCUMENT"),
+      uploadedAttachment:
+        r.uploadedAttachment && r.uploadedAttachment.deletedAt === null
+          ? {
+              id: r.uploadedAttachment.id,
+              originalName: r.uploadedAttachment.originalName,
+              mime: r.uploadedAttachment.mime,
+              bytes: r.uploadedAttachment.bytes,
+              createdAt: r.uploadedAttachment.createdAt,
+            }
+          : null,
     };
   });
 

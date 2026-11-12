@@ -54,6 +54,13 @@ export interface ResponseItemDto {
     width?: number | null;
     height?: number | null;
   }>;
+  uploadedAttachment?: {
+    id: string;
+    originalName: string;
+    mime: string;
+    bytes: number;
+    createdAt?: string | Date;
+  } | null;
 }
 
 export interface PaginatedResponses {

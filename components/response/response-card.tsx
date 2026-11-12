@@ -67,8 +67,8 @@ export interface ResponseItemData {
   id: string;
   workspaceId: string;
   prompt: string;
-  kind?: "TEXT" | "IMAGE" | string;
-  origin?: "DIRECT" | "PROMOTED" | string;
+  kind?: "TEXT" | "IMAGE" | "DOCUMENT" | string;
+  origin?: "DIRECT" | "PROMOTED" | "UPLOAD" | string;
   quote?: string | null;
   sourceAnnotationId?: string | null;
   sourceWorkspaceId?: string | null;
@@ -116,6 +116,16 @@ export interface ResponseItemData {
     mime: string;
     bytes: number;
   }>;
+  uploadedAttachment?: {
+    id: string;
+    originalName: string;
+    mime: string;
+    bytes: number;
+    createdAt?: string | Date;
+  } | null;
+  pageCount?: number | null;
+  totalRows?: number | null;
+  truncated?: boolean;
 }
 
 export interface ResponseCardProps {

@@ -1749,7 +1749,8 @@ export function ShareAndPeopleDialog({
                       {shareScope === "RESPONSE" ? "response" : "workspace"}.
                       They don&apos;t need an account. Annotations, comments,
                       questions, collaborators, and edit history are never
-                      included.
+                      included. For uploaded documents, only the text is shared
+                      — the original file is not downloadable from public links.
                     </p>
                   </div>
 

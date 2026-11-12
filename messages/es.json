@@ -1631,5 +1631,28 @@
       "sourceRemoved": "Iniciado a partir de una pregunta secundaria. El espacio de trabajo de origen se eliminó.",
       "sourceInaccessible": "Iniciado a partir de una pregunta secundaria en un espacio de trabajo al que no tienes acceso"
     }
+  },
+  "Documents": {
+    "uploadedBadge": "Documento subido",
+    "addToWorkspace": "Añadir al espacio de trabajo como documento",
+    "attachToMessage": "Adjuntar al mensaje",
+    "dropChoose": "Elige cómo añadir este archivo",
+    "showFull": "Mostrar documento completo",
+    "showLess": "Contraer documento",
+    "downloadOriginal": "Descargar original",
+    "pdfLayoutNote": "El diseño del PDF (columnas, tablas) puede no conservarse.",
+    "csvRowsNote": "Mostrando {shown} de {total} filas.",
+    "edit": "Editar",
+    "askKlecxReview": "Pedir a Klecx que revise",
+    "share": "Compartir",
+    "delete": "Eliminar",
+    "pagesCount": "{count, plural, one {# página} other {# páginas}}",
+    "addingDocument": "Añadiendo {name} al espacio de trabajo…",
+    "addedDocument": "Se añadió {name} al espacio de trabajo",
+    "errors": {
+      "uploadFailed": "No se pudo añadir el documento al espacio de trabajo.",
+      "pageLimit": "Este PDF supera el límite de 100 páginas.",
+      "unsupported": "Solo se pueden añadir archivos MD, TXT, DOCX, PDF y CSV como documentos del espacio de trabajo."
+    }
   }
 }
