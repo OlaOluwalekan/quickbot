@@ -40,7 +40,7 @@ npm run verify
 ```
 `verify` runs everything (it needs Docker for Postgres). Use `npm run db:migrate` to create migrations (`--create-only` when hand-editing SQL). Never edit a migration that's already merged. `check:i18n` exists once interlude F5.1 is merged.
 
-**Known migration drift (found 2026-11-09):** the `SupportTicket` model (`support_tickets` table, `TicketStatus` enum) is in `prisma/schema.prisma` but no migration creates it. `prisma migrate deploy` doesn't notice, but `prisma migrate dev` will report drift and propose a migration for it. Fix it in its own PR with a new migration; don't fold it into an unrelated step's migration. No guide step covers it. It must be merged **before F5.8** (support screenshots), whose `SupportAttachment` table has a foreign key to `support_tickets`: on a database built from the migrations alone that migration would fail, and until then the support form has no table to write to there.
+CI and `verify` fail when `schema.prisma` and the migrations disagree (`prisma migrate diff --exit-code`). If that check fails, the schema was changed without a migration (or with `prisma db push`): create the missing migration.
 
 **Open review items carried forward from F2.2 (PR #111, 2026-11-10), F2.4 (PR #113, 2026-11-10), F2.5 (PR #114, 2026-11-11), F2.6 (PR #115, 2026-11-11) and F2.7 (PR #116, 2026-11-11).** When reviewing the step named in each item, check whether it's fixed; if not, fix it in that step's PR. Once that step's review is done and the item is fixed, **delete the item from this file** (and delete this whole block when it's empty).
 

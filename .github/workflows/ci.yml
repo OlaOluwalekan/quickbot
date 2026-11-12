@@ -32,6 +32,8 @@ jobs:
       - run: npm ci
       - run: npx prisma validate
       - run: npx prisma migrate deploy # proves migrations apply to an empty DB
+      # Fails when schema.prisma has a change that no migration makes.
+      - run: npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code
       - run: npm run lint
       - run: npm run check:tokens
       - run: npm run typecheck
