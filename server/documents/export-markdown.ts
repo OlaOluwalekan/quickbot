@@ -22,6 +22,8 @@ export interface ExportMarkdownInput {
 export interface ExportWorkspaceTurn {
   prompt: string;
   content: string;
+  kind?: "TEXT" | "IMAGE" | "DOCUMENT" | string;
+  documentName?: string | null;
   modelKey?: string | null;
   versionNumber?: number | null;
   createdAt?: Date;
@@ -116,6 +118,13 @@ export function exportWorkspaceToMarkdown(
 
   input.turns.forEach((turn, idx) => {
     sections.push("", "---", "");
+    if (turn.kind === "DOCUMENT") {
+      const docName = (turn.documentName || turn.prompt || "Document").trim();
+      sections.push(`> Uploaded document: ${docName}`, "");
+      sections.push(turn.content.trim());
+      return;
+    }
+
     sections.push(`## Prompt ${idx + 1}`, "", turn.prompt.trim(), "");
 
     const metaParts: string[] = [];

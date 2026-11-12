@@ -8,7 +8,7 @@ import {
   resolveWorkspaceRole,
 } from "@/server/authz/access";
 import { logActivity } from "./activity";
-import { quoteIsFromSource } from "@/lib/annotations/quote-match";
+import { quoteIsFromStoredText } from "@/server/services/quote-source";
 import {
   syncMentionsAndNotes,
   sendMentionNotifications,
@@ -445,7 +445,7 @@ export async function createAnnotation(
     }
   }
 
-  if (!quoteIsFromSource(targetContent, input.anchor.exact)) {
+  if (!quoteIsFromStoredText(targetContent, input.anchor.exact)) {
     throw Errors.badRequest(
       "Selected text is not a substring of the response content"
     );
@@ -592,7 +592,7 @@ export async function createAnnotationOnMessage(
     throw Errors.badRequest("Maximum annotation depth exceeded");
   }
 
-  if (!quoteIsFromSource(message.content, input.anchor.exact)) {
+  if (!quoteIsFromStoredText(message.content, input.anchor.exact)) {
     throw Errors.badRequest(
       "Selected text is not a substring of the message content"
     );

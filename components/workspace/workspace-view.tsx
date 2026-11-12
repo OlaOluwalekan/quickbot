@@ -26,8 +26,8 @@ export interface WorkspaceViewProps {
   initialResponses?: Array<{
     id: string;
     prompt: string;
-    kind?: "TEXT" | "IMAGE";
-    origin?: "DIRECT" | "PROMOTED" | string;
+    kind?: "TEXT" | "IMAGE" | "DOCUMENT";
+    origin?: "DIRECT" | "PROMOTED" | "UPLOAD" | string;
     quote?: string | null;
     sourceAnnotationId?: string | null;
     sourceWorkspaceId?: string | null;
@@ -35,7 +35,12 @@ export interface WorkspaceViewProps {
     sourceRemoved?: boolean;
     sourceAccessible?: boolean;
     content?: string;
+    activeVersionId?: string | null;
     createdAt?: string | Date;
+    author?: {
+      name?: string;
+      avatarUrl?: string;
+    };
     citations?: CitationDto[];
     attachments?: Array<{
       id: string;
@@ -46,6 +51,13 @@ export interface WorkspaceViewProps {
       width?: number | null;
       height?: number | null;
     }>;
+    uploadedAttachment?: {
+      id: string;
+      originalName: string;
+      mime: string;
+      bytes: number;
+      createdAt?: string | Date;
+    } | null;
   }>;
   actor: Actor;
 }
@@ -143,6 +155,20 @@ export function WorkspaceView({
               width?: number | null;
               height?: number | null;
             }>;
+            uploadedAttachment?: {
+              id: string;
+              originalName: string;
+              mime: string;
+              bytes: number;
+              createdAt?: string | Date;
+            } | null;
+            author?: {
+              name?: string;
+              avatarUrl?: string;
+            };
+            pageCount?: number | null;
+            totalRows?: number | null;
+            truncated?: boolean;
           };
 
           const activeVer = raw.activeVersion;
@@ -158,7 +184,7 @@ export function WorkspaceView({
             id: r.id,
             workspaceId: workspace.id,
             prompt: r.prompt,
-            kind: (raw.kind as "TEXT" | "IMAGE") || "TEXT",
+            kind: (raw.kind as "TEXT" | "IMAGE" | "DOCUMENT") || "TEXT",
             origin: raw.origin,
             quote: raw.quote ?? null,
             sourceAnnotationId: raw.sourceAnnotationId ?? null,
@@ -171,8 +197,13 @@ export function WorkspaceView({
             versionCount: raw.versionCount || 1,
             activeVersionId: r.activeVersionId || activeVer?.id,
             createdAt: r.createdAt,
+            author: raw.author,
             citations: verCitations,
             attachments: (r as { attachments?: any[] }).attachments ?? raw.attachments ?? [],
+            uploadedAttachment: r.uploadedAttachment ?? raw.uploadedAttachment ?? null,
+            pageCount: raw.pageCount ?? null,
+            totalRows: raw.totalRows ?? null,
+            truncated: raw.truncated,
             activeVersion: activeVer
               ? {
                   id: activeVer.id,
@@ -208,11 +239,14 @@ export function WorkspaceView({
       content: r.content || "",
       response: r.content || "",
       versionCount: 1,
+      activeVersionId: r.activeVersionId || "ver-" + r.id,
       createdAt: r.createdAt,
+      author: r.author,
       citations: r.citations ?? [],
       attachments: r.attachments ?? [],
+      uploadedAttachment: r.uploadedAttachment ?? null,
       activeVersion: {
-        id: "ver-" + r.id,
+        id: r.activeVersionId || "ver-" + r.id,
         number: 1,
         content: r.content || "",
         originalContent: r.content || "",

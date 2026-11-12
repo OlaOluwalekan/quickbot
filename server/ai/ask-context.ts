@@ -93,7 +93,7 @@ export const ASK_TARGET_INCLUDE = {
   version: {
     include: {
       response: {
-        select: { id: true, prompt: true, deletedAt: true },
+        select: { id: true, prompt: true, kind: true, deletedAt: true },
       },
     },
   },
@@ -124,7 +124,7 @@ interface AskTargetAnnotation {
   version: {
     id: string;
     content: string;
-    response: { prompt: string; deletedAt: Date | null };
+    response: { prompt: string; kind?: string; deletedAt: Date | null };
   } | null;
   targetMessage: {
     id: string;
@@ -149,7 +149,7 @@ export interface AskTarget {
 /**
  * The text an Ask's highlight sits in, and where it comes from:
  * - RESPONSE_VERSION: the version (or the edit the highlight was made on) +
- *   the prompt that produced it.
+ *   the prompt that produced it, or the file name of an uploaded document.
  * - ANNOTATION_MESSAGE: the parent answer + the question that produced it.
  *
  * Returns null when the target was deleted.
@@ -186,9 +186,13 @@ export async function loadAskTarget(
     return {
       key,
       text,
-      description: version.response.prompt
-        ? `This text answered the request: "${version.response.prompt}"`
-        : "An earlier answer",
+      // An uploaded document keeps its file name in `prompt` (F3.1).
+      description:
+        version.response.kind === "DOCUMENT"
+          ? `The user uploaded the document "${version.response.prompt}"`
+          : version.response.prompt
+            ? `This text answered the request: "${version.response.prompt}"`
+            : "An earlier answer",
     };
   }
 

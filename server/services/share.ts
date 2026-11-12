@@ -322,6 +322,11 @@ export interface PublicShareResponseDto {
   citations: PublicShareCitationDto[];
   attachments: PublicShareAttachmentDto[];
   generatedDocuments: PublicShareAttachmentDto[];
+  uploadedDocument?: {
+    originalName: string;
+    mime: string;
+    bytes: number;
+  } | null;
 }
 
 export interface PublicSharePayloadDto {
@@ -486,6 +491,14 @@ export async function resolvePublicShareByToken(
         take: 1,
         select: { id: true },
       },
+      uploadedAttachment: {
+        select: {
+          originalName: true,
+          mime: true,
+          bytes: true,
+          deletedAt: true,
+        },
+      },
       attachments: {
         where: {
           deletedAt: null,
@@ -629,8 +642,22 @@ export async function resolvePublicShareByToken(
         imageUrl,
         createdAt: r.createdAt.toISOString(),
         citations,
-        attachments: promptAttachments,
-        generatedDocuments,
+        attachments: r.kind === "DOCUMENT" ? [] : promptAttachments,
+        generatedDocuments: r.kind === "DOCUMENT" ? [] : generatedDocuments,
+        uploadedDocument:
+          r.kind === "DOCUMENT"
+            ? r.uploadedAttachment && r.uploadedAttachment.deletedAt === null
+              ? {
+                  originalName: r.uploadedAttachment.originalName,
+                  mime: r.uploadedAttachment.mime,
+                  bytes: r.uploadedAttachment.bytes,
+                }
+              : {
+                  originalName: r.prompt,
+                  mime: "text/markdown",
+                  bytes: Buffer.byteLength(displayedContent, "utf-8"),
+                }
+            : null,
       };
     })
   );

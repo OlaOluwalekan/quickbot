@@ -23,11 +23,19 @@ import {
   Sparkles,
   Square,
 } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { QueryClientContext } from "@tanstack/react-query";
 import { useUiStore } from "@/lib/stores/ui";
 import { useGenerationStore } from "@/lib/stores/generation";
-import { api } from "@/lib/api/client";
+import { api, ApiClientError } from "@/lib/api/client";
+import {
+  MAX_CSV_ROWS,
+  MAX_WORKSPACE_DOCUMENTS,
+  WORKSPACE_DOCUMENT_ACCEPT,
+  isPdfFile,
+  isWorkspaceDocumentFile,
+} from "@/lib/documents/workspace-document-types";
 import { uploadAttachment } from "@/lib/api/attachments";
 import { navigateWithTransition } from "@/lib/navigation/view-transition";
 import { CLIENT_MODELS, type ClientModelOption } from "@/lib/ai/client-models";
@@ -92,6 +100,7 @@ export function Composer({
 }: ComposerProps) {
   const t = useTranslations("Chat");
   const tHome = useTranslations("Home");
+  const tDocs = useTranslations("Documents");
   const router = useRouter();
   const queryClient = React.useContext(QueryClientContext);
   const targetWorkspaceIdRef = React.useRef<string | null>(null);
@@ -206,7 +215,11 @@ export function Composer({
 
   const [attachments, setAttachments] = React.useState<ComposerAttachment[]>([]);
   const [isDragging, setIsDragging] = React.useState(false);
+  const [attachMenuOpen, setAttachMenuOpen] = React.useState(false);
+  const [pendingDropFiles, setPendingDropFiles] = React.useState<File[]>([]);
+  const [isAddingDocument, setIsAddingDocument] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const docFileInputRef = React.useRef<HTMLInputElement>(null);
 
   const { entitlements } = useEntitlements();
   const MAX_ATTACHMENTS = entitlements.limits.attachmentsPerWorkspace;
@@ -285,6 +298,103 @@ export function Composer({
       uploadItem(item);
     }
   }, [attachments.length, MAX_ATTACHMENTS, MAX_FILE_SIZE, t, uploadItem]);
+
+  const handleWorkspaceDocumentFiles = React.useCallback(
+    async (files: File[]) => {
+      if (files.length === 0) return;
+      setCreationError(null);
+      setPendingDropFiles([]);
+
+      for (const f of files) {
+        if (isPdfFile(f)) {
+          setCreationError(tDocs("errors.pdfNotSupported"));
+          return;
+        }
+        if (!isWorkspaceDocumentFile(f)) {
+          setCreationError(tDocs("errors.unsupported"));
+          return;
+        }
+        if (f.size > MAX_FILE_SIZE) {
+          setCreationError(t("attachSizeExceeded"));
+          return;
+        }
+      }
+
+      setIsAddingDocument(true);
+      try {
+        let targetWsId = workspaceId || targetWorkspaceIdRef.current;
+        const createdFromHome = !workspaceId;
+
+        if (!targetWsId) {
+          const defaultTitle =
+            files[0]?.name.replace(/\.[^.]+$/, "") || "New workspace";
+          const newWs = await api<WorkspaceDto>("/api/v1/workspaces", {
+            method: "POST",
+            body: { title: defaultTitle },
+          });
+          targetWsId = newWs.id;
+          targetWorkspaceIdRef.current = newWs.id;
+          queryClient?.invalidateQueries({ queryKey: ["workspaces"] });
+        }
+
+        for (const file of files) {
+          const attId = await uploadAttachment(file, targetWsId);
+          const added = await api<{
+            truncated?: boolean;
+            totalRows?: number | null;
+          }>(`/api/v1/workspaces/${targetWsId}/documents`, {
+            method: "POST",
+            body: { attachmentId: attId },
+          });
+          // Part of the file was left out: say so, it isn't visible otherwise.
+          if (added?.truncated) {
+            toast.warning(
+              typeof added.totalRows === "number" &&
+                added.totalRows > MAX_CSV_ROWS
+                ? tDocs("csvRowsNote", {
+                    shown: MAX_CSV_ROWS,
+                    total: added.totalRows,
+                  })
+                : tDocs("truncatedNote", { name: file.name })
+            );
+          }
+        }
+
+        window.dispatchEvent(
+          new CustomEvent("workspace-responses-changed", {
+            detail: { workspaceId: targetWsId },
+          })
+        );
+        queryClient?.invalidateQueries({ queryKey: ["workspaces"] });
+
+        if (createdFromHome && targetWsId) {
+          navigateWithTransition(router, `/workspaces/${targetWsId}`);
+        }
+      } catch (err: unknown) {
+        // Codes sent by the documents endpoint; anything else keeps the
+        // server's own message (plan limits, file checks).
+        const code = err instanceof ApiClientError ? err.code : null;
+        const known: Record<string, string> = {
+          document_type_unsupported: tDocs("errors.unsupported"),
+          document_page_limit: tDocs("errors.pageLimit"),
+          document_unreadable: tDocs("errors.unreadable"),
+          document_empty: tDocs("errors.empty"),
+          document_timeout: tDocs("errors.timeout"),
+          document_limit: tDocs("errors.limit", {
+            count: MAX_WORKSPACE_DOCUMENTS,
+          }),
+        };
+        setCreationError(
+          (code && known[code]) ||
+            (err instanceof ApiClientError && err.message) ||
+            tDocs("errors.uploadFailed")
+        );
+      } finally {
+        setIsAddingDocument(false);
+      }
+    },
+    [MAX_FILE_SIZE, queryClient, router, t, tDocs, workspaceId]
+  );
 
   const removeAttachment = React.useCallback((id: string) => {
     setAttachments((prev) => {
@@ -501,7 +611,14 @@ export function Composer({
         e.preventDefault();
         setIsDragging(false);
         const files = Array.from(e.dataTransfer.files);
-        if (files.length > 0) {
+        if (files.length === 0) return;
+        // Only files that can become a document get the choice; a PDF or an
+        // image is attached to the message directly.
+        const allDocs =
+          mode !== "image" && files.every((f) => isWorkspaceDocumentFile(f));
+        if (allDocs) {
+          setPendingDropFiles(files);
+        } else {
           handleFiles(files);
         }
       }}
@@ -512,11 +629,81 @@ export function Composer({
         className,
       )}
     >
-      {isDragging && (
-        <div className="absolute inset-0 z-20 flex items-center justify-center rounded-2xl sm:rounded-3xl border-2 border-dashed border-accent bg-surface/90 backdrop-blur-xs">
-          <div className="flex items-center gap-2 text-sm font-medium text-accent">
-            <Paperclip className="h-5 w-5" />
-            <span>{t("dropFilesHere")}</span>
+      {(isDragging || pendingDropFiles.length > 0) && (
+        <div
+          data-testid="composer-drop-overlay"
+          className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 rounded-2xl sm:rounded-3xl border-2 border-dashed border-accent bg-surface/95 p-4 backdrop-blur-xs"
+        >
+          <div className="flex items-center gap-2 text-xs font-medium text-muted">
+            <Paperclip className="h-4 w-4 text-accent" />
+            <span>
+              {pendingDropFiles.length > 0
+                ? tDocs("dropChoose")
+                : t("dropFilesHere")}
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <button
+              type="button"
+              data-testid="drop-attach-to-message"
+              onClick={() => {
+                if (pendingDropFiles.length > 0) {
+                  const files = pendingDropFiles;
+                  setPendingDropFiles([]);
+                  handleFiles(files);
+                }
+              }}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsDragging(false);
+                setPendingDropFiles([]);
+                const files = Array.from(e.dataTransfer.files);
+                if (files.length > 0) handleFiles(files);
+              }}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface-2 px-3 py-1.5 text-xs font-medium text-fg hover:border-accent hover:bg-accent/10 hover:text-accent transition-colors cursor-pointer"
+            >
+              <Paperclip className="h-3.5 w-3.5" />
+              <span>{tDocs("attachToMessage")}</span>
+            </button>
+            {mode !== "image" && (
+              <button
+                type="button"
+                data-testid="drop-add-to-workspace"
+                onClick={() => {
+                  if (pendingDropFiles.length > 0) {
+                    const files = pendingDropFiles;
+                    setPendingDropFiles([]);
+                    void handleWorkspaceDocumentFiles(files);
+                  }
+                }}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsDragging(false);
+                  setPendingDropFiles([]);
+                  const files = Array.from(e.dataTransfer.files);
+                  if (files.length > 0) void handleWorkspaceDocumentFiles(files);
+                }}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-info/40 bg-info/10 px-3 py-1.5 text-xs font-medium text-info hover:bg-info/20 transition-colors cursor-pointer"
+              >
+                <FileText className="h-3.5 w-3.5" />
+                <span>{tDocs("addToWorkspace")}</span>
+              </button>
+            )}
+            {pendingDropFiles.length > 0 && (
+              <button
+                type="button"
+                aria-label={tDocs("cancelDrop")}
+                title={tDocs("cancelDrop")}
+                onClick={() => setPendingDropFiles([])}
+                className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-muted hover:text-fg hover:bg-surface-2"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -751,7 +938,7 @@ export function Composer({
             </button>
           </div>
 
-          {/* Hidden File Input */}
+          {/* Hidden File Input (Attach to message) */}
           <input
             type="file"
             ref={fileInputRef}
@@ -765,18 +952,77 @@ export function Composer({
             accept="image/png,image/jpeg,image/webp,image/gif,application/pdf,text/plain,text/markdown,text/csv,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             className="hidden"
             aria-hidden="true"
+            data-testid="composer-attach-input"
           />
 
-          {/* Attach Button */}
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            title={t("attachFile")}
-            aria-label={t("attachFile")}
-            className="flex h-7 w-7 items-center justify-center rounded-lg text-muted hover:text-fg hover:bg-surface-2 transition-colors cursor-pointer"
-          >
-            <Paperclip className="h-3.5 w-3.5" strokeWidth={1.5} />
-          </button>
+          {/* Hidden File Input (Add to workspace as a document) */}
+          <input
+            type="file"
+            ref={docFileInputRef}
+            multiple
+            onChange={(e) => {
+              if (e.target.files) {
+                void handleWorkspaceDocumentFiles(Array.from(e.target.files));
+                e.target.value = "";
+              }
+            }}
+            accept={WORKSPACE_DOCUMENT_ACCEPT}
+            className="hidden"
+            aria-hidden="true"
+            data-testid="composer-document-input"
+          />
+
+          {/* Attach Menu Button */}
+          <Popover open={attachMenuOpen} onOpenChange={setAttachMenuOpen}>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                title={t("attachFile")}
+                aria-label={t("attachFile")}
+                disabled={isAddingDocument}
+                data-testid="composer-attach-btn"
+                className="flex h-7 w-7 items-center justify-center rounded-lg text-muted hover:text-fg hover:bg-surface-2 transition-colors cursor-pointer disabled:opacity-50"
+              >
+                {isAddingDocument ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Paperclip className="h-3.5 w-3.5" strokeWidth={1.5} />
+                )}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent
+              align="start"
+              sideOffset={6}
+              className="w-64 p-1.5"
+              data-testid="composer-attach-menu"
+            >
+              <button
+                type="button"
+                data-testid="menu-attach-to-message"
+                onClick={() => {
+                  setAttachMenuOpen(false);
+                  fileInputRef.current?.click();
+                }}
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-medium text-fg hover:bg-surface-2 transition-colors cursor-pointer"
+              >
+                <Paperclip className="h-3.5 w-3.5 text-muted shrink-0" />
+                <span>{tDocs("attachToMessage")}</span>
+              </button>
+              <button
+                type="button"
+                data-testid="menu-add-to-workspace"
+                disabled={mode === "image"}
+                onClick={() => {
+                  setAttachMenuOpen(false);
+                  docFileInputRef.current?.click();
+                }}
+                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-medium text-fg hover:bg-surface-2 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <FileText className="h-3.5 w-3.5 text-info shrink-0" />
+                <span>{tDocs("addToWorkspace")}</span>
+              </button>
+            </PopoverContent>
+          </Popover>
 
           {/* Model Picker */}
           <Popover>

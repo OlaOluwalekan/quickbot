@@ -14,6 +14,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ResponseCard, type ResponseItemData } from "./response-card";
+import { DocumentCard } from "./document-card";
 import { ThinkingPanel } from "./thinking-panel";
 import { SourcesAccordion } from "./citations";
 import { Markdown } from "@/components/markdown";
@@ -208,21 +209,34 @@ export function ResponseList({
       >
         <div className="mx-auto max-w-4xl space-y-6">
           {/* Historical Responses */}
-          {responses.map((res, idx) => (
-            <ResponseCard
-              key={res.id}
-              response={res}
-              workspaceId={workspaceId}
-              userId={actor.userId}
-              memberCount={memberCount}
-              onRegenerate={onRegenerateTurn}
-              onDelete={onDeleteResponse}
-              isFirstPrompt={idx === 0 && !optimisticPrompt}
-              className={cn(
-                idx === 0 && !optimisticPrompt && "vt-first-prompt"
-              )}
-            />
-          ))}
+          {responses.map((res, idx) =>
+            res.kind === "DOCUMENT" ? (
+              <DocumentCard
+                key={res.id}
+                response={res}
+                workspaceId={workspaceId}
+                userId={actor.userId}
+                onDelete={onDeleteResponse}
+                className={cn(
+                  idx === 0 && !optimisticPrompt && "vt-first-prompt"
+                )}
+              />
+            ) : (
+              <ResponseCard
+                key={res.id}
+                response={res}
+                workspaceId={workspaceId}
+                userId={actor.userId}
+                memberCount={memberCount}
+                onRegenerate={onRegenerateTurn}
+                onDelete={onDeleteResponse}
+                isFirstPrompt={idx === 0 && !optimisticPrompt}
+                className={cn(
+                  idx === 0 && !optimisticPrompt && "vt-first-prompt"
+                )}
+              />
+            )
+          )}
 
           {/* Active Generation Turn (Optimistic Prompt + Thinking + Streaming Bubble) */}
           {showActiveTurn && (

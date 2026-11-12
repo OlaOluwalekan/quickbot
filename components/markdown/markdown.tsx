@@ -5,10 +5,14 @@ import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
+import rehypeRaw from "rehype-raw";
+import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
+import type { PluggableList } from "unified";
 import "katex/dist/katex.min.css";
 import { cn } from "@/lib/utils";
 import { SafeLink } from "./safe-link";
 import { SafeImage } from "./safe-image";
+import { DocumentImage } from "./document-image";
 import { CodeBlock, InlineCode } from "./code-block";
 import {
   ScrollTable,
@@ -24,6 +28,44 @@ export interface MarkdownProps {
   isStreaming?: boolean;
   citations?: CitationDto[] | null;
   className?: string;
+  /**
+   * "document": the text of an uploaded document. HTML written inside the
+   * Markdown is rendered (after sanitizing) and images that can't be shown
+   * become a placeholder box with their description. AI answers keep the
+   * default: HTML stays text.
+   */
+  variant?: MarkdownVariant;
+}
+
+export type MarkdownVariant = "answer" | "document";
+
+const ANSWER_REHYPE_PLUGINS: PluggableList = [rehypeKatex];
+
+/**
+ * Raw HTML is parsed, then cleaned with the GitHub allow-list (no scripts,
+ * styles, iframes, event handlers or `javascript:` links), then formulas are
+ * rendered. The formula classes are allowed so that step still finds them.
+ */
+const DOCUMENT_REHYPE_PLUGINS: PluggableList = [
+  rehypeRaw,
+  [
+    rehypeSanitize,
+    {
+      ...defaultSchema,
+      attributes: {
+        ...defaultSchema.attributes,
+        code: [
+          ...(defaultSchema.attributes?.code ?? []),
+          ["className", /^language-./, "math-inline", "math-display"],
+        ],
+      },
+    },
+  ],
+  rehypeKatex,
+];
+
+function rehypePluginsFor(variant: MarkdownVariant): PluggableList {
+  return variant === "document" ? DOCUMENT_REHYPE_PLUGINS : ANSWER_REHYPE_PLUGINS;
 }
 
 function slugify(text: string): string {
@@ -94,11 +136,12 @@ function withoutNode<P extends object>(
 }
 
 function createMarkdownComponents(
-  citationsByIndex: Map<number, CitationDto>
+  citationsByIndex: Map<number, CitationDto>,
+  variant: MarkdownVariant
 ): Components {
   const components = {
     a: SafeLink,
-    img: SafeImage,
+    img: variant === "document" ? DocumentImage : SafeImage,
     pre: CodeBlock,
     code: ({
       inline,
@@ -262,6 +305,7 @@ function createMarkdownComponents(
 interface MemoizedBlockProps {
   blockText: string;
   components: ReturnType<typeof createMarkdownComponents>;
+  variant: MarkdownVariant;
 }
 
 function safeUrlTransform(url: string): string {
@@ -272,11 +316,11 @@ function safeUrlTransform(url: string): string {
 }
 
 const MemoizedMarkdownBlock = React.memo(
-  function MemoizedMarkdownBlock({ blockText, components }: MemoizedBlockProps) {
+  function MemoizedMarkdownBlock({ blockText, components, variant }: MemoizedBlockProps) {
     return (
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath]}
-        rehypePlugins={[rehypeKatex]}
+        rehypePlugins={rehypePluginsFor(variant)}
         urlTransform={safeUrlTransform}
         components={components}
       >
@@ -284,10 +328,19 @@ const MemoizedMarkdownBlock = React.memo(
       </ReactMarkdown>
     );
   },
-  (prev, next) => prev.blockText === next.blockText && prev.components === next.components
+  (prev, next) =>
+    prev.blockText === next.blockText &&
+    prev.components === next.components &&
+    prev.variant === next.variant
 );
 
-export function Markdown({ content, isStreaming = false, citations, className }: MarkdownProps) {
+export function Markdown({
+  content,
+  isStreaming = false,
+  citations,
+  className,
+  variant = "answer",
+}: MarkdownProps) {
   const citationsByIndex = React.useMemo(() => {
     const map = new Map<number, CitationDto>();
     if (citations) {
@@ -299,8 +352,8 @@ export function Markdown({ content, isStreaming = false, citations, className }:
   }, [citations]);
 
   const components = React.useMemo(
-    () => createMarkdownComponents(citationsByIndex),
-    [citationsByIndex]
+    () => createMarkdownComponents(citationsByIndex, variant),
+    [citationsByIndex, variant]
   );
 
   // If not streaming or short text, render single pass
@@ -309,7 +362,7 @@ export function Markdown({ content, isStreaming = false, citations, className }:
       <div className={cn("text-sm sm:text-base leading-relaxed text-fg space-y-2 select-text", className)}>
         <ReactMarkdown
           remarkPlugins={[remarkGfm, remarkMath]}
-          rehypePlugins={[rehypeKatex]}
+          rehypePlugins={rehypePluginsFor(variant)}
           urlTransform={safeUrlTransform}
           components={components}
         >
@@ -326,7 +379,12 @@ export function Markdown({ content, isStreaming = false, citations, className }:
   return (
     <div className={cn("text-sm sm:text-base leading-relaxed text-fg space-y-2 select-text", className)}>
       {blocks.map((block, idx) => (
-        <MemoizedMarkdownBlock key={idx} blockText={block} components={components} />
+        <MemoizedMarkdownBlock
+          key={idx}
+          blockText={block}
+          components={components}
+          variant={variant}
+        />
       ))}
     </div>
   );

@@ -43,7 +43,7 @@ const SingleWorkspacePage = async ({
       initialResponses={responsesPage.items.map((r) => ({
         id: r.id,
         prompt: r.prompt,
-        kind: (r.kind as "TEXT" | "IMAGE") || "TEXT",
+        kind: (r.kind as "TEXT" | "IMAGE" | "DOCUMENT") || "TEXT",
         origin: r.origin,
         quote: r.quote,
         sourceAnnotationId: r.sourceAnnotationId,
@@ -52,9 +52,12 @@ const SingleWorkspacePage = async ({
         sourceRemoved: r.sourceRemoved,
         sourceAccessible: r.sourceAccessible,
         content: r.activeVersion?.content || "",
+        activeVersionId: r.activeVersionId,
         createdAt: r.createdAt,
+        author: r.author,
         citations: r.activeVersion?.citations ?? [],
         attachments: r.attachments ?? [],
+        uploadedAttachment: r.uploadedAttachment ?? null,
       }))}
       actor={actor}
     />
