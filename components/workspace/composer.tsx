@@ -31,6 +31,7 @@ import { useGenerationStore } from "@/lib/stores/generation";
 import { api, ApiClientError } from "@/lib/api/client";
 import {
   MAX_CSV_ROWS,
+  MAX_WORKSPACE_DOCUMENTS,
   WORKSPACE_DOCUMENT_ACCEPT,
   isPdfFile,
   isWorkspaceDocumentFile,
@@ -379,6 +380,9 @@ export function Composer({
           document_unreadable: tDocs("errors.unreadable"),
           document_empty: tDocs("errors.empty"),
           document_timeout: tDocs("errors.timeout"),
+          document_limit: tDocs("errors.limit", {
+            count: MAX_WORKSPACE_DOCUMENTS,
+          }),
         };
         setCreationError(
           (code && known[code]) ||

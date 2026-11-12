@@ -1657,7 +1657,8 @@
       "pdfNotSupported": "PDFs can't be added as workspace documents yet. Attach the PDF to a message instead.",
       "unreadable": "This file couldn't be read. It may be damaged or password-protected.",
       "empty": "No text was found in this file.",
-      "timeout": "This file took too long to process. Try a smaller file."
+      "timeout": "This file took too long to process. Try a smaller file.",
+      "limit": "This workspace already has {count} documents, which is the limit. Delete one to add another."
     },
     "copy": "Copy",
     "cancelDrop": "Cancel",

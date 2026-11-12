@@ -46,3 +46,10 @@ export function isWorkspaceDocumentFile(file: {
 
 /** Rows of a CSV file shown in the document; the rest is left out. */
 export const MAX_CSV_ROWS = 200;
+
+/**
+ * Documents one workspace can hold (owner decision, 2026-11-12). Every
+ * document is sent with each prompt and is never dropped from the AI's
+ * context, so the number is kept small to bound the input tokens.
+ */
+export const MAX_WORKSPACE_DOCUMENTS = 3;

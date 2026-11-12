@@ -142,19 +142,18 @@ describe("Step F3.1 UI — DocumentCard & Composer document upload", () => {
     expect(bodyContainer.className).not.toContain("max-h-[60vh]");
     expect(toggleBtn).toHaveTextContent("Collapse document");
 
-    // Clicking "Download original" fetches signed download URL and opens it
-    const downloadBtn = screen.getByTestId("download-original-btn");
-    fireEvent.click(downloadBtn);
-    await waitFor(() => {
-      expect(mockApi).toHaveBeenCalledWith(
-        "/api/v1/attachments/att-pdf-1/download"
-      );
-      expect(openSpy).toHaveBeenCalledWith(
-        "https://signed.example.com/spec.pdf",
-        "_blank",
-        "noopener,noreferrer"
-      );
-    });
+    // "Download original" is a plain link: the endpoint sends the file itself
+    // (it does not answer with JSON, so it must not go through the API client).
+    const downloadLink = screen.getByTestId("download-original-btn");
+    expect(downloadLink.tagName).toBe("A");
+    expect(downloadLink).toHaveAttribute(
+      "href",
+      "/api/v1/attachments/att-pdf-1/download"
+    );
+    expect(downloadLink).toHaveAttribute("download");
+    expect(mockApi).not.toHaveBeenCalledWith(
+      "/api/v1/attachments/att-pdf-1/download"
+    );
 
     openSpy.mockRestore();
   });

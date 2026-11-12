@@ -1657,7 +1657,8 @@
       "pdfNotSupported": "Todavía no se pueden añadir PDF como documentos del espacio de trabajo. Adjunta el PDF a un mensaje.",
       "unreadable": "No se pudo leer este archivo. Puede estar dañado o protegido con contraseña.",
       "empty": "No se encontró texto en este archivo.",
-      "timeout": "El archivo tardó demasiado en procesarse. Prueba con un archivo más pequeño."
+      "timeout": "El archivo tardó demasiado en procesarse. Prueba con un archivo más pequeño.",
+      "limit": "Este espacio de trabajo ya tiene {count} documentos, que es el límite. Elimina uno para añadir otro."
     },
     "copy": "Copiar",
     "cancelDrop": "Cancelar",

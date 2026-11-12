@@ -1657,7 +1657,8 @@
       "pdfNotSupported": "Les PDF ne peuvent pas encore être ajoutés comme documents de l'espace de travail. Joignez plutôt le PDF à un message.",
       "unreadable": "Impossible de lire ce fichier. Il est peut-être endommagé ou protégé par un mot de passe.",
       "empty": "Aucun texte n'a été trouvé dans ce fichier.",
-      "timeout": "Le traitement de ce fichier a pris trop de temps. Essayez un fichier plus petit."
+      "timeout": "Le traitement de ce fichier a pris trop de temps. Essayez un fichier plus petit.",
+      "limit": "Cet espace de travail contient déjà {count} documents, la limite. Supprimez-en un pour en ajouter un autre."
     },
     "copy": "Copier",
     "cancelDrop": "Annuler",

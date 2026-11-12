@@ -25,8 +25,6 @@ import { AnswerBody } from "./answer-body";
 import { EditResponse } from "./edit-response";
 import { ShareAndPeopleDialog } from "@/components/workspace/ShareAndPeopleDialog";
 import { useCreateResponseEdit } from "@/lib/api/hooks/responses";
-import { api } from "@/lib/api/client";
-import { toast } from "sonner";
 import type { ResponseItemData } from "./response-card";
 
 export interface DocumentCardProps {
@@ -84,7 +82,6 @@ export function DocumentCard({
   const [copied, setCopied] = React.useState(false);
   const [isEditing, setIsEditing] = React.useState(false);
   const [shareOpen, setShareOpen] = React.useState(false);
-  const [downloading, setDownloading] = React.useState(false);
 
   const activeVer = response.activeVersion;
   const activeVersionId =
@@ -128,23 +125,6 @@ export function DocumentCard({
       // ignore clipboard errors
     }
   }, [displayedContent]);
-
-  const handleDownloadOriginal = React.useCallback(async () => {
-    if (!attachmentId || downloading) return;
-    setDownloading(true);
-    try {
-      const res = await api<{ url: string }>(
-        `/api/v1/attachments/${attachmentId}/download`
-      );
-      if (res?.url) {
-        window.open(res.url, "_blank", "noopener,noreferrer");
-      }
-    } catch {
-      toast.error(t("errors.downloadFailed"));
-    } finally {
-      setDownloading(false);
-    }
-  }, [attachmentId, downloading, t]);
 
   const handleSaveEdit = React.useCallback(
     async (newContent: string) => {
@@ -236,18 +216,22 @@ export function DocumentCard({
             </div>
           )}
 
+          {/* The endpoint sends the file itself, so this is a plain link. */}
           {attachmentId && (
             <Button
-              type="button"
+              asChild
               variant="outline"
               size="sm"
-              onClick={handleDownloadOriginal}
-              disabled={downloading}
-              data-testid="download-original-btn"
               className="h-7 gap-1.5 px-2.5 text-xs"
             >
-              <Download className="h-3.5 w-3.5" />
-              <span>{t("downloadOriginal")}</span>
+              <a
+                href={`/api/v1/attachments/${attachmentId}/download`}
+                download={docName}
+                data-testid="download-original-btn"
+              >
+                <Download className="h-3.5 w-3.5" />
+                <span>{t("downloadOriginal")}</span>
+              </a>
             </Button>
           )}
         </div>

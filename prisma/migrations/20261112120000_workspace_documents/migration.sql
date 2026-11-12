@@ -5,7 +5,6 @@ ALTER TYPE "ResponseKind" ADD VALUE IF NOT EXISTS 'DOCUMENT';
 ALTER TYPE "ResponseOrigin" ADD VALUE IF NOT EXISTS 'UPLOAD';
 
 -- AlterTable
-ALTER TABLE "responses" DROP COLUMN IF EXISTS "uploaded_attachment_id";
 ALTER TABLE "responses" ADD COLUMN "uploaded_attachment_id" TEXT;
 
 -- CreateIndex

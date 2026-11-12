@@ -14,7 +14,10 @@ import {
   renderMathAsPageText,
 } from "@/server/services/quote-source";
 import { quoteIsFromSource } from "@/lib/annotations/quote-match";
-import { isWorkspaceDocumentFile } from "@/lib/documents/workspace-document-types";
+import {
+  MAX_WORKSPACE_DOCUMENTS,
+  isWorkspaceDocumentFile,
+} from "@/lib/documents/workspace-document-types";
 
 const mockStorageBuffers = new Map<string, Buffer>();
 
@@ -216,6 +219,41 @@ describe("Step F3.1 review — document service", () => {
     expect(error).toMatchObject({ code: "document_unreadable" });
     expect((error as Error).message).not.toContain("secret-bucket");
   });
+
+  it("limits a workspace to 3 documents and frees a place when one is deleted", async () => {
+    const { ownerId, workspaceId } = await seed();
+    const owner = actorOf(ownerId);
+    const added: string[] = [];
+    for (let i = 1; i <= MAX_WORKSPACE_DOCUMENTS; i++) {
+      const id = await attach(ownerId, workspaceId, {
+        name: `doc-${i}.md`,
+        mime: "text/markdown",
+        content: `# Document ${i}`,
+      });
+      added.push((await addDocumentToWorkspace(owner, workspaceId, id)).id);
+    }
+    expect(MAX_WORKSPACE_DOCUMENTS).toBe(3);
+
+    const extraId = await attach(ownerId, workspaceId, {
+      name: "one-too-many.md",
+      mime: "text/markdown",
+      content: "# Extra",
+    });
+    await expect(
+      addDocumentToWorkspace(owner, workspaceId, extraId)
+    ).rejects.toMatchObject({
+      status: 409,
+      code: "document_limit",
+      details: { limit: 3 },
+    });
+
+    await db.response.update({
+      where: { id: added[0]! },
+      data: { deletedAt: new Date() },
+    });
+    const replaced = await addDocumentToWorkspace(owner, workspaceId, extraId);
+    expect(replaced.kind).toBe("DOCUMENT");
+  }, 15_000);
 
   it("lets a member comment on a formula, describes the document to an Ask, and can't regenerate it", async () => {
     const { ownerId, workspaceId } = await seed();

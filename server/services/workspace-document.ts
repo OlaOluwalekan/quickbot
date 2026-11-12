@@ -11,7 +11,10 @@ import {
   documentToMarkdown,
   DocumentExtractionError,
 } from "@/server/files/to-markdown";
-import { isWorkspaceDocumentFile } from "@/lib/documents/workspace-document-types";
+import {
+  MAX_WORKSPACE_DOCUMENTS,
+  isWorkspaceDocumentFile,
+} from "@/lib/documents/workspace-document-types";
 import { logActivity } from "@/server/services/activity";
 
 export async function addDocumentToWorkspace(
@@ -76,6 +79,17 @@ export async function addDocumentToWorkspace(
   ) {
     throw Errors.conflict(
       "This attachment has already been added to the workspace as a document"
+    );
+  }
+
+  const documentCount = await db.response.count({
+    where: { workspaceId, kind: "DOCUMENT", deletedAt: null },
+  });
+  if (documentCount >= MAX_WORKSPACE_DOCUMENTS) {
+    throw Errors.conflict(
+      `A workspace can hold at most ${MAX_WORKSPACE_DOCUMENTS} documents`,
+      "document_limit",
+      { limit: MAX_WORKSPACE_DOCUMENTS }
     );
   }
 
