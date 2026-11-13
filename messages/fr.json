@@ -1683,5 +1683,55 @@
     "imagePlaceholder": "Image",
     "fallbackName": "Document",
     "truncatedNote": "{name} est très long : seule la première partie a été ajoutée."
+  },
+  "Review": {
+    "askKlecxReview": "Demander à Klecx de réviser",
+    "popoverTitle": "Demander à Klecx de réviser",
+    "estimatedCredits": "~{credits, plural, one {# crédit} other {# crédits}}",
+    "presetLabel": "Objectif de révision",
+    "presets": {
+      "errors": "Trouver les erreurs et coquilles",
+      "consistency": "Vérifier la cohérence",
+      "clarity": "Améliorer la clarté",
+      "custom": "Instruction personnalisée"
+    },
+    "instructionLabel": "Instructions personnalisées (facultatif)",
+    "instructionPlaceholder": "ex. Vérifier la précision technique, le formatage ou les éléments manquants…",
+    "visibilityLabel": "Visibilité",
+    "visibilityWorkspace": "Visible par l'espace",
+    "visibilityPrivate": "Privé",
+    "cancel": "Annuler",
+    "startReview": "Démarrer la révision",
+    "reviewing": "Révision en cours…",
+    "reviewingProgress": "Révision de la section {current} sur {total}…",
+    "noFindingsFound": "Révision terminée. Aucun problème trouvé !",
+    "summary": "Révision terminée : {total, plural, one {# problème} other {# problèmes}} trouvés ({fixes, plural, one {# correction rapide} other {# corrections rapides}}).",
+    "summaryDetails": "{total, plural, one {# problème} other {# problèmes}} trouvés ({fixes, plural, one {# correction rapide} other {# corrections rapides}})",
+    "acceptAll": "Accepter toutes les corrections ({count})",
+    "allFixesApplied": "{count, plural, one {# correction appliquée} other {# corrections appliquées}} au brouillon",
+    "noFixesApplicable": "Aucune correction n'a pu être appliquée proprement",
+    "replaceWith": "Remplacer par « {text} »",
+    "dismiss": "Ignorer",
+    "fixApplied": "Correction appliquée",
+    "dismissed": "Ignorée",
+    "fixStale": "Texte modifié",
+    "dismissFailed": "Impossible d'ignorer la remarque",
+    "reviewFailed": "Échec de la révision",
+    "capAskReview": "demander à Klecx de réviser des documents",
+    "capEditResponse": "modifier des documents et appliquer les corrections",
+    "categories": {
+      "spelling": "Orthographe",
+      "grammar": "Grammaire",
+      "clarity": "Clarté",
+      "consistency": "Cohérence",
+      "factual": "Factuel",
+      "structure": "Structure",
+      "other": "Suggestion"
+    },
+    "severities": {
+      "low": "Faible",
+      "medium": "Moyenne",
+      "high": "Élevée"
+    }
   }
 }

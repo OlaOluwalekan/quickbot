@@ -27,6 +27,7 @@ import { DocumentDraftBar } from "./document-draft-bar";
 import { ShareAndPeopleDialog } from "@/components/workspace/ShareAndPeopleDialog";
 import { useDocumentDraftsStore } from "@/lib/stores/document-drafts";
 import { Gated } from "@/components/ui/gated";
+import { DocumentReviewPopover } from "./document-review-popover";
 import type { ResponseItemData } from "./response-card";
 
 export interface DocumentCardProps {
@@ -370,20 +371,13 @@ export function DocumentCard({
             </Button>
           </Gated>
 
-          {/* The AI review arrives with F3.3: no button until it does something. */}
-          {onReviewDocument && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => onReviewDocument(response.id)}
-              className="h-7 gap-1.5 px-2 text-xs text-muted hover:text-fg"
-              data-testid="ask-klecx-review-btn"
-            >
-              <Sparkles className="h-3.5 w-3.5 text-accent" />
-              <span>{t("askKlecxReview")}</span>
-            </Button>
-          )}
+          <DocumentReviewPopover
+            versionId={activeVersionId}
+            workspaceId={workspaceId}
+            activeContent={displayedContent}
+            canAsk={true}
+            canEdit={canEdit}
+          />
 
           <Button
             type="button"

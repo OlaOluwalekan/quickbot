@@ -1683,5 +1683,55 @@
     "imagePlaceholder": "Image",
     "fallbackName": "Document",
     "truncatedNote": "{name} is very long: only the first part was added."
+  },
+  "Review": {
+    "askKlecxReview": "Ask Klecx to review",
+    "popoverTitle": "Ask Klecx to review",
+    "estimatedCredits": "~{credits, plural, one {# credit} other {# credits}}",
+    "presetLabel": "Review focus",
+    "presets": {
+      "errors": "Find errors and typos",
+      "consistency": "Check consistency",
+      "clarity": "Improve clarity",
+      "custom": "Custom instruction"
+    },
+    "instructionLabel": "Custom instructions (optional)",
+    "instructionPlaceholder": "e.g. Check for technical accuracy, formatting, or missing requirements…",
+    "visibilityLabel": "Visibility",
+    "visibilityWorkspace": "Visible to workspace",
+    "visibilityPrivate": "Private",
+    "cancel": "Cancel",
+    "startReview": "Start review",
+    "reviewing": "Reviewing…",
+    "reviewingProgress": "Reviewing section {current} of {total}…",
+    "noFindingsFound": "Review complete. No issues found!",
+    "summary": "Review complete: {total, plural, one {# issue} other {# issues}} found ({fixes, plural, one {# quick fix} other {# quick fixes}}).",
+    "summaryDetails": "{total, plural, one {# issue} other {# issues}} found ({fixes, plural, one {# quick fix} other {# quick fixes}})",
+    "acceptAll": "Accept all fixes ({count})",
+    "allFixesApplied": "Applied {count, plural, one {# fix} other {# fixes}} to draft",
+    "noFixesApplicable": "No fixes could be applied cleanly",
+    "replaceWith": "Replace with “{text}”",
+    "dismiss": "Dismiss",
+    "fixApplied": "Fix applied",
+    "dismissed": "Dismissed",
+    "fixStale": "Text changed",
+    "dismissFailed": "Could not dismiss finding",
+    "reviewFailed": "Review failed to complete",
+    "capAskReview": "ask Klecx to review documents",
+    "capEditResponse": "edit documents and apply fixes",
+    "categories": {
+      "spelling": "Spelling",
+      "grammar": "Grammar",
+      "clarity": "Clarity",
+      "consistency": "Consistency",
+      "factual": "Factual",
+      "structure": "Structure",
+      "other": "Suggestion"
+    },
+    "severities": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High"
+    }
   }
 }

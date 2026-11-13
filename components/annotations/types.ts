@@ -26,6 +26,15 @@ export interface AnnotationItem {
   targetMessageId?: string | null;
   depth?: number;
   authorType?: "USER" | "AI";
+  suggestion?: {
+    exact?: string;
+    prefix?: string;
+    suffix?: string;
+    replacement?: string;
+    category?: string;
+    severity?: string;
+  } | null;
+  suggestionState?: "PENDING" | "ACCEPTED" | "REJECTED" | null;
   kind: "COMMENT" | "ASK";
   questionState?: "NONE" | "QUEUED" | "ANSWERING" | "ANSWERED" | "FAILED" | "CANCELLED";
   visibility: "PRIVATE" | "WORKSPACE";

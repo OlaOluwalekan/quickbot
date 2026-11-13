@@ -51,6 +51,7 @@ import {
 import { AnswerBody } from "./answer-body";
 import { PromptAttachmentPreview } from "./prompt-attachment-preview";
 import { EditResponse } from "./edit-response";
+import { DocumentReviewPopover } from "./document-review-popover";
 import { ShareAndPeopleDialog } from "@/components/workspace/ShareAndPeopleDialog";
 import { useUiStore } from "@/lib/stores/ui";
 import { openAnnotationThread } from "@/lib/stores/thread-stack";
@@ -164,7 +165,9 @@ export function ResponseCard({
   className,
 }: ResponseCardProps) {
   const t = useTranslations("Response");
+  const tReview = useTranslations("Review");
   const [isEditing, setIsEditing] = React.useState(false);
+  const [reviewOpen, setReviewOpen] = React.useState(false);
   const [isPromptExpanded, setIsPromptExpanded] = React.useState(false);
   const [viewMode, setViewMode] = React.useState<"edited" | "original">(
     "edited"
@@ -176,6 +179,7 @@ export function ResponseCard({
   // Public links require `workspace.share` (owner/admin); everyone else sees a disabled button
   const { data: workspace } = useWorkspace(userId, workspaceId);
   const canShare = workspace?.role === "OWNER" || workspace?.role === "ADMIN";
+  const canEdit = workspace?.role !== "VIEWER";
   const currentPageTitle = useUiStore((s) => s.currentPageTitle);
   const [signedUrlsByAttachmentId, setSignedUrlsByAttachmentId] = React.useState<
     Record<string, string>
@@ -1106,6 +1110,17 @@ export function ResponseCard({
                         <span>{t("copyLink")}</span>
                       </DropdownMenuItem>
 
+                      {!isImageResponse && (
+                        <DropdownMenuItem
+                          onClick={() => setReviewOpen(true)}
+                          className="cursor-pointer"
+                          data-testid="menu-ask-klecx-review"
+                        >
+                          <Sparkles className="mr-2 h-4 w-4 text-accent" />
+                          <span>{tReview("askKlecxReview")}</span>
+                        </DropdownMenuItem>
+                      )}
+
                       {onDelete && (
                         <>
                           <DropdownMenuSeparator />
@@ -1137,6 +1152,18 @@ export function ResponseCard({
           initialScope="RESPONSE"
           initialResponseId={response.id}
           initialResponsePrompt={response.prompt}
+        />
+      )}
+      {!isImageResponse && (
+        <DocumentReviewPopover
+          versionId={currentActiveId || `ver-${response.id}`}
+          workspaceId={workspaceId}
+          activeContent={displayedContent}
+          canAsk={true}
+          canEdit={canEdit}
+          open={reviewOpen}
+          onOpenChange={setReviewOpen}
+          trigger={<span className="hidden" />}
         />
       )}
     </div>

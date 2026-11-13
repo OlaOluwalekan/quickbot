@@ -495,6 +495,17 @@ export async function createAnnotation(
       createdBy: {
         select: { id: true, name: true, email: true, image: true },
       },
+      version: {
+        select: {
+          id: true,
+          content: true,
+          edits: {
+            orderBy: { revision: "desc" },
+            take: 1,
+            select: { revision: true, content: true },
+          },
+        },
+      },
     },
   });
 
@@ -646,6 +657,17 @@ export async function createAnnotationOnMessage(
       createdBy: {
         select: { id: true, name: true, email: true, image: true },
       },
+      version: {
+        select: {
+          id: true,
+          content: true,
+          edits: {
+            orderBy: { revision: "desc" },
+            take: 1,
+            select: { revision: true, content: true },
+          },
+        },
+      },
     },
   });
 
@@ -706,6 +728,17 @@ export async function getAnnotation(actor: Actor, annotationId: string) {
       },
       createdBy: {
         select: { id: true, name: true, email: true, image: true },
+      },
+      version: {
+        select: {
+          id: true,
+          content: true,
+          edits: {
+            orderBy: { revision: "desc" },
+            take: 1,
+            select: { revision: true, content: true },
+          },
+        },
       },
     },
   });
@@ -770,6 +803,17 @@ export async function getAnnotationChain(actor: Actor, annotationId: string) {
         orderBy: { createdAt: "asc" },
       },
       createdBy: { select: author },
+      version: {
+        select: {
+          id: true,
+          content: true,
+          edits: {
+            orderBy: { revision: "desc" },
+            take: 1,
+            select: { revision: true, content: true },
+          },
+        },
+      },
     },
     orderBy: { depth: "asc" },
   });
@@ -838,6 +882,7 @@ export async function updateAnnotation(
     resolvedAt?: Date | null;
     visibility?: "PRIVATE" | "WORKSPACE";
     questionState?: "NONE" | "QUEUED" | "ANSWERING" | "ANSWERED" | "CANCELLED" | "FAILED";
+    suggestionState?: "PENDING" | "ACCEPTED" | "REJECTED";
   } = {};
 
   if (input.resolved !== undefined) {
@@ -848,6 +893,9 @@ export async function updateAnnotation(
   }
   if (input.questionState !== undefined) {
     updateData.questionState = input.questionState;
+  }
+  if (input.suggestionState !== undefined) {
+    updateData.suggestionState = input.suggestionState;
   }
 
   const { updated, mentionSync } = await db.$transaction(async (tx) => {

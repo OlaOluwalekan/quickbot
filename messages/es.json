@@ -1683,5 +1683,55 @@
     "imagePlaceholder": "Imagen",
     "fallbackName": "Documento",
     "truncatedNote": "{name} es muy largo: solo se añadió la primera parte."
+  },
+  "Review": {
+    "askKlecxReview": "Pedir a Klecx que revise",
+    "popoverTitle": "Pedir a Klecx que revise",
+    "estimatedCredits": "~{credits, plural, one {# crédito} other {# créditos}}",
+    "presetLabel": "Enfoque de revisión",
+    "presets": {
+      "errors": "Buscar errores y erratas",
+      "consistency": "Verificar consistencia",
+      "clarity": "Mejorar claridad",
+      "custom": "Instrucción personalizada"
+    },
+    "instructionLabel": "Instrucciones personalizadas (opcional)",
+    "instructionPlaceholder": "p. ej., Comprobar precisión técnica, formato o requisitos faltantes…",
+    "visibilityLabel": "Visibilidad",
+    "visibilityWorkspace": "Visible para el espacio",
+    "visibilityPrivate": "Privado",
+    "cancel": "Cancelar",
+    "startReview": "Iniciar revisión",
+    "reviewing": "Revisando…",
+    "reviewingProgress": "Revisando sección {current} de {total}…",
+    "noFindingsFound": "Revisión completada. ¡No se encontraron problemas!",
+    "summary": "Revisión completada: {total, plural, one {# problema} other {# problemas}} encontrados ({fixes, plural, one {# corrección rápida} other {# correcciones rápidas}}).",
+    "summaryDetails": "{total, plural, one {# problema} other {# problemas}} encontrados ({fixes, plural, one {# corrección rápida} other {# correcciones rápidas}})",
+    "acceptAll": "Aceptar todas las correcciones ({count})",
+    "allFixesApplied": "Se aplicaron {count, plural, one {# corrección} other {# correcciones}} al borrador",
+    "noFixesApplicable": "Ninguna corrección se pudo aplicar limpiamente",
+    "replaceWith": "Reemplazar con “{text}”",
+    "dismiss": "Descartar",
+    "fixApplied": "Corrección aplicada",
+    "dismissed": "Descartada",
+    "fixStale": "Texto modificado",
+    "dismissFailed": "No se pudo descartar el hallazgo",
+    "reviewFailed": "Error al completar la revisión",
+    "capAskReview": "pedir a Klecx que revise documentos",
+    "capEditResponse": "editar documentos y aplicar correcciones",
+    "categories": {
+      "spelling": "Ortografía",
+      "grammar": "Gramática",
+      "clarity": "Claridad",
+      "consistency": "Consistencia",
+      "factual": "Hechos",
+      "structure": "Estructura",
+      "other": "Sugerencia"
+    },
+    "severities": {
+      "low": "Baja",
+      "medium": "Media",
+      "high": "Alta"
+    }
   }
 }
