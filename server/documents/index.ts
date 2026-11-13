@@ -306,6 +306,28 @@ async function storeGeneratedDocument(params: {
 }
 
 /**
+ * Plan check for a download in `format` (the downloader's plan, as for every
+ * other export) plus the daily export cap. Throws 403 `plan_upgrade_required`
+ * or 429. Shared by response exports and generated documents (F3.4).
+ */
+export async function assertExportAllowed(
+  userId: string,
+  format: ExportFormat,
+  explicitPlan?: PlanKey
+): Promise<void> {
+  const effectivePlan = await resolveExportPlanForUser(userId, explicitPlan);
+  const allowedFormats = PLANS[effectivePlan].limits.exportFormats;
+  if (!allowedFormats.includes(format)) {
+    throw new ApiError(
+      403,
+      "plan_upgrade_required",
+      `Your ${PLANS[effectivePlan].name} plan only supports ${allowedFormats.map((f) => f.toUpperCase()).join(", ")} exports. Upgrade to export as ${format.toUpperCase()}.`
+    );
+  }
+  checkAndIncrementDailyExportCap(userId, effectivePlan);
+}
+
+/**
  * Exports a single response in MD, PDF, or DOCX format (§5.6).
  * - Requires `workspace.export`.
  * - Enforces plan `exportFormats` and daily export cap (0 credits charged).
@@ -650,22 +672,20 @@ export async function exportWorkspaceDocument(
 }
 
 /**
- * Handles the `create_document` tool call emitted by an AI provider during streaming (§5.6).
- * Validates `title` (<= 120 chars), `markdown` (<= 200k chars), strips control characters,
- * renders the document with our server renderer, stores it as GENERATED_DOCUMENT linked to `responseId`,
- * and returns the attachment + downloadable Markdown card snippet.
+ * Executes the model's `create_document` tool call (F3.4).
+ * Validates `title` (<= 120 chars) and `markdown` (<= 200k chars), strips
+ * control characters, and saves a `Document` with revision 1 (the Markdown is
+ * the source of truth) on the response version being generated. Nothing is
+ * rendered here: Word / PDF are rendered when downloaded.
  */
 export async function executeCreateDocumentToolCall(params: {
   actorId: string;
   workspaceId: string;
-  responseId: string;
-  versionId?: string;
-  modelKey?: string;
-  versionNumber?: number;
+  /** The response version being generated: the document belongs to it. */
+  versionId: string;
   args: unknown;
 }) {
-  const { actorId, workspaceId, responseId, modelKey, versionNumber, args } =
-    params;
+  const { actorId, workspaceId, versionId, args } = params;
 
   if (!args || typeof args !== "object") {
     throw Errors.validation([
@@ -685,89 +705,25 @@ export async function executeCreateDocumentToolCall(params: {
   const title = sanitizeDocumentTitle(String(rawArgs.title ?? ""));
   const markdown = sanitizeDocumentMarkdown(String(rawArgs.markdown ?? ""));
 
-  let targetVersionId = params.versionId;
-  if (!targetVersionId) {
-    const resp = await db.response.findUnique({
-      where: { id: responseId },
-      select: {
-        activeVersionId: true,
-        versions: { orderBy: { number: "desc" }, take: 1, select: { id: true } },
-      },
-    });
-    targetVersionId = resp?.activeVersionId || resp?.versions?.[0]?.id;
-    if (!targetVersionId) {
-      const fallbackVer = await db.responseVersion.create({
-        data: {
-          responseId,
-          number: versionNumber ?? 1,
-          status: "COMPLETE",
-          content: "",
-          modelKey: modelKey || "text-economy",
-          providerModelId: "text-economy",
-          promptVersion: "v1",
-          createdById: actorId,
-        },
-      });
-      targetVersionId = fallbackVer.id;
-    }
-  }
-
   const doc = await db.document.create({
     data: {
       workspaceId,
-      versionId: targetVersionId,
+      versionId,
       title,
       format,
       currentRevision: 1,
       createdById: actorId,
       revisions: {
-        create: {
-          revision: 1,
-          content: markdown,
-          editorId: null,
-        },
+        create: { revision: 1, content: markdown, editorId: null },
       },
     },
-    include: {
-      revisions: true,
-    },
+    select: { id: true, title: true, format: true, currentRevision: true },
   });
 
-  let attachment: any = null;
-  const { filename } = buildExportFilename(title, format);
-  try {
-    const buffer = await renderDocumentBuffer({
-      format,
-      title,
-      date: new Date(),
-      modelKey: modelKey ?? null,
-      versionNumber: versionNumber ?? 1,
-      markdown,
-    });
-    attachment = await storeGeneratedDocument({
-      actorId,
-      workspaceId,
-      responseId,
-      format,
-      filename,
-      buffer,
-    });
-  } catch (err) {
-    console.warn("[Documents] Pre-rendering initial export failed, will render on-demand:", err);
-  }
-
-  const downloadUrl = `/api/v1/documents/${doc.id}/download?format=${format}&revision=1`;
-
   return {
-    document: doc,
     documentId: doc.id,
     title: doc.title,
     format: doc.format,
     currentRevision: doc.currentRevision,
-    markdown,
-    attachment,
-    filename,
-    downloadUrl,
-    cardMarkdown: "",
   };
 }

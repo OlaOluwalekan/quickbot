@@ -15,7 +15,7 @@ export const GET = route({
   handler: async ({ actor, params }) => {
     const docId = params.id as string;
     const doc = await getDocument(actor, docId);
-    return { data: doc };
+    return doc;
   },
 });
 
@@ -24,6 +24,6 @@ export const PATCH = route({
   handler: async ({ actor, params, body }) => {
     const docId = params.id as string;
     const updated = await renameDocument(actor, docId, body.title);
-    return { data: updated };
+    return updated;
   },
 });

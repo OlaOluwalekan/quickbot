@@ -23,7 +23,10 @@ import { cn } from "@/lib/utils";
 type ReviewPreset = (typeof REVIEW_PRESETS)[number];
 
 export interface DocumentReviewProps {
+  /** The response version reviewed; unused when `documentId` is set. */
   versionId: string;
+  /** A generated document (F3.4): its current revision is reviewed. */
+  documentId?: string;
   responseId: string;
   /** Caller holds `workspace.ask` (the server re-checks). */
   canAsk?: boolean;
@@ -54,7 +57,8 @@ function notifyAnnotationsChanged(responseId: string) {
  * wavy underlines while the review runs and stay after a reload.
  */
 export function DocumentReview({
-  versionId,
+  versionId: versionIdProp,
+  documentId,
   responseId,
   canAsk = true,
   hasDraft = false,
@@ -65,6 +69,11 @@ export function DocumentReview({
   className,
 }: DocumentReviewProps) {
   const t = useTranslations("Review");
+  // Runs are tracked per reviewed text: a version, or a generated document.
+  const versionId = documentId ?? versionIdProp;
+  const endpoint = documentId
+    ? `/api/v1/documents/${encodeURIComponent(documentId)}/review`
+    : `/api/v1/response-versions/${encodeURIComponent(versionId)}/review`;
   const [internalOpen, setInternalOpen] = React.useState(false);
   const isOpen = controlledOpen ?? internalOpen;
   const setOpen = React.useCallback(
@@ -88,9 +97,7 @@ export function DocumentReview({
   React.useEffect(() => {
     if (!isOpen) return;
     let cancelled = false;
-    api<{ estimatedCredits: number }>(
-      `/api/v1/response-versions/${encodeURIComponent(versionId)}/review`
-    )
+    api<{ estimatedCredits: number }>(endpoint)
       .then((res) => {
         if (!cancelled) setEstimate(res.estimatedCredits);
       })
@@ -100,7 +107,7 @@ export function DocumentReview({
     return () => {
       cancelled = true;
     };
-  }, [isOpen, versionId]);
+  }, [isOpen, endpoint]);
 
   const needsInstruction = preset === "custom" && !instruction.trim();
 
@@ -128,7 +135,7 @@ export function DocumentReview({
     };
 
     await streamDocumentReview(
-      versionId,
+      documentId ? { documentId } : versionId,
       {
         preset,
         instruction: instruction.trim() || undefined,

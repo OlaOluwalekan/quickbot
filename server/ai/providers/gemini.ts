@@ -77,9 +77,9 @@ export class GeminiProvider implements AiProvider {
               args: (p.args as Record<string, unknown>) || {},
             },
           };
+          // Thinking models need the signature of their own call back.
           if (p.thoughtSignature) {
             callPart.thoughtSignature = p.thoughtSignature;
-            callPart.thought_signature = p.thoughtSignature;
           }
           return callPart;
         }
@@ -168,25 +168,10 @@ export class GeminiProvider implements AiProvider {
 
         const candidate = chunk.candidates?.[0];
 
-        const chunkCandidateSig =
-          (candidate as any)?.thoughtSignature ||
-          (candidate as any)?.thought_signature ||
-          (chunk as any)?.thoughtSignature ||
-          (chunk as any)?.thought_signature;
-
-        if (chunkCandidateSig && !latestThoughtSignature) {
-          latestThoughtSignature = chunkCandidateSig;
-          yield { type: "thought_signature", signature: chunkCandidateSig };
-        }
-
         // 1. Check parts for thoughts, text, and tool calls
         if (candidate?.content?.parts) {
           for (const part of candidate.content.parts) {
-            const partSig =
-              (part as any).thoughtSignature ||
-              (part as any).thought_signature ||
-              (part.functionCall as any)?.thoughtSignature ||
-              (part.functionCall as any)?.thought_signature;
+            const partSig = part.thoughtSignature;
 
             if (partSig) {
               latestThoughtSignature = partSig;

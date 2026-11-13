@@ -1,17 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { FileText, Download, ChevronDown, ExternalLink } from "lucide-react";
+import { FileText, ExternalLink } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Gated } from "@/components/ui/gated";
 import { useThreadStackStore } from "@/lib/stores/thread-stack";
+import { GeneratedDocumentDownload } from "./generated-document-download";
 
 export interface GeneratedDocumentCardProps {
   document: {
@@ -21,14 +15,17 @@ export interface GeneratedDocumentCardProps {
     currentRevision: number;
     createdAt?: string | Date;
   };
-  workspaceId: string;
+  /** Caller holds `workspace.export` (Word / PDF downloads; the server re-checks). */
   canExport?: boolean;
 }
 
+/**
+ * A document Klecx generated (F3.4), shown below the answer that created it.
+ * The whole card opens the document panel; Download gets the current revision.
+ */
 export function GeneratedDocumentCard({
   document: doc,
-  workspaceId,
-  canExport = true,
+  canExport = false,
 }: GeneratedDocumentCardProps) {
   const t = useTranslations("GeneratedDocs");
   const openStack = useThreadStackStore((s) => s.open);
@@ -37,24 +34,21 @@ export function GeneratedDocumentCard({
     openStack({ kind: "document", id: doc.id });
   };
 
-  const handleDownload = (format: string, e?: React.MouseEvent) => {
-    e?.stopPropagation();
-    const url = `/api/v1/documents/${doc.id}/download?format=${format}&revision=${doc.currentRevision}`;
-    const link = window.document.createElement("a");
-    link.href = url;
-    link.download = "";
-    window.document.body.appendChild(link);
-    link.click();
-    window.document.body.removeChild(link);
-  };
-
-  const formatUpper = (doc.format || "md").toUpperCase();
-
   return (
     <div
+      role="button"
+      tabIndex={0}
+      aria-label={t("openDocument", { title: doc.title })}
       data-testid={`generated-doc-card-${doc.id}`}
       onClick={handleOpen}
-      className="group relative flex items-center justify-between gap-3 rounded-xl border border-border bg-surface p-3.5 shadow-sm transition-all hover:border-accent/40 hover:bg-surface/80 cursor-pointer"
+      onKeyDown={(e) => {
+        if (e.target !== e.currentTarget) return;
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          handleOpen();
+        }
+      }}
+      className="group relative flex items-center justify-between gap-3 rounded-xl border border-border bg-surface p-3.5 shadow-sm transition-all hover:border-accent/40 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
     >
       <div className="flex items-center gap-3 min-w-0">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border bg-surface-2 text-foreground/80 group-hover:text-accent group-hover:border-accent/30 transition-colors">
@@ -66,7 +60,7 @@ export function GeneratedDocumentCard({
               {doc.title}
             </span>
             <span className="inline-flex items-center rounded-md border border-border bg-surface-2 px-1.5 py-0.5 text-[10px] font-semibold text-muted uppercase">
-              {formatUpper}
+              {(doc.format || "md").toUpperCase()}
             </span>
             {doc.currentRevision > 1 && (
               <span
@@ -86,6 +80,7 @@ export function GeneratedDocumentCard({
       <div
         className="flex items-center gap-1.5 shrink-0"
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
       >
         <Button
           type="button"
@@ -93,84 +88,18 @@ export function GeneratedDocumentCard({
           variant="outline"
           data-testid="doc-open-btn"
           onClick={handleOpen}
-          className="h-8 gap-1.5 px-2.5 text-xs font-medium border-border hover:bg-surface-2"
+          className="h-8 gap-1.5 px-2.5 text-xs font-medium"
         >
           <ExternalLink className="h-3.5 w-3.5 text-muted" />
           <span>{t("open")}</span>
         </Button>
 
-        <div className="inline-flex rounded-md shadow-xs">
-          <Button
-            type="button"
-            size="sm"
-            variant="default"
-            data-testid="doc-download-btn"
-            onClick={(e) => handleDownload(doc.format, e)}
-            className="h-8 gap-1.5 rounded-r-none px-2.5 text-xs font-medium bg-accent text-accent-foreground hover:bg-accent/90"
-          >
-            <Download className="h-3.5 w-3.5" />
-            <span>{t("download")}</span>
-          </Button>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                type="button"
-                size="sm"
-                variant="default"
-                data-testid="doc-download-menu-trigger"
-                className="h-8 rounded-l-none border-l border-accent-foreground/20 px-1.5 bg-accent text-accent-foreground hover:bg-accent/90"
-                aria-label={t("downloadAs")}
-              >
-                <ChevronDown className="h-3.5 w-3.5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-44">
-              <DropdownMenuItem
-                data-testid="download-md-item"
-                onClick={(e) => handleDownload("md", e)}
-              >
-                <span>Markdown (.md)</span>
-              </DropdownMenuItem>
-
-              <Gated
-                reason={
-                  canExport
-                    ? null
-                    : {
-                        code: "no_permission",
-                        capability: t("formatNotAllowed"),
-                      }
-                }
-              >
-                <DropdownMenuItem
-                  data-testid="download-pdf-item"
-                  onClick={(e) => handleDownload("pdf", e)}
-                >
-                  <span>PDF (.pdf)</span>
-                </DropdownMenuItem>
-              </Gated>
-
-              <Gated
-                reason={
-                  canExport
-                    ? null
-                    : {
-                        code: "no_permission",
-                        capability: t("formatNotAllowed"),
-                      }
-                }
-              >
-                <DropdownMenuItem
-                  data-testid="download-docx-item"
-                  onClick={(e) => handleDownload("docx", e)}
-                >
-                  <span>Word (.docx)</span>
-                </DropdownMenuItem>
-              </Gated>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+        <GeneratedDocumentDownload
+          documentId={doc.id}
+          format={doc.format}
+          revision={doc.currentRevision}
+          canExport={canExport}
+        />
       </div>
     </div>
   );

@@ -23,6 +23,10 @@ jest.mock("next-intl", () => ({
   },
 }));
 
+jest.mock("../lib/api/hooks/entitlements", () => ({
+  useEntitlements: () => ({ data: undefined }),
+}));
+
 const mockApi = jest.fn();
 jest.mock("../lib/api/client", () => ({
   api: (...args: any[]) => mockApi(...args),
@@ -45,7 +49,7 @@ describe("Step F3.4 — Generated Document UI (Card & Column)", () => {
             format: "docx",
             currentRevision: 1,
           }}
-          workspaceId="ws-1"
+          canExport
         />
       );
 
@@ -65,7 +69,7 @@ describe("Step F3.4 — Generated Document UI (Card & Column)", () => {
             format: "pdf",
             currentRevision: 3,
           }}
-          workspaceId="ws-1"
+          canExport
         />
       );
 
@@ -82,7 +86,7 @@ describe("Step F3.4 — Generated Document UI (Card & Column)", () => {
             format: "md",
             currentRevision: 1,
           }}
-          workspaceId="ws-1"
+          canExport
         />
       );
 
@@ -93,8 +97,9 @@ describe("Step F3.4 — Generated Document UI (Card & Column)", () => {
   });
 
   describe("DocumentColumn", () => {
+    // `api()` returns the payload without the `{ data }` envelope.
     const mockDocData = {
-      data: {
+      ...{
         document: {
           id: "doc-abc",
           workspaceId: "ws-1",
@@ -161,7 +166,7 @@ describe("Step F3.4 — Generated Document UI (Card & Column)", () => {
 
       expect(screen.getByTestId("tab-preview")).toBeInTheDocument();
       expect(screen.getByTestId("tab-edit")).toBeInTheDocument();
-      expect(screen.getByText("Rev 2")).toBeInTheDocument();
+      expect(screen.getByTestId("revision-selector-btn")).toHaveTextContent("Revision 2");
     });
 
     it("switching to Edit tab and typing updates draft and reveals Save bar", async () => {
@@ -197,7 +202,7 @@ describe("Step F3.4 — Generated Document UI (Card & Column)", () => {
       expect(screen.getByTestId("doc-save-btn")).toBeInTheDocument();
 
       // Click Save
-      mockApi.mockResolvedValueOnce({ data: { revision: 3 } });
+      mockApi.mockResolvedValueOnce({ revision: 3 });
       mockApi.mockResolvedValueOnce(mockDocData);
 
       fireEvent.click(screen.getByTestId("doc-save-btn"));

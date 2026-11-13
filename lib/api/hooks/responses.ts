@@ -105,6 +105,16 @@ export interface ResponseVersionDto {
     createdAt: string;
   } | null;
   latestEditContent?: string | null;
+  /** Documents Klecx generated in this version (F3.4). */
+  documents?: GeneratedDocumentDto[];
+}
+
+export interface GeneratedDocumentDto {
+  id: string;
+  title: string;
+  format: string;
+  currentRevision: number;
+  createdAt?: string;
 }
 
 /**

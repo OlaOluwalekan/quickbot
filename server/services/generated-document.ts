@@ -1,11 +1,9 @@
 import "server-only";
-import crypto from "node:crypto";
 import { db } from "@/server/db/client";
 import { Errors } from "@/server/http/errors";
 import type { Actor } from "@/server/auth/session";
 import { requireWorkspace } from "@/server/authz/access";
 import { logActivity } from "@/server/services/activity";
-import { getEntitlements } from "@/server/billing/entitlements";
 import {
   type ExportFormat,
   renderDocumentBuffer,
@@ -13,8 +11,10 @@ import {
   EXPORT_MIME_TYPES,
   sanitizeDocumentTitle,
   sanitizeDocumentMarkdown,
+  assertExportAllowed,
 } from "@/server/documents";
 import { quoteIsFromStoredText } from "@/server/services/quote-source";
+import { applySuggestion, toSuggestionTarget } from "@/lib/documents/apply-suggestion";
 import { type CreateAnnotationInput } from "@/lib/schemas/annotation";
 import { syncMentionsAndNotes, sendMentionNotifications } from "./mentions";
 
@@ -191,6 +191,8 @@ export async function createDocumentRevision(
     content: string;
     baseRevision?: number | null;
     title?: string;
+    /** Quick fixes (F3.3 review comments) the editor accepted into this text. */
+    acceptedSuggestionIds?: string[];
   }
 ) {
   const doc = await db.document.findUnique({
@@ -250,6 +252,40 @@ export async function createDocumentRevision(
             ...(sanitizedTitle ? { title: sanitizedTitle } : {}),
           },
         });
+
+        if (input.acceptedSuggestionIds && input.acceptedSuggestionIds.length > 0) {
+          await tx.annotation.updateMany({
+            where: {
+              id: { in: input.acceptedSuggestionIds },
+              workspaceId: doc.workspaceId,
+              documentId,
+              deletedAt: null,
+              // Only quick fixes waiting for an answer: the ids come from the
+              // client and must not resolve other people's comments.
+              suggestionState: "PENDING",
+            },
+            data: { suggestionState: "ACCEPTED", resolvedAt: new Date() },
+          });
+        }
+
+        // Quick fixes whose passage this revision changed can't be applied
+        // any more: they become STALE (the comment stays, the button goes).
+        const pendingFixes = await tx.annotation.findMany({
+          where: { documentId, deletedAt: null, suggestionState: "PENDING" },
+          select: { id: true, suggestion: true },
+        });
+        const staleIds = pendingFixes
+          .filter((a) => {
+            const target = toSuggestionTarget(a.suggestion);
+            return !target || !applySuggestion(sanitizedContent, target).ok;
+          })
+          .map((a) => a.id);
+        if (staleIds.length > 0) {
+          await tx.annotation.updateMany({
+            where: { id: { in: staleIds }, suggestionState: "PENDING" },
+            data: { suggestionState: "STALE" },
+          });
+        }
 
         await tx.workspace.update({
           where: { id: doc.workspaceId },
@@ -319,9 +355,7 @@ export async function downloadDocument(
 ): Promise<{ buffer: Buffer; filename: string; contentType: string }> {
   const doc = await db.document.findUnique({
     where: { id: documentId, deletedAt: null },
-    include: {
-      workspace: { select: { id: true, ownerId: true } },
-    },
+    select: { id: true, workspaceId: true, title: true, format: true, currentRevision: true },
   });
 
   if (!doc) {
@@ -336,14 +370,11 @@ export async function downloadDocument(
   }
   const format = reqFormat as ExportFormat;
 
-  if (format !== "md") {
-    if (!access.capabilities.has("workspace.export")) {
-      throw Errors.forbidden("Workspace export permission required");
-    }
-    const entitlements = await getEntitlements(doc.workspace.ownerId);
-    if (!entitlements.exportFormats.includes(format)) {
-      throw Errors.forbidden(`Export format '${format}' is not enabled on this workspace's plan.`);
-    }
+  // Markdown is the document's own text: anyone who can read it may take it.
+  // Word and PDF are exports (permission + the downloader's plan, as for
+  // response exports). Every download counts towards the daily export cap.
+  if (format !== "md" && !access.capabilities.has("workspace.export")) {
+    throw Errors.forbidden("Workspace export permission required");
   }
 
   const targetRevisionNum = query.revision ?? doc.currentRevision;
@@ -359,6 +390,8 @@ export async function downloadDocument(
   if (!revision) {
     throw Errors.notFound("DocumentRevision");
   }
+
+  await assertExportAllowed(actor.userId, format);
 
   const buffer = await renderDocumentBuffer({
     format,
@@ -501,4 +534,48 @@ export async function createDocumentAnnotation(
   }
 
   return created;
+}
+
+/**
+ * Lists the annotations on one revision of a generated document visible to
+ * the caller: `WORKSPACE` ones and the caller's own `PRIVATE` ones.
+ */
+export async function listDocumentAnnotations(
+  actor: Actor,
+  documentId: string,
+  revisionNumber: number
+) {
+  const doc = await db.document.findUnique({
+    where: { id: documentId, deletedAt: null },
+    select: { workspaceId: true },
+  });
+  if (!doc) {
+    throw Errors.notFound("Document");
+  }
+
+  await requireWorkspace(actor, doc.workspaceId, "workspace.read");
+
+  return db.annotation.findMany({
+    where: {
+      documentId,
+      documentRevision: revisionNumber,
+      deletedAt: null,
+      OR: [{ visibility: "WORKSPACE" }, { createdById: actor.userId }],
+    },
+    include: {
+      messages: {
+        orderBy: { createdAt: "asc" },
+        include: {
+          author: { select: { id: true, name: true, image: true } },
+          mentions: { select: { isKlecx: true } },
+        },
+      },
+      notes: {
+        where: { deletedAt: null },
+        select: { id: true, status: true },
+      },
+      createdBy: { select: { id: true, name: true, image: true } },
+    },
+    orderBy: { createdAt: "asc" },
+  });
 }

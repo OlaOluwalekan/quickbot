@@ -5,7 +5,6 @@ import {
   ArrowLeft,
   Home,
   FileText,
-  Download,
   ChevronDown,
   Edit2,
   Check,
@@ -15,7 +14,7 @@ import {
   Loader2,
   Wand2,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useFormatter, useNow, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { api } from "@/lib/api/client";
 import { Button } from "@/components/ui/button";
@@ -29,8 +28,12 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AnswerBody } from "@/components/response/answer-body";
 import { useDocumentDraftsStore } from "@/lib/stores/document-drafts";
-import { DocumentReview } from "@/components/response/document-review-popover";
-import { Gated } from "@/components/ui/gated";
+import {
+  DocumentReview,
+  DocumentReviewProgress,
+} from "@/components/response/document-review-popover";
+import type { QuickFixContext } from "@/components/annotations/quick-fix";
+import { GeneratedDocumentDownload } from "./generated-document-download";
 import { cn } from "@/lib/utils";
 
 export interface DocumentColumnProps {
@@ -40,11 +43,21 @@ export interface DocumentColumnProps {
   workspaceId: string;
   onBack: () => void;
   onCloseAll: () => void;
+  /** Fallbacks until the document is loaded; the server's answer wins. */
   canEdit?: boolean;
   canComment?: boolean;
   canAsk?: boolean;
-  canExport?: boolean;
   className?: string;
+}
+
+interface RevisionData {
+  id: string;
+  documentId: string;
+  revision: number;
+  content: string;
+  editorId: string | null;
+  editor?: { id: string; name: string; image?: string | null } | null;
+  createdAt: string;
 }
 
 interface DocumentData {
@@ -59,24 +72,8 @@ interface DocumentData {
     createdById: string;
     createdAt: string;
   };
-  latestRevision: {
-    id: string;
-    documentId: string;
-    revision: number;
-    content: string;
-    editorId: string | null;
-    editor?: { id: string; name: string; image?: string | null } | null;
-    createdAt: string;
-  };
-  revisions: Array<{
-    id: string;
-    documentId: string;
-    revision: number;
-    content: string;
-    editorId: string | null;
-    editor?: { id: string; name: string; image?: string | null } | null;
-    createdAt: string;
-  }>;
+  latestRevision: RevisionData;
+  revisions: RevisionData[];
   capabilities: {
     canEdit: boolean;
     canComment: boolean;
@@ -85,6 +82,17 @@ interface DocumentData {
   };
 }
 
+function errorCode(err: unknown): string | undefined {
+  return typeof err === "object" && err !== null && "code" in err
+    ? String((err as { code: unknown }).code)
+    : undefined;
+}
+
+/**
+ * A generated document (F3.4) as a column of the thread stack: preview
+ * (highlight → comment / ask / review), edit (Markdown) with a Save bar, and
+ * downloads. Asks on the document open further columns to its right.
+ */
 export function DocumentColumn({
   id,
   index,
@@ -92,47 +100,42 @@ export function DocumentColumn({
   workspaceId,
   onBack,
   onCloseAll,
-  canEdit: propCanEdit = true,
-  canComment = true,
-  canAsk = true,
-  canExport = true,
+  canEdit: propCanEdit = false,
+  canAsk: propCanAsk = false,
   className,
 }: DocumentColumnProps) {
   const t = useTranslations("GeneratedDocs");
   const tThreads = useTranslations("Threads");
+  const tReview = useTranslations("Review");
+  const format = useFormatter();
+  const now = useNow({ updateInterval: 60_000 });
 
   const [docData, setDocData] = React.useState<DocumentData | null>(null);
   const [selectedRevision, setSelectedRevision] = React.useState<number>(1);
   const [isLoading, setIsLoading] = React.useState(true);
   const [activeTab, setActiveTab] = React.useState<"preview" | "edit">("preview");
 
-  // Title editing state
   const [isEditingTitle, setIsEditingTitle] = React.useState(false);
   const [titleInput, setTitleInput] = React.useState("");
   const [isSavingTitle, setIsSavingTitle] = React.useState(false);
-
-  // Review dialog state
   const [reviewOpen, setReviewOpen] = React.useState(false);
+  const [isSavingRevision, setIsSavingRevision] = React.useState(false);
 
-  // Draft store
-  const drafts = useDocumentDraftsStore((s) => s.drafts);
+  // Drafts are keyed by document id (ids are unique across versions and documents).
+  const draft = useDocumentDraftsStore((s) => s.drafts[id]);
   const updateDraftContent = useDocumentDraftsStore((s) => s.updateDraftContent);
   const discardDraft = useDocumentDraftsStore((s) => s.discardDraft);
-
-  const existingDraft = drafts[id];
-  const draftContent = existingDraft?.content;
 
   const loadDocument = React.useCallback(
     async (silent = false) => {
       if (!silent) setIsLoading(true);
       try {
-        const res = await api<{ data: DocumentData }>(`/api/v1/documents/${id}`);
-        setDocData(res.data);
-        setSelectedRevision(res.data.document.currentRevision);
-        setTitleInput(res.data.document.title);
-      } catch (err) {
+        const data = await api<DocumentData>(`/api/v1/documents/${id}`);
+        setDocData(data);
+        setSelectedRevision(data.document.currentRevision);
+        setTitleInput(data.document.title);
+      } catch {
         if (!silent) setDocData(null);
-        toast.error("Failed to load document");
       } finally {
         if (!silent) setIsLoading(false);
       }
@@ -145,7 +148,13 @@ export function DocumentColumn({
   }, [loadDocument]);
 
   const canEdit = docData?.capabilities.canEdit ?? propCanEdit;
+  const canAsk = docData?.capabilities.canAsk ?? propCanAsk;
+  const canExport = docData?.capabilities.canExport ?? false;
 
+  const latest = docData?.latestRevision ?? null;
+  const isViewingLatest = docData
+    ? selectedRevision === docData.document.currentRevision
+    : true;
   const activeRevisionData = React.useMemo(() => {
     if (!docData) return null;
     return (
@@ -154,39 +163,61 @@ export function DocumentColumn({
     );
   }, [docData, selectedRevision]);
 
-  const baseContent = activeRevisionData?.content ?? "";
-  const displayedContent = draftContent !== undefined ? draftContent : baseContent;
-  const isViewingLatest = docData ? selectedRevision === docData.document.currentRevision : true;
-  const hasUnsavedChanges = draftContent !== undefined && draftContent !== baseContent;
+  // The draft belongs to the latest revision; older revisions are read-only.
+  const savedContent = latest?.content ?? "";
+  const hasUnsavedChanges =
+    isViewingLatest && draft !== undefined && draft.content !== savedContent;
+  const displayedContent = hasUnsavedChanges
+    ? draft!.content
+    : (activeRevisionData?.content ?? "");
+
+  const quickFix = React.useMemo<QuickFixContext | undefined>(
+    () =>
+      docData && isViewingLatest
+        ? {
+            versionId: id,
+            responseId: docData.document.responseId ?? null,
+            savedContent,
+            baseRevision: docData.document.currentRevision,
+            canEdit,
+          }
+        : undefined,
+    [docData, isViewingLatest, id, savedContent, canEdit]
+  );
 
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     if (!docData) return;
-    const nextText = e.target.value;
     updateDraftContent({
       versionId: id,
       baseRevision: docData.document.currentRevision,
-      baseContent,
-      content: nextText,
+      baseContent: savedContent,
+      content: e.target.value,
     });
   };
 
-  const [isSavingRevision, setIsSavingRevision] = React.useState(false);
   const handleSaveRevision = async () => {
-    if (!docData || draftContent === undefined) return;
+    if (!docData || !draft) return;
     setIsSavingRevision(true);
     try {
       await api(`/api/v1/documents/${id}/revisions`, {
         method: "POST",
         json: {
-          content: draftContent,
-          baseRevision: docData.document.currentRevision,
+          content: draft.content,
+          baseRevision: draft.baseRevision ?? docData.document.currentRevision,
+          acceptedSuggestionIds:
+            draft.appliedSuggestionIds.length > 0
+              ? draft.appliedSuggestionIds
+              : undefined,
         },
       });
       discardDraft(id);
       toast.success(t("saveSuccess"));
       await loadDocument(true);
-    } catch (err: any) {
-      toast.error(err?.message || "Failed to save revision");
+      window.dispatchEvent(
+        new CustomEvent("annotation-changed", { detail: { documentId: id } })
+      );
+    } catch (err) {
+      toast.error(errorCode(err) === "edit_conflict" ? t("saveConflict") : t("saveFailed"));
     } finally {
       setIsSavingRevision(false);
     }
@@ -198,57 +229,27 @@ export function DocumentColumn({
   };
 
   const handleSaveTitle = async () => {
-    if (!docData || !titleInput.trim()) return;
+    const next = titleInput.trim();
+    if (!docData || !next) return;
     setIsSavingTitle(true);
     try {
       await api(`/api/v1/documents/${id}`, {
         method: "PATCH",
-        json: { title: titleInput.trim() },
+        json: { title: next },
       });
       setDocData((prev) =>
-        prev
-          ? {
-              ...prev,
-              document: { ...prev.document, title: titleInput.trim() },
-            }
-          : prev
+        prev ? { ...prev, document: { ...prev.document, title: next } } : prev
       );
       setIsEditingTitle(false);
-      toast.success("Document renamed");
-    } catch (err: any) {
-      toast.error(err?.message || "Failed to rename document");
+      toast.success(t("renamed"));
+    } catch {
+      toast.error(t("renameFailed"));
     } finally {
       setIsSavingTitle(false);
     }
   };
 
-  const handleDownload = (fmt: string) => {
-    if (!docData) return;
-    const url = `/api/v1/documents/${id}/download?format=${fmt}&revision=${selectedRevision}`;
-    const link = window.document.createElement("a");
-    link.href = url;
-    link.download = "";
-    window.document.body.appendChild(link);
-    link.click();
-    window.document.body.removeChild(link);
-  };
-
-  if (isLoading) {
-    return (
-      <div
-        style={{ width }}
-        className={cn(
-          "flex flex-col h-full border-r border-border bg-surface items-center justify-center",
-          className
-        )}
-      >
-        <Loader2 className="h-6 w-6 animate-spin text-accent mb-2" />
-        <span className="text-xs text-muted">Loading document…</span>
-      </div>
-    );
-  }
-
-  if (!docData) {
+  if (isLoading || !docData) {
     return (
       <div
         style={{ width }}
@@ -257,20 +258,37 @@ export function DocumentColumn({
           className
         )}
       >
-        <FileText className="h-8 w-8 text-muted mb-2" />
-        <h3 className="font-semibold text-sm text-foreground">Document not found</h3>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          onClick={onBack}
-          className="mt-4 text-xs"
-        >
-          {tThreads("back")}
-        </Button>
+        {isLoading ? (
+          <>
+            <Loader2 className="h-6 w-6 animate-spin text-accent mb-2" />
+            <span className="text-xs text-muted">{t("loading")}</span>
+          </>
+        ) : (
+          <>
+            <FileText className="h-8 w-8 text-muted mb-2" />
+            <h3 className="font-semibold text-sm text-foreground">{t("notFound")}</h3>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={onBack}
+              className="mt-4 text-xs"
+            >
+              {tThreads("back")}
+            </Button>
+          </>
+        )}
       </div>
     );
   }
+
+  const isPdf = docData.document.format.toLowerCase() === "pdf";
+  const revisionLabel = (rev: RevisionData) =>
+    t("revisionBy", {
+      revision: rev.revision,
+      name: rev.editor?.name || tThreads("assistantName"),
+      when: format.relativeTime(new Date(rev.createdAt), now),
+    });
 
   return (
     <div
@@ -281,7 +299,7 @@ export function DocumentColumn({
         className
       )}
     >
-      {/* Column Header */}
+      {/* Header */}
       <div className="flex flex-col border-b border-border bg-surface shrink-0">
         <div className="flex items-center justify-between gap-2 px-3 py-2">
           <div className="flex items-center gap-1.5 min-w-0">
@@ -292,6 +310,7 @@ export function DocumentColumn({
               data-testid="column-back-btn"
               onClick={onBack}
               aria-label={tThreads("back")}
+              title={tThreads("back")}
               className="h-7 w-7 text-muted hover:text-foreground"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -303,75 +322,30 @@ export function DocumentColumn({
               data-testid="column-main-btn"
               onClick={onCloseAll}
               aria-label={tThreads("main")}
+              title={tThreads("main")}
               className="h-7 w-7 text-muted hover:text-foreground"
             >
               <Home className="h-4 w-4" />
             </Button>
             <span className="text-xs font-semibold text-muted px-1">
-              Level {index}
+              {tThreads("level", { level: index })}
             </span>
           </div>
 
           <div className="flex items-center gap-1">
-            <div className="inline-flex rounded-md shadow-xs">
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                data-testid="doc-col-download-btn"
-                onClick={() => handleDownload(docData.document.format)}
-                className="h-7 gap-1.5 rounded-r-none px-2 text-xs font-medium border-border hover:bg-surface-2"
-              >
-                <Download className="h-3 w-3 text-muted" />
-                <span>{t("download")}</span>
-              </Button>
+            <GeneratedDocumentDownload
+              documentId={id}
+              format={docData.document.format}
+              revision={selectedRevision}
+              canExport={canExport}
+              size="sm"
+            />
 
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    data-testid="doc-col-download-menu"
-                    className="h-7 rounded-l-none border-l-0 px-1 text-xs border-border hover:bg-surface-2"
-                  >
-                    <ChevronDown className="h-3 w-3 text-muted" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-40">
-                  <DropdownMenuItem onClick={() => handleDownload("md")}>
-                    Markdown (.md)
-                  </DropdownMenuItem>
-                  <Gated
-                    reason={
-                      canExport
-                        ? null
-                        : { code: "no_permission", capability: t("formatNotAllowed") }
-                    }
-                  >
-                    <DropdownMenuItem onClick={() => handleDownload("pdf")}>
-                      PDF (.pdf)
-                    </DropdownMenuItem>
-                  </Gated>
-                  <Gated
-                    reason={
-                      canExport
-                        ? null
-                        : { code: "no_permission", capability: t("formatNotAllowed") }
-                    }
-                  >
-                    <DropdownMenuItem onClick={() => handleDownload("docx")}>
-                      Word (.docx)
-                    </DropdownMenuItem>
-                  </Gated>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-
-            {canAsk && docData.document.versionId && (
+            {canAsk && (
               <DocumentReview
-                versionId={docData.document.versionId}
-                responseId={docData.document.responseId || docData.document.versionId}
+                versionId={id}
+                documentId={id}
+                responseId={docData.document.responseId ?? id}
                 canAsk={canAsk}
                 hasDraft={hasUnsavedChanges}
                 mode="dialog"
@@ -387,6 +361,8 @@ export function DocumentColumn({
                   variant="ghost"
                   size="icon"
                   data-testid="doc-col-more-menu"
+                  aria-label={t("moreActions")}
+                  title={t("moreActions")}
                   className="h-7 w-7 text-muted hover:text-foreground"
                 >
                   <MoreVertical className="h-3.5 w-3.5" />
@@ -399,13 +375,13 @@ export function DocumentColumn({
                     onClick={() => setReviewOpen(true)}
                   >
                     <Wand2 className="h-3.5 w-3.5 mr-2 text-accent" />
-                    <span>Ask Klecx to review</span>
+                    <span>{tReview("askKlecxReview")}</span>
                   </DropdownMenuItem>
                 )}
                 {canEdit && !isEditingTitle && (
                   <DropdownMenuItem onClick={() => setIsEditingTitle(true)}>
                     <Edit2 className="h-3.5 w-3.5 mr-2 text-muted" />
-                    <span>Rename</span>
+                    <span>{t("rename")}</span>
                   </DropdownMenuItem>
                 )}
               </DropdownMenuContent>
@@ -413,7 +389,7 @@ export function DocumentColumn({
           </div>
         </div>
 
-        {/* Title & Revision Bar */}
+        {/* Title & revision */}
         <div className="px-3 pb-2.5 pt-0.5">
           {isEditingTitle ? (
             <div className="flex items-center gap-1.5">
@@ -421,6 +397,8 @@ export function DocumentColumn({
                 value={titleInput}
                 onChange={(e) => setTitleInput(e.target.value)}
                 autoFocus
+                maxLength={120}
+                aria-label={t("titleLabel")}
                 className="h-7 text-xs bg-surface-2"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") void handleSaveTitle();
@@ -433,6 +411,8 @@ export function DocumentColumn({
                 variant="ghost"
                 onClick={handleSaveTitle}
                 disabled={isSavingTitle}
+                aria-label={t("saveTitle")}
+                title={t("saveTitle")}
                 className="h-7 w-7 text-accent"
               >
                 <Check className="h-3.5 w-3.5" />
@@ -442,6 +422,8 @@ export function DocumentColumn({
                 size="icon"
                 variant="ghost"
                 onClick={() => setIsEditingTitle(false)}
+                aria-label={t("cancelRename")}
+                title={t("cancelRename")}
                 className="h-7 w-7 text-muted"
               >
                 <X className="h-3.5 w-3.5" />
@@ -449,18 +431,10 @@ export function DocumentColumn({
             </div>
           ) : (
             <div className="flex items-center justify-between gap-2">
-              <h2
-                onClick={() => canEdit && setIsEditingTitle(true)}
-                title={canEdit ? "Click to rename" : undefined}
-                className={cn(
-                  "font-bold text-sm text-foreground truncate",
-                  canEdit && "hover:text-accent cursor-pointer"
-                )}
-              >
+              <h2 className="font-bold text-sm text-foreground truncate">
                 {docData.document.title}
               </h2>
 
-              {/* Revision Selector */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -468,27 +442,25 @@ export function DocumentColumn({
                     variant="ghost"
                     size="sm"
                     data-testid="revision-selector-btn"
+                    aria-label={t("revisionHistory")}
                     className="h-6 gap-1 px-1.5 text-[11px] font-medium text-muted hover:text-foreground"
                   >
                     <History className="h-3 w-3" />
-                    <span>Rev {selectedRevision}</span>
+                    <span>{t("revision", { revision: selectedRevision })}</span>
                     <ChevronDown className="h-2.5 w-2.5 opacity-60" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuContent align="end" className="w-72">
                   {docData.revisions.map((rev) => (
                     <DropdownMenuItem
                       key={rev.id}
                       onClick={() => setSelectedRevision(rev.revision)}
                       className={cn(
-                        "flex items-center justify-between text-xs",
+                        "text-xs",
                         rev.revision === selectedRevision && "font-semibold text-accent"
                       )}
                     >
-                      <span>Revision {rev.revision}</span>
-                      <span className="text-[10px] text-muted">
-                        {rev.editor?.name || "Klecx"}
-                      </span>
+                      {revisionLabel(rev)}
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>
@@ -498,7 +470,9 @@ export function DocumentColumn({
         </div>
       </div>
 
-      {/* Tabs: Preview | Edit */}
+      <DocumentReviewProgress versionId={id} className="mx-3 mt-2" />
+
+      {/* Preview | Edit */}
       <Tabs
         value={activeTab}
         onValueChange={(v) => setActiveTab(v as "preview" | "edit")}
@@ -525,22 +499,12 @@ export function DocumentColumn({
               </TabsTrigger>
             )}
           </TabsList>
-
-          {hasUnsavedChanges && (
-            <span className="text-[10px] text-warning font-medium">
-              {t("unsavedChanges")}
-            </span>
-          )}
         </div>
 
-        {/* Tab 1: Preview */}
-        <TabsContent
-          value="preview"
-          className="flex-1 overflow-y-auto p-4 m-0 outline-none"
-        >
+        <TabsContent value="preview" className="flex-1 overflow-y-auto p-4 m-0 outline-none">
           <AnswerBody
             content={displayedContent}
-            responseId={docData.document.responseId || id}
+            responseId={docData.document.responseId ?? undefined}
             workspaceId={workspaceId}
             targetType="DOCUMENT_REVISION"
             targetId={id}
@@ -548,19 +512,24 @@ export function DocumentColumn({
             documentRevision={selectedRevision}
             depth={index}
             unsaved={hasUnsavedChanges}
-            variant={docData.document.format.toLowerCase() === "pdf" ? "document" : undefined}
+            quickFix={quickFix}
+            variant="document"
           />
         </TabsContent>
 
-        {/* Tab 2: Edit */}
         {canEdit && (
           <TabsContent
             value="edit"
             className="flex flex-col flex-1 overflow-hidden p-0 m-0 outline-none"
           >
-            {docData.document.format.toLowerCase() === "pdf" && (
+            {isPdf && (
               <div className="bg-surface-2 px-3 py-1.5 text-[11px] text-muted border-b border-border">
                 {t("editPdfSource")}
+              </div>
+            )}
+            {!isViewingLatest && (
+              <div className="bg-surface-2 px-3 py-1.5 text-[11px] text-muted border-b border-border">
+                {t("oldRevisionReadOnly")}
               </div>
             )}
             <textarea
@@ -568,22 +537,20 @@ export function DocumentColumn({
               onChange={handleContentChange}
               disabled={!isViewingLatest}
               data-testid="document-editor-textarea"
-              placeholder="Write document in Markdown…"
+              aria-label={t("editorLabel")}
+              placeholder={t("editorPlaceholder")}
               className="flex-1 w-full resize-none p-4 bg-transparent text-sm font-mono text-foreground leading-relaxed focus:outline-none"
             />
           </TabsContent>
         )}
       </Tabs>
 
-      {/* Save Draft Bar */}
-      {hasUnsavedChanges && (
+      {hasUnsavedChanges && canEdit && (
         <div
           data-testid="doc-save-bar"
-          className="flex items-center justify-between border-t border-border bg-surface-2 px-3 py-2 shrink-0 animate-in fade-in"
+          className="flex items-center justify-between border-t border-border bg-surface-2 px-3 py-2 shrink-0"
         >
-          <span className="text-xs text-muted truncate mr-2">
-            {t("unsavedChanges")}
-          </span>
+          <span className="text-xs text-muted truncate mr-2">{t("unsavedChanges")}</span>
           <div className="flex items-center gap-2">
             <Button
               type="button"
@@ -602,7 +569,7 @@ export function DocumentColumn({
               data-testid="doc-save-btn"
               onClick={handleSaveRevision}
               disabled={isSavingRevision}
-              className="h-7 gap-1 px-3 text-xs bg-accent text-accent-foreground hover:bg-accent/90"
+              className="h-7 gap-1 px-3 text-xs"
             >
               {isSavingRevision ? (
                 <Loader2 className="h-3 w-3 animate-spin" />

@@ -237,7 +237,7 @@ export async function loadAskTarget(
         return {
           key: `document:${doc.id}:r${rev.revision}`,
           text: rev.content,
-          description: `From document "${doc.title}" (Revision ${rev.revision})`,
+          description: `Document "${doc.title}" generated earlier (revision ${rev.revision})`,
         };
       }
     }

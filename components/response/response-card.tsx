@@ -66,6 +66,7 @@ import {
 } from "@/lib/api/hooks/responses";
 import { useWorkspace } from "@/lib/api/hooks/workspaces";
 import type { CitationDto } from "@/lib/api/sse";
+import type { GeneratedDocumentDto } from "@/lib/api/hooks/responses";
 
 export interface ResponseItemData {
   id: string;
@@ -103,13 +104,7 @@ export interface ResponseItemData {
     } | null;
     latestEditContent?: string | null;
     citations?: CitationDto[];
-    documents?: Array<{
-      id: string;
-      title: string;
-      format: string;
-      currentRevision: number;
-      createdAt?: string | Date;
-    }>;
+    documents?: GeneratedDocumentDto[];
   } | null;
   author?: {
     name?: string;
@@ -152,6 +147,8 @@ export interface ResponseCardProps {
   canAsk?: boolean;
   /** False when the member may not edit responses. The server re-checks. */
   canEditResponse?: boolean;
+  /** Member holds `workspace.export` (Word / PDF downloads). The server re-checks. */
+  canExport?: boolean;
   onRegenerate?: (responseId: string) => void;
   onDelete?: (responseId: string) => void;
   isRegenerating?: boolean;
@@ -174,6 +171,7 @@ export function ResponseCard({
   memberCount = 1,
   canAsk = true,
   canEditResponse,
+  canExport = false,
   onRegenerate,
   onDelete,
   isRegenerating = false,
@@ -949,7 +947,7 @@ export function ResponseCard({
                 <GeneratedDocumentCard
                   key={doc.id}
                   document={doc}
-                  workspaceId={workspaceId}
+                  canExport={canExport}
                 />
               ))}
             </div>

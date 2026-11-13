@@ -129,6 +129,12 @@ export function AnswerBody({
             responseId={isVersion ? responseId : undefined}
             versionId={isVersion ? targetId : undefined}
             messageId={targetType === "ANNOTATION_MESSAGE" ? targetId : undefined}
+            documentId={
+              targetType === "DOCUMENT_REVISION" ? (documentId || targetId) : undefined
+            }
+            documentRevision={
+              targetType === "DOCUMENT_REVISION" ? documentRevision : undefined
+            }
             content={content}
             quickFix={quickFix}
             onAnnotationsChange={onAnnotationsChange}

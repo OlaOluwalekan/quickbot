@@ -4,7 +4,7 @@ import "server-only";
 import crypto from "node:crypto";
 import { db } from "@/server/db/client";
 import { env } from "@/server/env";
-import { Errors } from "@/server/http/errors";
+import { ApiError, Errors } from "@/server/http/errors";
 import type { Actor } from "@/server/auth/session";
 import { requireWorkspace } from "@/server/authz/access";
 import { logActivity } from "./activity";
@@ -46,7 +46,7 @@ import {
   CreateGenerationInput,
 } from "@/lib/schemas/generation";
 import { getStorageProvider } from "@/server/storage";
-import type { Part } from "@/server/ai/types";
+import type { Msg, Part } from "@/server/ai/types";
 import { normalizeGeminiError } from "@/server/ai/errors";
 import { resolveEffectiveAiLanguage } from "@/lib/locale";
 
@@ -402,7 +402,7 @@ async function executeDetachedGeneration(params: {
       : { summaries: false };
 
     let stage: "preparing" | "thinking" | "writing" = "preparing";
-    let usage = { inputTokens: 0, outputTokens: 0 };
+    const usage = { inputTokens: 0, outputTokens: 0 };
     let currentMessages: Msg[] = [...inputMessages];
     let toolIterations = 0;
     const MAX_TOOL_ITERATIONS = 2;
@@ -414,7 +414,11 @@ async function executeDetachedGeneration(params: {
           messages: currentMessages,
           system: systemPrompt,
           thinking: thinkingConfig,
-          tools: !grounding && modelDef.caps.tools ? [CREATE_DOCUMENT_TOOL] : undefined,
+          // After the last allowed tool call the model only writes text.
+          tools:
+            !grounding && modelDef.caps.tools && toolIterations < MAX_TOOL_ITERATIONS
+              ? [CREATE_DOCUMENT_TOOL]
+              : undefined,
           grounding: Boolean(grounding),
         },
         {
@@ -429,6 +433,9 @@ async function executeDetachedGeneration(params: {
         thoughtSignature?: string;
       } | null = null;
       let assistantTextInThisTurn = "";
+      // A provider may report usage on several chunks, each a running total
+      // for this call: keep the last one, then add the calls together.
+      let callUsage = { inputTokens: 0, outputTokens: 0 };
 
       for await (const event of stream) {
         if (abortController.signal.aborted) {
@@ -511,10 +518,15 @@ async function executeDetachedGeneration(params: {
             }
           }
         } else if (event.type === "usage") {
-          usage.inputTokens += event.inputTokens;
-          usage.outputTokens += event.outputTokens;
+          callUsage = {
+            inputTokens: event.inputTokens,
+            outputTokens: event.outputTokens,
+          };
         }
       }
+
+      usage.inputTokens += callUsage.inputTokens;
+      usage.outputTokens += callUsage.outputTokens;
 
       if (toolCallEmitted && toolIterations < MAX_TOOL_ITERATIONS) {
         toolIterations++;
@@ -522,21 +534,32 @@ async function executeDetachedGeneration(params: {
           stage = "writing";
           broadcastEvent(active, "status", { stage: "writing" });
         }
-        const docResult = await executeCreateDocumentToolCall({
-          actorId,
-          workspaceId,
-          responseId,
-          versionId,
-          modelKey,
-          args: toolCallEmitted.args,
-        });
-
-        broadcastEvent(active, "document", {
-          id: docResult.documentId,
-          title: docResult.title,
-          format: docResult.format,
-          currentRevision: docResult.currentRevision,
-        });
+        // A refused document (title too long, bad format…) is reported back
+        // to the model, which tells the user; the generation goes on.
+        let toolResponse: Record<string, unknown>;
+        try {
+          const docResult = await executeCreateDocumentToolCall({
+            actorId,
+            workspaceId,
+            versionId,
+            args: toolCallEmitted.args,
+          });
+          broadcastEvent(active, "document", {
+            id: docResult.documentId,
+            title: docResult.title,
+            format: docResult.format,
+            currentRevision: docResult.currentRevision,
+          });
+          toolResponse = {
+            success: true,
+            documentId: docResult.documentId,
+            title: docResult.title,
+            format: docResult.format,
+          };
+        } catch (err) {
+          if (!(err instanceof ApiError)) throw err;
+          toolResponse = { success: false, error: err.message };
+        }
 
         currentMessages = [
           ...currentMessages,
@@ -560,12 +583,7 @@ async function executeDetachedGeneration(params: {
               {
                 type: "tool_response" as const,
                 name: toolCallEmitted.name,
-                response: {
-                  documentId: docResult.documentId,
-                  title: docResult.title,
-                  format: docResult.format,
-                  success: true,
-                },
+                response: toolResponse,
               },
             ],
           },

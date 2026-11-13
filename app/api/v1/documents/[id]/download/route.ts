@@ -1,4 +1,5 @@
 import { route } from "@/server/http/route";
+import { Errors } from "@/server/http/errors";
 import { downloadDocument } from "@/server/services/generated-document";
 
 export const runtime = "nodejs";
@@ -9,7 +10,10 @@ export const GET = route({
     const url = new URL(req.url);
     const format = url.searchParams.get("format") || undefined;
     const revParam = url.searchParams.get("revision");
-    const revision = revParam ? parseInt(revParam, 10) : undefined;
+    const revision = revParam ? Number(revParam) : undefined;
+    if (revision !== undefined && (!Number.isInteger(revision) || revision < 1)) {
+      throw Errors.badRequest("Invalid revision number");
+    }
 
     const { buffer, filename, contentType } = await downloadDocument(actor, docId, {
       format,

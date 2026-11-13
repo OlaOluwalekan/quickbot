@@ -95,6 +95,9 @@ export interface AnnotationLayerProps {
   versionId?: string;
   /** Ask answer: the annotations made on this ASSISTANT message are loaded. */
   messageId?: string;
+  /** Generated document (F3.4): the annotations on this revision are loaded. */
+  documentId?: string;
+  documentRevision?: number;
   content: string;
   annotations?: AnnotationItem[];
   /**
@@ -312,6 +315,8 @@ export function AnnotationLayer({
   responseId,
   versionId,
   messageId,
+  documentId,
+  documentRevision,
   content,
   annotations: propAnnotations,
   quickFix,
@@ -354,9 +359,11 @@ export function AnnotationLayer({
 
   // 1. Fetch annotations if not provided via props
   const fetchAnnotations = React.useCallback(async () => {
-    if (propAnnotations || (!responseId && !messageId)) return;
+    if (propAnnotations || (!responseId && !messageId && !documentId)) return;
     try {
-      const url = messageId
+      const url = documentId
+        ? `/api/v1/documents/${documentId}/revisions/${documentRevision ?? 1}/annotations`
+        : messageId
         ? `/api/v1/annotation-messages/${messageId}/annotations`
         : versionId
         ? `/api/v1/responses/${responseId}/annotations?versionId=${versionId}`
@@ -374,7 +381,7 @@ export function AnnotationLayer({
     } catch {
       // Ignore network errors in polling
     }
-  }, [propAnnotations, responseId, versionId, messageId]);
+  }, [propAnnotations, responseId, versionId, messageId, documentId, documentRevision]);
 
   React.useEffect(() => {
     fetchAnnotations();
@@ -388,6 +395,7 @@ export function AnnotationLayer({
       // concerned, so it always reloads.
       if (
         messageId ||
+        documentId ||
         !detail?.responseId ||
         detail.responseId === responseId
       ) {
@@ -398,7 +406,7 @@ export function AnnotationLayer({
     return () => {
       window.removeEventListener("annotation-changed", handleAnnotationChanged);
     };
-  }, [responseId, messageId, fetchAnnotations]);
+  }, [responseId, messageId, documentId, fetchAnnotations]);
 
   const annotations = propAnnotations ?? internalAnnotations;
 

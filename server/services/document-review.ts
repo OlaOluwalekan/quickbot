@@ -291,24 +291,114 @@ function sse(event: string, data: unknown): string {
   return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
 }
 
-/** What a review of this text would reserve. Shown before the review starts. */
-export async function estimateDocumentReview(
-  actor: Actor,
-  versionId: string
-): Promise<{ estimatedCredits: number; sections: number }> {
+/**
+ * The text a review reads (F3.3): a response version (main responses and
+ * uploaded documents: its latest saved edit, else the original) or a
+ * generated document (F3.4: its current revision).
+ */
+export type ReviewTarget =
+  | { kind: "version"; versionId: string }
+  | { kind: "document"; documentId: string };
+
+interface ResolvedReviewTarget {
+  workspaceId: string;
+  responseId: string | null;
+  /** The saved text the review reads. */
+  source: string;
+  /** Where findings are stored: the fields of each AI annotation. */
+  annotationTarget:
+    | {
+        targetType: "RESPONSE_VERSION";
+        versionId: string;
+        contentSource: "EDIT" | "ORIGINAL";
+        editRevision: number | null;
+      }
+    | {
+        targetType: "DOCUMENT_REVISION";
+        documentId: string;
+        documentRevision: number;
+      };
+}
+
+async function resolveReviewTarget(target: ReviewTarget): Promise<ResolvedReviewTarget> {
+  if (target.kind === "document") {
+    const doc = await db.document.findUnique({
+      where: { id: target.documentId, deletedAt: null },
+      select: {
+        id: true,
+        workspaceId: true,
+        currentRevision: true,
+        version: { select: { responseId: true } },
+        revisions: {
+          orderBy: { revision: "desc" },
+          take: 1,
+          select: { revision: true, content: true },
+        },
+      },
+    });
+    const rev = doc?.revisions[0];
+    if (!doc || !rev) {
+      throw Errors.notFound("Document");
+    }
+    return {
+      workspaceId: doc.workspaceId,
+      responseId: doc.version.responseId,
+      source: rev.content,
+      annotationTarget: {
+        targetType: "DOCUMENT_REVISION",
+        documentId: doc.id,
+        documentRevision: rev.revision,
+      },
+    };
+  }
+
   const version = await db.responseVersion.findUnique({
-    where: { id: versionId },
+    where: { id: target.versionId },
     include: {
-      edits: { orderBy: { revision: "desc" }, take: 1, select: { content: true } },
-      response: { select: { workspaceId: true, deletedAt: true } },
+      edits: {
+        orderBy: { revision: "desc" },
+        take: 1,
+        select: { revision: true, content: true },
+      },
+      response: {
+        select: { id: true, workspaceId: true, deletedAt: true, kind: true },
+      },
     },
   });
   if (!version || version.response.deletedAt) {
     throw Errors.notFound("ResponseVersion");
   }
-  await requireWorkspace(actor, version.response.workspaceId, "workspace.read");
+  if (version.response.kind === "IMAGE") {
+    throw Errors.badRequest("Only text can be reviewed", "not_reviewable");
+  }
+  // The text the reader sees: the latest saved edit, else the original.
+  const latestEdit = version.edits[0] ?? null;
+  return {
+    workspaceId: version.response.workspaceId,
+    responseId: version.response.id,
+    source: latestEdit?.content ?? version.content,
+    annotationTarget: {
+      targetType: "RESPONSE_VERSION",
+      versionId: version.id,
+      contentSource: latestEdit ? "EDIT" : "ORIGINAL",
+      editRevision: latestEdit?.revision ?? null,
+    },
+  };
+}
 
-  const chunks = chunkDocumentByHeadings(version.edits[0]?.content ?? version.content);
+function toTarget(target: ReviewTarget | string): ReviewTarget {
+  return typeof target === "string" ? { kind: "version", versionId: target } : target;
+}
+
+/** What a review of this text would reserve. Shown before the review starts. */
+export async function estimateDocumentReview(
+  actor: Actor,
+  target: ReviewTarget | string
+): Promise<{ estimatedCredits: number; sections: number }> {
+  const resolved = await resolveReviewTarget(toTarget(target));
+  await requireWorkspace(actor, resolved.workspaceId, "workspace.read");
+
+  const chunks = chunkDocumentByHeadings(resolved.source);
   return {
     estimatedCredits: chunks.length === 0 ? 0 : reviewReserveAmount(chunks),
     sections: chunks.length,
@@ -333,31 +423,12 @@ function reviewReserveAmount(chunks: ReviewChunk[]): number {
  */
 export async function startDocumentReview(
   actor: Actor,
-  versionId: string,
+  target: ReviewTarget | string,
   input: DocumentReviewInput,
   options: { providerInstance?: AiProvider } = {}
 ): Promise<{ stream: ReadableStream<Uint8Array>; generationId: string }> {
-  const version = await db.responseVersion.findUnique({
-    where: { id: versionId },
-    include: {
-      edits: {
-        orderBy: { revision: "desc" },
-        take: 1,
-        select: { revision: true, content: true },
-      },
-      response: {
-        select: { id: true, workspaceId: true, deletedAt: true, kind: true },
-      },
-    },
-  });
-  if (!version || version.response.deletedAt) {
-    throw Errors.notFound("ResponseVersion");
-  }
-  if (version.response.kind === "IMAGE") {
-    throw Errors.badRequest("Only text can be reviewed", "not_reviewable");
-  }
-
-  const workspaceId = version.response.workspaceId;
+  const resolved = await resolveReviewTarget(toTarget(target));
+  const { workspaceId, responseId, source, annotationTarget } = resolved;
   const wsAccess = await requireWorkspace(actor, workspaceId, "workspace.ask");
 
   // A repeated request (same key) must not start a second review.
@@ -372,9 +443,6 @@ export async function startDocumentReview(
     throw Errors.conflict("This request was already sent", "duplicate_request");
   }
 
-  // The text the reader sees: the latest saved edit, else the original.
-  const latestEdit = version.edits[0] ?? null;
-  const source = latestEdit?.content ?? version.content;
   const chunks = chunkDocumentByHeadings(source);
   if (chunks.length === 0) {
     throw Errors.badRequest("There is no text to review", "empty_document");
@@ -476,7 +544,12 @@ export async function startDocumentReview(
           // Findings of an earlier review that are still open: not reported twice.
           db.annotation.findMany({
             where: {
-              versionId,
+              ...(annotationTarget.targetType === "DOCUMENT_REVISION"
+                ? {
+                    documentId: annotationTarget.documentId,
+                    documentRevision: annotationTarget.documentRevision,
+                  }
+                : { versionId: annotationTarget.versionId }),
               authorType: "AI",
               deletedAt: null,
               resolvedAt: null,
@@ -605,17 +678,14 @@ export async function startDocumentReview(
               const annotation = await db.annotation.create({
                 data: {
                   workspaceId,
-                  responseId: version.response.id,
-                  versionId: version.id,
-                  targetType: "RESPONSE_VERSION",
+                  responseId,
+                  ...annotationTarget,
                   depth: 0,
                   authorType: "AI",
                   createdById: actor.userId,
                   kind: "COMMENT",
                   questionState: "NONE",
                   visibility,
-                  contentSource: latestEdit ? "EDIT" : "ORIGINAL",
-                  editRevision: latestEdit?.revision ?? null,
                   anchorExact: found.anchor.exact,
                   anchorPrefix: found.anchor.prefix,
                   anchorSuffix: found.anchor.suffix,
@@ -648,8 +718,15 @@ export async function startDocumentReview(
 
               send("finding", {
                 annotationId: annotation.id,
-                responseId: version.response.id,
-                versionId: version.id,
+                responseId,
+                versionId:
+                  annotationTarget.targetType === "RESPONSE_VERSION"
+                    ? annotationTarget.versionId
+                    : null,
+                documentId:
+                  annotationTarget.targetType === "DOCUMENT_REVISION"
+                    ? annotationTarget.documentId
+                    : null,
                 anchor: found.anchor,
                 category: found.category,
                 severity: found.severity,

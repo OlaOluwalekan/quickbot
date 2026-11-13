@@ -44,8 +44,15 @@ export type DocumentReviewHandlers = {
  * failure (refused request, dropped connection) is reported through `onError`
  * exactly once.
  */
+/** The review endpoint of a response version, or of a generated document (F3.4). */
+export function reviewEndpoint(target: { versionId?: string; documentId?: string }): string {
+  return target.documentId
+    ? `/api/v1/documents/${encodeURIComponent(target.documentId)}/review`
+    : `/api/v1/response-versions/${encodeURIComponent(target.versionId ?? "")}/review`;
+}
+
 export async function streamDocumentReview(
-  versionId: string,
+  versionId: string | { versionId?: string; documentId?: string },
   input: Omit<DocumentReviewInput, "preset" | "visibility"> &
     Partial<Pick<DocumentReviewInput, "preset" | "visibility">>,
   handlers: DocumentReviewHandlers = {},
@@ -54,7 +61,7 @@ export async function streamDocumentReview(
   let res: Response;
   try {
     res = await fetch(
-      `/api/v1/response-versions/${encodeURIComponent(versionId)}/review`,
+      reviewEndpoint(typeof versionId === "string" ? { versionId } : versionId),
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },

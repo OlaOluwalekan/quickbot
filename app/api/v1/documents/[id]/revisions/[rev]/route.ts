@@ -13,6 +13,6 @@ export const GET = route({
     }
 
     const revision = await getDocumentRevision(actor, docId, revNum);
-    return { data: revision };
+    return revision;
   },
 });

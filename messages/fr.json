@@ -1785,7 +1785,6 @@
     "edited": "Modifié",
     "revision": "Révision {revision}",
     "editPdfSource": "Modification de la source Markdown de ce PDF. Le PDF est regénéré lors du téléchargement.",
-    "formatNotAllowed": "Ce format d'exportation n'est pas inclus dans le forfait de votre espace de travail.",
     "assumptions": "Hypothèses :",
     "questions": "Questions :",
     "preview": "Aperçu",
@@ -1794,6 +1793,23 @@
     "discard": "Ignorer",
     "unsavedChanges": "Modifications non enregistrées",
     "saveSuccess": "Nouvelle révision enregistrée",
-    "discarded": "Modifications ignorées"
+    "discarded": "Modifications ignorées",
+    "openDocument": "Ouvrir le document {title}",
+    "loading": "Chargement du document…",
+    "notFound": "Ce document n'est plus disponible.",
+    "saveFailed": "La révision n'a pas pu être enregistrée.",
+    "saveConflict": "Quelqu'un a enregistré une révision plus récente. Copiez vos modifications, rechargez le document et réessayez.",
+    "rename": "Renommer",
+    "renamed": "Document renommé",
+    "renameFailed": "Le document n'a pas pu être renommé.",
+    "titleLabel": "Titre du document",
+    "saveTitle": "Enregistrer le titre",
+    "cancelRename": "Annuler",
+    "moreActions": "Plus d'actions",
+    "revisionHistory": "Historique des révisions",
+    "revisionBy": "Révision {revision} · {name} · {when}",
+    "editorLabel": "Texte du document (Markdown)",
+    "editorPlaceholder": "Rédigez le document en Markdown…",
+    "oldRevisionReadOnly": "Ceci est une ancienne révision. Passez à la dernière révision pour la modifier."
   }
 }

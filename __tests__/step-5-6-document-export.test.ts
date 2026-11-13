@@ -30,7 +30,7 @@ import {
 import { MockStorageProvider, setStorageProvider } from "@/server/storage";
 import { GET as exportResponseRoute } from "@/app/api/v1/responses/[id]/export/route";
 import { GET as exportWorkspaceRoute } from "@/app/api/v1/workspaces/[id]/export/route";
-import { GET as downloadAttachmentRoute } from "@/app/api/v1/attachments/[id]/download/route";
+import { GET as downloadDocumentRoute } from "@/app/api/v1/documents/[id]/download/route";
 import type { AiProvider, GenerateRequest, StreamEvent } from "@/server/ai/types";
 
 let mockActorId: string | null = null;
@@ -68,6 +68,7 @@ describe("Step 5.6 — Document generation and export (Markdown, PDF, DOCX)", ()
   let outsiderId: string;
   let workspaceId: string;
   let responseId: string;
+  let versionId: string;
   let mockStorage: MockStorageProvider;
 
   const richMarkdown = [
@@ -183,6 +184,7 @@ describe("Step 5.6 — Document generation and export (Markdown, PDF, DOCX)", ()
         createdById: ownerId,
       },
     });
+    versionId = ver1.id;
 
     await db.citation.createMany({
       data: [
@@ -472,6 +474,16 @@ describe("Step 5.6 — Document generation and export (Markdown, PDF, DOCX)", ()
     const fakeDocToolProvider: AiProvider = {
       id: "gemini",
       async *stream(req: GenerateRequest): AsyncIterable<StreamEvent> {
+        // After the tool ran, the model is called again with its result and
+        // writes the summary.
+        const isFollowUp = req.messages.some((m) =>
+          m.parts.some((p) => p.type === "tool_response")
+        );
+        if (isFollowUp) {
+          yield { type: "text_delta", text: " It lists both milestones." };
+          yield { type: "usage", inputTokens: 80, outputTokens: 20, estimated: false };
+          return;
+        }
         capturedTools = req.tools;
         yield {
           type: "text_delta",
@@ -527,31 +539,39 @@ describe("Step 5.6 — Document generation and export (Markdown, PDF, DOCX)", ()
       ])
     );
 
-    // Verify SSE output contains downloadable card
-    expect(sseOutput).toContain("Quarterly-Plan-2026.pdf");
-    expect(sseOutput).toContain("/api/v1/attachments/");
-    expect(sseOutput).toContain("/download");
+    // F3.4: the tool creates a Document (no card Markdown in the answer)
+    // and the stream announces it with a `document` event.
+    expect(sseOutput).toContain("event: document");
+    expect(sseOutput).not.toContain("/api/v1/attachments/");
 
     const gen = await db.generation.findUnique({ where: { id: generationId } });
     expect(gen?.status).toBe("COMPLETED");
 
-    // Verify the GENERATED_DOCUMENT attachment is linked to the response
-    const docAtt = await db.attachment.findFirst({
-      where: {
-        responseId: gen!.responseId!,
-        kind: "GENERATED_DOCUMENT",
-      },
+    const doc = await db.document.findFirst({
+      where: { version: { responseId: gen!.responseId! } },
+      include: { revisions: true },
     });
-    expect(docAtt).not.toBeNull();
-    expect(docAtt?.originalName).toBe("Quarterly-Plan-2026.pdf");
-    expect(docAtt?.mime).toBe("application/pdf");
-
-    // Verify the download route streams the generated PDF to the workspace member
-    const dlReq = new NextRequest(
-      `http://localhost:3000/api/v1/attachments/${docAtt!.id}/download`
+    expect(doc).not.toBeNull();
+    expect(doc?.title).toBe("Quarterly Plan 2026");
+    expect(doc?.format).toBe("pdf");
+    expect(doc?.revisions[0]?.content).toContain("Milestone 1: Launch");
+    const version = await db.responseVersion.findFirst({
+      where: { responseId: gen!.responseId! },
+      select: { content: true },
+    });
+    expect(version?.content).toBe(
+      "Here is the PDF of your quarterly plan: It lists both milestones."
     );
-    const dlRes = await downloadAttachmentRoute(dlReq, {
-      params: Promise.resolve({ id: docAtt!.id }),
+    // The model is called again with the tool's result: one document, and
+    // the summary follows the text written before the tool call.
+    expect(await db.document.count({ where: { version: { responseId: gen!.responseId! } } })).toBe(1);
+
+    // The PDF is rendered on download, for a member
+    const dlReq = new NextRequest(
+      `http://localhost:3000/api/v1/documents/${doc!.id}/download?format=pdf`
+    );
+    const dlRes = await downloadDocumentRoute(dlReq, {
+      params: Promise.resolve({ id: doc!.id }),
     });
     expect(dlRes.status).toBe(200);
     expect(dlRes.headers.get("Content-Type")).toBe("application/pdf");
@@ -561,10 +581,10 @@ describe("Step 5.6 — Document generation and export (Markdown, PDF, DOCX)", ()
     const downloadedBytes = Buffer.from(await dlRes.arrayBuffer());
     expect(downloadedBytes.subarray(0, 5).toString("ascii")).toBe("%PDF-");
 
-    // Verify outsider cannot download the generated document
+    // Someone outside the workspace can't download it
     mockActorId = outsiderId;
-    const outsiderDlRes = await downloadAttachmentRoute(dlReq, {
-      params: Promise.resolve({ id: docAtt!.id }),
+    const outsiderDlRes = await downloadDocumentRoute(dlReq, {
+      params: Promise.resolve({ id: doc!.id }),
     });
     expect(outsiderDlRes.status).toBe(404);
   });
@@ -586,7 +606,7 @@ describe("Step 5.6 — Document generation and export (Markdown, PDF, DOCX)", ()
       executeCreateDocumentToolCall({
         actorId: ownerId,
         workspaceId,
-        responseId,
+        versionId,
         args: {
           format: "md",
           title: "T".repeat(130),
