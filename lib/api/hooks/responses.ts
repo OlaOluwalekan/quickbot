@@ -310,3 +310,38 @@ export function useRevertResponseEdit(userId: string, workspaceId: string) {
     },
   });
 }
+
+export function useCreateVersionEdit(userId: string, workspaceId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      versionId,
+      input,
+    }: {
+      versionId: string;
+      input: CreateResponseEditInput;
+    }) =>
+      api<{
+        id: string;
+        versionId: string;
+        revision: number;
+        content: string;
+        editorId: string;
+        createdAt: string;
+      }>(`/api/v1/response-versions/${versionId}/edits`, {
+        method: "POST",
+        body: input,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.responses.all(userId, workspaceId),
+      });
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("annotations-changed", { detail: { workspaceId } })
+        );
+      }
+    },
+  });
+}

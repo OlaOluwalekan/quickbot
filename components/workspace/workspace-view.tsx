@@ -140,11 +140,16 @@ export function WorkspaceView({
               modelKey?: string | null;
               edited?: boolean;
               hasEdits?: boolean;
+              latestEdit?: {
+                id?: string;
+                revision?: number;
+                content?: string;
+              } | null;
               latestEditContent?: string | null;
               citations?: CitationDto[];
             };
             response?: string;
-            latestEdit?: { content?: string };
+            latestEdit?: { id?: string; revision?: number; content?: string };
             citations?: CitationDto[];
             attachments?: Array<{
               id: string;
@@ -215,6 +220,7 @@ export function WorkspaceView({
                   modelKey: activeVer.modelKey,
                   edited: Boolean(activeVer.edited || activeVer.hasEdits || latestEdit),
                   hasEdits: Boolean(activeVer.hasEdits || latestEdit),
+                  latestEdit: activeVer.latestEdit ?? null,
                   latestEditContent: latestEdit,
                   citations: verCitations,
                 }

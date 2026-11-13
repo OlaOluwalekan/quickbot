@@ -23,8 +23,11 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AnswerBody } from "./answer-body";
 import { EditResponse } from "./edit-response";
+import { DocumentDraftBar } from "./document-draft-bar";
 import { ShareAndPeopleDialog } from "@/components/workspace/ShareAndPeopleDialog";
-import { useCreateResponseEdit } from "@/lib/api/hooks/responses";
+import { useDocumentDraftsStore } from "@/lib/stores/document-drafts";
+import { api } from "@/lib/api/client";
+import { toast } from "sonner";
 import type { ResponseItemData } from "./response-card";
 
 export interface DocumentCardProps {
@@ -86,8 +89,16 @@ export function DocumentCard({
   const activeVer = response.activeVersion;
   const activeVersionId =
     response.activeVersionId || activeVer?.id || `ver-${response.id}`;
-  const displayedContent =
+  const savedContent =
     activeVer?.content ?? response.content ?? response.response ?? "";
+  const baseRevision = activeVer?.latestEdit?.revision ?? null;
+
+  const draft = useDocumentDraftsStore((s) => s.drafts[activeVersionId]);
+  const updateDraftContent = useDocumentDraftsStore(
+    (s) => s.updateDraftContent
+  );
+
+  const displayedContent = draft ? draft.content : savedContent;
 
   const docName =
     response.uploadedAttachment?.originalName ||
@@ -114,8 +125,6 @@ export function DocumentCard({
     return lineCount > COLLAPSE_LINE_THRESHOLD;
   }, [displayedContent]);
 
-  const createEditMutation = useCreateResponseEdit(userId, workspaceId);
-
   const handleCopy = React.useCallback(async () => {
     try {
       await navigator.clipboard.writeText(displayedContent);
@@ -127,14 +136,15 @@ export function DocumentCard({
   }, [displayedContent]);
 
   const handleSaveEdit = React.useCallback(
-    async (newContent: string) => {
-      await createEditMutation.mutateAsync({
-        responseId: response.id,
-        input: { content: newContent },
+    (newContent: string) => {
+      updateDraftContent({
+        versionId: activeVersionId,
+        baseRevision,
+        content: newContent,
       });
       setIsEditing(false);
     },
-    [createEditMutation, response.id]
+    [activeVersionId, baseRevision, updateDraftContent]
   );
 
   const sizeLabel = formatFileSize(docBytes);
@@ -254,7 +264,6 @@ export function DocumentCard({
           initialContent={displayedContent}
           onSave={handleSaveEdit}
           onCancel={() => setIsEditing(false)}
-          isSaving={createEditMutation.isPending}
         />
       ) : (
         <div className="relative">
@@ -307,6 +316,16 @@ export function DocumentCard({
             </div>
           )}
         </div>
+      )}
+
+      {draft && !isEditing && (
+        <DocumentDraftBar
+          versionId={activeVersionId}
+          workspaceId={workspaceId}
+          userId={userId}
+          savedContent={savedContent}
+          draft={draft}
+        />
       )}
 
       {/* Action bar: Copy, Edit, Ask Klecx to review, Share, Delete */}

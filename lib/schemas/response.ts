@@ -21,6 +21,8 @@ export const createResponseEditSchema = z.object({
     .string()
     .min(1, "Content cannot be empty")
     .max(100_000, "Content cannot exceed 100,000 characters"),
+  baseRevision: z.number().int().min(0).nullable().optional(),
+  acceptedSuggestionIds: z.array(z.string().min(1)).optional(),
 });
 
 export type CreateResponseEditInput = z.infer<typeof createResponseEditSchema>;
