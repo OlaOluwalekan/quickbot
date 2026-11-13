@@ -1661,7 +1661,13 @@
     "overwrite": "Écraser",
     "saved": "Document enregistré",
     "discarded": "Brouillon ignoré",
+    "caps": {
+      "edit": "modifier ce document"
+    },
     "errors": {
+      "saveFailed": "Vos modifications n'ont pas pu être enregistrées. Réessayez.",
+      "reapplyFailed": "Vos modifications ne peuvent pas être combinées automatiquement avec la révision plus récente. Écrasez-la ou ignorez votre brouillon.",
+      "tooLong": "Ce document est trop long pour être enregistré (limite : {max, number} caractères).",
       "uploadFailed": "Impossible d'ajouter le document à l'espace de travail.",
       "pageLimit": "Ce PDF dépasse la limite de 100 pages.",
       "unsupported": "Seuls les fichiers MD, TXT, DOCX et CSV peuvent être ajoutés comme documents de l'espace de travail.",

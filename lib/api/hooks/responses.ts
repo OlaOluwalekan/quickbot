@@ -7,7 +7,7 @@ import {
   useQueryClient,
   type InfiniteData,
 } from "@tanstack/react-query";
-import { api } from "@/lib/api/client";
+import { api, ApiClientError } from "@/lib/api/client";
 import type { CitationDto } from "@/lib/api/sse";
 import { queryKeys, userQueryKey } from "./query-keys";
 import type {
@@ -42,6 +42,8 @@ export interface ResponseItemDto {
     updatedAt: string;
   } | null;
   activeVersionId?: string | null;
+  /** The version shown in the timeline, with its latest saved edit. */
+  activeVersion?: (Partial<ResponseVersionDto> & { id: string }) | null;
   versionCount?: number;
   createdAt: string;
   updatedAt: string;
@@ -333,14 +335,56 @@ export function useCreateVersionEdit(userId: string, workspaceId: string) {
         method: "POST",
         body: input,
       }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.responses.all(userId, workspaceId),
-      });
+    onSuccess: (edit, { versionId }) => {
+      const baseKey = queryKeys.responses.all(userId, workspaceId);
+      // Show the saved text (and its revision) right away. Without this the
+      // card falls back to the old text until the refetch ends, and a new
+      // draft started in between would carry a stale base revision.
+      queryClient.setQueriesData<InfiniteData<PaginatedResponses>>(
+        { queryKey: baseKey },
+        (old) => {
+          if (!old?.pages) return old;
+          return {
+            ...old,
+            pages: old.pages.map((page) => ({
+              ...page,
+              items: page.items.map((item) => {
+                const ver = item.activeVersion;
+                if (!ver || ver.id !== versionId) return item;
+                return {
+                  ...item,
+                  activeVersion: {
+                    ...ver,
+                    content: edit.content,
+                    edited: true,
+                    hasEdits: true,
+                    latestEdit: {
+                      id: edit.id,
+                      revision: edit.revision,
+                      editorId: edit.editorId,
+                      createdAt: edit.createdAt,
+                    },
+                    latestEditContent: edit.content,
+                  },
+                };
+              }),
+            })),
+          };
+        },
+      );
+      queryClient.invalidateQueries({ queryKey: baseKey });
       if (typeof window !== "undefined") {
         window.dispatchEvent(
           new CustomEvent("annotations-changed", { detail: { workspaceId } })
         );
+      }
+    },
+    onError: (err) => {
+      // Someone else saved first: load their text.
+      if (err instanceof ApiClientError && err.code === "edit_conflict") {
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.responses.all(userId, workspaceId),
+        });
       }
     },
   });

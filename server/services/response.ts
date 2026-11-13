@@ -656,7 +656,10 @@ export async function createResponseEdit(
               id: { in: input.acceptedSuggestionIds },
               workspaceId: version.response.workspaceId,
               deletedAt: null,
-              OR: [{ versionId }, { responseId: version.response.id }],
+              // Only quick fixes waiting for an answer: the ids come from the
+              // client and must not resolve other people's comments.
+              suggestionState: "PENDING",
+              versionId,
             },
             data: {
               suggestionState: "ACCEPTED",

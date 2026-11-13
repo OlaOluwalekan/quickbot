@@ -1661,7 +1661,13 @@
     "overwrite": "Overwrite",
     "saved": "Document saved",
     "discarded": "Draft discarded",
+    "caps": {
+      "edit": "edit this document"
+    },
     "errors": {
+      "saveFailed": "Your changes couldn't be saved. Try again.",
+      "reapplyFailed": "Your changes can't be combined with the newer revision automatically. Overwrite it, or discard your draft.",
+      "tooLong": "This document is too long to save (limit: {max, number} characters).",
       "uploadFailed": "Failed to add document to workspace.",
       "pageLimit": "This PDF exceeds the 100-page limit.",
       "unsupported": "Only MD, TXT, DOCX and CSV files can be added as workspace documents.",

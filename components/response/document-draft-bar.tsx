@@ -5,7 +5,6 @@ import { diffWords } from "diff";
 import { useTranslations } from "next-intl";
 import {
   AlertTriangle,
-  Check,
   Loader2,
   RotateCcw,
   Save,
@@ -20,10 +19,8 @@ import {
   useDocumentDraftsStore,
   type DocumentDraft,
 } from "@/lib/stores/document-drafts";
-import {
-  applySuggestion,
-  type SuggestionTarget,
-} from "@/lib/documents/apply-suggestion";
+import { reapplyChanges } from "@/lib/documents/reapply-changes";
+import { MAX_EDIT_CHARS } from "@/lib/schemas/response";
 import { cn } from "@/lib/utils";
 
 export interface DocumentDraftBarProps {
@@ -32,7 +29,6 @@ export interface DocumentDraftBarProps {
   userId: string;
   savedContent: string;
   draft: DocumentDraft;
-  suggestionsById?: Record<string, SuggestionTarget>;
   onSaved?: (newContent: string, newRevision: number) => void;
   onDiscarded?: () => void;
   className?: string;
@@ -49,7 +45,6 @@ export function DocumentDraftBar({
   userId,
   savedContent,
   draft,
-  suggestionsById,
   onSaved,
   onDiscarded,
   className,
@@ -63,6 +58,7 @@ export function DocumentDraftBar({
   const clearDraft = useDocumentDraftsStore((s) => s.clearDraft);
 
   const saveMutation = useCreateVersionEdit(userId, workspaceId);
+  const tooLong = draft.content.length > MAX_EDIT_CHARS;
 
   const diffParts = React.useMemo(() => {
     if (!showDiff) return [];
@@ -109,9 +105,7 @@ export function DocumentDraftBar({
           });
           return;
         }
-        toast.error(
-          err instanceof Error ? err.message : t("errors.uploadFailed")
-        );
+        toast.error(t("errors.saveFailed"));
       }
     },
     [
@@ -127,29 +121,35 @@ export function DocumentDraftBar({
     ]
   );
 
+  // Rebuilds the draft on top of the newer saved text. Everything in the
+  // draft (quick fixes and manual edits) is carried over; when a change can't
+  // be placed the draft is left as it is, so nothing is lost.
   const handleReloadAndReapply = React.useCallback(() => {
     if (!conflict) return;
-    let nextContent = conflict.latestContent;
-    const stillApplied: string[] = [];
+    const merged = reapplyChanges(
+      draft.baseContent ?? savedContent,
+      draft.content,
+      conflict.latestContent
+    );
 
-    for (const id of draft.appliedSuggestionIds) {
-      const suggestion = suggestionsById?.[id];
-      if (!suggestion) continue;
-      const res = applySuggestion(nextContent, suggestion);
-      if (res.ok) {
-        nextContent = res.next;
-        stillApplied.push(id);
-      }
+    if (merged === null) {
+      toast.error(t("errors.reapplyFailed"));
+      return;
     }
 
-    setDraft(versionId, {
-      baseRevision: conflict.latestRevision,
-      content: nextContent,
-      appliedSuggestionIds: stillApplied,
-      changeCount: Math.max(1, stillApplied.length || draft.changeCount),
-    });
+    if (merged === conflict.latestContent) {
+      // The newer revision already holds every change of this draft.
+      clearDraft(versionId);
+    } else {
+      setDraft(versionId, {
+        ...draft,
+        baseRevision: conflict.latestRevision,
+        baseContent: conflict.latestContent,
+        content: merged,
+      });
+    }
     setConflict(null);
-  }, [conflict, draft.appliedSuggestionIds, draft.changeCount, setDraft, suggestionsById, versionId]);
+  }, [clearDraft, conflict, draft, savedContent, setDraft, t, versionId]);
 
   const handleDiscard = React.useCallback(() => {
     discardDraft(versionId);
@@ -195,7 +195,7 @@ export function DocumentDraftBar({
               size="sm"
               variant="destructive"
               onClick={() => void executeSave(conflict.latestRevision)}
-              disabled={saveMutation.isPending}
+              disabled={saveMutation.isPending || tooLong}
               data-testid="conflict-overwrite-btn"
               className="h-7 text-xs"
             >
@@ -222,6 +222,12 @@ export function DocumentDraftBar({
             </span>
           ))}
         </div>
+      )}
+
+      {tooLong && (
+        <p role="alert" className="text-xs text-danger" data-testid="draft-too-long">
+          {t("errors.tooLong", { max: MAX_EDIT_CHARS })}
+        </p>
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -271,7 +277,7 @@ export function DocumentDraftBar({
             type="button"
             size="sm"
             onClick={() => void executeSave()}
-            disabled={saveMutation.isPending}
+            disabled={saveMutation.isPending || tooLong}
             data-testid="draft-save-btn"
             className="h-7 gap-1 px-3 text-xs bg-accent text-accent-fg hover:bg-accent/90"
           >

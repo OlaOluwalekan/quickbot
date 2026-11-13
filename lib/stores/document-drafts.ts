@@ -9,7 +9,10 @@ import {
 } from "@/lib/documents/apply-suggestion";
 
 export interface DocumentDraft {
+  /** Revision the draft started from (null = the original text). */
   baseRevision: number | null;
+  /** Saved text the draft started from: needed to re-apply the changes after a conflict. */
+  baseContent: string;
   content: string;
   appliedSuggestionIds: string[];
   changeCount: number;
@@ -21,6 +24,7 @@ interface DocumentDraftsState {
   updateDraftContent: (args: {
     versionId: string;
     baseRevision: number | null;
+    baseContent: string;
     content: string;
     appliedSuggestionIds?: string[];
     incrementChangeCount?: boolean;
@@ -56,7 +60,13 @@ const safeSessionStorage: StateStorage = {
         return;
       }
     } catch {
-      // ignore storage quota/security errors
+      // Quota or security error: keep the draft in memory, and drop the stored
+      // copy so a reload can't bring back an older draft.
+      try {
+        window.sessionStorage.removeItem(name);
+      } catch {
+        // ignore
+      }
     }
     memoryFallback.set(name, value);
   },
@@ -89,12 +99,21 @@ export const useDocumentDraftsStore = create<DocumentDraftsState>()(
       updateDraftContent: ({
         versionId,
         baseRevision,
+        baseContent,
         content,
         appliedSuggestionIds,
         incrementChangeCount = true,
       }) =>
         set((state) => {
           const existing = state.drafts[versionId];
+          const startedFrom = existing ? existing.baseContent : baseContent;
+          // Back to the saved text: nothing left to save.
+          if (content === startedFrom) {
+            if (!existing) return state;
+            const next = { ...state.drafts };
+            delete next[versionId];
+            return { drafts: next };
+          }
           const nextCount = incrementChangeCount
             ? (existing?.changeCount ?? 0) + 1
             : (existing?.changeCount ?? 1);
@@ -103,6 +122,7 @@ export const useDocumentDraftsStore = create<DocumentDraftsState>()(
               ...state.drafts,
               [versionId]: {
                 baseRevision: existing ? existing.baseRevision : baseRevision,
+                baseContent: startedFrom,
                 content,
                 appliedSuggestionIds:
                   appliedSuggestionIds ?? existing?.appliedSuggestionIds ?? [],
@@ -136,6 +156,7 @@ export const useDocumentDraftsStore = create<DocumentDraftsState>()(
             ...state.drafts,
             [versionId]: {
               baseRevision: existing ? existing.baseRevision : baseRevision,
+              baseContent: existing ? existing.baseContent : baseContent,
               content: res.next,
               appliedSuggestionIds: nextIds,
               changeCount: (existing?.changeCount ?? 0) + 1,

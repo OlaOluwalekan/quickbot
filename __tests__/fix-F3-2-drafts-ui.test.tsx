@@ -207,14 +207,6 @@ describe("Step F3.2 UI — Document drafts, diff view, Save, Discard, and Confli
           userId="user-1"
           savedContent={savedContent}
           draft={currentDraft}
-          suggestionsById={{
-            "sug-js": {
-              exact: "JavScript",
-              prefix: "",
-              suffix: "",
-              replacement: "JavaScript",
-            },
-          }}
         />
       );
     }
@@ -246,5 +238,162 @@ describe("Step F3.2 UI — Document drafts, diff view, Save, Discard, and Confli
     fireEvent.click(screen.getByTestId("draft-discard-btn"));
     expect(await screen.findByTestId("no-draft")).toBeInTheDocument();
     expect(draft).toBeDefined();
+  });
+
+  function DraftHarness({
+    versionId,
+    savedContent,
+  }: {
+    versionId: string;
+    savedContent: string;
+  }) {
+    const currentDraft = useDocumentDraftsStore((s) => s.drafts[versionId]);
+    if (!currentDraft) return <div data-testid="no-draft">clean</div>;
+    return (
+      <DocumentDraftBar
+        versionId={versionId}
+        workspaceId="ws-1"
+        userId="user-1"
+        savedContent={savedContent}
+        draft={currentDraft}
+      />
+    );
+  }
+
+  function conflictError(latestContent: string) {
+    return new ApiClientError({
+      status: 409,
+      code: "edit_conflict",
+      message: "Document was modified",
+      details: { latestRevision: 4, latestContent },
+    });
+  }
+
+  it("re-applies a manual edit on top of the newer revision", async () => {
+    const versionId = "ver-f32-3";
+    const saved = "# Title\n\nFirst paragraph.\n\nSecond paragraph.";
+    useDocumentDraftsStore.getState().updateDraftContent({
+      versionId,
+      baseRevision: 3,
+      baseContent: saved,
+      content: "# Title\n\nFirst paragraph.\n\nSecond paragraph, edited by me.",
+    });
+
+    // Someone else changed the first paragraph meanwhile.
+    mockApi.mockRejectedValueOnce(
+      conflictError("# Title\n\nFirst paragraph, edited by them.\n\nSecond paragraph.")
+    );
+    renderWithProviders(
+      <DraftHarness versionId={versionId} savedContent={saved} />
+    );
+
+    fireEvent.click(screen.getByTestId("draft-save-btn"));
+    await screen.findByTestId("document-conflict-banner");
+    fireEvent.click(screen.getByTestId("conflict-reload-btn"));
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("document-conflict-banner")
+      ).not.toBeInTheDocument();
+    });
+    const merged = useDocumentDraftsStore.getState().drafts[versionId]!;
+    expect(merged.baseRevision).toBe(4);
+    expect(merged.content).toBe(
+      "# Title\n\nFirst paragraph, edited by them.\n\nSecond paragraph, edited by me."
+    );
+  });
+
+  it("keeps the draft when the changes can't be re-applied", async () => {
+    const versionId = "ver-f32-4";
+    const saved = "One paragraph only.";
+    const mine = "One paragraph only, edited by me.";
+    useDocumentDraftsStore.getState().updateDraftContent({
+      versionId,
+      baseRevision: 3,
+      baseContent: saved,
+      content: mine,
+    });
+
+    mockApi.mockRejectedValueOnce(
+      conflictError("One paragraph only, edited by them.")
+    );
+    renderWithProviders(
+      <DraftHarness versionId={versionId} savedContent={saved} />
+    );
+
+    fireEvent.click(screen.getByTestId("draft-save-btn"));
+    await screen.findByTestId("document-conflict-banner");
+    fireEvent.click(screen.getByTestId("conflict-reload-btn"));
+
+    // Still in conflict, and the draft is untouched.
+    expect(screen.getByTestId("document-conflict-banner")).toBeInTheDocument();
+    const kept = useDocumentDraftsStore.getState().drafts[versionId]!;
+    expect(kept.content).toBe(mine);
+    expect(kept.baseRevision).toBe(3);
+
+    // Overwrite saves the draft on top of the newer revision.
+    mockApi.mockResolvedValueOnce({
+      id: "edit-5",
+      versionId,
+      revision: 5,
+      content: mine,
+      editorId: "user-1",
+      createdAt: new Date().toISOString(),
+    });
+    fireEvent.click(screen.getByTestId("conflict-overwrite-btn"));
+    await waitFor(() => {
+      expect(mockApi).toHaveBeenLastCalledWith(
+        `/api/v1/response-versions/${versionId}/edits`,
+        {
+          method: "POST",
+          body: { content: mine, baseRevision: 4, acceptedSuggestionIds: undefined },
+        }
+      );
+    });
+    expect(await screen.findByTestId("no-draft")).toBeInTheDocument();
+  });
+
+  it("drops the draft when the text is edited back to the saved text", () => {
+    const versionId = "ver-f32-5";
+    const store = useDocumentDraftsStore.getState();
+    store.updateDraftContent({
+      versionId,
+      baseRevision: null,
+      baseContent: "Saved text.",
+      content: "Changed text.",
+    });
+    expect(useDocumentDraftsStore.getState().drafts[versionId]).toBeDefined();
+    store.updateDraftContent({
+      versionId,
+      baseRevision: null,
+      baseContent: "Saved text.",
+      content: "Saved text.",
+    });
+    expect(useDocumentDraftsStore.getState().drafts[versionId]).toBeUndefined();
+  });
+
+  it("gates Edit for a member who can't edit", () => {
+    renderWithProviders(
+      <DocumentCard
+        workspaceId="ws-1"
+        userId="user-2"
+        canEdit={false}
+        response={{
+          id: "resp-9",
+          workspaceId: "ws-1",
+          prompt: "Spec.md",
+          kind: "DOCUMENT",
+          origin: "UPLOAD",
+          activeVersionId: "ver-f32-9",
+          activeVersion: { id: "ver-f32-9", number: 1, content: "Text." },
+        }}
+      />
+    );
+    const editBtn = screen.getByTestId("document-edit-btn");
+    expect(editBtn).toHaveAttribute("aria-disabled", "true");
+    fireEvent.click(editBtn);
+    expect(
+      screen.queryByPlaceholderText("Edit response content...")
+    ).not.toBeInTheDocument();
   });
 });

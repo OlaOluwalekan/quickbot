@@ -1661,7 +1661,13 @@
     "overwrite": "Sobrescribir",
     "saved": "Documento guardado",
     "discarded": "Borrador descartado",
+    "caps": {
+      "edit": "editar este documento"
+    },
     "errors": {
+      "saveFailed": "No se pudieron guardar los cambios. Inténtalo de nuevo.",
+      "reapplyFailed": "Tus cambios no se pueden combinar automáticamente con la revisión más reciente. Sobrescríbela o descarta tu borrador.",
+      "tooLong": "Este documento es demasiado largo para guardarlo (límite: {max, number} caracteres).",
       "uploadFailed": "No se pudo añadir el documento al espacio de trabajo.",
       "pageLimit": "Este PDF supera el límite de 100 páginas.",
       "unsupported": "Solo se pueden añadir archivos MD, TXT, DOCX y CSV como documentos del espacio de trabajo.",

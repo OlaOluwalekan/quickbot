@@ -187,6 +187,48 @@ describe("Step F3.2 — applySuggestion & versioned edits with conflict detectio
         },
       });
 
+      // A member's own comment on the same document: not a quick fix.
+      const commentAnnId = crypto.randomUUID();
+      await db.annotation.create({
+        data: {
+          id: commentAnnId,
+          workspaceId,
+          responseId,
+          versionId,
+          targetType: "RESPONSE_VERSION",
+          kind: "COMMENT",
+          visibility: "PRIVATE",
+          createdById: viewerId,
+          anchorExact: "spec",
+          anchorPrefix: "JavScript ",
+          anchorSuffix: ".",
+        },
+      });
+
+      // Someone outside the workspace gets 404
+      const outsiderId = crypto.randomUUID();
+      createdUserIds.push(outsiderId);
+      await db.user.create({
+        data: {
+          id: outsiderId,
+          email: `outsider-${outsiderId}@example.com`,
+          name: "Outsider",
+          emailVerified: true,
+        },
+      });
+      await expect(
+        createResponseEdit(
+          {
+            userId: outsiderId,
+            sessionId: `sess-${outsiderId}`,
+            email: `outsider-${outsiderId}@example.com`,
+            role: "USER",
+          },
+          versionId,
+          { content: "hacked", baseRevision: null }
+        )
+      ).rejects.toMatchObject({ status: 404 });
+
       // Viewer cannot edit
       await expect(
         createResponseEdit(
@@ -214,7 +256,7 @@ describe("Step F3.2 — applySuggestion & versioned edits with conflict detectio
           body: JSON.stringify({
             content: "# PRD\n\nInitial JavaScript spec.",
             baseRevision: null,
-            acceptedSuggestionIds: [suggestionAnnId],
+            acceptedSuggestionIds: [suggestionAnnId, commentAnnId],
           }),
         }
       );
@@ -232,6 +274,13 @@ describe("Step F3.2 — applySuggestion & versioned edits with conflict detectio
       });
       expect(updatedAnn?.suggestionState).toBe("ACCEPTED");
       expect(updatedAnn?.resolvedAt).not.toBeNull();
+
+      // The ordinary comment was not resolved by the save
+      const untouched = await db.annotation.findUnique({
+        where: { id: commentAnnId },
+      });
+      expect(untouched?.resolvedAt).toBeNull();
+      expect(untouched?.suggestionState).toBeNull();
 
       // Second tab tries to save with stale baseRevision: null -> 409 edit_conflict
       const req2 = new NextRequest(

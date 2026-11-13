@@ -26,14 +26,15 @@ import { EditResponse } from "./edit-response";
 import { DocumentDraftBar } from "./document-draft-bar";
 import { ShareAndPeopleDialog } from "@/components/workspace/ShareAndPeopleDialog";
 import { useDocumentDraftsStore } from "@/lib/stores/document-drafts";
-import { api } from "@/lib/api/client";
-import { toast } from "sonner";
+import { Gated } from "@/components/ui/gated";
 import type { ResponseItemData } from "./response-card";
 
 export interface DocumentCardProps {
   response: ResponseItemData;
   workspaceId: string;
   userId: string;
+  /** False when the member may not edit (viewer, suspended). The server re-checks. */
+  canEdit?: boolean;
   onDelete?: (responseId: string) => void;
   onReviewDocument?: (responseId: string) => void;
   className?: string;
@@ -76,6 +77,7 @@ export function DocumentCard({
   response,
   workspaceId,
   userId,
+  canEdit = true,
   onDelete,
   onReviewDocument,
   className,
@@ -140,11 +142,12 @@ export function DocumentCard({
       updateDraftContent({
         versionId: activeVersionId,
         baseRevision,
+        baseContent: savedContent,
         content: newContent,
       });
       setIsEditing(false);
     },
-    [activeVersionId, baseRevision, updateDraftContent]
+    [activeVersionId, baseRevision, savedContent, updateDraftContent]
   );
 
   const sizeLabel = formatFileSize(docBytes);
@@ -318,7 +321,7 @@ export function DocumentCard({
         </div>
       )}
 
-      {draft && !isEditing && (
+      {draft && canEdit && !isEditing && (
         <DocumentDraftBar
           versionId={activeVersionId}
           workspaceId={workspaceId}
@@ -347,17 +350,25 @@ export function DocumentCard({
             <span>{t("copy")}</span>
           </Button>
 
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsEditing(true)}
-            className="h-7 gap-1.5 px-2 text-xs text-muted hover:text-fg"
-            data-testid="document-edit-btn"
+          <Gated
+            reason={
+              canEdit
+                ? null
+                : { code: "no_permission", capability: t("caps.edit") }
+            }
           >
-            <Edit2 className="h-3.5 w-3.5" />
-            <span>{t("edit")}</span>
-          </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsEditing(true)}
+              className="h-7 gap-1.5 px-2 text-xs text-muted hover:text-fg"
+              data-testid="document-edit-btn"
+            >
+              <Edit2 className="h-3.5 w-3.5" />
+              <span>{t("edit")}</span>
+            </Button>
+          </Gated>
 
           {/* The AI review arrives with F3.3: no button until it does something. */}
           {onReviewDocument && (

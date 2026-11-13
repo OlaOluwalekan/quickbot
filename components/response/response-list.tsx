@@ -216,6 +216,11 @@ export function ResponseList({
                 response={res}
                 workspaceId={workspaceId}
                 userId={actor.userId}
+                canEdit={
+                  capabilities
+                    ? capabilities.includes("workspace.edit_response")
+                    : undefined
+                }
                 onDelete={onDeleteResponse}
                 className={cn(
                   idx === 0 && !optimisticPrompt && "vt-first-prompt"
