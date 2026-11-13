@@ -621,12 +621,27 @@ export async function createResponseEdit(
         const maxEdit = await tx.responseEdit.findFirst({
           where: { versionId },
           orderBy: { revision: "desc" },
-          select: { revision: true },
+          select: { revision: true, content: true },
         });
+
+        const latestRevision = maxEdit?.revision ?? null;
+        if (input.baseRevision !== undefined) {
+          const expected = input.baseRevision === 0 ? null : input.baseRevision;
+          if (latestRevision !== expected) {
+            throw Errors.conflict(
+              "Document was modified since you started editing",
+              "edit_conflict",
+              {
+                latestRevision,
+                latestContent: maxEdit?.content ?? version.content,
+              }
+            );
+          }
+        }
 
         const nextRevision = (maxEdit?.revision ?? 0) + 1;
 
-        return tx.responseEdit.create({
+        const created = await tx.responseEdit.create({
           data: {
             versionId,
             revision: nextRevision,
@@ -634,6 +649,26 @@ export async function createResponseEdit(
             editorId: actor.userId,
           },
         });
+
+        if (input.acceptedSuggestionIds && input.acceptedSuggestionIds.length > 0) {
+          await tx.annotation.updateMany({
+            where: {
+              id: { in: input.acceptedSuggestionIds },
+              workspaceId: version.response.workspaceId,
+              deletedAt: null,
+              // Only quick fixes waiting for an answer: the ids come from the
+              // client and must not resolve other people's comments.
+              suggestionState: "PENDING",
+              versionId,
+            },
+            data: {
+              suggestionState: "ACCEPTED",
+              resolvedAt: new Date(),
+            },
+          });
+        }
+
+        return created;
       });
 
       await logActivity(db, {

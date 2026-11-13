@@ -327,14 +327,14 @@ describe("Step 2.7 — User edits stored separately", () => {
     const emptyResult = createResponseEditSchema.safeParse({ content: "" });
     expect(emptyResult.success).toBe(false);
 
-    // 100k characters accepted
-    const valid100k = createResponseEditSchema.safeParse({ content: "a".repeat(100_000) });
-    expect(valid100k.success).toBe(true);
+    // 200k characters accepted (the longest text an uploaded document can hold)
+    const validMax = createResponseEditSchema.safeParse({ content: "a".repeat(200_000) });
+    expect(validMax.success).toBe(true);
 
-    // 100,001 characters rejected
-    const invalidOver100k = createResponseEditSchema.safeParse({
-      content: "a".repeat(100_001),
+    // 200,001 characters rejected
+    const invalidOverMax = createResponseEditSchema.safeParse({
+      content: "a".repeat(200_001),
     });
-    expect(invalidOver100k.success).toBe(false);
+    expect(invalidOverMax.success).toBe(false);
   });
 });

@@ -92,7 +92,11 @@ export interface ResponseItemData {
     modelKey?: string | null;
     edited?: boolean;
     hasEdits?: boolean;
-    latestEdit?: { content?: string } | null;
+    latestEdit?: {
+      id?: string;
+      revision?: number;
+      content?: string;
+    } | null;
     latestEditContent?: string | null;
     citations?: CitationDto[];
   } | null;

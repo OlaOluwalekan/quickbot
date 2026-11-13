@@ -16,11 +16,21 @@ export const setActiveVersionSchema = z.object({
 
 export type SetActiveVersionInput = z.infer<typeof setActiveVersionSchema>;
 
+/**
+ * Longest text an edit may hold. Same as the longest text kept from an
+ * uploaded document (MAX_EXTRACTED_CHARS), so every document can be edited.
+ */
+export const MAX_EDIT_CHARS = 200_000;
+
 export const createResponseEditSchema = z.object({
   content: z
     .string()
     .min(1, "Content cannot be empty")
-    .max(100_000, "Content cannot exceed 100,000 characters"),
+    .max(MAX_EDIT_CHARS, "Content cannot exceed 200,000 characters"),
+  // Revision the edit was made on (null = the original text). When given, the
+  // server refuses the edit if a newer revision exists.
+  baseRevision: z.number().int().min(0).nullable().optional(),
+  acceptedSuggestionIds: z.array(z.string().min(1)).max(200).optional(),
 });
 
 export type CreateResponseEditInput = z.infer<typeof createResponseEditSchema>;
