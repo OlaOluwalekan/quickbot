@@ -43,6 +43,7 @@ import { streamAskAnswer, useAskStreamStore } from "@/lib/stores/ask-stream";
 import { useThreadStackStore } from "@/lib/stores/thread-stack";
 import type { CitationDto } from "@/lib/api/sse";
 import { cn } from "@/lib/utils";
+import { ANSWER_STALE_MS } from "@/lib/annotations/limits";
 
 export interface ThreadColumnProps {
   id: string;
@@ -83,8 +84,6 @@ interface AnnotationMessage {
   status?: string;
 }
 
-/** A STREAMING answer older than this was interrupted (same limit as the server). */
-const ANSWER_STALE_MS = 2 * 60 * 1000;
 
 interface PromotionItem {
   id: string;

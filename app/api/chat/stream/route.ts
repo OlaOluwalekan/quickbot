@@ -13,7 +13,6 @@ import {
 import { streamGeminiInteraction } from "@/utils/ai-models/gemini";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60; // Allows streaming to run up to 60 seconds
 
 function formatSSEEvent(event: string, data: unknown): string {
   return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;

@@ -42,8 +42,8 @@ import {
   buildAskContext,
   estimateAskContextTokens,
 } from "@/server/ai/ask-context";
-import { MAX_ANNOTATION_DEPTH } from "@/lib/annotations/limits";
 import { estimateTokens } from "@/server/ai/context-builder";
+import { ANSWER_STALE_MS, MAX_ANNOTATION_DEPTH } from "@/lib/annotations/limits";
 
 let customAnnotationProviderForTesting: AiProvider | null = null;
 
@@ -1080,8 +1080,6 @@ export async function createAnnotationMessage(
   return createdMsg;
 }
 
-/** A STREAMING answer older than this was interrupted (the route runs for 60 s at most). */
-const ANSWER_STALE_MS = 2 * 60 * 1000;
 
 /**
  * Streams an AI answer for an Ask thread (Step F2.5).

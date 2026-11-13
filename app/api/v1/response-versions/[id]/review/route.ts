@@ -7,7 +7,6 @@ import {
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
 
 /**
  * POST /api/v1/response-versions/:id/review (SSE) — "Ask Klecx to review".
