@@ -7,8 +7,12 @@ import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api/client";
-import { useUiStore } from "@/lib/stores/ui";
-import { openAnnotationThread } from "@/lib/stores/thread-stack";
+import { createParser } from "eventsource-parser";
+import {
+  openAnnotationThread,
+  useThreadStackStore,
+} from "@/lib/stores/thread-stack";
+import { useQuestionBatchStore } from "@/lib/stores/question-batch";
 import {
   Popover,
   PopoverContent,
@@ -50,8 +54,6 @@ function QuestionQueuePopoverInner({
   const [isRunning, setIsRunning] = React.useState(false);
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [editText, setEditText] = React.useState("");
-  const setRightPanelOpen = useUiStore((s) => s.setRightPanelOpen);
-  const setRightPanelFocus = useUiStore((s) => s.setRightPanelFocus);
 
   // Fetch queued questions
   const { data: questions = [], isLoading } = useQuery<QueuedQuestion[]>({
@@ -128,11 +130,16 @@ function QuestionQueuePopoverInner({
     }
   };
 
-  // Run Batch SSE
+  // "Ask all": the answers open in one column next to the conversation, like
+  // "Ask now", and fill in as they arrive (F2.5).
   const handleRunBatch = async () => {
     if (!workspaceId || queuedCount === 0 || isRunning) return;
 
     setIsRunning(true);
+    let generationId: string | null = null;
+    let finished = false;
+    const batchStore = useQuestionBatchStore.getState();
+
     try {
       const response = await fetch(
         `/api/v1/workspaces/${workspaceId}/questions/run`,
@@ -143,77 +150,106 @@ function QuestionQueuePopoverInner({
           },
           body: JSON.stringify({
             annotationIds: questions.map((q) => q.id),
+            idempotencyKey: `qbatch_${crypto.randomUUID()}`,
           }),
         }
       );
 
-      if (!response.ok) {
-        throw new Error(`Failed to start batch (status ${response.status})`);
+      if (!response.ok || !response.body) {
+        let code = "";
+        try {
+          code = (await response.json())?.error?.code ?? "";
+        } catch {
+          // no JSON body
+        }
+        toast.error(
+          code === "insufficient_credits"
+            ? tThreads("batch.errors.credits")
+            : tThreads("batch.errors.failed")
+        );
+        return;
       }
 
-      if (!response.body) {
-        throw new Error("No response body");
-      }
+      const parser = createParser({
+        onEvent: (evt) => {
+          let data: Record<string, unknown>;
+          try {
+            data = JSON.parse(evt.data);
+          } catch {
+            return;
+          }
+
+          if (evt.event === "started" && typeof data.generationId === "string") {
+            generationId = data.generationId;
+            const started = Array.isArray(data.questions)
+              ? (data.questions as Array<{
+                  id: string;
+                  depth: number;
+                  quote: string;
+                  question: string;
+                }>)
+              : [];
+            batchStore.begin(generationId, started);
+            // One column for the whole run, right next to the conversation.
+            useThreadStackStore
+              .getState()
+              .setStack([{ kind: "batch", id: generationId }]);
+            setIsOpen(false);
+          } else if (evt.event === "question_answered" && generationId) {
+            batchStore.answer(
+              generationId,
+              String(data.id),
+              String(data.answer ?? ""),
+              String(data.messageId ?? "")
+            );
+            queryClient.setQueryData<QueuedQuestion[]>(
+              ["workspaces", workspaceId, "questions", "QUEUED"],
+              (old) => (old ? old.filter((q) => q.id !== data.id) : [])
+            );
+          } else if (evt.event === "question_failed" && generationId) {
+            batchStore.fail(generationId, String(data.id));
+          } else if (evt.event === "done") {
+            finished = true;
+            if (generationId) batchStore.finish(generationId, "done");
+            const failed = Number(data.failedCount ?? 0);
+            if (failed > 0) {
+              toast.warning(tThreads("batch.someFailed", { count: failed }));
+            } else {
+              toast.success(
+                tThreads("batch.done", { count: Number(data.answeredCount ?? 0) })
+              );
+            }
+          } else if (evt.event === "error") {
+            finished = true;
+            if (generationId) batchStore.finish(generationId, "failed");
+            toast.error(tThreads("batch.errors.failed"));
+          }
+        },
+      });
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
-      let buffer = "";
-
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const events = buffer.split("\n\n");
-        buffer = events.pop() || "";
-
-        for (const evt of events) {
-          const lines = evt.split("\n");
-          let eventName = "";
-          let dataStr = "";
-          for (const line of lines) {
-            if (line.startsWith("event: ")) {
-              eventName = line.slice(7).trim();
-            } else if (line.startsWith("data: ")) {
-              dataStr = line.slice(6).trim();
-            }
-          }
-
-          if (eventName === "question_answered") {
-            try {
-              const data = JSON.parse(dataStr);
-              queryClient.setQueryData<QueuedQuestion[]>(
-                ["workspaces", workspaceId, "questions", "QUEUED"],
-                (old) => (old ? old.filter((q) => q.id !== data.id) : [])
-              );
-            } catch {
-              // ignore json error
-            }
-          } else if (eventName === "done") {
-            toast.success("All questions answered");
-          } else if (eventName === "error") {
-            toast.error("Question answering encountered an issue");
-          }
-        }
+        parser.feed(decoder.decode(value, { stream: true }));
       }
-
+    } catch {
+      // reported below
+    } finally {
+      if (!finished) {
+        // The connection dropped: the server may still finish the run.
+        if (generationId) batchStore.finish(generationId, "failed");
+        toast.error(tThreads("batch.errors.failed"));
+      }
       queryClient.invalidateQueries({
         queryKey: ["workspaces", workspaceId, "questions"],
       });
       queryClient.invalidateQueries({
         queryKey: ["workspaces", workspaceId, "annotations"],
       });
-
-      // Open columns of answered questions reload, and the All-annotations
-      // drawer opens on the answered threads.
+      // Highlights and open columns of the answered questions reload.
       window.dispatchEvent(new CustomEvent("annotation-changed", { detail: {} }));
-      setRightPanelFocus({ tab: "questions" });
-      setRightPanelOpen(true);
-      setIsOpen(false);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to run questions";
-      toast.error(msg);
-    } finally {
       setIsRunning(false);
     }
   };

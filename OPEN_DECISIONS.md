@@ -58,3 +58,27 @@ Review items that are already decided and only wait for a later step live in `CL
 | E | PDFs: show the pages, annotate the text | Render the PDF pages with a text layer and anchor highlights to page + text. Faithful view, but a second anchoring model and no editing or corrected download. Only worth it if PDFs must be reviewable. |
 
 **If nothing is decided:** stays at A, PDFs stay blocked. Recommended next step if fidelity matters: B first (cheap, visible), then C as a dedicated step after F3.3.
+
+---
+
+## 3. Reviews of very long documents
+
+- **Found:** 2026-11-13, review of F3.3 (PR #120).
+- **Where:** `app/api/v1/response-versions/[id]/review/route.ts` (`maxDuration = 60`), `REVIEW_CONCURRENCY` in `server/services/document-review.ts`.
+
+**The situation.** A review reads the document in parts of about 8,000 tokens and makes one model call per part. The request that runs it may last 60 seconds, like every other AI route.
+
+**Today.** Three parts are read at the same time. A document near the size limit (200,000 characters, about 7 parts) needs three rounds of model calls, and the host can cut the request off before the last round ends. Comments found until then are kept and shown; the page reports that the review didn't finish. A review that is cut off this way is never settled: its generation stays `RUNNING` and its reserved credits stay held, like any other generation the host stops, until the crash-recovery job of main-guide Step 10.3 exists. How long one round takes has not been measured against the real model.
+
+**Why it's open.** Removing the limit depends on the hosting plan (longer functions cost more) or on moving reviews to a background job, which is a piece of infrastructure the app doesn't have yet.
+
+**Options.**
+
+| | Option | Effect |
+|---|---|---|
+| A | Keep it (today) | No new infrastructure. Very long documents may be reviewed only in part; running the review again covers the rest (open findings are not repeated). |
+| B | Raise `maxDuration` for this route | One line, if the hosting plan allows it (up to 300 s). Covers every document the app accepts. |
+| C | Background job | The review runs outside the request and the page follows its progress. Works for any length and survives a closed tab; needs a job queue (also useful for main-guide Step 10.3). |
+| D | Cap the length | Refuse a review above a size, with a message. Simple and predictable; the longest documents can't be reviewed at all. |
+
+**If nothing is decided:** stays at A.

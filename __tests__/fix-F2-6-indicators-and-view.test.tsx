@@ -31,6 +31,7 @@ import { ThreadStackLayout } from "@/components/threads/thread-stack-layout";
 import { AllAnnotationsDrawer } from "@/components/annotations/all-annotations-drawer";
 import { useThreadStackStore } from "@/lib/stores/thread-stack";
 import { useUiStore } from "@/lib/stores/ui";
+import { useDocumentDraftsStore } from "@/lib/stores/document-drafts";
 import type { AnnotationItem } from "@/components/annotations/types";
 
 // The preview card is read in English; other components show their keys.
@@ -730,5 +731,78 @@ describe("Step F2.6 — Indicators, hover View, and default-closed workspace", (
     expect(useThreadStackStore.getState().stack).toEqual([]);
     expect(document.querySelector("[data-thread-column-index]")).toBeNull();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  // F3.3: a review comment is decided from its highlight, one change at a time.
+  it("the preview of a review comment shows the change, and Accept applies it to the draft", () => {
+    const text = "We use JavScript for apps.";
+    useDocumentDraftsStore.setState({ drafts: {} });
+
+    render(
+      <AnnotationLayer
+        responseId="resp_1"
+        versionId="ver_1"
+        content={text}
+        quickFix={{
+          versionId: "ver_1",
+          responseId: "resp_1",
+          savedContent: text,
+          baseRevision: null,
+          canEdit: true,
+        }}
+        annotations={[
+          makeAnnot({
+            id: "ai_1",
+            authorType: "AI",
+            anchorExact: "JavScript",
+            suggestion: {
+              exact: "JavScript",
+              prefix: "We use ",
+              suffix: " for apps.",
+              replacement: "JavaScript",
+              category: "spelling",
+              severity: "low",
+            },
+            suggestionState: "PENDING",
+            messages: [
+              {
+                id: "msg_ai_1",
+                role: "ASSISTANT",
+                content: "Did you mean JavaScript?",
+                createdAt: new Date().toISOString(),
+              },
+            ],
+          }),
+        ]}
+      >
+        <p>{text}</p>
+      </AnnotationLayer>
+    );
+
+    // Drawn as an AI review mark (wavy underline).
+    expect(highlightsMap.get("annot-ai-review")?.ranges).toHaveLength(1);
+
+    act(() => {
+      fireEvent.focus(screen.getByTestId("gutter-dot"));
+    });
+
+    const card = screen.getByTestId("preview-ai-review");
+    expect(card).toHaveTextContent("Did you mean JavaScript?");
+    expect(screen.getByTestId("quick-fix-old")).toHaveTextContent("JavScript");
+    expect(screen.getByTestId("quick-fix-new")).toHaveTextContent("JavaScript");
+    expect(screen.getByTestId("dismiss-fix-btn")).toBeInTheDocument();
+
+    act(() => {
+      fireEvent.click(screen.getByTestId("apply-fix-btn"));
+    });
+
+    const draft = useDocumentDraftsStore.getState().drafts["ver_1"];
+    expect(draft?.content).toBe("We use JavaScript for apps.");
+    expect(draft?.appliedSuggestionIds).toEqual(["ai_1"]);
+
+    // The card closes and the accepted finding no longer marks the text.
+    expect(screen.queryByTestId("preview-ai-review")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("gutter-dot")).not.toBeInTheDocument();
+    expect(highlightsMap.has("annot-ai-review")).toBe(false);
   });
 });

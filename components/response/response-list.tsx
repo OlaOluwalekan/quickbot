@@ -221,6 +221,15 @@ export function ResponseList({
                     ? capabilities.includes("workspace.edit_response")
                     : undefined
                 }
+                canAsk={
+                  capabilities ? capabilities.includes("workspace.ask") : undefined
+                }
+                canExport={
+                  capabilities
+                    ? capabilities.includes("workspace.export")
+                    : undefined
+                }
+                memberCount={memberCount}
                 onDelete={onDeleteResponse}
                 className={cn(
                   idx === 0 && !optimisticPrompt && "vt-first-prompt"
@@ -233,6 +242,14 @@ export function ResponseList({
                 workspaceId={workspaceId}
                 userId={actor.userId}
                 memberCount={memberCount}
+                canAsk={
+                  capabilities ? capabilities.includes("workspace.ask") : undefined
+                }
+                canEditResponse={
+                  capabilities
+                    ? capabilities.includes("workspace.edit_response")
+                    : undefined
+                }
                 onRegenerate={onRegenerateTurn}
                 onDelete={onDeleteResponse}
                 isFirstPrompt={idx === 0 && !optimisticPrompt}

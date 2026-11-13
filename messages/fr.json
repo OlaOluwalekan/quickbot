@@ -1303,7 +1303,8 @@
       "mentionEmpty": "Aucun membre trouvé",
       "klecxNoted": "Klecx en a pris note",
       "mentionLoading": "Chargement…",
-      "mentionNotMember": "N’est pas membre de cet espace de travail"
+      "mentionNotMember": "N’est pas membre de cet espace de travail",
+      "saveChangesFirst": "Enregistrez d'abord vos modifications. Les commentaires et les questions ne peuvent porter que sur le texte enregistré."
     },
     "preview": {
       "ariaLabel": "Aperçu de l’annotation",
@@ -1630,6 +1631,19 @@
       "questionRemoved": "la question annexe a été supprimée",
       "sourceRemoved": "Démarré à partir d'une question annexe. L'espace de travail d'origine a été supprimé.",
       "sourceInaccessible": "Démarré à partir d'une question annexe dans un espace de travail auquel vous n'avez pas accès"
+    },
+    "batch": {
+      "title": "{count, plural, one {Réponse à # question} other {Réponses à # questions}}",
+      "notAvailable": "Ces réponses ne sont plus disponibles.",
+      "answering": "{count, plural, one {Klecx répond à # question…} other {Klecx répond à # questions…}}",
+      "answered": "{answered} sur {total} répondues",
+      "openThread": "Continuer dans le fil",
+      "done": "{count, plural, one {# question a reçu une réponse} other {# questions ont reçu une réponse}}",
+      "someFailed": "{count, plural, one {# question n'a pas reçu de réponse.} other {# questions n'ont pas reçu de réponse.}}",
+      "errors": {
+        "credits": "L'espace de travail n'a pas assez de crédits pour répondre à ces questions.",
+        "failed": "Les questions n'ont pas pu recevoir de réponse. Réessayez."
+      }
     }
   },
   "Documents": {
@@ -1639,7 +1653,17 @@
     "dropChoose": "Choisissez comment ajouter ce fichier",
     "showFull": "Afficher le document complet",
     "showLess": "Réduire le document",
-    "downloadOriginal": "Télécharger l'original",
+    "download": "Télécharger",
+    "downloadOriginalLabel": "Tel qu'importé",
+    "downloadOriginal": "Fichier d'origine",
+    "downloadEditedLabel": "Version modifiée",
+    "downloadCurrentLabel": "Texte actuel",
+    "downloadFormats": {
+      "docx": "Word (.docx)",
+      "pdf": "PDF (.pdf)",
+      "md": "Markdown (.md)"
+    },
+    "downloadUnsavedNote": "Les modifications non enregistrées ne sont pas incluses. Enregistrez d'abord pour les télécharger.",
     "pdfLayoutNote": "La mise en page du PDF (colonnes, tableaux) peut ne pas être conservée.",
     "csvRowsNote": "Affichage de {shown} sur {total} lignes.",
     "edit": "Modifier",
@@ -1662,7 +1686,8 @@
     "saved": "Document enregistré",
     "discarded": "Brouillon ignoré",
     "caps": {
-      "edit": "modifier ce document"
+      "edit": "modifier ce document",
+      "export": "exporter ce document"
     },
     "errors": {
       "saveFailed": "Vos modifications n'ont pas pu être enregistrées. Réessayez.",
@@ -1687,44 +1712,63 @@
   "Review": {
     "askKlecxReview": "Demander à Klecx de réviser",
     "popoverTitle": "Demander à Klecx de réviser",
-    "estimatedCredits": "~{credits, plural, one {# crédit} other {# crédits}}",
-    "presetLabel": "Objectif de révision",
+    "description": "Klecx lit le texte et laisse des commentaires sur des passages précis. Certains proposent une correction que vous pouvez accepter.",
+    "estimatedCredits": "Jusqu'à {credits, plural, one {# crédit} other {# crédits}}",
+    "presetLabel": "Objectif de la révision",
     "presets": {
       "errors": "Trouver les erreurs et coquilles",
       "consistency": "Vérifier la cohérence",
       "clarity": "Améliorer la clarté",
-      "custom": "Instruction personnalisée"
+      "custom": "Personnalisée…"
     },
-    "instructionLabel": "Instructions personnalisées (facultatif)",
-    "instructionPlaceholder": "ex. Vérifier la précision technique, le formatage ou les éléments manquants…",
-    "visibilityLabel": "Visibilité",
-    "visibilityWorkspace": "Visible par l'espace",
-    "visibilityPrivate": "Privé",
+    "instructionLabel": "Instructions supplémentaires (facultatif)",
+    "instructionLabelRequired": "Que doit rechercher Klecx ?",
+    "instructionPlaceholder": "ex. Vérifier la précision technique, la mise en forme ou les exigences manquantes…",
+    "visibilityLabel": "Qui voit les commentaires",
+    "visibilityWorkspace": "Visible par l'espace de travail",
+    "visibilityPrivate": "Moi uniquement",
+    "draftNote": "Vous avez des modifications non enregistrées. Klecx révise le texte enregistré.",
     "cancel": "Annuler",
-    "startReview": "Démarrer la révision",
+    "startReview": "Lancer la révision",
     "reviewing": "Révision en cours…",
     "reviewingProgress": "Révision de la section {current} sur {total}…",
-    "noFindingsFound": "Révision terminée. Aucun problème trouvé !",
-    "summary": "Révision terminée : {total, plural, one {# problème} other {# problèmes}} trouvés ({fixes, plural, one {# correction rapide} other {# corrections rapides}}).",
-    "summaryDetails": "{total, plural, one {# problème} other {# problèmes}} trouvés ({fixes, plural, one {# correction rapide} other {# corrections rapides}})",
+    "foundSoFar": "{count, plural, one {# commentaire pour l'instant} other {# commentaires pour l'instant}}",
+    "noFindingsFound": "Révision terminée. Klecx n'a rien trouvé à signaler.",
+    "incompleteNothing": "Une partie du texte n'a pas pu être révisée et rien n'a été trouvé dans le reste. Réessayez.",
+    "incomplete": "Une partie du texte n'a pas pu être révisée. Relancez la révision pour couvrir le reste.",
+    "summary": "Révision terminée : {total, plural, one {# commentaire} other {# commentaires}}, {fixes, plural, =0 {aucune correction rapide} one {# avec correction rapide} other {# avec correction rapide}}.",
+    "summaryHint": "Survolez un passage souligné pour voir la modification et l'accepter.",
+    "pendingFixes": "{count, plural, one {# correction suggérée en attente} other {# corrections suggérées en attente}}",
     "acceptAll": "Accepter toutes les corrections ({count})",
-    "allFixesApplied": "{count, plural, one {# correction appliquée} other {# corrections appliquées}} au brouillon",
-    "noFixesApplicable": "Aucune correction n'a pu être appliquée proprement",
-    "replaceWith": "Remplacer par « {text} »",
+    "allFixesApplied": "{count, plural, one {# correction appliquée} other {# corrections appliquées}}",
+    "noFixesApplicable": "Aucune correction n'a pu être appliquée : le texte a changé.",
+    "accept": "Accepter",
     "dismiss": "Ignorer",
     "fixApplied": "Correction appliquée",
+    "fixAppliedHint": "Enregistrez pour conserver la modification.",
+    "fixAppliedUnsaved": "Appliquée. Enregistrez pour la conserver.",
+    "fixAccepted": "Acceptée",
     "dismissed": "Ignorée",
-    "fixStale": "Texte modifié",
-    "dismissFailed": "Impossible d'ignorer la remarque",
-    "reviewFailed": "Échec de la révision",
-    "capAskReview": "demander à Klecx de réviser des documents",
-    "capEditResponse": "modifier des documents et appliquer les corrections",
+    "fixStale": "Le texte a changé : cette correction ne peut plus être appliquée.",
+    "dismissFailed": "Impossible d'ignorer ce commentaire. Réessayez.",
+    "reviewFailed": "La révision n'a pas pu être terminée. Vous n'avez pas été facturé.",
+    "changeLabel": "Modification suggérée",
+    "removeText": "(supprimer)",
+    "capAskReview": "demander à Klecx de réviser",
+    "capEditResponse": "modifier ce texte",
+    "errors": {
+      "credits": "L'espace de travail n'a pas assez de crédits pour cette révision.",
+      "forbidden": "Vous n'avez pas l'autorisation d'interroger Klecx dans cet espace de travail.",
+      "rateLimited": "Trop de requêtes. Patientez un instant puis réessayez.",
+      "empty": "Il n'y a aucun texte à réviser.",
+      "partial": "{count, plural, one {# commentaire a été enregistré avant l'arrêt.} other {# commentaires ont été enregistrés avant l'arrêt.}}"
+    },
     "categories": {
       "spelling": "Orthographe",
       "grammar": "Grammaire",
       "clarity": "Clarté",
       "consistency": "Cohérence",
-      "factual": "Factuel",
+      "factual": "Faits",
       "structure": "Structure",
       "other": "Suggestion"
     },

@@ -475,6 +475,9 @@ export function WorkspaceView({
   const canPromoteToTimeline = workspace.capabilities
     ? workspace.capabilities.includes("workspace.generate")
     : undefined;
+  const canEditResponse = workspace.capabilities
+    ? workspace.capabilities.includes("workspace.edit_response")
+    : true;
   const canComment = workspace.capabilities
     ? workspace.capabilities.includes("workspace.comment")
     : undefined;
@@ -490,6 +493,7 @@ export function WorkspaceView({
       canComment={canComment}
       canAsk={canAsk}
       canPromoteToTimeline={canPromoteToTimeline}
+      canEditResponse={canEditResponse}
       className="flex-1 h-full w-full"
     >
       <div className="flex-1 flex flex-col h-full w-full overflow-hidden bg-bg">

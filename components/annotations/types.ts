@@ -34,7 +34,7 @@ export interface AnnotationItem {
     category?: string;
     severity?: string;
   } | null;
-  suggestionState?: "PENDING" | "ACCEPTED" | "REJECTED" | null;
+  suggestionState?: "PENDING" | "ACCEPTED" | "REJECTED" | "STALE" | null;
   kind: "COMMENT" | "ASK";
   questionState?: "NONE" | "QUEUED" | "ANSWERING" | "ANSWERED" | "FAILED" | "CANCELLED";
   visibility: "PRIVATE" | "WORKSPACE";

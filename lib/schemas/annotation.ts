@@ -61,7 +61,9 @@ export const updateAnnotationSchema = z.object({
   questionState: z
     .enum(["NONE", "QUEUED", "ANSWERING", "ANSWERED", "CANCELLED", "FAILED"])
     .optional(),
-  suggestionState: z.enum(["PENDING", "ACCEPTED", "REJECTED"]).optional(),
+  // Dismiss a quick fix (REJECTED) or bring it back (PENDING). ACCEPTED is set
+  // by saving the corrected text, never directly.
+  suggestionState: z.enum(["PENDING", "REJECTED"]).optional(),
 });
 
 export type UpdateAnnotationInput = z.infer<typeof updateAnnotationSchema>;

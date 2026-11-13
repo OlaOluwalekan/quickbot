@@ -33,6 +33,8 @@ import {
   type HighlightKind,
 } from "@/lib/annotations/highlight";
 import type { AnnotationItem } from "./types";
+import { QuickFixBlock, ReviewChips, type QuickFixContext } from "./quick-fix";
+import { useDocumentDraftsStore } from "@/lib/stores/document-drafts";
 import { cn } from "@/lib/utils";
 
 /**
@@ -95,6 +97,13 @@ export interface AnnotationLayerProps {
   messageId?: string;
   content: string;
   annotations?: AnnotationItem[];
+  /**
+   * The text quick fixes are applied to (F3.3). With it, the preview card of
+   * a review comment shows the change with Accept and Dismiss.
+   */
+  quickFix?: QuickFixContext;
+  /** Called with the annotations of this text whenever they are (re)loaded. */
+  onAnnotationsChange?: (annotations: AnnotationItem[]) => void;
   children: React.ReactNode;
   className?: string;
 }
@@ -305,6 +314,8 @@ export function AnnotationLayer({
   messageId,
   content,
   annotations: propAnnotations,
+  quickFix,
+  onAnnotationsChange,
   children,
   className,
 }: AnnotationLayerProps) {
@@ -391,6 +402,18 @@ export function AnnotationLayer({
 
   const annotations = propAnnotations ?? internalAnnotations;
 
+  // Callers pass a stable function (a state setter).
+  React.useEffect(() => {
+    onAnnotationsChange?.(annotations);
+  }, [annotations, onAnnotationsChange]);
+
+  // Quick fixes already put into the unsaved draft: their passage now holds
+  // the replacement, so their mark is not drawn (it could land on another
+  // occurrence of the old text).
+  const appliedFixIds = useDocumentDraftsStore((s) =>
+    quickFix ? s.drafts[quickFix.versionId]?.appliedSuggestionIds : undefined
+  );
+
   // 2. Compute DOM Ranges and apply CSS Custom Highlights
   const computeRanges = React.useCallback(() => {
     const rootEl = rootRef.current;
@@ -398,7 +421,9 @@ export function AnnotationLayer({
 
     // Cap at 200 highlights per response (§6.6 performance requirement)
     const capped = annotations
-      .filter((a) => !a.resolvedAt && !a.detachedAt)
+      .filter(
+        (a) => !a.resolvedAt && !a.detachedAt && !appliedFixIds?.includes(a.id)
+      )
       .slice(0, 200);
 
     const nodes = textNodes(rootEl);
@@ -526,7 +551,7 @@ export function AnnotationLayer({
     });
 
     setGutterDots(dots);
-  }, [annotations, highlightOwner]);
+  }, [annotations, appliedFixIds, highlightOwner]);
 
   // Recompute when annotations or content change
   React.useEffect(() => {
@@ -1019,11 +1044,27 @@ export function AnnotationLayer({
               </div>
 
               {/* Body: Preview Content */}
-              {(kind === "COMMENT" || kind === "AI_REVIEW") && (
+              {kind === "COMMENT" && (
                 <div className="text-fg-muted leading-relaxed">
                   <p className="line-clamp-3 select-text">
                     {truncateText(commentText, 140)}
                   </p>
+                </div>
+              )}
+
+              {/* Review comment: what is wrong, what would change, and the
+                  decision, without leaving the text. */}
+              {kind === "AI_REVIEW" && (
+                <div className="space-y-2" data-testid="preview-ai-review">
+                  <ReviewChips suggestion={targetAnnot.suggestion} />
+                  <p className="text-fg-muted leading-relaxed line-clamp-4 select-text">
+                    {truncateText(commentText, 280)}
+                  </p>
+                  <QuickFixBlock
+                    annotation={targetAnnot}
+                    ctx={quickFix}
+                    onDone={closePreview}
+                  />
                 </div>
               )}
 

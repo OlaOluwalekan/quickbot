@@ -51,7 +51,9 @@ import {
 import { AnswerBody } from "./answer-body";
 import { PromptAttachmentPreview } from "./prompt-attachment-preview";
 import { EditResponse } from "./edit-response";
-import { DocumentReviewPopover } from "./document-review-popover";
+import { DocumentReview, DocumentReviewProgress } from "./document-review-popover";
+import { DocumentDraftBar } from "./document-draft-bar";
+import { useDocumentDraftsStore } from "@/lib/stores/document-drafts";
 import { ShareAndPeopleDialog } from "@/components/workspace/ShareAndPeopleDialog";
 import { useUiStore } from "@/lib/stores/ui";
 import { openAnnotationThread } from "@/lib/stores/thread-stack";
@@ -138,6 +140,10 @@ export interface ResponseCardProps {
   workspaceId: string;
   userId: string;
   memberCount?: number;
+  /** False when the member may not ask Klecx (no `workspace.ask`). The server re-checks. */
+  canAsk?: boolean;
+  /** False when the member may not edit responses. The server re-checks. */
+  canEditResponse?: boolean;
   onRegenerate?: (responseId: string) => void;
   onDelete?: (responseId: string) => void;
   isRegenerating?: boolean;
@@ -158,6 +164,8 @@ export function ResponseCard({
   workspaceId,
   userId,
   memberCount = 1,
+  canAsk = true,
+  canEditResponse,
   onRegenerate,
   onDelete,
   isRegenerating = false,
@@ -179,7 +187,7 @@ export function ResponseCard({
   // Public links require `workspace.share` (owner/admin); everyone else sees a disabled button
   const { data: workspace } = useWorkspace(userId, workspaceId);
   const canShare = workspace?.role === "OWNER" || workspace?.role === "ADMIN";
-  const canEdit = workspace?.role !== "VIEWER";
+  const canEdit = canEditResponse ?? workspace?.role !== "VIEWER";
   const currentPageTitle = useUiStore((s) => s.currentPageTitle);
   const [signedUrlsByAttachmentId, setSignedUrlsByAttachmentId] = React.useState<
     Record<string, string>
@@ -263,8 +271,35 @@ export function ResponseCard({
 
   const editedText =
     activeVer?.latestEditContent || activeVer?.content || originalText;
+  // Review fixes (F3.3) are collected in an unsaved draft of the current
+  // text, like on documents, and saved from the bar under the answer.
+  const reviewVersionId = activeVer?.id || response.activeVersionId || "";
+  const draft = useDocumentDraftsStore((s) =>
+    reviewVersionId ? s.drafts[reviewVersionId] : undefined
+  );
+  const showsDraft = Boolean(draft) && viewMode === "edited";
+  const baseRevision =
+    (activeVer?.latestEdit as { revision?: number } | null | undefined)?.revision ?? null;
+  const quickFix = React.useMemo(
+    () =>
+      reviewVersionId && viewMode === "edited"
+        ? {
+            versionId: reviewVersionId,
+            responseId: response.id,
+            savedContent: editedText,
+            baseRevision,
+            canEdit,
+          }
+        : undefined,
+    [reviewVersionId, viewMode, response.id, editedText, baseRevision, canEdit]
+  );
+
   const displayedContent = (
-    hasEdits && viewMode === "original" ? originalText : editedText
+    hasEdits && viewMode === "original"
+      ? originalText
+      : showsDraft && draft
+        ? draft.content
+        : editedText
   ).trim();
 
   // Prompt truncation helper (> 6 lines or > 300 chars)
@@ -392,10 +427,20 @@ export function ResponseCard({
 
   // Save edit
   const handleSaveEdit = async (newContent: string) => {
+    // The editor opened on the text shown, which holds the review fixes not
+    // saved yet: this save keeps them, so they are recorded as accepted and
+    // the draft is done.
+    const appliedFixes = showsDraft ? (draft?.appliedSuggestionIds ?? []) : [];
     await createEditMutation.mutateAsync({
       responseId: response.id,
-      input: { content: newContent },
+      input: {
+        content: newContent,
+        acceptedSuggestionIds: appliedFixes.length > 0 ? appliedFixes : undefined,
+      },
     });
+    if (showsDraft && reviewVersionId) {
+      useDocumentDraftsStore.getState().clearDraft(reviewVersionId);
+    }
     setViewMode("edited");
     setIsEditing(false);
   };
@@ -857,6 +902,8 @@ export function ResponseCard({
               depth={0}
               workspaceId={workspaceId}
               responseId={response.id}
+              quickFix={quickFix}
+              unsaved={showsDraft}
               contentSource={viewMode === "original" ? "ORIGINAL" : (hasEdits ? "EDIT" : "ORIGINAL")}
               editRevision={
                 viewMode === "edited" && (activeVer?.latestEdit as { revision?: number } | null)?.revision !== undefined
@@ -886,6 +933,18 @@ export function ResponseCard({
                   </div>
                 )}
             </AnswerBody>
+          )}
+
+          {reviewVersionId && <DocumentReviewProgress versionId={reviewVersionId} />}
+
+          {showsDraft && draft && canEdit && !isEditing && (
+            <DocumentDraftBar
+              versionId={reviewVersionId}
+              workspaceId={workspaceId}
+              userId={userId}
+              savedContent={editedText}
+              draft={draft}
+            />
           )}
 
           {/* Card Footer Actions (Desktop & Mobile) */}
@@ -1154,16 +1213,16 @@ export function ResponseCard({
           initialResponsePrompt={response.prompt}
         />
       )}
-      {!isImageResponse && (
-        <DocumentReviewPopover
-          versionId={currentActiveId || `ver-${response.id}`}
-          workspaceId={workspaceId}
-          activeContent={displayedContent}
-          canAsk={true}
-          canEdit={canEdit}
+      {!isImageResponse && reviewVersionId && (
+        <DocumentReview
+          mode="dialog"
+          versionId={reviewVersionId}
+          responseId={response.id}
+          canAsk={canAsk}
+          hasDraft={Boolean(draft)}
+          hasMembers={memberCount > 1}
           open={reviewOpen}
           onOpenChange={setReviewOpen}
-          trigger={<span className="hidden" />}
         />
       )}
     </div>

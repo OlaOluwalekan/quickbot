@@ -267,6 +267,15 @@ export async function runQuestionBatch(
             formatSSEEvent("started", {
               generationId,
               questionCount: claimedAnnotations.length,
+              // The questions of this run, in order: the page shows them in
+              // one column and fills in the answers as they arrive.
+              questions: claimedAnnotations.map((a) => ({
+                id: a.id,
+                depth: a.depth,
+                quote: a.anchorExact,
+                question:
+                  a.messages.find((m) => m.role === "USER")?.content ?? "",
+              })),
             })
           )
         );
@@ -513,5 +522,74 @@ export async function runQuestionBatch(
     stream,
     generationId,
     count: claimedAnnotations.length,
+  };
+}
+
+export interface QuestionBatchItem {
+  id: string;
+  depth: number;
+  quote: string;
+  question: string;
+  answer: {
+    messageId: string;
+    content: string;
+    createdAt: Date;
+  } | null;
+}
+
+/**
+ * The questions answered by one "Ask all" run, in the order they were asked,
+ * so the page can show them as one answer (`?thread=b:<generationId>`).
+ * Only answered questions are found (a question that got no answer goes back
+ * to the queue as "not answered"). Private questions of other members are
+ * left out; a run with nothing the caller may see is a 404.
+ */
+export async function getQuestionBatch(
+  actor: Actor,
+  workspaceId: string,
+  generationId: string
+): Promise<{ generationId: string; items: QuestionBatchItem[] }> {
+  await requireWorkspace(actor, workspaceId, "workspace.read");
+
+  const annotations = await db.annotation.findMany({
+    where: {
+      workspaceId,
+      deletedAt: null,
+      kind: "ASK",
+      OR: [{ visibility: "WORKSPACE" }, { createdById: actor.userId }],
+      messages: {
+        some: { role: "ASSISTANT", generationId: { startsWith: `${generationId}:` } },
+      },
+    },
+    orderBy: { createdAt: "asc" },
+    include: { messages: { orderBy: { createdAt: "asc" } } },
+  });
+
+  if (annotations.length === 0) {
+    throw Errors.notFound("QuestionBatch");
+  }
+
+  return {
+    generationId,
+    items: annotations.map((a) => {
+      const answer = a.messages.find(
+        (m) =>
+          m.role === "ASSISTANT" &&
+          (m.generationId ?? "").startsWith(`${generationId}:`)
+      );
+      return {
+        id: a.id,
+        depth: a.depth,
+        quote: a.anchorExact,
+        question: a.messages.find((m) => m.role === "USER")?.content ?? "",
+        answer: answer
+          ? {
+              messageId: answer.id,
+              content: answer.content,
+              createdAt: answer.createdAt,
+            }
+          : null,
+      };
+    }),
   };
 }

@@ -17,11 +17,9 @@ import {
   Sparkles,
   History,
   ExternalLink,
-  Wand2,
 } from "lucide-react";
 import Logo from "@/components/logo/Logo";
-import { useDocumentDraftsStore } from "@/lib/stores/document-drafts";
-import { applySuggestion, type SuggestionTarget } from "@/lib/documents/apply-suggestion";
+import { QuickFixBlock, ReviewChips } from "@/components/annotations/quick-fix";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -118,7 +116,7 @@ interface AnnotationDetail {
     category?: string;
     severity?: string;
   } | null;
-  suggestionState?: "PENDING" | "ACCEPTED" | "REJECTED" | null;
+  suggestionState?: "PENDING" | "ACCEPTED" | "REJECTED" | "STALE" | null;
   questionState?: string | null;
   resolvedAt?: string | null;
   createdById: string;
@@ -372,7 +370,7 @@ export function ThreadColumn({
 
   const breadcrumbItems: BreadcrumbItem[] = React.useMemo(
     () =>
-      (Array.isArray(chain) ? chain : []).map((item) => ({
+      chain.map((item) => ({
         id: item.id,
         quote: item.anchorExact,
         depth: item.depth,
@@ -496,76 +494,21 @@ export function ThreadColumn({
     if (start !== null && end !== undefined && end - start > 60) onBack();
   };
 
-  const tReview = useTranslations("Review");
-  const applyFixToDraft = useDocumentDraftsStore((s) => s.applyFixToDraft);
-  const drafts = useDocumentDraftsStore((s) => s.drafts);
-
-  const isFixStale = React.useMemo(() => {
-    if (!annotation?.suggestion || !annotation.suggestion.replacement) return false;
-    if (annotation.suggestionState === "ACCEPTED" || annotation.suggestionState === "REJECTED") return false;
-    const versionId = annotation.versionId || annotation.id;
-    const existingDraft = drafts[versionId];
-    const sourceText = existingDraft
-      ? existingDraft.content
-      : (annotation.version?.edits?.[0]?.content ?? annotation.version?.content);
-    if (sourceText && annotation.suggestion.exact) {
-      const res = applySuggestion(
-        sourceText,
-        annotation.suggestion as SuggestionTarget
-      );
-      return !res.ok;
-    }
-    return false;
-  }, [annotation, drafts]);
-
-  const handleApplyFix = async () => {
-    if (!annotation?.suggestion || !annotation.suggestion.replacement) return;
-    const versionId = annotation.versionId || annotation.id;
-    const existingDraft = drafts[versionId];
-    const baseContent = existingDraft
-      ? existingDraft.content
-      : (annotation.version?.edits?.[0]?.content ??
-         annotation.version?.content ??
-         annotation.anchorExact);
-    const baseRevision = existingDraft
-      ? existingDraft.baseRevision
-      : (annotation.version?.edits?.[0]?.revision ?? null);
-
-    const res = applyFixToDraft({
-      versionId,
-      baseRevision,
-      baseContent,
-      suggestionId: annotation.id,
-      suggestion: annotation.suggestion as SuggestionTarget,
-    });
-
-    if (res.ok) {
-      setAnnotation((prev) =>
-        prev ? { ...prev, suggestionState: "ACCEPTED" } : prev
-      );
-      toast.success(tReview("fixApplied"));
-      window.dispatchEvent(new CustomEvent("annotations-changed", { detail: { workspaceId } }));
-    } else {
-      toast.error(tReview("fixStale"));
-    }
-  };
-
-  const handleDismissFix = async () => {
-    if (!annotation) return;
-    try {
-      await api(`/api/v1/annotations/${annotation.id}`, {
-        method: "PATCH",
-        json: { suggestionState: "REJECTED" },
-      });
-      setAnnotation((prev) =>
-        prev ? { ...prev, suggestionState: "REJECTED" } : prev
-      );
-      toast.success(tReview("dismissed"));
-      window.dispatchEvent(new CustomEvent("annotations-changed", { detail: { workspaceId } }));
-    } catch {
-      toast.error(tReview("dismissFailed"));
-    }
-  };
+  // Review comment (F3.3): the text its quick fix applies to.
+  const reviewVersion = annotation?.version ?? null;
+  const quickFixCtx = React.useMemo(
+    () =>
+      reviewVersion
+        ? {
+            versionId: reviewVersion.id,
+            responseId: annotation?.responseId ?? null,
+            savedContent: reviewVersion.edits?.[0]?.content ?? reviewVersion.content,
+            baseRevision: reviewVersion.edits?.[0]?.revision ?? null,
+            canEdit: canEditResponse,
+          }
+        : null,
+    [reviewVersion, annotation?.responseId, canEditResponse]
+  );
 
   const renderMessage = (msg: {
     key: string;
@@ -583,11 +526,9 @@ export function ThreadColumn({
     const isAssistant = msg.role === "ASSISTANT";
     const isAiReviewComment =
       annotation?.authorType === "AI" && msg.role === "ASSISTANT";
-    const authorName = isAiReviewComment
-      ? "Klecx"
-      : isAssistant
-        ? t("assistantName")
-        : msg.author?.name || msg.author?.username || t("member");
+    const authorName = isAssistant
+      ? t("assistantName")
+      : msg.author?.name || msg.author?.username || t("member");
 
     return (
       <div
@@ -627,28 +568,8 @@ export function ThreadColumn({
           )}
         </div>
 
-        {isAiReviewComment && annotation?.suggestion && (
-          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-            {annotation.suggestion.category && (
-              <span className="inline-flex items-center rounded-md border border-border bg-surface px-2 py-0.5 text-[10px] font-medium text-foreground">
-                {tReview(`categories.${annotation.suggestion.category}`)}
-              </span>
-            )}
-            {annotation.suggestion.severity && (
-              <span
-                className={cn(
-                  "inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-medium capitalize",
-                  annotation.suggestion.severity === "high"
-                    ? "border-danger/30 bg-danger/10 text-danger"
-                    : annotation.suggestion.severity === "medium"
-                      ? "border-warning/30 bg-warning/10 text-warning"
-                      : "border-border bg-surface text-muted"
-                )}
-              >
-                {tReview(`severities.${annotation.suggestion.severity}`)}
-              </span>
-            )}
-          </div>
+        {isAiReviewComment && annotation && (
+          <ReviewChips suggestion={annotation.suggestion} className="pt-0.5" />
         )}
 
         <div className="text-foreground/90 leading-relaxed break-words">
@@ -841,71 +762,12 @@ export function ThreadColumn({
           )}
         </div>
 
-        {isAiReviewComment && annotation?.suggestion?.replacement && (
-          <div className="mt-2 pt-2 border-t border-border/60 flex flex-wrap items-center gap-2">
-            {annotation.suggestionState === "ACCEPTED" ? (
-              <span
-                className="inline-flex items-center gap-1 text-xs text-accent font-medium"
-                data-testid="fix-applied-badge"
-              >
-                <Check className="h-3.5 w-3.5" />
-                {tReview("fixApplied")}
-              </span>
-            ) : annotation.suggestionState === "REJECTED" ? (
-              <span
-                className="inline-flex items-center gap-1 text-xs text-muted"
-                data-testid="fix-dismissed-badge"
-              >
-                {tReview("dismissed")}
-              </span>
-            ) : isFixStale ? (
-              <span
-                className="inline-flex items-center gap-1 text-xs text-muted"
-                data-testid="fix-stale-badge"
-              >
-                {tReview("fixStale")}
-              </span>
-            ) : (
-              <>
-                <Gated
-                  reason={
-                    canEditResponse
-                      ? null
-                      : {
-                          code: "no_permission",
-                          capability: tReview("capEditResponse"),
-                        }
-                  }
-                >
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="default"
-                    data-testid="apply-fix-btn"
-                    onClick={handleApplyFix}
-                    className="h-7 px-2.5 text-xs gap-1.5 bg-accent text-accent-foreground hover:bg-accent/90"
-                  >
-                    <Wand2 className="h-3 w-3" />
-                    <span>
-                      {tReview("replaceWith", {
-                        text: annotation.suggestion.replacement,
-                      })}
-                    </span>
-                  </Button>
-                </Gated>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  data-testid="dismiss-fix-btn"
-                  onClick={handleDismissFix}
-                  className="h-7 px-2 text-xs text-muted hover:text-foreground"
-                >
-                  {tReview("dismiss")}
-                </Button>
-              </>
-            )}
-          </div>
+        {isAiReviewComment && annotation && (
+          <QuickFixBlock
+            annotation={annotation}
+            ctx={quickFixCtx}
+            className="mt-2 pt-2 border-t border-border/60"
+          />
         )}
       </div>
     );

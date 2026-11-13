@@ -11,6 +11,8 @@ import { ThinkingPanel } from "./thinking-panel";
 import { SourcesAccordion } from "./citations";
 import { AnnotationLayer } from "@/components/annotations/annotation-layer";
 import type { CitationDto } from "@/lib/api/sse";
+import type { QuickFixContext } from "@/components/annotations/quick-fix";
+import type { AnnotationItem } from "@/components/annotations/types";
 
 export interface AnswerBodyProps {
   content: string;
@@ -31,6 +33,14 @@ export interface AnswerBodyProps {
   showCopyButton?: boolean;
   /** "document" for the text of an uploaded document (see Markdown). */
   variant?: MarkdownVariant;
+  /** The text review fixes are applied to (see AnnotationLayer). */
+  quickFix?: QuickFixContext;
+  onAnnotationsChange?: (annotations: AnnotationItem[]) => void;
+  /**
+   * The text shown has unsaved changes. New highlights are checked against
+   * the saved text, so Comment and Ask wait until the changes are saved.
+   */
+  unsaved?: boolean;
   className?: string;
   /** Extra content under the sources (e.g. generated documents). */
   children?: React.ReactNode;
@@ -55,6 +65,9 @@ export function AnswerBody({
   editRevision,
   showCopyButton = false,
   variant,
+  quickFix,
+  onAnnotationsChange,
+  unsaved = false,
   className,
   children,
 }: AnswerBodyProps) {
@@ -100,12 +113,15 @@ export function AnswerBody({
           data-edit-revision={
             isVersion && editRevision !== undefined ? String(editRevision) : undefined
           }
+          data-annot-unsaved={unsaved ? "true" : undefined}
         >
           <AnnotationLayer
             responseId={isVersion ? responseId : undefined}
             versionId={isVersion ? targetId : undefined}
             messageId={targetType === "ANNOTATION_MESSAGE" ? targetId : undefined}
             content={content}
+            quickFix={quickFix}
+            onAnnotationsChange={onAnnotationsChange}
           >
             {text}
           </AnnotationLayer>

@@ -90,3 +90,20 @@ export function applySuggestion(
 
   return { ok: true, next };
 }
+
+/**
+ * Reads a stored quick fix (`Annotation.suggestion`, JSON). Returns null when
+ * the annotation is a comment without a replacement.
+ */
+export function toSuggestionTarget(value: unknown): SuggestionTarget | null {
+  if (!value || typeof value !== "object") return null;
+  const v = value as Record<string, unknown>;
+  if (typeof v.exact !== "string" || !v.exact) return null;
+  if (typeof v.replacement !== "string") return null;
+  return {
+    exact: v.exact,
+    prefix: typeof v.prefix === "string" ? v.prefix : "",
+    suffix: typeof v.suffix === "string" ? v.suffix : "",
+    replacement: v.replacement,
+  };
+}

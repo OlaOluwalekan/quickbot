@@ -333,6 +333,7 @@ export async function exportResponseDocument(
       id: true,
       workspaceId: true,
       prompt: true,
+      kind: true,
       activeVersionId: true,
       createdAt: true,
       versions: {
@@ -413,11 +414,16 @@ export async function exportResponseDocument(
     ? `${appUrl}/workspaces/${response.workspaceId}`
     : null;
 
+  // An uploaded document (F3.1) is the member's own file: its download holds
+  // the text and nothing about the workspace or the model. Its "prompt" is
+  // the file name, so the extension is dropped ("report.docx" → "report").
+  const isUploadedDocument = response.kind === "DOCUMENT";
+  const promptTitle = response.prompt.replace(/[\r\n]+/g, " ").trim();
   const rawTitle =
-    response.prompt
-      .replace(/[\r\n]+/g, " ")
-      .trim()
-      .slice(0, 80) || "Response Export";
+    (isUploadedDocument
+      ? promptTitle.replace(/\.[a-z0-9]{1,5}$/i, "")
+      : promptTitle
+    ).slice(0, 80) || "Response Export";
 
   const date = activeVer.createdAt ?? response.createdAt;
   const citations: ExportCitationItem[] = (activeVer.citations || []).map(
@@ -428,16 +434,19 @@ export async function exportResponseDocument(
     })
   );
 
-  const buffer = await renderDocumentBuffer({
-    format,
-    title: rawTitle,
-    date,
-    sourceUrl,
-    modelKey: activeVer.modelKey,
-    versionNumber: activeVer.number,
-    markdown: effectiveContent,
-    citations,
-  });
+  const buffer =
+    isUploadedDocument && format === "md"
+      ? Buffer.from(effectiveContent, "utf-8")
+      : await renderDocumentBuffer({
+          format,
+          title: rawTitle,
+          date,
+          sourceUrl: isUploadedDocument ? null : sourceUrl,
+          modelKey: isUploadedDocument ? null : activeVer.modelKey,
+          versionNumber: isUploadedDocument ? null : activeVer.number,
+          markdown: effectiveContent,
+          citations,
+        });
 
   const { filename, contentDisposition, mime } = buildExportFilename(
     rawTitle,

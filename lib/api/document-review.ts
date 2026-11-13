@@ -1,134 +1,123 @@
 import { createParser } from "eventsource-parser";
+import type { DocumentReviewInput } from "@/lib/schemas/document-review";
 
 export interface ReviewFindingEvent {
   annotationId: string;
-  messageId: string;
-  anchor: {
-    exact: string;
-    prefix: string;
-    suffix: string;
-    start?: number;
-    end?: number;
-  };
+  responseId: string;
+  versionId: string;
+  anchor: { exact: string; prefix: string; suffix: string; start: number; end: number };
   category: string;
   severity: string;
   comment: string;
-  suggestion?: {
-    exact?: string;
-    prefix?: string;
-    suffix?: string;
-    replacement?: string;
-    category?: string;
-    severity?: string;
-  } | null;
-  suggestionState?: "PENDING" | "ACCEPTED" | "REJECTED" | null;
-  authorType: "AI";
-  visibility: "PRIVATE" | "WORKSPACE";
+  replacement: string | null;
 }
 
 export interface ReviewSummaryEvent {
   total: number;
+  fixes: number;
   byCategory: Record<string, number>;
+  /** Part of the text could not be reviewed. */
+  incomplete?: boolean;
 }
 
 export interface ReviewProgressEvent {
-  stage: string;
   section: number;
   totalSections: number;
-  message: string;
+}
+
+export interface ReviewErrorEvent {
+  /** Machine-readable reason; the page chooses the message. */
+  code: string;
+  /** Findings saved before the failure. */
+  total?: number;
 }
 
 export type DocumentReviewHandlers = {
   onProgress?: (progress: ReviewProgressEvent) => void;
   onFinding?: (finding: ReviewFindingEvent) => void;
   onSummary?: (summary: ReviewSummaryEvent) => void;
-  onDone?: (data: { generationId?: string; total: number }) => void;
-  onError?: (err: { message: string }) => void;
+  onError?: (err: ReviewErrorEvent) => void;
 };
 
+/**
+ * Starts a review and reads its events. Resolves when the stream ends; every
+ * failure (refused request, dropped connection) is reported through `onError`
+ * exactly once.
+ */
 export async function streamDocumentReview(
   versionId: string,
-  input: {
-    instruction?: string;
-    preset?: "errors" | "consistency" | "clarity" | "custom";
-    visibility?: "PRIVATE" | "WORKSPACE";
-    idempotencyKey?: string;
-  },
+  input: Omit<DocumentReviewInput, "preset" | "visibility"> &
+    Partial<Pick<DocumentReviewInput, "preset" | "visibility">>,
   handlers: DocumentReviewHandlers = {},
   signal?: AbortSignal
 ): Promise<void> {
-  const res = await fetch(
-    `/api/v1/response-versions/${encodeURIComponent(versionId)}/review`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(input),
-      signal,
-    }
-  );
-
-  if (!res.ok) {
-    let errMessage = res.statusText || `Request failed with status ${res.status}`;
-    try {
-      const errJson = await res.json();
-      if (errJson?.error?.message) {
-        errMessage = errJson.error.message;
+  let res: Response;
+  try {
+    res = await fetch(
+      `/api/v1/response-versions/${encodeURIComponent(versionId)}/review`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+        signal,
       }
+    );
+  } catch {
+    if (!signal?.aborted) handlers.onError?.({ code: "network" });
+    return;
+  }
+
+  if (!res.ok || !res.body) {
+    let code = `http_${res.status}`;
+    try {
+      const json = await res.json();
+      if (typeof json?.error?.code === "string") code = json.error.code;
     } catch {
-      // ignore
+      // keep the status code
     }
-    handlers.onError?.({ message: errMessage });
+    handlers.onError?.({ code });
     return;
   }
 
-  if (!res.body) {
-    handlers.onError?.({ message: "No response body" });
-    return;
-  }
-
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-
+  let finished = false;
   const parser = createParser({
     onEvent: (event) => {
       if (!event.data) return;
+      let data: unknown;
       try {
-        const data = JSON.parse(event.data);
-        switch (event.event) {
-          case "progress":
-            handlers.onProgress?.(data);
-            break;
-          case "finding":
-            handlers.onFinding?.(data);
-            break;
-          case "summary":
-            handlers.onSummary?.(data);
-            break;
-          case "done":
-            handlers.onDone?.(data);
-            break;
-          case "error":
-            handlers.onError?.(data);
-            break;
-        }
+        data = JSON.parse(event.data);
       } catch {
-        // ignore parse error
+        return;
+      }
+      switch (event.event) {
+        case "progress":
+          handlers.onProgress?.(data as ReviewProgressEvent);
+          break;
+        case "finding":
+          handlers.onFinding?.(data as ReviewFindingEvent);
+          break;
+        case "summary":
+          finished = true;
+          handlers.onSummary?.(data as ReviewSummaryEvent);
+          break;
+        case "error":
+          finished = true;
+          handlers.onError?.(data as ReviewErrorEvent);
+          break;
       }
     },
   });
 
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
   try {
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
       parser.feed(decoder.decode(value, { stream: true }));
     }
-  } catch (err: unknown) {
-    if (signal?.aborted) return;
-    handlers.onError?.({
-      message: err instanceof Error ? err.message : "Review connection dropped",
-    });
+  } catch {
+    // reported below
   }
+  if (!finished && !signal?.aborted) handlers.onError?.({ code: "connection" });
 }

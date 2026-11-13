@@ -15,6 +15,7 @@ import {
 } from "@/lib/annotations/thread-stack";
 import { useThreadStackStore, useThreadStackUrlSync } from "@/lib/stores/thread-stack";
 import { ThreadColumn } from "./thread-column";
+import { BatchColumn } from "./batch-column";
 import { cn } from "@/lib/utils";
 
 const COL_WIDTH_KEY = "klecx-ask-col-width";
@@ -38,6 +39,8 @@ export interface ThreadStackLayoutProps {
   canAsk?: boolean;
   /** Caller may add Ask answers to the timeline (server re-checks). */
   canPromoteToTimeline?: boolean;
+  /** Caller may edit responses, i.e. accept review fixes (server re-checks). */
+  canEditResponse?: boolean;
   /** The main conversation (column 0). It stays mounted while it is a spine. */
   children: React.ReactNode;
   className?: string;
@@ -49,6 +52,7 @@ export function ThreadStackLayout({
   canComment,
   canAsk,
   canPromoteToTimeline,
+  canEditResponse,
   children,
   className,
 }: ThreadStackLayoutProps) {
@@ -175,6 +179,7 @@ export function ThreadStackLayout({
     canComment,
     canAsk,
     canPromoteToTimeline,
+    canEditResponse,
     onBack: back,
     onCloseAll: closeAll,
     onNavigate: goTo,
@@ -194,16 +199,28 @@ export function ThreadStackLayout({
         >
           {children}
         </div>
-        {activeEntry && (
-          <ThreadColumn
-            key={activeEntry.id}
-            id={activeEntry.id}
-            index={stack.length}
-            width={containerWidth}
-            {...columnProps}
-            className="!w-full flex-1 border-r-0"
-          />
-        )}
+        {activeEntry &&
+          (activeEntry.kind === "batch" ? (
+            <BatchColumn
+              key={activeEntry.id}
+              id={activeEntry.id}
+              index={stack.length}
+              width={containerWidth}
+              workspaceId={workspaceId}
+              onBack={back}
+              onCloseAll={closeAll}
+              className="!w-full flex-1 border-r-0"
+            />
+          ) : (
+            <ThreadColumn
+              key={activeEntry.id}
+              id={activeEntry.id}
+              index={stack.length}
+              width={containerWidth}
+              {...columnProps}
+              className="!w-full flex-1 border-r-0"
+            />
+          ))}
       </div>
     );
   }
@@ -335,13 +352,25 @@ export function ThreadStackLayout({
                 className="w-1.5 h-full cursor-col-resize hover:bg-accent/40 active:bg-accent focus-visible:bg-accent/60 focus-visible:outline-none transition-colors z-20 shrink-0 -mx-[3px]"
               />
             )}
-            <ThreadColumn
-              id={entry.id}
-              index={col.index}
-              width={col.width}
-              {...columnProps}
-              className="h-full overflow-hidden"
-            />
+            {entry.kind === "batch" ? (
+              <BatchColumn
+                id={entry.id}
+                index={col.index}
+                width={col.width}
+                workspaceId={workspaceId}
+                onBack={back}
+                onCloseAll={closeAll}
+                className="h-full overflow-hidden"
+              />
+            ) : (
+              <ThreadColumn
+                id={entry.id}
+                index={col.index}
+                width={col.width}
+                {...columnProps}
+                className="h-full overflow-hidden"
+              />
+            )}
           </React.Fragment>
         );
       })}

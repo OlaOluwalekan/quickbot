@@ -6,7 +6,9 @@
 
 export type StackEntry =
   | { kind: "annotation"; id: string }
-  | { kind: "document"; id: string };
+  | { kind: "document"; id: string }
+  /** The answers of one "Ask all" run of the question queue (id = generation id). */
+  | { kind: "batch"; id: string };
 
 export type ColumnLayout = {
   index: number;
@@ -209,6 +211,7 @@ export function computeColumnLayout(
  * Parses the thread URL parameter: "a:<id>.a:<id>.d:<id>"
  * - a:<id> -> { kind: "annotation", id }
  * - d:<id> -> { kind: "document", id }
+ * - b:<id> -> { kind: "batch", id }
  */
 export function parseThreadParam(v: string | null | undefined): StackEntry[] {
   if (!v || typeof v !== "string") {
@@ -229,6 +232,11 @@ export function parseThreadParam(v: string | null | undefined): StackEntry[] {
       if (id) {
         entries.push({ kind: "document", id });
       }
+    } else if (seg.startsWith("b:")) {
+      const id = seg.slice(2).trim();
+      if (id) {
+        entries.push({ kind: "batch", id });
+      }
     }
   }
 
@@ -245,7 +253,8 @@ export function serializeThreadParam(s: StackEntry[]): string {
 
   return s
     .map((entry) => {
-      const prefix = entry.kind === "document" ? "d:" : "a:";
+      const prefix =
+        entry.kind === "document" ? "d:" : entry.kind === "batch" ? "b:" : "a:";
       return `${prefix}${entry.id}`;
     })
     .join(".");
