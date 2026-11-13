@@ -1303,7 +1303,8 @@
       "mentionEmpty": "No members found",
       "klecxNoted": "Klecx noted this",
       "mentionLoading": "Loading…",
-      "mentionNotMember": "Not a member of this workspace"
+      "mentionNotMember": "Not a member of this workspace",
+      "saveChangesFirst": "Save your changes first. Comments and questions can be added to saved text only."
     },
     "preview": {
       "ariaLabel": "Annotation preview",
@@ -1630,6 +1631,19 @@
       "questionRemoved": "the side question was removed",
       "sourceRemoved": "Started from a side question. The source workspace was removed.",
       "sourceInaccessible": "Started from a side question in a workspace you can't access"
+    },
+    "batch": {
+      "title": "{count, plural, one {Answer to # question} other {Answers to # questions}}",
+      "notAvailable": "These answers are no longer available.",
+      "answering": "{count, plural, one {Klecx is answering # question…} other {Klecx is answering # questions…}}",
+      "answered": "{answered} of {total} answered",
+      "openThread": "Continue in thread",
+      "done": "{count, plural, one {# question answered} other {# questions answered}}",
+      "someFailed": "{count, plural, one {# question wasn't answered.} other {# questions weren't answered.}}",
+      "errors": {
+        "credits": "The workspace doesn't have enough credits to answer these questions.",
+        "failed": "The questions couldn't be answered. Try again."
+      }
     }
   },
   "Documents": {
@@ -1639,7 +1653,17 @@
     "dropChoose": "Choose how to add this file",
     "showFull": "Show full document",
     "showLess": "Collapse document",
-    "downloadOriginal": "Download original",
+    "download": "Download",
+    "downloadOriginalLabel": "As uploaded",
+    "downloadOriginal": "Original file",
+    "downloadEditedLabel": "Edited version",
+    "downloadCurrentLabel": "Current text",
+    "downloadFormats": {
+      "docx": "Word (.docx)",
+      "pdf": "PDF (.pdf)",
+      "md": "Markdown (.md)"
+    },
+    "downloadUnsavedNote": "Unsaved changes are not included. Save first to download them.",
     "pdfLayoutNote": "PDF layout (columns, tables) may not be preserved.",
     "csvRowsNote": "Showing {shown} of {total} rows.",
     "edit": "Edit",
@@ -1662,7 +1686,8 @@
     "saved": "Document saved",
     "discarded": "Draft discarded",
     "caps": {
-      "edit": "edit this document"
+      "edit": "edit this document",
+      "export": "export this document"
     },
     "errors": {
       "saveFailed": "Your changes couldn't be saved. Try again.",
@@ -1683,5 +1708,74 @@
     "imagePlaceholder": "Image",
     "fallbackName": "Document",
     "truncatedNote": "{name} is very long: only the first part was added."
+  },
+  "Review": {
+    "askKlecxReview": "Ask Klecx to review",
+    "popoverTitle": "Ask Klecx to review",
+    "description": "Klecx reads the text and leaves comments on exact passages. Some come with a fix you can accept.",
+    "estimatedCredits": "Up to {credits, plural, one {# credit} other {# credits}}",
+    "presetLabel": "Review focus",
+    "presets": {
+      "errors": "Find errors and typos",
+      "consistency": "Check consistency",
+      "clarity": "Improve clarity",
+      "custom": "Custom…"
+    },
+    "instructionLabel": "Extra instructions (optional)",
+    "instructionLabelRequired": "What should Klecx look for?",
+    "instructionPlaceholder": "e.g. Check for technical accuracy, formatting, or missing requirements…",
+    "visibilityLabel": "Who sees the comments",
+    "visibilityWorkspace": "Visible to workspace",
+    "visibilityPrivate": "Only me",
+    "draftNote": "You have unsaved changes. Klecx reviews the saved text.",
+    "cancel": "Cancel",
+    "startReview": "Start review",
+    "reviewing": "Reviewing…",
+    "reviewingProgress": "Reviewing section {current} of {total}…",
+    "foundSoFar": "{count, plural, one {# comment so far} other {# comments so far}}",
+    "noFindingsFound": "Review complete. Klecx found nothing to report.",
+    "incompleteNothing": "Part of the text couldn't be reviewed, and nothing was found in the rest. Try again.",
+    "incomplete": "Part of the text couldn't be reviewed. Run the review again to cover the rest.",
+    "summary": "Review complete: {total, plural, one {# comment} other {# comments}}, {fixes, plural, =0 {no quick fixes} one {# with a quick fix} other {# with a quick fix}}.",
+    "summaryHint": "Hover an underlined passage to see the change and accept it.",
+    "pendingFixes": "{count, plural, one {# suggested fix is waiting} other {# suggested fixes are waiting}}",
+    "acceptAll": "Accept all fixes ({count})",
+    "allFixesApplied": "{count, plural, one {# fix applied} other {# fixes applied}}",
+    "noFixesApplicable": "No fix could be applied: the text has changed.",
+    "accept": "Accept",
+    "dismiss": "Dismiss",
+    "fixApplied": "Fix applied",
+    "fixAppliedHint": "Save to keep the change.",
+    "fixAppliedUnsaved": "Applied. Save to keep it.",
+    "fixAccepted": "Accepted",
+    "dismissed": "Dismissed",
+    "fixStale": "The text has changed, so this fix can no longer be applied.",
+    "dismissFailed": "Couldn't dismiss this comment. Try again.",
+    "reviewFailed": "The review couldn't be completed. You were not charged.",
+    "changeLabel": "Suggested change",
+    "removeText": "(remove)",
+    "capAskReview": "ask Klecx to review",
+    "capEditResponse": "edit this text",
+    "errors": {
+      "credits": "The workspace doesn't have enough credits for this review.",
+      "forbidden": "You don't have permission to ask Klecx in this workspace.",
+      "rateLimited": "Too many requests. Wait a moment and try again.",
+      "empty": "There is no text to review.",
+      "partial": "{count, plural, one {# comment was saved before it stopped.} other {# comments were saved before it stopped.}}"
+    },
+    "categories": {
+      "spelling": "Spelling",
+      "grammar": "Grammar",
+      "clarity": "Clarity",
+      "consistency": "Consistency",
+      "factual": "Factual",
+      "structure": "Structure",
+      "other": "Suggestion"
+    },
+    "severities": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High"
+    }
   }
 }

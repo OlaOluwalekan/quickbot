@@ -3,7 +3,6 @@ import { regenerateResponseSchema } from "@/lib/schemas/response";
 import { regenerateResponse } from "@/server/services/response";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
 
 export const POST = route({
   body: regenerateResponseSchema,

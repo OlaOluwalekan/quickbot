@@ -13,7 +13,6 @@ import {
 import { generateGeminiImage } from "@/utils/ai-models/gemini";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60; // Allows up to 60 seconds for image generation
 
 export async function POST(req: NextRequest) {
   try {

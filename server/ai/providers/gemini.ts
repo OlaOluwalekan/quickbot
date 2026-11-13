@@ -81,7 +81,7 @@ export class GeminiProvider implements AiProvider {
       safetySettings: GEMINI_SAFETY_SETTINGS,
     };
 
-    if (req.thinking?.summaries !== false) {
+    if (req.thinking?.summaries !== false && !req.responseSchema) {
       config.thinkingConfig = {
         includeThoughts: true,
       };
@@ -109,6 +109,7 @@ export class GeminiProvider implements AiProvider {
 
     if (req.responseSchema) {
       config.responseSchema = req.responseSchema;
+      config.responseMimeType = "application/json";
     }
 
     let inputCharCount = 0;

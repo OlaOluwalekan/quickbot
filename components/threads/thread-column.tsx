@@ -18,6 +18,8 @@ import {
   History,
   ExternalLink,
 } from "lucide-react";
+import Logo from "@/components/logo/Logo";
+import { QuickFixBlock, ReviewChips } from "@/components/annotations/quick-fix";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -41,6 +43,7 @@ import { streamAskAnswer, useAskStreamStore } from "@/lib/stores/ask-stream";
 import { useThreadStackStore } from "@/lib/stores/thread-stack";
 import type { CitationDto } from "@/lib/api/sse";
 import { cn } from "@/lib/utils";
+import { ANSWER_STALE_MS } from "@/lib/annotations/limits";
 
 export interface ThreadColumnProps {
   id: string;
@@ -55,6 +58,7 @@ export interface ThreadColumnProps {
   canAsk?: boolean;
   /** Caller may add Ask answers to the timeline (server re-checks). */
   canPromoteToTimeline?: boolean;
+  canEditResponse?: boolean;
   onBack: () => void;
   onCloseAll: () => void;
   onNavigate: (index: number) => void;
@@ -80,8 +84,6 @@ interface AnnotationMessage {
   status?: string;
 }
 
-/** A STREAMING answer older than this was interrupted (same limit as the server). */
-const ANSWER_STALE_MS = 2 * 60 * 1000;
 
 interface PromotionItem {
   id: string;
@@ -98,14 +100,31 @@ interface PromotionItem {
 interface AnnotationDetail {
   id: string;
   workspaceId: string;
+  versionId?: string | null;
+  responseId?: string | null;
   kind: "COMMENT" | "ASK";
   depth: number;
   anchorExact: string;
   visibility: "PRIVATE" | "WORKSPACE";
+  authorType?: "USER" | "AI";
+  suggestion?: {
+    exact?: string;
+    prefix?: string;
+    suffix?: string;
+    replacement?: string;
+    category?: string;
+    severity?: string;
+  } | null;
+  suggestionState?: "PENDING" | "ACCEPTED" | "REJECTED" | "STALE" | null;
   questionState?: string | null;
   resolvedAt?: string | null;
   createdById: string;
   createdBy?: AnnotationAuthor | null;
+  version?: {
+    id: string;
+    content: string;
+    edits?: Array<{ revision: number; content: string }>;
+  } | null;
   messages: AnnotationMessage[];
   promotions?: PromotionItem[];
 }
@@ -122,6 +141,7 @@ export function ThreadColumn({
   canComment = true,
   canAsk = true,
   canPromoteToTimeline = true,
+  canEditResponse = true,
   onBack,
   onCloseAll,
   onNavigate,
@@ -473,6 +493,22 @@ export function ThreadColumn({
     if (start !== null && end !== undefined && end - start > 60) onBack();
   };
 
+  // Review comment (F3.3): the text its quick fix applies to.
+  const reviewVersion = annotation?.version ?? null;
+  const quickFixCtx = React.useMemo(
+    () =>
+      reviewVersion
+        ? {
+            versionId: reviewVersion.id,
+            responseId: annotation?.responseId ?? null,
+            savedContent: reviewVersion.edits?.[0]?.content ?? reviewVersion.content,
+            baseRevision: reviewVersion.edits?.[0]?.revision ?? null,
+            canEdit: canEditResponse,
+          }
+        : null,
+    [reviewVersion, annotation?.responseId, canEditResponse]
+  );
+
   const renderMessage = (msg: {
     key: string;
     role: "USER" | "ASSISTANT";
@@ -487,6 +523,8 @@ export function ThreadColumn({
     live?: boolean;
   }) => {
     const isAssistant = msg.role === "ASSISTANT";
+    const isAiReviewComment =
+      annotation?.authorType === "AI" && msg.role === "ASSISTANT";
     const authorName = isAssistant
       ? t("assistantName")
       : msg.author?.name || msg.author?.username || t("member");
@@ -501,16 +539,22 @@ export function ThreadColumn({
       >
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <Avatar className="w-5 h-5">
-              {!isAssistant && <AvatarImage src={msg.author?.image || undefined} />}
-              <AvatarFallback className="text-[10px]">
-                {isAssistant ? (
-                  <Sparkles className="w-3 h-3 text-accent" />
-                ) : (
-                  authorName.charAt(0).toUpperCase()
-                )}
-              </AvatarFallback>
-            </Avatar>
+            {isAiReviewComment ? (
+              <div className="flex h-5 w-5 items-center justify-center rounded bg-accent/10 text-accent">
+                <Logo size="icon" className="h-3 w-3" />
+              </div>
+            ) : (
+              <Avatar className="w-5 h-5">
+                {!isAssistant && <AvatarImage src={msg.author?.image || undefined} />}
+                <AvatarFallback className="text-[10px]">
+                  {isAssistant ? (
+                    <Sparkles className="w-3 h-3 text-accent" />
+                  ) : (
+                    authorName.charAt(0).toUpperCase()
+                  )}
+                </AvatarFallback>
+              </Avatar>
+            )}
             <span className="font-semibold text-foreground text-xs">{authorName}</span>
           </div>
           {msg.createdAt && (
@@ -522,6 +566,10 @@ export function ThreadColumn({
             </time>
           )}
         </div>
+
+        {isAiReviewComment && annotation && (
+          <ReviewChips suggestion={annotation.suggestion} className="pt-0.5" />
+        )}
 
         <div className="text-foreground/90 leading-relaxed break-words">
           {isAssistant ? (
@@ -712,6 +760,14 @@ export function ThreadColumn({
             <RenderMentions text={msg.content} workspaceId={workspaceId} />
           )}
         </div>
+
+        {isAiReviewComment && annotation && (
+          <QuickFixBlock
+            annotation={annotation}
+            ctx={quickFixCtx}
+            className="mt-2 pt-2 border-t border-border/60"
+          />
+        )}
       </div>
     );
   };

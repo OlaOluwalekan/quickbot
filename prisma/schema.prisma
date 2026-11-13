@@ -365,6 +365,7 @@ enum GenKind {
   QUESTION_BATCH
   TITLE
   SPEECH
+  DOCUMENT_REVIEW
 }
 
 model Generation {

@@ -30,6 +30,12 @@ export interface SelectionTargetMetadata {
   workspaceId?: string;
   /** Column the selection is in: 0 = main conversation, n = nth thread column. */
   columnIndex: number;
+  /**
+   * The text has unsaved changes (document draft, F3.2/F3.3). The server
+   * checks a highlight against the saved text, so Comment and Ask are held
+   * back until the changes are saved.
+   */
+  unsaved?: boolean;
 }
 
 export interface SelectionToolbarProps {
@@ -276,6 +282,7 @@ export function SelectionToolbar({
           editRevision,
           workspaceId,
           columnIndex,
+          unsaved: startRoot.getAttribute("data-annot-unsaved") === "true",
         });
         setIsVisible(true);
       }, 120);
@@ -316,7 +323,7 @@ export function SelectionToolbar({
 
       const mod = isMac ? e.metaKey : e.ctrlKey;
 
-      if (mod && e.altKey) {
+      if (mod && e.altKey && !metadata?.unsaved) {
         // `e.code`, because Alt changes `e.key` on macOS (⌥M → "µ").
         if (e.code === "KeyM" && effectiveCanComment) {
           e.preventDefault();
@@ -538,8 +545,19 @@ export function SelectionToolbar({
           {announcement}
         </div>
 
+        {/* Unsaved text: nothing can be anchored to it yet. */}
+        {mode === "idle" && metadata?.unsaved && (
+          <p
+            role="status"
+            data-testid="selection-unsaved-note"
+            className="max-w-64 px-2 py-1 text-xs text-fg-muted"
+          >
+            {t("saveChangesFirst")}
+          </p>
+        )}
+
         {/* 1. Idle Toolbar Buttons */}
-        {mode === "idle" && (
+        {mode === "idle" && !metadata?.unsaved && (
           <div className="flex items-center gap-1">
             {/* Comment */}
             <Gated reason={commentGateReason}>

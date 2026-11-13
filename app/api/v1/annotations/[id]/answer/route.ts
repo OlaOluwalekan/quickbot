@@ -4,7 +4,6 @@ import { Errors } from "@/server/http/errors";
 import { streamAnnotationAnswer } from "@/server/services/annotation";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
 
 const answerBodySchema = z.object({
   idempotencyKey: z.string().min(1).max(255).optional(),

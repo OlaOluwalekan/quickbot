@@ -244,7 +244,7 @@ Internal server errors (`500`) never expose stack traces or raw exception messag
 
 - **Authorization**: Requires `workspace.generate` permission on the target workspace.
 - **Billing**: The workspace owner's credit account is billed (not the actor's).
-- **Runtime**: `nodejs`, with `maxDuration = 300` s.
+- **Runtime**: `nodejs`; may run up to 300 s (set for every API route in `vercel.json`).
 - **Headers**:
   ```http
   Content-Type: text/event-stream; charset=utf-8

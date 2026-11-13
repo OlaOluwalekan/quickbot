@@ -144,7 +144,9 @@ describe("Step F3.1 UI — DocumentCard & Composer document upload", () => {
 
     // "Download original" is a plain link: the endpoint sends the file itself
     // (it does not answer with JSON, so it must not go through the API client).
-    const downloadLink = screen.getByTestId("download-original-btn");
+    // It sits in the Download menu, next to the edited version (F3.3).
+    fireEvent.keyDown(screen.getByTestId("document-download-btn"), { key: "Enter" });
+    const downloadLink = await screen.findByTestId("download-original-btn");
     expect(downloadLink.tagName).toBe("A");
     expect(downloadLink).toHaveAttribute(
       "href",

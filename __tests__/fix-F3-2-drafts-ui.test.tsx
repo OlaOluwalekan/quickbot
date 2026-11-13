@@ -131,7 +131,10 @@ describe("Step F3.2 UI — Document drafts, diff view, Save, Discard, and Confli
     });
     fireEvent.click(screen.getByRole("button", { name: /save as edit/i }));
 
-    expect(mockApi).not.toHaveBeenCalled();
+    // Nothing is saved yet (the card only asked for the plan's entitlements).
+    expect(
+      mockApi.mock.calls.filter(([url]) => String(url).includes("/edits"))
+    ).toHaveLength(0);
     expect(screen.getByTestId("draft-unsaved-count")).toHaveTextContent(
       "Unsaved changes (3)"
     );

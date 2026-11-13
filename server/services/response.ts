@@ -4,6 +4,7 @@ import { Errors } from "@/server/http/errors";
 import type { Actor } from "@/server/auth/session";
 import { requireWorkspace, resolveWorkspaceRole } from "@/server/authz/access";
 import { logActivity } from "./activity";
+import { applySuggestion, toSuggestionTarget } from "@/lib/documents/apply-suggestion";
 import { resolveAvatarUrl } from "@/lib/avatar";
 import { toPage } from "@/server/http/pagination";
 import { createAndStreamGeneration } from "./generation";
@@ -665,6 +666,25 @@ export async function createResponseEdit(
               suggestionState: "ACCEPTED",
               resolvedAt: new Date(),
             },
+          });
+        }
+
+        // Quick fixes whose passage this edit changed can't be applied any
+        // more: they become STALE (the comment stays, the button goes).
+        const pendingFixes = await tx.annotation.findMany({
+          where: { versionId, deletedAt: null, suggestionState: "PENDING" },
+          select: { id: true, suggestion: true },
+        });
+        const staleIds = pendingFixes
+          .filter((a) => {
+            const target = toSuggestionTarget(a.suggestion);
+            return !target || !applySuggestion(input.content, target).ok;
+          })
+          .map((a) => a.id);
+        if (staleIds.length > 0) {
+          await tx.annotation.updateMany({
+            where: { id: { in: staleIds }, suggestionState: "PENDING" },
+            data: { suggestionState: "STALE" },
           });
         }
 

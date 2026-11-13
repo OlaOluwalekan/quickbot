@@ -136,6 +136,24 @@ describe("Fix F2.2 — Selection Popover v2 & Mention Autocomplete", () => {
     });
   }
 
+  describe("0. Unsaved text (F3.3)", () => {
+    it("holds back Comment and Ask on text with unsaved changes", async () => {
+      // A document with a draft: the server only knows the saved text.
+      responseRoot.setAttribute("data-annot-unsaved", "true");
+      render(<SelectionToolbar />);
+
+      const textNode = responseRoot.querySelector("#resp_text")!.firstChild!;
+      mockSelection(textNode, 0, 21);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("selection-unsaved-note")).toBeInTheDocument();
+      });
+      expect(screen.queryByTestId("action-comment")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("action-ask")).not.toBeInTheDocument();
+      expect(api).not.toHaveBeenCalled();
+    });
+  });
+
   describe("1. Polymorphic Root Detection (Main Response & Nested Ask Answer)", () => {
     it("opens toolbar and targets RESPONSE_VERSION when selection is on response", async () => {
       (api as jest.Mock).mockResolvedValueOnce({ id: "annot_1", kind: "COMMENT" });

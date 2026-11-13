@@ -1303,7 +1303,8 @@
       "mentionEmpty": "No se encontraron miembros",
       "klecxNoted": "Klecx tomó nota",
       "mentionLoading": "Cargando…",
-      "mentionNotMember": "No es miembro de este espacio de trabajo"
+      "mentionNotMember": "No es miembro de este espacio de trabajo",
+      "saveChangesFirst": "Guarda primero los cambios. Los comentarios y las preguntas solo se pueden añadir al texto guardado."
     },
     "preview": {
       "ariaLabel": "Vista previa de la anotación",
@@ -1630,6 +1631,19 @@
       "questionRemoved": "la pregunta secundaria se eliminó",
       "sourceRemoved": "Iniciado a partir de una pregunta secundaria. El espacio de trabajo de origen se eliminó.",
       "sourceInaccessible": "Iniciado a partir de una pregunta secundaria en un espacio de trabajo al que no tienes acceso"
+    },
+    "batch": {
+      "title": "{count, plural, one {Respuesta a # pregunta} other {Respuestas a # preguntas}}",
+      "notAvailable": "Estas respuestas ya no están disponibles.",
+      "answering": "{count, plural, one {Klecx está respondiendo # pregunta…} other {Klecx está respondiendo # preguntas…}}",
+      "answered": "{answered} de {total} respondidas",
+      "openThread": "Continuar en el hilo",
+      "done": "{count, plural, one {# pregunta respondida} other {# preguntas respondidas}}",
+      "someFailed": "{count, plural, one {# pregunta no se respondió.} other {# preguntas no se respondieron.}}",
+      "errors": {
+        "credits": "El espacio de trabajo no tiene créditos suficientes para responder estas preguntas.",
+        "failed": "No se pudieron responder las preguntas. Inténtalo de nuevo."
+      }
     }
   },
   "Documents": {
@@ -1639,7 +1653,17 @@
     "dropChoose": "Elige cómo añadir este archivo",
     "showFull": "Mostrar documento completo",
     "showLess": "Contraer documento",
-    "downloadOriginal": "Descargar original",
+    "download": "Descargar",
+    "downloadOriginalLabel": "Tal como se subió",
+    "downloadOriginal": "Archivo original",
+    "downloadEditedLabel": "Versión editada",
+    "downloadCurrentLabel": "Texto actual",
+    "downloadFormats": {
+      "docx": "Word (.docx)",
+      "pdf": "PDF (.pdf)",
+      "md": "Markdown (.md)"
+    },
+    "downloadUnsavedNote": "Los cambios sin guardar no se incluyen. Guarda primero para descargarlos.",
     "pdfLayoutNote": "El diseño del PDF (columnas, tablas) puede no conservarse.",
     "csvRowsNote": "Mostrando {shown} de {total} filas.",
     "edit": "Editar",
@@ -1662,7 +1686,8 @@
     "saved": "Documento guardado",
     "discarded": "Borrador descartado",
     "caps": {
-      "edit": "editar este documento"
+      "edit": "editar este documento",
+      "export": "exportar este documento"
     },
     "errors": {
       "saveFailed": "No se pudieron guardar los cambios. Inténtalo de nuevo.",
@@ -1683,5 +1708,74 @@
     "imagePlaceholder": "Imagen",
     "fallbackName": "Documento",
     "truncatedNote": "{name} es muy largo: solo se añadió la primera parte."
+  },
+  "Review": {
+    "askKlecxReview": "Pedir a Klecx que revise",
+    "popoverTitle": "Pedir a Klecx que revise",
+    "description": "Klecx lee el texto y deja comentarios en pasajes concretos. Algunos incluyen una corrección que puedes aceptar.",
+    "estimatedCredits": "Hasta {credits, plural, one {# crédito} other {# créditos}}",
+    "presetLabel": "Enfoque de la revisión",
+    "presets": {
+      "errors": "Buscar errores y erratas",
+      "consistency": "Comprobar la coherencia",
+      "clarity": "Mejorar la claridad",
+      "custom": "Personalizada…"
+    },
+    "instructionLabel": "Instrucciones adicionales (opcional)",
+    "instructionLabelRequired": "¿Qué debe buscar Klecx?",
+    "instructionPlaceholder": "p. ej. Comprueba la precisión técnica, el formato o los requisitos que faltan…",
+    "visibilityLabel": "Quién ve los comentarios",
+    "visibilityWorkspace": "Visible para el espacio de trabajo",
+    "visibilityPrivate": "Solo yo",
+    "draftNote": "Tienes cambios sin guardar. Klecx revisa el texto guardado.",
+    "cancel": "Cancelar",
+    "startReview": "Iniciar revisión",
+    "reviewing": "Revisando…",
+    "reviewingProgress": "Revisando la sección {current} de {total}…",
+    "foundSoFar": "{count, plural, one {# comentario por ahora} other {# comentarios por ahora}}",
+    "noFindingsFound": "Revisión completada. Klecx no encontró nada que señalar.",
+    "incompleteNothing": "No se pudo revisar una parte del texto y no se encontró nada en el resto. Inténtalo de nuevo.",
+    "incomplete": "No se pudo revisar una parte del texto. Vuelve a ejecutar la revisión para cubrir el resto.",
+    "summary": "Revisión completada: {total, plural, one {# comentario} other {# comentarios}}, {fixes, plural, =0 {sin correcciones rápidas} one {# con corrección rápida} other {# con corrección rápida}}.",
+    "summaryHint": "Pasa el cursor por un pasaje subrayado para ver el cambio y aceptarlo.",
+    "pendingFixes": "{count, plural, one {# corrección sugerida pendiente} other {# correcciones sugeridas pendientes}}",
+    "acceptAll": "Aceptar todas las correcciones ({count})",
+    "allFixesApplied": "{count, plural, one {# corrección aplicada} other {# correcciones aplicadas}}",
+    "noFixesApplicable": "No se pudo aplicar ninguna corrección: el texto ha cambiado.",
+    "accept": "Aceptar",
+    "dismiss": "Descartar",
+    "fixApplied": "Corrección aplicada",
+    "fixAppliedHint": "Guarda para conservar el cambio.",
+    "fixAppliedUnsaved": "Aplicada. Guarda para conservarla.",
+    "fixAccepted": "Aceptada",
+    "dismissed": "Descartada",
+    "fixStale": "El texto ha cambiado y esta corrección ya no se puede aplicar.",
+    "dismissFailed": "No se pudo descartar este comentario. Inténtalo de nuevo.",
+    "reviewFailed": "No se pudo completar la revisión. No se te ha cobrado.",
+    "changeLabel": "Cambio sugerido",
+    "removeText": "(eliminar)",
+    "capAskReview": "pedir a Klecx que revise",
+    "capEditResponse": "editar este texto",
+    "errors": {
+      "credits": "El espacio de trabajo no tiene créditos suficientes para esta revisión.",
+      "forbidden": "No tienes permiso para preguntar a Klecx en este espacio de trabajo.",
+      "rateLimited": "Demasiadas solicitudes. Espera un momento y vuelve a intentarlo.",
+      "empty": "No hay texto que revisar.",
+      "partial": "{count, plural, one {Se guardó # comentario antes de que se detuviera.} other {Se guardaron # comentarios antes de que se detuviera.}}"
+    },
+    "categories": {
+      "spelling": "Ortografía",
+      "grammar": "Gramática",
+      "clarity": "Claridad",
+      "consistency": "Coherencia",
+      "factual": "Datos",
+      "structure": "Estructura",
+      "other": "Sugerencia"
+    },
+    "severities": {
+      "low": "Baja",
+      "medium": "Media",
+      "high": "Alta"
+    }
   }
 }

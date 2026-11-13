@@ -12,6 +12,7 @@ import {
 import { setQuestionBatchCustomProviderForTesting } from "@/server/services/question-batch";
 import { GET as listQuestionsRoute } from "@/app/api/v1/workspaces/[id]/questions/route";
 import { POST as runBatchRoute } from "@/app/api/v1/workspaces/[id]/questions/run/route";
+import { GET as getBatchRoute } from "@/app/api/v1/workspaces/[id]/questions/batches/[generationId]/route";
 import { PATCH as updateAnnotationRoute } from "@/app/api/v1/annotations/[id]/route";
 
 let mockActorId: string | null = null;
@@ -295,6 +296,12 @@ describe("Step 6.5 — Question queue (batch answers)", () => {
 
     const sseBody = await readStream(res.body!);
     expect(sseBody).toContain("event: started");
+    // The run announces its questions, so the page can show them at once.
+    const started = JSON.parse(
+      /event: started\ndata: (.*)/.exec(sseBody)?.[1] ?? "{}"
+    );
+    expect(started.questions.map((q: { id: string }) => q.id)).toEqual(qIds);
+    expect(started.questions[0].question.length).toBeGreaterThan(0);
     expect(sseBody).toContain("event: question_answered");
     expect(sseBody).toContain("Election timeouts are randomized");
     expect(sseBody).toContain("The leader decrements nextIndex");
@@ -324,6 +331,53 @@ describe("Step 6.5 — Question queue (batch answers)", () => {
       const asstMsg = annot.messages.find((m) => m.role === "ASSISTANT");
       expect(asstMsg).toBeDefined();
       expect(asstMsg!.content.length).toBeGreaterThan(5);
+    }
+  });
+
+  it("2b. The run's answers can be opened together as one response (batch column)", async () => {
+    const generation = await db.generation.findFirstOrThrow({
+      where: {
+        workspaceId,
+        kind: "QUESTION_BATCH",
+        idempotencyKey: `idem_batch_run_${testSuffix}`,
+      },
+    });
+    const call = (userId: string) => {
+      mockActorId = userId;
+      return getBatchRoute(
+        new NextRequest(
+          `http://localhost/api/v1/workspaces/${workspaceId}/questions/batches/${generation.id}`
+        ),
+        { params: Promise.resolve({ id: workspaceId, generationId: generation.id }) }
+      );
+    };
+
+    // The person who asked: the three questions, in order, each with its answer.
+    const res = await call(editorId);
+    expect(res.status).toBe(200);
+    const { data } = await res.json();
+    expect(data.generationId).toBe(generation.id);
+    expect(data.items).toHaveLength(3);
+    expect(data.items[0].answer.content).toContain("Election timeouts are randomized");
+    expect(data.items[2].answer.content).toContain("Yes, a single physical node");
+    for (const item of data.items) {
+      expect(typeof item.quote).toBe("string");
+      expect(item.question.length).toBeGreaterThan(0);
+      expect(item.answer.messageId).toBeTruthy();
+    }
+
+    // The questions are private: another member finds nothing to open.
+    expect((await call(commenterId)).status).toBe(404);
+
+    // Someone outside the workspace gets 404 as well.
+    const outsiderId = `user_outsider_${testSuffix}`;
+    await db.user.create({
+      data: { id: outsiderId, email: `outsider_${testSuffix}@example.com`, name: "Outsider" },
+    });
+    try {
+      expect((await call(outsiderId)).status).toBe(404);
+    } finally {
+      await db.user.delete({ where: { id: outsiderId } });
     }
   });
 

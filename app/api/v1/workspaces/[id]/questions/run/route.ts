@@ -3,7 +3,6 @@ import { runQuestionBatchSchema } from "@/lib/schemas/annotation";
 import { runQuestionBatch } from "@/server/services/question-batch";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
 
 export const POST = route({
   body: runQuestionBatchSchema,

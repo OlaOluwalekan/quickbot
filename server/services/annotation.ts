@@ -42,8 +42,8 @@ import {
   buildAskContext,
   estimateAskContextTokens,
 } from "@/server/ai/ask-context";
-import { MAX_ANNOTATION_DEPTH } from "@/lib/annotations/limits";
 import { estimateTokens } from "@/server/ai/context-builder";
+import { ANSWER_STALE_MS, MAX_ANNOTATION_DEPTH } from "@/lib/annotations/limits";
 
 let customAnnotationProviderForTesting: AiProvider | null = null;
 
@@ -707,6 +707,17 @@ export async function getAnnotation(actor: Actor, annotationId: string) {
       createdBy: {
         select: { id: true, name: true, email: true, image: true },
       },
+      version: {
+        select: {
+          id: true,
+          content: true,
+          edits: {
+            orderBy: { revision: "desc" },
+            take: 1,
+            select: { revision: true, content: true },
+          },
+        },
+      },
     },
   });
 
@@ -770,6 +781,17 @@ export async function getAnnotationChain(actor: Actor, annotationId: string) {
         orderBy: { createdAt: "asc" },
       },
       createdBy: { select: author },
+      version: {
+        select: {
+          id: true,
+          content: true,
+          edits: {
+            orderBy: { revision: "desc" },
+            take: 1,
+            select: { revision: true, content: true },
+          },
+        },
+      },
     },
     orderBy: { depth: "asc" },
   });
@@ -821,23 +843,47 @@ export async function updateAnnotation(
 
   const isCreator = annot.createdById === actor.userId;
   const isAdmin = access.role === "ADMIN" || access.role === "OWNER";
+  const isAiComment = annot.authorType === "AI";
 
-  if (!isCreator && !isAdmin) {
-    throw Errors.forbidden(
-      "Only the creator or workspace admin can update this annotation"
-    );
+  // F3.3: dismissing a quick fix (or bringing it back) is a decision about
+  // the text, so anyone who may edit the text can take it.
+  const onlySuggestionState =
+    input.suggestionState !== undefined &&
+    input.text === undefined &&
+    input.resolved === undefined &&
+    input.visibility === undefined &&
+    input.questionState === undefined;
+  const decidesAsEditor =
+    onlySuggestionState && access.capabilities.has("workspace.edit_response");
+
+  if (!decidesAsEditor) {
+    if (!isCreator && !isAdmin) {
+      throw Errors.forbidden(
+        "Only the creator or workspace admin can update this annotation"
+      );
+    }
+
+    // F1.2: a creator who lost the capability for this kind (toggle off,
+    // role lowered, or suspended) can no longer change it. Admins moderate.
+    // A review comment was asked for with `workspace.ask`.
+    const needed = isAiComment
+      ? "workspace.ask"
+      : annotationKindPermission(annot.kind);
+    if (!isAdmin && !access.capabilities.has(needed)) {
+      throw Errors.forbidden();
+    }
   }
 
-  // F1.2: a creator who lost the capability for this kind (toggle off,
-  // role lowered, or suspended) can no longer change it. Admins moderate.
-  if (!isAdmin && !access.capabilities.has(annotationKindPermission(annot.kind))) {
-    throw Errors.forbidden();
+  // Klecx wrote the comment: its text is not the requester's to rewrite.
+  if (isAiComment && input.text !== undefined) {
+    throw Errors.badRequest("A review comment can't be edited");
   }
 
   const updateData: {
     resolvedAt?: Date | null;
     visibility?: "PRIVATE" | "WORKSPACE";
     questionState?: "NONE" | "QUEUED" | "ANSWERING" | "ANSWERED" | "CANCELLED" | "FAILED";
+    suggestionState?: "PENDING" | "REJECTED";
   } = {};
 
   if (input.resolved !== undefined) {
@@ -848,6 +894,17 @@ export async function updateAnnotation(
   }
   if (input.questionState !== undefined) {
     updateData.questionState = input.questionState;
+  }
+  if (input.suggestionState !== undefined) {
+    // Only a quick fix that is still open can be dismissed or brought back.
+    // "Accepted" is never set here: it is recorded when the corrected text is
+    // saved (createResponseEdit), so it can't be claimed without the change.
+    if (annot.suggestionState !== "PENDING" && annot.suggestionState !== "REJECTED") {
+      throw Errors.conflict("This quick fix can no longer be changed", "suggestion_closed");
+    }
+    updateData.suggestionState = input.suggestionState;
+    // A dismissed finding is settled: its mark leaves the text.
+    updateData.resolvedAt = input.suggestionState === "REJECTED" ? new Date() : null;
   }
 
   const { updated, mentionSync } = await db.$transaction(async (tx) => {
@@ -1023,8 +1080,6 @@ export async function createAnnotationMessage(
   return createdMsg;
 }
 
-/** A STREAMING answer older than this was interrupted (the route runs for 60 s at most). */
-const ANSWER_STALE_MS = 2 * 60 * 1000;
 
 /**
  * Streams an AI answer for an Ask thread (Step F2.5).

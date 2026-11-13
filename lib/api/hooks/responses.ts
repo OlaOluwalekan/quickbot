@@ -375,7 +375,7 @@ export function useCreateVersionEdit(userId: string, workspaceId: string) {
       queryClient.invalidateQueries({ queryKey: baseKey });
       if (typeof window !== "undefined") {
         window.dispatchEvent(
-          new CustomEvent("annotations-changed", { detail: { workspaceId } })
+          new CustomEvent("annotation-changed", { detail: {} })
         );
       }
     },

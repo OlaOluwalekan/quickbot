@@ -7,7 +7,6 @@ import {
 } from "@/server/services/annotation";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
 
 const messageBodySchema = z.object({
   content: z.string().min(1).max(20000).optional(),
