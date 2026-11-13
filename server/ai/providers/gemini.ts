@@ -70,6 +70,30 @@ export class GeminiProvider implements AiProvider {
             },
           };
         }
+        if (p.type === "tool_call") {
+          const callPart: Record<string, unknown> = {
+            functionCall: {
+              name: p.name,
+              args: (p.args as Record<string, unknown>) || {},
+            },
+          };
+          if (p.thoughtSignature) {
+            callPart.thoughtSignature = p.thoughtSignature;
+            callPart.thought_signature = p.thoughtSignature;
+          }
+          return callPart;
+        }
+        if (p.type === "tool_response") {
+          return {
+            functionResponse: {
+              name: p.name,
+              response:
+                typeof p.response === "object" && p.response !== null
+                  ? (p.response as Record<string, unknown>)
+                  : { result: p.response },
+            },
+          };
+        }
         return { text: "" };
       });
       return { role, parts };
@@ -134,6 +158,8 @@ export class GeminiProvider implements AiProvider {
       throw normalizeGeminiError(err);
     }
 
+    let latestThoughtSignature: string | undefined;
+
     try {
       for await (const chunk of responseStream) {
         if (req.signal?.aborted) {
@@ -142,9 +168,31 @@ export class GeminiProvider implements AiProvider {
 
         const candidate = chunk.candidates?.[0];
 
+        const chunkCandidateSig =
+          (candidate as any)?.thoughtSignature ||
+          (candidate as any)?.thought_signature ||
+          (chunk as any)?.thoughtSignature ||
+          (chunk as any)?.thought_signature;
+
+        if (chunkCandidateSig && !latestThoughtSignature) {
+          latestThoughtSignature = chunkCandidateSig;
+          yield { type: "thought_signature", signature: chunkCandidateSig };
+        }
+
         // 1. Check parts for thoughts, text, and tool calls
         if (candidate?.content?.parts) {
           for (const part of candidate.content.parts) {
+            const partSig =
+              (part as any).thoughtSignature ||
+              (part as any).thought_signature ||
+              (part.functionCall as any)?.thoughtSignature ||
+              (part.functionCall as any)?.thought_signature;
+
+            if (partSig) {
+              latestThoughtSignature = partSig;
+              yield { type: "thought_signature", signature: partSig };
+            }
+
             if (part.thought === true) {
               const text = part.text || "";
               outputCharCount += text.length;
@@ -155,10 +203,12 @@ export class GeminiProvider implements AiProvider {
             }
 
             if (part.functionCall) {
+              const toolSig = partSig || latestThoughtSignature;
               yield {
                 type: "tool_call",
                 name: part.functionCall.name,
                 args: part.functionCall.args,
+                thoughtSignature: toolSig,
               };
             }
           }

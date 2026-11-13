@@ -1777,5 +1777,23 @@
       "medium": "Moyenne",
       "high": "Élevée"
     }
+  },
+  "GeneratedDocs": {
+    "open": "Ouvrir",
+    "download": "Télécharger",
+    "downloadAs": "Télécharger sous…",
+    "edited": "Modifié",
+    "revision": "Révision {revision}",
+    "editPdfSource": "Modification de la source Markdown de ce PDF. Le PDF est regénéré lors du téléchargement.",
+    "formatNotAllowed": "Ce format d'exportation n'est pas inclus dans le forfait de votre espace de travail.",
+    "assumptions": "Hypothèses :",
+    "questions": "Questions :",
+    "preview": "Aperçu",
+    "edit": "Modifier",
+    "save": "Enregistrer",
+    "discard": "Ignorer",
+    "unsavedChanges": "Modifications non enregistrées",
+    "saveSuccess": "Nouvelle révision enregistrée",
+    "discarded": "Modifications ignorées"
   }
 }

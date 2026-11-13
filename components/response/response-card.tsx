@@ -53,6 +53,7 @@ import { PromptAttachmentPreview } from "./prompt-attachment-preview";
 import { EditResponse } from "./edit-response";
 import { DocumentReview, DocumentReviewProgress } from "./document-review-popover";
 import { DocumentDraftBar } from "./document-draft-bar";
+import { GeneratedDocumentCard } from "@/components/documents/generated-document-card";
 import { useDocumentDraftsStore } from "@/lib/stores/document-drafts";
 import { ShareAndPeopleDialog } from "@/components/workspace/ShareAndPeopleDialog";
 import { useUiStore } from "@/lib/stores/ui";
@@ -102,6 +103,13 @@ export interface ResponseItemData {
     } | null;
     latestEditContent?: string | null;
     citations?: CitationDto[];
+    documents?: Array<{
+      id: string;
+      title: string;
+      format: string;
+      currentRevision: number;
+      createdAt?: string | Date;
+    }>;
   } | null;
   author?: {
     name?: string;
@@ -933,6 +941,18 @@ export function ResponseCard({
                   </div>
                 )}
             </AnswerBody>
+          )}
+
+          {activeVer?.documents && activeVer.documents.length > 0 && (
+            <div className="flex flex-col gap-2 pt-2" data-testid="generated-documents-container">
+              {activeVer.documents.map((doc) => (
+                <GeneratedDocumentCard
+                  key={doc.id}
+                  document={doc}
+                  workspaceId={workspaceId}
+                />
+              ))}
+            </div>
           )}
 
           {reviewVersionId && <DocumentReviewProgress versionId={reviewVersionId} />}

@@ -1777,5 +1777,23 @@
       "medium": "Medium",
       "high": "High"
     }
+  },
+  "GeneratedDocs": {
+    "open": "Open",
+    "download": "Download",
+    "downloadAs": "Download as…",
+    "edited": "Edited",
+    "revision": "Revision {revision}",
+    "editPdfSource": "Editing the Markdown source of this PDF. The PDF is re-rendered on download.",
+    "formatNotAllowed": "This export format is not included in your workspace plan.",
+    "assumptions": "Assumptions:",
+    "questions": "Questions:",
+    "preview": "Preview",
+    "edit": "Edit",
+    "save": "Save",
+    "discard": "Discard",
+    "unsavedChanges": "Unsaved changes",
+    "saveSuccess": "Saved new revision",
+    "discarded": "Discarded changes"
   }
 }

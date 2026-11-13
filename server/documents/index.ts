@@ -35,7 +35,8 @@ export const EXPORT_MIME_TYPES: Record<ExportFormat, string> = {
  */
 export const CREATE_DOCUMENT_TOOL: ToolSpec = {
   name: "create_document",
-  description: "Create a downloadable document when the user asks for a file.",
+  description:
+    "Create a downloadable document. After the tool returns, write: (1) a 2–4 sentence summary of what the document contains, (2) 'Assumptions:' bullet list if you assumed anything, (3) 'Questions:' bullet list if information was missing. Do not paste the document content into the chat.",
   parameters: {
     type: "object",
     properties: {
@@ -658,6 +659,7 @@ export async function executeCreateDocumentToolCall(params: {
   actorId: string;
   workspaceId: string;
   responseId: string;
+  versionId?: string;
   modelKey?: string;
   versionNumber?: number;
   args: unknown;
@@ -683,33 +685,89 @@ export async function executeCreateDocumentToolCall(params: {
   const title = sanitizeDocumentTitle(String(rawArgs.title ?? ""));
   const markdown = sanitizeDocumentMarkdown(String(rawArgs.markdown ?? ""));
 
-  const buffer = await renderDocumentBuffer({
-    format,
-    title,
-    date: new Date(),
-    modelKey: modelKey ?? null,
-    versionNumber: versionNumber ?? 1,
-    markdown,
+  let targetVersionId = params.versionId;
+  if (!targetVersionId) {
+    const resp = await db.response.findUnique({
+      where: { id: responseId },
+      select: {
+        activeVersionId: true,
+        versions: { orderBy: { number: "desc" }, take: 1, select: { id: true } },
+      },
+    });
+    targetVersionId = resp?.activeVersionId || resp?.versions?.[0]?.id;
+    if (!targetVersionId) {
+      const fallbackVer = await db.responseVersion.create({
+        data: {
+          responseId,
+          number: versionNumber ?? 1,
+          status: "COMPLETE",
+          content: "",
+          modelKey: modelKey || "text-economy",
+          providerModelId: "text-economy",
+          promptVersion: "v1",
+          createdById: actorId,
+        },
+      });
+      targetVersionId = fallbackVer.id;
+    }
+  }
+
+  const doc = await db.document.create({
+    data: {
+      workspaceId,
+      versionId: targetVersionId,
+      title,
+      format,
+      currentRevision: 1,
+      createdById: actorId,
+      revisions: {
+        create: {
+          revision: 1,
+          content: markdown,
+          editorId: null,
+        },
+      },
+    },
+    include: {
+      revisions: true,
+    },
   });
 
+  let attachment: any = null;
   const { filename } = buildExportFilename(title, format);
+  try {
+    const buffer = await renderDocumentBuffer({
+      format,
+      title,
+      date: new Date(),
+      modelKey: modelKey ?? null,
+      versionNumber: versionNumber ?? 1,
+      markdown,
+    });
+    attachment = await storeGeneratedDocument({
+      actorId,
+      workspaceId,
+      responseId,
+      format,
+      filename,
+      buffer,
+    });
+  } catch (err) {
+    console.warn("[Documents] Pre-rendering initial export failed, will render on-demand:", err);
+  }
 
-  const attachment = await storeGeneratedDocument({
-    actorId,
-    workspaceId,
-    responseId,
-    format,
-    filename,
-    buffer,
-  });
-
-  const downloadUrl = `/api/v1/attachments/${attachment.id}/download`;
-  const cardMarkdown = `\n\n📄 **${filename}** · [Download](${downloadUrl})\n`;
+  const downloadUrl = `/api/v1/documents/${doc.id}/download?format=${format}&revision=1`;
 
   return {
+    document: doc,
+    documentId: doc.id,
+    title: doc.title,
+    format: doc.format,
+    currentRevision: doc.currentRevision,
+    markdown,
     attachment,
     filename,
     downloadUrl,
-    cardMarkdown,
+    cardMarkdown: "",
   };
 }

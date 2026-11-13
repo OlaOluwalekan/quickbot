@@ -121,6 +121,8 @@ interface AskTargetAnnotation {
   anchorExact: string;
   contentSource: string;
   editRevision: number | null;
+  documentId?: string | null;
+  documentRevision?: number | null;
   version: {
     id: string;
     content: string;
@@ -216,8 +218,36 @@ export async function loadAskTarget(
     };
   }
 
-  // DOCUMENT_REVISION: documents arrive with F3; until then only the quoted
-  // passage is known.
+  if (annotation.targetType === "DOCUMENT_REVISION") {
+    if (annotation.documentId) {
+      const doc = await db.document.findUnique({
+        where: { id: annotation.documentId, deletedAt: null },
+        include: {
+          revisions: {
+            where: annotation.documentRevision
+              ? { revision: annotation.documentRevision }
+              : undefined,
+            orderBy: { revision: "desc" },
+            take: 1,
+          },
+        },
+      });
+      if (doc && doc.revisions.length > 0) {
+        const rev = doc.revisions[0]!;
+        return {
+          key: `document:${doc.id}:r${rev.revision}`,
+          text: rev.content,
+          description: `From document "${doc.title}" (Revision ${rev.revision})`,
+        };
+      }
+    }
+    return {
+      key: `annotation:${annotation.id}`,
+      text: annotation.anchorExact,
+      description: "A passage of a document",
+    };
+  }
+
   return {
     key: `annotation:${annotation.id}`,
     text: annotation.anchorExact,

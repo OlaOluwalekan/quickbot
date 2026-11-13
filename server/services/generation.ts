@@ -401,50 +401,123 @@ async function executeDetachedGeneration(params: {
         }
       : { summaries: false };
 
-    const stream = streamAi(
-      {
-        modelKey,
-        messages: inputMessages,
-        system: systemPrompt,
-        thinking: thinkingConfig,
-        tools: !grounding && modelDef.caps.tools ? [CREATE_DOCUMENT_TOOL] : undefined,
-
-        grounding: Boolean(grounding),
-
-      },
-      {
-        userPlan,
-        providerInstance: activeProvider,
-      }
-    );
-
     let stage: "preparing" | "thinking" | "writing" = "preparing";
     let usage = { inputTokens: 0, outputTokens: 0 };
+    let currentMessages: Msg[] = [...inputMessages];
+    let toolIterations = 0;
+    const MAX_TOOL_ITERATIONS = 2;
 
-    for await (const event of stream) {
-      if (abortController.signal.aborted) {
-        throw new Error("Cancelled");
+    while (toolIterations <= MAX_TOOL_ITERATIONS) {
+      const stream = streamAi(
+        {
+          modelKey,
+          messages: currentMessages,
+          system: systemPrompt,
+          thinking: thinkingConfig,
+          tools: !grounding && modelDef.caps.tools ? [CREATE_DOCUMENT_TOOL] : undefined,
+          grounding: Boolean(grounding),
+        },
+        {
+          userPlan,
+          providerInstance: activeProvider,
+        }
+      );
+
+      let toolCallEmitted: {
+        name: string;
+        args: unknown;
+        thoughtSignature?: string;
+      } | null = null;
+      let assistantTextInThisTurn = "";
+
+      for await (const event of stream) {
+        if (abortController.signal.aborted) {
+          throw new Error("Cancelled");
+        }
+
+        if (event.type === "thought_delta") {
+          if (supportsThinking) {
+            if (stage !== "thinking") {
+              stage = "thinking";
+              broadcastEvent(active, "status", { stage: "thinking" });
+            }
+            active.currentThought += event.text;
+            active.tokensEmitted = true;
+            broadcastEvent(active, "thought", { text: event.text });
+          }
+        } else if (event.type === "thought_signature") {
+          if (toolCallEmitted && !toolCallEmitted.thoughtSignature) {
+            toolCallEmitted.thoughtSignature = event.signature;
+          }
+        } else if (event.type === "text_delta") {
+          if (stage !== "writing") {
+            stage = "writing";
+            broadcastEvent(active, "status", { stage: "writing" });
+          }
+          active.currentContent += event.text;
+          assistantTextInThisTurn += event.text;
+          active.tokensEmitted = true;
+          broadcastEvent(active, "delta", { text: event.text });
+        } else if (
+          event.type === "tool_call" &&
+          (event.name === "create_document" || event.name.endsWith("create_document"))
+        ) {
+          toolCallEmitted = {
+            name: event.name,
+            args: event.args,
+            thoughtSignature: event.thoughtSignature,
+          };
+        } else if (event.type === "citation") {
+          // Step 5.5: Only record provider citations when grounding is enabled.
+          // Validate URL (http/https only) and never parse URLs from model text.
+          if (grounding) {
+            const check = validateCitationUrl(event.url);
+            if (check.valid && check.normalizedUrl) {
+              const existing = active.citations.find(
+                (c) => c.url === check.normalizedUrl
+              );
+              if (existing) {
+                if (!existing.title && event.title) {
+                  existing.title = event.title;
+                }
+                if (!existing.snippet && event.snippet) {
+                  existing.snippet = event.snippet;
+                }
+                if (event.segments && event.segments.length > 0) {
+                  existing.segments = [
+                    ...(existing.segments || []),
+                    ...event.segments,
+                  ];
+                }
+              } else {
+                const nextIndex = active.citations.length + 1;
+                const newCit: CitationItem = {
+                  index: nextIndex,
+                  url: check.normalizedUrl,
+                  title: event.title || check.hostname || null,
+                  snippet: event.snippet || null,
+                  source: "GROUNDING",
+                  segments: event.segments,
+                };
+                active.citations.push(newCit);
+                broadcastEvent(active, "citation", {
+                  index: newCit.index,
+                  url: newCit.url,
+                  title: newCit.title,
+                  snippet: newCit.snippet,
+                  source: newCit.source,
+                });
+              }
+            }
+          }
+        } else if (event.type === "usage") {
+          usage.inputTokens += event.inputTokens;
+          usage.outputTokens += event.outputTokens;
+        }
       }
 
-      if (event.type === "thought_delta") {
-        if (supportsThinking) {
-          if (stage !== "thinking") {
-            stage = "thinking";
-            broadcastEvent(active, "status", { stage: "thinking" });
-          }
-          active.currentThought += event.text;
-          active.tokensEmitted = true;
-          broadcastEvent(active, "thought", { text: event.text });
-        }
-      } else if (event.type === "text_delta") {
-        if (stage !== "writing") {
-          stage = "writing";
-          broadcastEvent(active, "status", { stage: "writing" });
-        }
-        active.currentContent += event.text;
-        active.tokensEmitted = true;
-        broadcastEvent(active, "delta", { text: event.text });
-      } else if (event.type === "tool_call" && event.name === "create_document") {
+      if (toolCallEmitted && toolIterations < MAX_TOOL_ITERATIONS) {
+        toolIterations++;
         if (stage !== "writing") {
           stage = "writing";
           broadcastEvent(active, "status", { stage: "writing" });
@@ -453,68 +526,55 @@ async function executeDetachedGeneration(params: {
           actorId,
           workspaceId,
           responseId,
+          versionId,
           modelKey,
-          args: event.args,
+          args: toolCallEmitted.args,
         });
-        active.currentContent += docResult.cardMarkdown;
-        active.tokensEmitted = true;
-        broadcastEvent(active, "delta", {
-          text: docResult.cardMarkdown,
-          generatedDocument: {
-            id: docResult.attachment.id,
-            name: docResult.filename,
-            downloadUrl: docResult.downloadUrl,
+
+        broadcastEvent(active, "document", {
+          id: docResult.documentId,
+          title: docResult.title,
+          format: docResult.format,
+          currentRevision: docResult.currentRevision,
+        });
+
+        currentMessages = [
+          ...currentMessages,
+          {
+            role: "assistant",
+            parts: [
+              ...(assistantTextInThisTurn
+                ? [{ type: "text" as const, text: assistantTextInThisTurn }]
+                : []),
+              {
+                type: "tool_call" as const,
+                name: toolCallEmitted.name,
+                args: toolCallEmitted.args,
+                thoughtSignature: toolCallEmitted.thoughtSignature,
+              },
+            ],
           },
-        });
-      } else if (event.type === "citation") {
-        // Step 5.5: Only record provider citations when grounding is enabled.
-        // Validate URL (http/https only) and never parse URLs from model text.
-        if (grounding) {
-          const check = validateCitationUrl(event.url);
-          if (check.valid && check.normalizedUrl) {
-            const existing = active.citations.find(
-              (c) => c.url === check.normalizedUrl
-            );
-            if (existing) {
-              if (!existing.title && event.title) {
-                existing.title = event.title;
-              }
-              if (!existing.snippet && event.snippet) {
-                existing.snippet = event.snippet;
-              }
-              if (event.segments && event.segments.length > 0) {
-                existing.segments = [
-                  ...(existing.segments || []),
-                  ...event.segments,
-                ];
-              }
-            } else {
-              const nextIndex = active.citations.length + 1;
-              const newCit: CitationItem = {
-                index: nextIndex,
-                url: check.normalizedUrl,
-                title: event.title || check.hostname || null,
-                snippet: event.snippet || null,
-                source: "GROUNDING",
-                segments: event.segments,
-              };
-              active.citations.push(newCit);
-              broadcastEvent(active, "citation", {
-                index: newCit.index,
-                url: newCit.url,
-                title: newCit.title,
-                snippet: newCit.snippet,
-                source: newCit.source,
-              });
-            }
-          }
-        }
-      } else if (event.type === "usage") {
-        usage = {
-          inputTokens: event.inputTokens,
-          outputTokens: event.outputTokens,
-        };
+          {
+            role: "user",
+            parts: [
+              {
+                type: "tool_response" as const,
+                name: toolCallEmitted.name,
+                response: {
+                  documentId: docResult.documentId,
+                  title: docResult.title,
+                  format: docResult.format,
+                  success: true,
+                },
+              },
+            ],
+          },
+        ];
+
+        continue;
       }
+
+      break;
     }
 
     if (abortController.signal.aborted) {

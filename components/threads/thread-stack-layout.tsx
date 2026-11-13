@@ -16,6 +16,7 @@ import {
 import { useThreadStackStore, useThreadStackUrlSync } from "@/lib/stores/thread-stack";
 import { ThreadColumn } from "./thread-column";
 import { BatchColumn } from "./batch-column";
+import { DocumentColumn } from "@/components/documents/document-column";
 import { cn } from "@/lib/utils";
 
 const COL_WIDTH_KEY = "klecx-ask-col-width";
@@ -211,6 +212,20 @@ export function ThreadStackLayout({
               onCloseAll={closeAll}
               className="!w-full flex-1 border-r-0"
             />
+          ) : activeEntry.kind === "document" ? (
+            <DocumentColumn
+              key={activeEntry.id}
+              id={activeEntry.id}
+              index={stack.length}
+              width={containerWidth}
+              workspaceId={workspaceId}
+              onBack={back}
+              onCloseAll={closeAll}
+              canEdit={columnProps.canEditResponse}
+              canComment={columnProps.canComment}
+              canAsk={columnProps.canAsk}
+              className="!w-full flex-1 border-r-0"
+            />
           ) : (
             <ThreadColumn
               key={activeEntry.id}
@@ -360,6 +375,19 @@ export function ThreadStackLayout({
                 workspaceId={workspaceId}
                 onBack={back}
                 onCloseAll={closeAll}
+                className="h-full overflow-hidden"
+              />
+            ) : entry.kind === "document" ? (
+              <DocumentColumn
+                id={entry.id}
+                index={col.index}
+                width={col.width}
+                workspaceId={workspaceId}
+                onBack={back}
+                onCloseAll={closeAll}
+                canEdit={columnProps.canEditResponse}
+                canComment={columnProps.canComment}
+                canAsk={columnProps.canAsk}
                 className="h-full overflow-hidden"
               />
             ) : (

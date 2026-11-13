@@ -270,6 +270,16 @@ export async function listWorkspaceResponses(
           citations: {
             orderBy: { index: "asc" },
           },
+          documents: {
+            where: { deletedAt: null },
+            select: {
+              id: true,
+              title: true,
+              format: true,
+              currentRevision: true,
+              createdAt: true,
+            },
+          },
           _count: {
             select: { edits: true },
           },
@@ -336,6 +346,7 @@ export async function listWorkspaceResponses(
         hasEdits: (activeVer._count?.edits ?? 0) > 0,
         editCount: activeVer._count?.edits ?? 0,
         citations: activeVer.citations ?? [],
+        documents: activeVer.documents ?? [],
         latestEdit: latestEdit
           ? {
               id: latestEdit.id,
@@ -428,6 +439,16 @@ export async function listResponseVersions(
       citations: {
         orderBy: { index: "asc" },
       },
+      documents: {
+        where: { deletedAt: null },
+        select: {
+          id: true,
+          title: true,
+          format: true,
+          currentRevision: true,
+          createdAt: true,
+        },
+      },
       _count: {
         select: { edits: true },
       },
@@ -460,6 +481,7 @@ export async function listResponseVersions(
       hasEdits: (v._count?.edits ?? 0) > 0,
       editCount: v._count?.edits ?? 0,
       citations: v.citations ?? [],
+      documents: v.documents ?? [],
       latestEdit: latestEdit
         ? {
             id: latestEdit.id,
