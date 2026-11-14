@@ -211,8 +211,14 @@ describe("Auto-closing sidebar — rules", () => {
     expect(resolveSidebar({ userCollapsed: false, columnsNeedRoom: false, pinnedOpen: false }).collapsed).toBe(false);
   });
 
-  it("the toggle pins it open when auto-collapsed, and collapsing unpins", () => {
+  it("the toggle keeps it open (pinned while columns need the room), and collapsing unpins", () => {
     expect(toggleSidebar({ userCollapsed: false, columnsNeedRoom: true, pinnedOpen: false })).toEqual({
+      userCollapsed: false,
+      pinnedOpen: true,
+    });
+    // Collapsed by the person while columns are open: opening it pins it too,
+    // or it would collapse again at once.
+    expect(toggleSidebar({ userCollapsed: true, columnsNeedRoom: true, pinnedOpen: false })).toEqual({
       userCollapsed: false,
       pinnedOpen: true,
     });
@@ -220,6 +226,7 @@ describe("Auto-closing sidebar — rules", () => {
       userCollapsed: true,
       pinnedOpen: false,
     });
+    // No columns: just the person's choice, no pin.
     expect(toggleSidebar({ userCollapsed: true, columnsNeedRoom: false, pinnedOpen: false })).toEqual({
       userCollapsed: false,
       pinnedOpen: false,
@@ -345,5 +352,23 @@ describe("Auto-closing sidebar — app shell", () => {
     fireEvent.pointerOut(overlay, { pointerType: "mouse" });
     act(() => jest.advanceTimersByTime(300));
     expect(screen.getByTestId("sidebar-overlay")).toBeInTheDocument();
+  });
+
+  it("also opens as an overlay when the person collapsed it themselves", () => {
+    renderAppShell(true);
+    expect(sidebar()).toHaveAttribute("data-collapsed", "true");
+    // Not an automatic collapse.
+    expect(rail()).not.toHaveAttribute("data-sidebar-auto");
+
+    hover(rail());
+    act(() => jest.advanceTimersByTime(300));
+    const overlay = screen.getByTestId("sidebar-overlay");
+
+    // "Keep sidebar open" expands it for good; no columns, so no pin.
+    fireEvent.click(overlay.querySelector('button[aria-label="Keep sidebar open"]')!);
+    expect(screen.queryByTestId("sidebar-overlay")).toBeNull();
+    expect(sidebar()).toHaveAttribute("data-collapsed", "false");
+    expect(document.cookie).toContain("sidebar=expanded");
+    expect(localStorage.getItem("klecx-sidebar-pinned")).toBeNull();
   });
 });

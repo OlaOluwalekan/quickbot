@@ -3,9 +3,11 @@
  *
  * - When the open columns don't fit next to the expanded sidebar at their
  *   minimum widths, the sidebar collapses to its rail by itself.
- * - Hovering the rail (or reaching it with the keyboard) opens the full
- *   sidebar as an overlay over the page.
- * - Only the toggle pins it open; the pin is remembered.
+ * - Whenever the sidebar is a rail (collapsed by the app or by the person),
+ *   hovering it (or reaching it with the keyboard) opens the full sidebar as
+ *   an overlay over the page.
+ * - Only the toggle keeps it open; while columns need the room that is a
+ *   pin, which is remembered.
  * - When the columns close, the person's own choice (the `sidebar` cookie)
  *   applies again.
  */
@@ -43,7 +45,7 @@ export interface SidebarState {
   pinnedOpen: boolean;
 }
 
-/** `auto` = collapsed by the app, not by the person (hover opens the overlay). */
+/** `auto` = collapsed by the app, not by the person. */
 export function resolveSidebar(s: SidebarState): { collapsed: boolean; auto: boolean } {
   const auto = !s.userCollapsed && s.columnsNeedRoom && !s.pinnedOpen;
   return { collapsed: s.userCollapsed || auto, auto };
@@ -51,8 +53,9 @@ export function resolveSidebar(s: SidebarState): { collapsed: boolean; auto: boo
 
 /** What the toggle button (and `[`) does. */
 export function toggleSidebar(s: SidebarState): { userCollapsed: boolean; pinnedOpen: boolean } {
-  const { collapsed, auto } = resolveSidebar(s);
-  if (auto) return { userCollapsed: false, pinnedOpen: true }; // pin it open
-  if (collapsed) return { userCollapsed: false, pinnedOpen: s.pinnedOpen };
+  const { collapsed } = resolveSidebar(s);
+  // Opening it while columns need the room pins it, or it would collapse
+  // again at once.
+  if (collapsed) return { userCollapsed: false, pinnedOpen: s.pinnedOpen || s.columnsNeedRoom };
   return { userCollapsed: true, pinnedOpen: false }; // collapsing also unpins
 }

@@ -98,8 +98,9 @@ export function AppShell({
 
   const userCollapsed = hydrated ? storeCollapsed : initialSidebarCollapsed;
 
-  // Auto-closing sidebar: open columns may collapse it to the rail; the
-  // toggle pins it open (remembered). See lib/layout/sidebar-auto.ts.
+  // Auto-closing sidebar: open columns may collapse it to the rail. Whenever
+  // it's a rail, hovering it opens the full sidebar as an overlay; the toggle
+  // keeps it open. See lib/layout/sidebar-auto.ts.
   const columnsNeedRoom = useSidebarAutoStore((s) => s.columnsNeedRoom);
   const pinnedOpen = useSidebarAutoStore((s) => s.pinnedOpen);
   const setPinnedOpen = useSidebarAutoStore((s) => s.setPinnedOpen);
@@ -123,11 +124,11 @@ export function AppShell({
   React.useEffect(() => clearTimers, [clearTimers]);
   // Nothing to overlay once the sidebar is expanded again.
   React.useEffect(() => {
-    if (!autoCollapsed) {
+    if (!collapsed) {
       clearTimers();
       setOverlayOpen(false);
     }
-  }, [autoCollapsed, clearTimers]);
+  }, [collapsed, clearTimers]);
 
   // When focus last left the overlay: focus landing on the rail right after
   // (Shift+Tab, or Escape returning it) must not reopen it.
@@ -159,7 +160,7 @@ export function AppShell({
 
   /** Mouse (not touch) on the rail: open the overlay after a short delay. */
   const handleRailPointerEnter = (e: React.PointerEvent) => {
-    if (!autoCollapsed || e.pointerType !== "mouse") return;
+    if (!collapsed || e.pointerType !== "mouse") return;
     clearTimers();
     openTimer.current = setTimeout(() => setOverlayOpen(true), OVERLAY_OPEN_DELAY_MS);
   };
@@ -169,7 +170,7 @@ export function AppShell({
   };
   /** Keyboard: reaching the rail with Tab opens the overlay and moves focus into it. */
   const handleRailFocus = (e: React.FocusEvent) => {
-    if (!autoCollapsed || overlayOpen) return;
+    if (!collapsed || overlayOpen) return;
     if (Date.now() - leftOverlayAt.current < 300) return;
     const target = e.target as HTMLElement;
     if (!target.matches?.(":focus-visible")) return;
@@ -500,8 +501,8 @@ export function AppShell({
         />
       </div>
 
-      {/* Auto-collapsed: the full sidebar over the page, from hover or keyboard */}
-      {autoCollapsed && overlayOpen && (
+      {/* Collapsed (by the person or by the columns): the full sidebar over the page, from hover or keyboard */}
+      {collapsed && overlayOpen && (
         <div
           ref={overlayRef}
           data-testid="sidebar-overlay"

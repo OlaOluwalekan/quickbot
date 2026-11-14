@@ -104,7 +104,7 @@ export interface SidebarProps {
   onArchiveWorkspace: (workspaceId: string) => Promise<void>;
   onRequestDeleteWorkspace: (workspace: SidebarWorkspaceItem) => void;
   isMobileDrawer?: boolean;
-  /** Shown as an overlay over auto-collapsed columns: the toggle pins it open. */
+  /** Shown as an overlay over the collapsed rail: the toggle keeps it open. */
   pinLabel?: boolean;
 }
 
