@@ -145,6 +145,7 @@ export function WorkspaceHome({
         {/* 1. Greeting + Large Composer */}
         <GreetingSection
           userName={userName}
+          userId={userId}
           prefilledPrompt={selectedPrompt}
           prefilledMode={selectedMode}
           credits={homeData.credits}

@@ -5,50 +5,36 @@ import { useTranslations } from "next-intl";
 import { Globe, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
-import { api } from "@/lib/api/client";
+import {
+  useUpdateUserPreferences,
+  useUserPreferences,
+} from "@/lib/api/hooks/me";
 
 export interface AiPreferencesProps {
+  userId: string;
   initialWebSearchEnabled?: boolean;
 }
 
 export default function AiPreferences({
+  userId,
   initialWebSearchEnabled = true,
 }: AiPreferencesProps) {
   const t = useTranslations("Settings.ai");
-  const [webSearchEnabled, setWebSearchEnabled] = React.useState<boolean>(
-    initialWebSearchEnabled
-  );
-  const [isUpdating, setIsUpdating] = React.useState(false);
+  const { data: preferences } = useUserPreferences(userId);
+  const update = useUpdateUserPreferences(userId);
+  const webSearchEnabled =
+    preferences?.webSearchEnabled ?? initialWebSearchEnabled;
+  const isUpdating = update.isPending;
 
-  React.useEffect(() => {
-    let isMounted = true;
-    api<{ data: { webSearchEnabled?: boolean } }>("/api/v1/me/preferences")
-      .then((res) => {
-        if (isMounted && res?.data?.webSearchEnabled !== undefined) {
-          setWebSearchEnabled(res.data.webSearchEnabled);
-        }
-      })
-      .catch(() => {});
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  const handleToggle = async (checked: boolean) => {
-    setWebSearchEnabled(checked);
-    setIsUpdating(true);
-    try {
-      await api("/api/v1/me/preferences", {
-        method: "PATCH",
-        body: JSON.stringify({ webSearchEnabled: checked }),
-      });
-      toast.success(checked ? "Web search enabled" : "Web search disabled");
-    } catch {
-      setWebSearchEnabled(!checked);
-      toast.error("Failed to update AI preferences");
-    } finally {
-      setIsUpdating(false);
-    }
+  const handleToggle = (checked: boolean) => {
+    update.mutate(
+      { webSearchEnabled: checked },
+      {
+        onSuccess: () =>
+          toast.success(checked ? t("searchOnToast") : t("searchOffToast")),
+        onError: () => toast.error(t("saveError")),
+      }
+    );
   };
 
   return (

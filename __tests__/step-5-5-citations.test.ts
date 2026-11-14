@@ -264,20 +264,25 @@ describe("Step 5.5 — Citations and References", () => {
   });
 
   describe("2. Pricing Surcharge & Plan Gate", () => {
-    it("adds +3 credit surcharge when grounding is enabled", () => {
+    it("adds +3 credits per executed web search", () => {
       const baseCredits = creditsFor("text-economy", {
         inputTokens: 200,
         outputTokens: 100,
-        grounding: false,
       });
-      const groundedCredits = creditsFor("text-economy", {
+      const oneSearch = creditsFor("text-economy", {
         inputTokens: 200,
         outputTokens: 100,
-        grounding: true,
+        searches: 1,
+      });
+      const twoSearches = creditsFor("text-economy", {
+        inputTokens: 200,
+        outputTokens: 100,
+        searches: 2,
       });
 
       expect(GROUNDING_SURCHARGE_CREDITS).toBe(3);
-      expect(groundedCredits).toBe(baseCredits + 3);
+      expect(oneSearch).toBe(baseCredits + 3);
+      expect(twoSearches).toBe(baseCredits + 6);
     });
 
     it("runs ungrounded without surcharge when web search preference is off", async () => {
@@ -313,7 +318,6 @@ describe("Step 5.5 — Citations and References", () => {
         prompt: "How does PostgreSQL handle concurrency and read scaling?",
         modelKey: "text-economy",
         kind: "TEXT",
-        grounding: true,
       });
 
       const sseOutput = await readAllSse(stream);
@@ -326,7 +330,7 @@ describe("Step 5.5 — Citations and References", () => {
       const expectedCharge = creditsFor("text-economy", {
         inputTokens: 200,
         outputTokens: 100,
-        grounding: true,
+        searches: 1,
       });
       expect(beforeTotal - afterTotal).toBe(expectedCharge);
 
@@ -360,7 +364,6 @@ describe("Step 5.5 — Citations and References", () => {
         prompt: "Tell me about PostgreSQL",
         modelKey: "text-economy",
         kind: "TEXT",
-        grounding: false,
       });
 
       await readAllSse(stream);
@@ -396,7 +399,6 @@ describe("Step 5.5 — Citations and References", () => {
         prompt: "Summarize this specification link",
         modelKey: "text-economy",
         kind: "TEXT",
-        grounding: false,
         attachmentIds: [linkAtt.id],
       });
 
@@ -425,7 +427,6 @@ describe("Step 5.5 — Citations and References", () => {
           prompt: "Explain PostgreSQL architecture",
           modelKey: "text-economy",
           kind: "TEXT",
-          grounding: true,
         }
       );
       await readAllSse(s1);

@@ -42,7 +42,6 @@ export interface PendingWorkspaceStart {
   idempotencyKey?: string;
   mode?: "text" | "image";
   thinkHarder?: boolean;
-  grounding?: boolean;
   language?: string | null;
 }
 

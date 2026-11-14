@@ -585,10 +585,6 @@ export async function regenerateResponse(
 
   const isImageTurn = targetResponse.kind === "IMAGE";
   const defaultModelKey = isImageTurn ? "image-standard" : "text-economy";
-  const priorHadGrounding = Boolean(
-    targetResponse.versions?.[0]?.citations &&
-      targetResponse.versions[0].citations.length > 0
-  );
 
   // Calls generation service with regenerateResponseId
   return createAndStreamGeneration(
@@ -601,7 +597,6 @@ export async function regenerateResponse(
       kind: isImageTurn ? "IMAGE" : "TEXT",
       regenerateResponseId: responseId,
       think: input.think,
-      grounding: input.grounding ?? priorHadGrounding,
       language: input.language,
       attachmentIds: isImageTurn
         ? undefined

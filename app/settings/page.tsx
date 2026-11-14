@@ -121,7 +121,10 @@ const SettingsPage = async () => {
 
             {/* Token Usage Column */}
             <div className="lg:col-span-7 flex flex-col gap-6">
-              <AiPreferences initialWebSearchEnabled={userPref?.webSearchEnabled ?? true} />
+              <AiPreferences
+                userId={actor.userId}
+                initialWebSearchEnabled={userPref?.webSearchEnabled ?? true}
+              />
               <TokensDisplay user={sessionUser} />
             </div>
           </div>

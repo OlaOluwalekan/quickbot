@@ -1,7 +1,7 @@
 import "server-only";
 import { type ToolSpec, type AiProvider } from "../types";
 import { streamAi } from "../index";
-import { validateCitationUrl } from "../citations";
+import { validateCitationUrl, type CitationSegment } from "../citations";
 
 export const WEB_SEARCH_TOOL: ToolSpec = {
   name: "web_search",
@@ -19,9 +19,17 @@ export const WEB_SEARCH_TOOL: ToolSpec = {
   },
 };
 
+export interface WebSearchSource {
+  url: string;
+  title?: string;
+  snippet?: string;
+  /** Where in `summary` this source is used (from the provider's grounding). */
+  segments?: CitationSegment[];
+}
+
 export interface WebSearchResult {
   summary: string;
-  sources: { url: string; title?: string; snippet?: string }[];
+  sources: WebSearchSource[];
 }
 
 /**
@@ -59,7 +67,7 @@ export async function runWebSearch(
   );
 
   let summary = "";
-  const sources: { url: string; title?: string; snippet?: string }[] = [];
+  const sources: WebSearchSource[] = [];
 
   for await (const event of stream) {
     if (event.type === "text_delta") {
@@ -67,11 +75,17 @@ export async function runWebSearch(
     } else if (event.type === "citation") {
       const check = validateCitationUrl(event.url);
       if (check.valid && check.normalizedUrl) {
-        if (!sources.some((s) => s.url === check.normalizedUrl)) {
+        const existing = sources.find((s) => s.url === check.normalizedUrl);
+        if (existing) {
+          if (event.segments?.length) {
+            existing.segments = [...(existing.segments ?? []), ...event.segments];
+          }
+        } else {
           sources.push({
             url: check.normalizedUrl,
             title: event.title || check.hostname || undefined,
             snippet: event.snippet || undefined,
+            segments: event.segments?.length ? [...event.segments] : undefined,
           });
         }
       }
@@ -79,7 +93,8 @@ export async function runWebSearch(
   }
 
   return {
-    summary: summary.trim() || "No relevant search results found.",
+    // Not trimmed: the sources' segment offsets point into this text.
+    summary: summary.trim() ? summary : "No relevant search results found.",
     sources,
   };
 }

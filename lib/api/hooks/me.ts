@@ -1,6 +1,9 @@
 "use client";
 
+import * as React from "react";
 import {
+  QueryClient,
+  QueryClientContext,
   useMutation,
   useQuery,
   useQueryClient,
@@ -14,10 +17,19 @@ export interface UserPreferencesDto {
   userId: string;
   uiLocale: string | null;
   aiLanguage: string | null;
+  webSearchEnabled: boolean;
 }
 
 export interface UserCreditsDto {
   tokens: number;
+}
+
+// Components rendered outside a QueryClientProvider (some tests) get an idle
+// query instead of a crash, like `useEntitlements`.
+let idleQueryClient: QueryClient | null = null;
+function getIdleQueryClient(): QueryClient {
+  idleQueryClient ??= new QueryClient();
+  return idleQueryClient;
 }
 
 export function useUserPreferences(
@@ -27,13 +39,21 @@ export function useUserPreferences(
     "queryKey" | "queryFn"
   >,
 ) {
-  return useQuery({
-    queryKey: queryKeys.me.preferences(userId),
-    enabled: Boolean(userId),
-    queryFn: ({ signal }) =>
-      api<UserPreferencesDto>("/api/v1/me/preferences", { signal }),
-    ...options,
-  });
+  const contextClient = React.useContext(QueryClientContext);
+  return useQuery(
+    {
+      // No user yet: a key that is never fetched (userQueryKey needs an id).
+      queryKey: userId
+        ? queryKeys.me.preferences(userId)
+        : (["me", "preferences", "no-user"] as const),
+      queryFn: ({ signal }) =>
+        api<UserPreferencesDto>("/api/v1/me/preferences", { signal }),
+      ...options,
+      enabled:
+        Boolean(userId) && Boolean(contextClient) && (options?.enabled ?? true),
+    },
+    contextClient ?? getIdleQueryClient()
+  );
 }
 
 export function useUpdateUserPreferences(userId: string) {
@@ -56,6 +76,9 @@ export function useUpdateUserPreferences(userId: string) {
           ...(input.uiLocale !== undefined ? { uiLocale: input.uiLocale } : {}),
           ...(input.aiLanguage !== undefined
             ? { aiLanguage: input.aiLanguage }
+            : {}),
+          ...(input.webSearchEnabled !== undefined
+            ? { webSearchEnabled: input.webSearchEnabled }
             : {}),
         });
       }

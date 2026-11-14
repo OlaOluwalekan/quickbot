@@ -42,6 +42,7 @@ import { CLIENT_MODELS, type ClientModelOption } from "@/lib/ai/client-models";
 import { AI_LANGUAGES, type AiLanguage } from "@/lib/locale";
 import type { WorkspaceDto } from "@/lib/api/hooks/workspaces";
 import { useEntitlements } from "@/lib/api/hooks/entitlements";
+import { useUserPreferences } from "@/lib/api/hooks/me";
 import { QuestionQueuePopover } from "@/components/workspace/question-queue-popover";
 import {
   Popover,
@@ -75,6 +76,8 @@ export interface ComposerProps {
   ) => void;
   onStop?: () => void;
   credits?: { plan: string; balance: number };
+  /** Signed-in user: reads their preferences (the "web search is off" line). */
+  userId?: string;
 }
 
 export interface ComposerAttachment {
@@ -103,6 +106,7 @@ export function Composer({
   onCompleted: onCompletedProp,
   onStop,
   credits,
+  userId,
 }: ComposerProps) {
   const t = useTranslations("Chat");
   const tHome = useTranslations("Home");
@@ -136,21 +140,9 @@ export function Composer({
   );
   const [selectedModel, setSelectedModel] = React.useState<string>("text-economy");
   const [thinkHarder, setThinkHarder] = React.useState(false);
-  const [webSearchEnabled, setWebSearchEnabled] = React.useState<boolean | null>(null);
-
-  React.useEffect(() => {
-    let isMounted = true;
-    api<{ data: { webSearchEnabled?: boolean } }>("/api/v1/me/preferences")
-      .then((res) => {
-        if (isMounted && res?.data?.webSearchEnabled !== undefined) {
-          setWebSearchEnabled(res.data.webSearchEnabled);
-        }
-      })
-      .catch(() => {});
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  // F4.1: search is a Settings preference; only say so when it's off.
+  const { data: preferences } = useUserPreferences(userId ?? "");
+  const webSearchOff = preferences?.webSearchEnabled === false;
   const [selectedLanguage, setSelectedLanguage] = React.useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [creationError, setCreationError] = React.useState<string | null>(null);
@@ -1200,11 +1192,11 @@ export function Composer({
           )}
         </div>
       </div>
-      {webSearchEnabled === false && (
+      {webSearchOff && (
         <p className="mt-1.5 text-center text-[11px] text-muted">
-          {t("webSearchOff" as any) || "Web search is off"} ·{" "}
+          {t("webSearchOff")} ·{" "}
           <Link href="/settings" className="underline hover:text-fg">
-            {t("changeInSettings" as any) || "Change in Settings"}
+            {t("changeInSettings")}
           </Link>
         </p>
       )}

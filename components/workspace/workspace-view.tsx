@@ -273,7 +273,7 @@ export function WorkspaceView({
 
   // Execute or retry stream generation
   const startStreamTurn = React.useCallback(
-    (promptText: string, idempotencyKey: string, options?: { modelKey?: string; kind?: "TEXT" | "IMAGE"; think?: boolean; grounding?: boolean; language?: string; attachmentIds?: string[] }) => {
+    (promptText: string, idempotencyKey: string, options?: { modelKey?: string; kind?: "TEXT" | "IMAGE"; think?: boolean; language?: string; attachmentIds?: string[] }) => {
       const genStore = useGenerationStore.getState();
       const effectiveKind = options?.kind || "TEXT";
       genStore.startStream(workspace.id, { prompt: promptText, kind: effectiveKind });
@@ -289,7 +289,6 @@ export function WorkspaceView({
           modelKey: options?.modelKey || (effectiveKind === "IMAGE" ? "image-standard" : "text-economy"),
           kind: effectiveKind,
           think: options?.think,
-          grounding: options?.grounding,
           language: options?.language,
           attachmentIds: options?.attachmentIds,
         },
@@ -386,7 +385,6 @@ export function WorkspaceView({
       modelKey: pending.modelKey,
       kind: pending.mode === "image" ? "IMAGE" : "TEXT",
       think: pending.thinkHarder,
-      grounding: pending.grounding,
       language: pending.language || undefined,
       attachmentIds: pending.attachmentIds,
     });
@@ -412,15 +410,10 @@ export function WorkspaceView({
           ? crypto.randomUUID()
           : "regen-" + Date.now().toString(36) + Math.random().toString(36).substring(2, 8);
 
-      const hasExistingGrounding = Boolean(
-        targetResponse.citations?.some((c) => c.source === "GROUNDING")
-      );
-
       streamRegeneration(
         responseId,
         {
           idempotencyKey: idemKey,
-          grounding: hasExistingGrounding ? true : undefined,
         },
         {
           onStarted: (data) => {
@@ -578,6 +571,7 @@ export function WorkspaceView({
           <div className="max-w-4xl mx-auto">
             <Composer
               workspaceId={workspace.id}
+              userId={actor.userId}
               size="compact"
               className="vt-composer shadow-lg"
               onCompleted={(data, prompt) =>

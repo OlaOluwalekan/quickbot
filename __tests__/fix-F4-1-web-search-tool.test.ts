@@ -6,8 +6,8 @@ import {
   createAndStreamGeneration,
   setCustomProvider,
   clearActiveGenerationsForTesting,
-  getSearchesCountToday,
 } from "@/server/services/generation";
+import { countSearchesToday } from "@/server/services/web-search";
 import { createAccountWithFreeGrant, getAccountByUserId } from "@/server/services/credits";
 import { setUserPlanOverride, clearUserPlanOverrides } from "@/server/billing/plans";
 import {
@@ -190,7 +190,7 @@ describe("Step F4.1 — Web search tool, switchable in Settings, and plan caps",
     // Citations were emitted and saved
     const citationEvents = events.filter((e) => e.event === "citation");
     expect(citationEvents.length).toBeGreaterThan(0);
-    expect(citationEvents[0].data.url).toBe("https://example.com/verified-source");
+    expect(citationEvents[0]!.data.url).toBe("https://example.com/verified-source");
 
     // Status event with searching was emitted
     const searchingStatus = events.find(
@@ -281,7 +281,7 @@ describe("Step F4.1 — Web search tool, switchable in Settings, and plan caps",
       });
     }
 
-    const todayCount = await getSearchesCountToday(actor.userId);
+    const todayCount = await countSearchesToday(actor.userId);
     expect(todayCount).toBeGreaterThanOrEqual(10);
 
     const { stream } = await createAndStreamGeneration(actor, workspace.id, {

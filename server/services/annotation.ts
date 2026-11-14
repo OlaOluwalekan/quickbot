@@ -33,13 +33,17 @@ import {
   ModelKey,
 } from "@/server/ai/registry";
 import { getEntitlements } from "@/server/billing/entitlements";
-import { PLANS } from "@/server/billing/plans";
 import { streamAi, type AiProvider, validateCitationUrl } from "@/server/ai";
-import { AiError, type ToolSpec } from "@/server/ai/types";
+import { AiError } from "@/server/ai/types";
 import { resolveEffectiveAiLanguage } from "@/lib/locale";
-import { getCustomProvider, getSearchesCountToday } from "@/server/services/generation";
-import { WEB_SEARCH_TOOL, runWebSearch } from "@/server/ai/tools/web-search";
-import { getUserPreferences } from "@/server/services/user-preferences";
+import { getCustomProvider } from "@/server/services/generation";
+import { WEB_SEARCH_TOOL } from "@/server/ai/tools/web-search";
+import {
+  MAX_SEARCHES_PER_GENERATION,
+  executeWebSearchTool,
+  resolveWebSearchAccess,
+  webSearchNotice,
+} from "@/server/services/web-search";
 import { ANNOTATION_PROMPT_VERSION } from "@/server/ai/prompts/annotation";
 import {
   buildAskContext,
@@ -1305,6 +1309,7 @@ export async function streamAnnotationAnswer(
       let fullThoughtText = "";
       const citations: AnswerCitation[] = [];
       let usage: { inputTokens: number; outputTokens: number } | null = null;
+      let searchesExecuted = 0;
 
       try {
         send("started", {
@@ -1314,29 +1319,29 @@ export async function streamAnnotationAnswer(
         });
         send("status", { stage: "writing" });
 
-        const actorPref = await getUserPreferences(actor.userId).catch(() => ({ webSearchEnabled: true }));
-        const searchesCountToday = await getSearchesCountToday(actor.userId);
-        const limits = PLANS[ownerEntitlements.plan]?.limits ?? PLANS.FREE.limits;
-        const reachedDailyCap = searchesCountToday >= limits.searchesPerDay;
-        const webSearchAllowed =
-          Boolean(actorPref.webSearchEnabled) &&
-          Boolean(limits.grounding) &&
-          !reachedDailyCap;
+        // F4.1: Asks use the same web_search tool rule as main answers.
+        const webSearch = model.caps.tools
+          ? await resolveWebSearchAccess(actor.userId, ownerEntitlements)
+          : { allowed: false, reachedDailyCap: false, locale: null };
 
-        if (reachedDailyCap) {
-          send("thought", { text: "Web search limit reached for today\n\n" });
+        if (webSearch.reachedDailyCap) {
+          const notice = webSearchNotice(webSearch.locale, "searchLimitReached");
+          fullThoughtText += `${notice}\n\n`;
+          send("thought", { text: `${notice}\n\n` });
         }
 
-        let searchesExecuted = 0;
+        const MAX_TOOL_ITERATIONS = MAX_SEARCHES_PER_GENERATION;
         let toolIterations = 0;
-        const MAX_TOOL_ITERATIONS = 4;
         let currentMessages = [...askContext.messages];
+        let inputTokens = 0;
+        let outputTokens = 0;
+        let gotUsage = false;
 
-        while (toolIterations <= MAX_TOOL_ITERATIONS) {
-          const availableTools: ToolSpec[] = [];
-          if (webSearchAllowed && searchesExecuted < 3 && toolIterations < MAX_TOOL_ITERATIONS) {
-            availableTools.push(WEB_SEARCH_TOOL);
-          }
+        while (true) {
+          const offerSearch =
+            webSearch.allowed &&
+            searchesExecuted < MAX_SEARCHES_PER_GENERATION &&
+            toolIterations < MAX_TOOL_ITERATIONS;
 
           const aiStream = streamAi(
             {
@@ -1344,7 +1349,7 @@ export async function streamAnnotationAnswer(
               system: askContext.system,
               messages: currentMessages,
               thinking: { summaries: true },
-              tools: availableTools.length > 0 ? availableTools : undefined,
+              tools: offerSearch ? [WEB_SEARCH_TOOL] : undefined,
             },
             {
               userPlan: ownerEntitlements.plan,
@@ -1352,113 +1357,115 @@ export async function streamAnnotationAnswer(
             }
           );
 
-          let toolCallEmitted: { name: string; args: unknown; thoughtSignature?: string } | null = null;
-          let turnAssistantText = "";
+          let toolCall: { args: unknown; thoughtSignature?: string } | null = null;
+          let turnText = "";
+          // Usage chunks are running totals for one call: keep the last.
+          let callUsage: { inputTokens: number; outputTokens: number } | null = null;
 
           for await (const chunk of aiStream) {
             if (chunk.type === "text_delta" && chunk.text) {
               fullAssistantText += chunk.text;
-              turnAssistantText += chunk.text;
+              turnText += chunk.text;
               send("delta", { text: chunk.text });
             } else if (chunk.type === "thought_delta" && chunk.text) {
               fullThoughtText += chunk.text;
               send("thought", { text: chunk.text });
-            } else if (chunk.type === "tool_call" && (chunk.name === "web_search" || chunk.name.endsWith("web_search"))) {
-              toolCallEmitted = {
-                name: "web_search",
-                args: chunk.args,
-                thoughtSignature: chunk.thoughtSignature,
-              };
+            } else if (chunk.type === "thought_signature") {
+              if (toolCall && !toolCall.thoughtSignature) {
+                toolCall.thoughtSignature = chunk.signature;
+              }
+            } else if (chunk.type === "tool_call" && chunk.name.endsWith("web_search")) {
+              toolCall = { args: chunk.args, thoughtSignature: chunk.thoughtSignature };
             } else if (chunk.type === "citation") {
-              if (!chunk.url || citations.some((c) => c.url === chunk.url)) continue;
+              if (!chunk.url) continue;
               const check = validateCitationUrl(chunk.url);
-              if (check.valid && check.normalizedUrl) {
-                const citation: AnswerCitation = {
-                  index: citations.length + 1,
-                  url: check.normalizedUrl,
-                  title: chunk.title || check.hostname || null,
-                  snippet: chunk.snippet ?? null,
-                  source: chunk.source ?? "GROUNDING",
-                };
+              if (!check.valid || !check.normalizedUrl) continue;
+              if (citations.some((c) => c.url === check.normalizedUrl)) continue;
+              const citation: AnswerCitation = {
+                index: citations.length + 1,
+                url: check.normalizedUrl,
+                title: chunk.title || check.hostname || null,
+                snippet: chunk.snippet ?? null,
+                source: chunk.source ?? "MODEL_PROVIDED",
+              };
+              citations.push(citation);
+              send("citation", citation);
+            } else if (chunk.type === "usage") {
+              callUsage = {
+                inputTokens: chunk.inputTokens,
+                outputTokens: chunk.outputTokens,
+              };
+            }
+          }
+
+          if (callUsage) {
+            gotUsage = true;
+            inputTokens += callUsage.inputTokens;
+            outputTokens += callUsage.outputTokens;
+          }
+
+          if (!toolCall) break;
+
+          toolIterations++;
+          let toolResponse: Record<string, unknown>;
+          if (offerSearch) {
+            const result = await executeWebSearchTool({
+              args: toolCall.args,
+              providerInstance: activeProvider,
+              citations,
+              onCitation: (citation) => {
                 citations.push(citation);
                 send("citation", citation);
-              }
-            } else if (chunk.type === "usage") {
-              usage = {
-                inputTokens: (usage?.inputTokens || 0) + chunk.inputTokens,
-                outputTokens: (usage?.outputTokens || 0) + chunk.outputTokens,
-              };
+              },
+              onSearchStart: (query) => send("status", { stage: "searching", query }),
+            });
+            if (result.executed) {
+              searchesExecuted++;
+              const notice = webSearchNotice(webSearch.locale, "searchedWeb", {
+                query: result.query,
+              });
+              fullThoughtText += `\n\n${notice}\n\n`;
+              send("thought", { text: `\n\n${notice}\n\n` });
+              send("status", { stage: "writing" });
             }
+            toolResponse = result.response;
+          } else {
+            // Called without being offered (search off or limit reached).
+            toolResponse = { error: "Web search is not available now. Answer without it." };
           }
 
-          if (toolCallEmitted && toolIterations < MAX_TOOL_ITERATIONS) {
-            toolIterations++;
-            searchesExecuted++;
-            const queryStr = typeof (toolCallEmitted.args as any)?.query === "string" ? (toolCallEmitted.args as any).query : "";
-            send("status", { stage: "searching", query: queryStr });
-            send("thought", { text: `\n\nSearched the web for “${queryStr}”\n\n` });
+          currentMessages = [
+            ...currentMessages,
+            {
+              role: "assistant",
+              parts: [
+                ...(turnText ? [{ type: "text" as const, text: turnText }] : []),
+                {
+                  type: "tool_call" as const,
+                  name: "web_search",
+                  args: toolCall.args,
+                  thoughtSignature: toolCall.thoughtSignature,
+                },
+              ],
+            },
+            {
+              role: "user",
+              parts: [
+                {
+                  type: "tool_response" as const,
+                  name: "web_search",
+                  response: toolResponse,
+                },
+              ],
+            },
+          ];
 
-            let searchSummary = "No relevant search results found.";
-            let searchSources: Array<{ url: string; title?: string; snippet?: string }> = [];
+          // Last round: the model must answer in text.
+          if (toolIterations > MAX_TOOL_ITERATIONS) break;
+        }
 
-            if (queryStr.trim()) {
-              try {
-                const searchRes = await runWebSearch(queryStr, {
-                  modelKey: "text-economy",
-                  providerInstance: activeProvider,
-                });
-                searchSummary = searchRes.summary;
-                searchSources = searchRes.sources;
-
-                for (const s of searchRes.sources) {
-                  const check = validateCitationUrl(s.url);
-                  if (check.valid && check.normalizedUrl && !citations.some((c) => c.url === check.normalizedUrl)) {
-                    const nextIndex = citations.length + 1;
-                    const newCit: AnswerCitation = {
-                      index: nextIndex,
-                      url: check.normalizedUrl,
-                      title: s.title || check.hostname || null,
-                      snippet: s.snippet || null,
-                      source: "GROUNDING",
-                    };
-                    citations.push(newCit);
-                    send("citation", newCit);
-                  }
-                }
-              } catch {
-                searchSummary = "Failed to retrieve search results.";
-              }
-            }
-
-            currentMessages = [
-              ...currentMessages,
-              {
-                role: "assistant",
-                parts: [
-                  ...(turnAssistantText ? [{ type: "text" as const, text: turnAssistantText }] : []),
-                  {
-                    type: "tool_call" as const,
-                    name: "web_search",
-                    args: toolCallEmitted.args,
-                    thoughtSignature: toolCallEmitted.thoughtSignature,
-                  },
-                ],
-              },
-              {
-                role: "user",
-                parts: [
-                  {
-                    type: "tool_response" as const,
-                    name: "web_search",
-                    response: { summary: searchSummary, sources: searchSources },
-                  },
-                ],
-              },
-            ];
-            continue;
-          }
-
-          break;
+        if (gotUsage) {
+          usage = { inputTokens, outputTokens };
         }
 
         if (!fullAssistantText.trim()) {

@@ -196,7 +196,10 @@
       "title": "Préférences de l'IA",
       "subtitle": "Personnalisez la façon dont Klecx réfléchit et répond à vos demandes.",
       "searchLabel": "Rechercher sur le web si utile",
-      "searchHint": "Klecx peut rechercher sur le web des faits récents, des prix et de la documentation."
+      "searchHint": "Klecx peut rechercher sur le web des faits récents, des prix et de la documentation. Chaque recherche coûte 3 crédits.",
+      "searchOnToast": "Recherche web activée",
+      "searchOffToast": "Recherche web désactivée",
+      "saveError": "Impossible d'enregistrer vos préférences d'IA. Réessayez."
     },
     "title": "Paramètres de l'espace",
     "subtitle": "Gérez votre profil, vos préférences et votre consommation de jetons.",
@@ -528,6 +531,8 @@
     "writing": "Writing…",
     "saving": "Saving…",
     "searching": "Recherche sur le web…",
+    "searchedWeb": "Recherche web : « {query} »",
+    "searchLimitReached": "Limite quotidienne de recherches web atteinte",
     "tryAgain": "Try again",
     "jumpToLatest": "Jump to latest",
     "offline": "You are currently offline. Check your network connection.",
