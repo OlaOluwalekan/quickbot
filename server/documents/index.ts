@@ -306,25 +306,39 @@ async function storeGeneratedDocument(params: {
 }
 
 /**
- * Plan check for a download in `format` (the downloader's plan, as for every
- * other export) plus the daily export cap. Throws 403 `plan_upgrade_required`
- * or 429. Shared by response exports and generated documents (F3.4).
+ * Plan check for a download in `format`. The **workspace owner's plan**
+ * decides which formats the workspace's members may download (decided
+ * 2026-11-14: the owner invites the members, so their plan applies). Each
+ * download also counts towards the downloader's daily export cap, at the
+ * owner's plan's cap. Throws 403 `plan_upgrade_required` or 429.
+ * Shared by response, workspace and generated-document downloads.
  */
-export async function assertExportAllowed(
-  userId: string,
-  format: ExportFormat,
-  explicitPlan?: PlanKey
-): Promise<void> {
-  const effectivePlan = await resolveExportPlanForUser(userId, explicitPlan);
-  const allowedFormats = PLANS[effectivePlan].limits.exportFormats;
-  if (!allowedFormats.includes(format)) {
+export async function assertExportAllowed(args: {
+  ownerId: string;
+  downloaderId: string;
+  format: ExportFormat;
+  /** Tests: use this plan instead of the owner's. */
+  ownerPlan?: PlanKey;
+}): Promise<void> {
+  const ownerPlan = await resolveExportPlanForUser(args.ownerId, args.ownerPlan);
+  const allowedFormats = PLANS[ownerPlan].limits.exportFormats;
+  if (!allowedFormats.includes(args.format)) {
+    const formats = allowedFormats.map((f) => f.toUpperCase()).join(", ");
     throw new ApiError(
       403,
       "plan_upgrade_required",
-      `Your ${PLANS[effectivePlan].name} plan only supports ${allowedFormats.map((f) => f.toUpperCase()).join(", ")} exports. Upgrade to export as ${format.toUpperCase()}.`
+      args.ownerId === args.downloaderId
+        ? `Your ${PLANS[ownerPlan].name} plan only supports ${formats} exports. Upgrade to export as ${args.format.toUpperCase()}.`
+        : `This workspace's plan only supports ${formats} exports.`
     );
   }
-  checkAndIncrementDailyExportCap(userId, effectivePlan);
+  checkAndIncrementDailyExportCap(args.downloaderId, ownerPlan);
+}
+
+/** The formats the workspace owner's plan allows (for UI gating). */
+export async function exportFormatsForOwner(ownerId: string): Promise<ExportFormat[]> {
+  const plan = await resolveExportPlanForUser(ownerId);
+  return [...PLANS[plan].limits.exportFormats];
 }
 
 /**
@@ -340,6 +354,7 @@ export async function exportResponseDocument(
   options: {
     format: ExportFormat;
     view?: "original" | "edited";
+    /** Tests: the plan to apply instead of the workspace owner's. */
     userPlan?: PlanKey;
   }
 ) {
@@ -398,22 +413,13 @@ export async function exportResponseDocument(
     "workspace.export"
   );
 
-  // Check plan export format entitlement
-  const effectivePlan = await resolveExportPlanForUser(
-    actor.userId,
-    options.userPlan
-  );
-  const allowedFormats = PLANS[effectivePlan].limits.exportFormats;
-  if (!allowedFormats.includes(format)) {
-    throw new ApiError(
-      403,
-      "plan_upgrade_required",
-      `Your ${PLANS[effectivePlan].name} plan only supports ${allowedFormats.map((f) => f.toUpperCase()).join(", ")} exports. Upgrade to export as ${format.toUpperCase()}.`
-    );
-  }
-
-  // Enforce daily export cap (0 credits charged)
-  checkAndIncrementDailyExportCap(actor.userId, effectivePlan);
+  // The workspace owner's plan decides the formats; daily cap (0 credits).
+  await assertExportAllowed({
+    ownerId: access.ws.ownerId,
+    downloaderId: actor.userId,
+    format,
+    ownerPlan: options.userPlan,
+  });
 
   const activeVer =
     response.versions.find((v) => v.id === response.activeVersionId) ??
@@ -507,6 +513,7 @@ export async function exportWorkspaceDocument(
   options: {
     format: ExportFormat;
     view?: "original" | "edited";
+    /** Tests: the plan to apply instead of the workspace owner's. */
     userPlan?: PlanKey;
   }
 ) {
@@ -524,20 +531,12 @@ export async function exportWorkspaceDocument(
     );
   }
 
-  const effectivePlan = await resolveExportPlanForUser(
-    actor.userId,
-    options.userPlan
-  );
-  const allowedFormats = PLANS[effectivePlan].limits.exportFormats;
-  if (!allowedFormats.includes(format)) {
-    throw new ApiError(
-      403,
-      "plan_upgrade_required",
-      `Your ${PLANS[effectivePlan].name} plan only supports ${allowedFormats.map((f) => f.toUpperCase()).join(", ")} exports. Upgrade to export as ${format.toUpperCase()}.`
-    );
-  }
-
-  checkAndIncrementDailyExportCap(actor.userId, effectivePlan);
+  await assertExportAllowed({
+    ownerId: access.ws.ownerId,
+    downloaderId: actor.userId,
+    format,
+    ownerPlan: options.userPlan,
+  });
 
   const workspace = await db.workspace.findUnique({
     where: { id: workspaceId, deletedAt: null },

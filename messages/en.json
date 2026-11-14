@@ -1110,7 +1110,8 @@
     "daily_cap": "You have reached your daily limit for this feature",
     "no_permission": "You do not have permission to {capability}",
     "max_depth": "Maximum thread depth ({depth}) reached. Promote this answer to a new workspace to continue.",
-    "upgrade": "Upgrade"
+    "upgrade": "Upgrade",
+    "owner_plan": "The workspace owner's plan doesn't include this (available on {plan} and above)"
   },
   "Members": {
     "errors": {

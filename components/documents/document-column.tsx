@@ -80,6 +80,8 @@ interface DocumentData {
     canAsk: boolean;
     canExport: boolean;
   };
+  exportFormats: string[];
+  isOwner: boolean;
 }
 
 function errorCode(err: unknown): string | undefined {
@@ -338,6 +340,8 @@ export function DocumentColumn({
               format={docData.document.format}
               revision={selectedRevision}
               canExport={canExport}
+              ownerFormats={docData.exportFormats}
+              isOwner={docData.isOwner}
               size="sm"
             />
 

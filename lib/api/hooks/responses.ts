@@ -6,6 +6,7 @@ import {
   useQuery,
   useQueryClient,
   type InfiniteData,
+  type QueryClient,
 } from "@tanstack/react-query";
 import { api, ApiClientError } from "@/lib/api/client";
 import type { CitationDto } from "@/lib/api/sse";
@@ -398,4 +399,63 @@ export function useCreateVersionEdit(userId: string, workspaceId: string) {
       }
     },
   });
+}
+
+/**
+ * Puts a finished answer into the cached response list the moment the stream
+ * completes, with its citations and generated documents (F3.4). The list then
+ * shows the final card at once; the reload that follows brings the same data,
+ * so nothing moves (no gap, no card popping in late). Only for a new turn at
+ * the end of a fully loaded list; anything else is left to the reload.
+ */
+export function insertCompletedResponse(
+  queryClient: QueryClient,
+  userId: string,
+  workspaceId: string,
+  done: {
+    responseId: string;
+    versionId: string;
+    prompt: string;
+    content: string;
+    citations?: CitationDto[];
+    documents?: GeneratedDocumentDto[];
+  }
+): void {
+  if (!done.responseId || !done.versionId) return;
+  const now = new Date().toISOString();
+  queryClient.setQueriesData<InfiniteData<PaginatedResponses>>(
+    { queryKey: queryKeys.responses.all(userId, workspaceId) },
+    (data) => {
+      if (!data || data.pages.length === 0) return data;
+      const pages = data.pages;
+      const last = pages[pages.length - 1]!;
+      if (last.nextCursor) return data;
+      if (pages.some((p) => p.items.some((r) => r.id === done.responseId))) return data;
+      const item: ResponseItemDto = {
+        id: done.responseId,
+        chatId: workspaceId,
+        prompt: done.prompt,
+        origin: "DIRECT",
+        response: done.content,
+        activeVersionId: done.versionId,
+        activeVersion: {
+          id: done.versionId,
+          responseId: done.responseId,
+          number: 1,
+          content: done.content,
+          originalContent: done.content,
+          citations: done.citations ?? [],
+          documents: done.documents ?? [],
+          createdAt: now,
+        },
+        versionCount: 1,
+        createdAt: now,
+        updatedAt: now,
+      };
+      return {
+        ...data,
+        pages: [...pages.slice(0, -1), { ...last, items: [...last.items, item] }],
+      };
+    }
+  );
 }

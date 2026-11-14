@@ -58,3 +58,24 @@ Review items that are already decided and only wait for a later step live in `CL
 | E | PDFs: show the pages, annotate the text | Render the PDF pages with a text layer and anchor highlights to page + text. Faithful view, but a second anchoring model and no editing or corrected download. Only worth it if PDFs must be reviewable. |
 
 **If nothing is decided:** stays at A, PDFs stay blocked. Recommended next step if fidelity matters: B first (cheap, visible), then C as a dedicated step after F3.3.
+
+---
+
+## 3. A seat-based team plan (Organization / Enterprise)
+
+**The situation.** Collaboration is being cut back on the personal plans so that one subscription can't be shared by a group (see "collaboration limits per plan" in `CLAUDE.md`, Step 8.1). Teams that really work together then need another way to pay.
+
+**Today.** No such plan. The owner of a workspace pays for everything in it (`CreditAccount` of the owner); collaborators are limited per plan.
+
+**Idea from the owner (2026-11-14).** A plan billed **per seat with a minimum number of seats**, e.g. $7 per seat, at least 5 seats (example numbers).
+
+**Questions to answer before building it:**
+
+| # | Question | Options |
+|---|---|---|
+| 1 | Who owns the workspaces? | The organization (a new owner type next to users), or still a person with the org paying. The ledger already points at a `CreditAccount`, so an org account is a data-model addition (main guide §1, decision 4). |
+| 2 | How are credits shared? | One pool for the organization, a pool per seat, or a pool plus a per-member cap (Step 7.5 spend caps already exist for owners). |
+| 3 | What does a seat include? | The Standard or Pro features per person; whether guests (view/comment only) need a seat. |
+| 4 | Billing mechanics | Seat changes mid-period (prorated with the merchant of record), minimum seats on downgrade, what happens to content when a seat is removed (same grace → read-only rule as today). |
+| 5 | When | After launch, once there are teams asking for it. |
+

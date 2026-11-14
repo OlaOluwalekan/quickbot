@@ -11,8 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Gated } from "@/components/ui/gated";
-import { useEntitlements } from "@/lib/api/hooks/entitlements";
-import { getGateReason, type GateReason } from "@/lib/entitlements/shared";
+import { exportFormatGateReason, type GateReason } from "@/lib/entitlements/shared";
 import { cn } from "@/lib/utils";
 
 const FORMATS = ["docx", "pdf", "md"] as const;
@@ -34,14 +33,16 @@ export function documentDownloadUrl(
 /**
  * Download button (the document's own format) + "Download as" menu for a
  * generated document (F3.4). Markdown needs read access only; Word and PDF
- * need `workspace.export` and a plan that includes the format. The server
- * re-checks both.
+ * need `workspace.export`. The workspace owner's plan decides which formats
+ * are available. The server re-checks both.
  */
 export function GeneratedDocumentDownload({
   documentId,
   format,
   revision,
   canExport,
+  ownerFormats,
+  isOwner,
   size = "md",
   className,
 }: {
@@ -49,19 +50,24 @@ export function GeneratedDocumentDownload({
   format: string;
   revision: number;
   canExport: boolean;
+  /** Formats of the workspace owner's plan (undefined while loading). */
+  ownerFormats: readonly string[] | undefined;
+  /** The viewer owns the workspace. */
+  isOwner: boolean;
   size?: "sm" | "md";
   className?: string;
 }) {
   const t = useTranslations("GeneratedDocs");
   const tFormats = useTranslations("Documents.downloadFormats");
   const tCaps = useTranslations("Documents.caps");
-  const { data: entitlements } = useEntitlements();
-
-  const reasonFor = (f: DownloadFormat): GateReason | null => {
-    if (f === "md") return null;
-    if (!canExport) return { code: "no_permission", capability: tCaps("export") };
-    return getGateReason(entitlements, f);
-  };
+  const reasonFor = (f: DownloadFormat): GateReason | null =>
+    exportFormatGateReason({
+      format: f,
+      ownerFormats,
+      isOwner,
+      canExport,
+      exportCapabilityLabel: tCaps("export"),
+    });
 
   const ownFormat = toFormat(format);
   const ownReason = reasonFor(ownFormat);

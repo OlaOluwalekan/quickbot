@@ -17,6 +17,10 @@ export interface GeneratedDocumentCardProps {
   };
   /** Caller holds `workspace.export` (Word / PDF downloads; the server re-checks). */
   canExport?: boolean;
+  /** Formats of the workspace owner's plan (undefined while loading). */
+  ownerFormats?: readonly string[];
+  /** The viewer owns the workspace. */
+  isOwner?: boolean;
 }
 
 /**
@@ -26,6 +30,8 @@ export interface GeneratedDocumentCardProps {
 export function GeneratedDocumentCard({
   document: doc,
   canExport = false,
+  ownerFormats,
+  isOwner = false,
 }: GeneratedDocumentCardProps) {
   const t = useTranslations("GeneratedDocs");
   const openStack = useThreadStackStore((s) => s.open);
@@ -99,6 +105,8 @@ export function GeneratedDocumentCard({
           format={doc.format}
           revision={doc.currentRevision}
           canExport={canExport}
+          ownerFormats={ownerFormats}
+          isOwner={isOwner}
         />
       </div>
     </div>

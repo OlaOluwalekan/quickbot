@@ -22,6 +22,19 @@ import { cn } from "@/lib/utils";
 const COL_WIDTH_KEY = "klecx-ask-col-width";
 const COL_WIDTH_MIN = DEFAULT_LAYOUT_PREFS.colMin;
 const COL_WIDTH_MAX = 900;
+/**
+ * Generated-document panel (F3.4): opens at half the space, can be resized
+ * from 420 px to 70 % of the window, and its width is remembered on its own.
+ */
+const DOC_WIDTH_KEY = "klecx-doc-col-width";
+const DOC_WIDTH_SHARE = 0.5;
+const DOC_WIDTH_MAX_VW = 0.7;
+
+function docWidthMax(): number {
+  return typeof window === "undefined"
+    ? COL_WIDTH_MAX
+    : Math.max(COL_WIDTH_MIN, Math.round(window.innerWidth * DOC_WIDTH_MAX_VW));
+}
 /** Below this viewport width only one column is shown at a time. */
 const SINGLE_COLUMN_QUERY = "(max-width: 1023px)";
 
@@ -75,14 +88,20 @@ export function ThreadStackLayout({
   const [colPreferred, setColPreferred] = React.useState(
     DEFAULT_LAYOUT_PREFS.colPreferred
   );
+  // Document panel width; null = half of the space (the default).
+  const [docPreferred, setDocPreferred] = React.useState<number | null>(null);
   React.useEffect(() => {
     try {
       const stored = Number(window.localStorage.getItem(COL_WIDTH_KEY));
       if (stored >= COL_WIDTH_MIN && stored <= COL_WIDTH_MAX) {
         setColPreferred(stored);
       }
+      const storedDoc = Number(window.localStorage.getItem(DOC_WIDTH_KEY));
+      if (storedDoc >= COL_WIDTH_MIN) {
+        setDocPreferred(storedDoc);
+      }
     } catch {
-      // Storage unavailable: keep the default width.
+      // Storage unavailable: keep the default widths.
     }
   }, []);
 
@@ -127,33 +146,56 @@ export function ThreadStackLayout({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [hasColumns, back, closeAll]);
 
+  // The deepest column decides which remembered width applies.
+  const deepestIsDocument = stack[stack.length - 1]?.kind === "document";
+  const sizing = deepestIsDocument
+    ? {
+        key: DOC_WIDTH_KEY,
+        max: docWidthMax(),
+        value: docPreferred ?? Math.round(containerWidth * DOC_WIDTH_SHARE),
+        set: (w: number) => setDocPreferred(w),
+      }
+    : {
+        key: COL_WIDTH_KEY,
+        max: COL_WIDTH_MAX,
+        value: colPreferred,
+        set: (w: number) => setColPreferred(w),
+      };
+  const preferredWidth = Math.max(COL_WIDTH_MIN, Math.min(sizing.max, sizing.value));
+
   const layout = React.useMemo(
-    () => computeColumnLayout(containerWidth, stack.length, { colPreferred }),
-    [containerWidth, stack.length, colPreferred]
+    () =>
+      computeColumnLayout(containerWidth, stack.length, {
+        colPreferred: preferredWidth,
+      }),
+    [containerWidth, stack.length, preferredWidth]
   );
+
+  const clampWidth = (w: number) => Math.max(COL_WIDTH_MIN, Math.min(sizing.max, w));
+  const rememberWidth = (key: string, w: number) => {
+    try {
+      window.localStorage.setItem(key, String(w));
+    } catch {
+      // Not remembered; the width still applies until reload.
+    }
+  };
 
   // Drag handle between the last two full columns
   const handleResizeStart = (e: React.MouseEvent) => {
     e.preventDefault();
     const startX = e.clientX;
-    const startWidth = colPreferred;
+    const startWidth = preferredWidth;
+    const { key, set } = sizing;
     let latest = startWidth;
 
     const onMove = (move: MouseEvent) => {
-      latest = Math.max(
-        COL_WIDTH_MIN,
-        Math.min(COL_WIDTH_MAX, startWidth + (startX - move.clientX))
-      );
-      setColPreferred(latest);
+      latest = clampWidth(startWidth + (startX - move.clientX));
+      set(latest);
     };
     const onUp = () => {
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseup", onUp);
-      try {
-        window.localStorage.setItem(COL_WIDTH_KEY, String(latest));
-      } catch {
-        // Not remembered; the width still applies until reload.
-      }
+      rememberWidth(key, latest);
     };
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
@@ -162,16 +204,9 @@ export function ThreadStackLayout({
   const handleResizeKey = (e: React.KeyboardEvent) => {
     if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
     e.preventDefault();
-    const next = Math.max(
-      COL_WIDTH_MIN,
-      Math.min(COL_WIDTH_MAX, colPreferred + (e.key === "ArrowLeft" ? 24 : -24))
-    );
-    setColPreferred(next);
-    try {
-      window.localStorage.setItem(COL_WIDTH_KEY, String(next));
-    } catch {
-      // ignore
-    }
+    const next = clampWidth(preferredWidth + (e.key === "ArrowLeft" ? 24 : -24));
+    sizing.set(next);
+    rememberWidth(sizing.key, next);
   };
 
   const columnProps = {
@@ -360,7 +395,7 @@ export function ThreadStackLayout({
                 aria-label={t("resize")}
                 aria-valuenow={Math.round(col.width)}
                 aria-valuemin={COL_WIDTH_MIN}
-                aria-valuemax={COL_WIDTH_MAX}
+                aria-valuemax={sizing.max}
                 tabIndex={0}
                 onMouseDown={handleResizeStart}
                 onKeyDown={handleResizeKey}

@@ -1110,7 +1110,8 @@
     "daily_cap": "Vous avez atteint votre limite quotidienne pour cette fonctionnalité",
     "no_permission": "Vous n'avez pas la permission pour {capability}",
     "max_depth": "Profondeur maximale de fil atteinte ({depth}). Promouvez cette réponse dans un nouvel espace pour continuer.",
-    "upgrade": "Mettre à niveau"
+    "upgrade": "Mettre à niveau",
+    "owner_plan": "Le forfait du propriétaire de l'espace n'inclut pas cette option (disponible à partir de {plan})"
   },
   "Members": {
     "errors": {

@@ -1,5 +1,6 @@
 "use client";
 
+import type { GenerationSSEHandlers } from "@/lib/api/sse";
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -68,6 +69,11 @@ export interface ComposerProps {
   workspaceId?: string | null;
   autoFocus?: boolean;
   onSubmitted?: () => void;
+  /** The answer finished streaming (inside a workspace): its final data, before any reload. */
+  onCompleted?: (
+    data: Parameters<NonNullable<GenerationSSEHandlers["onCompleted"]>>[0],
+    prompt: string
+  ) => void;
   onStop?: () => void;
   credits?: { plan: string; balance: number };
 }
@@ -95,6 +101,7 @@ export function Composer({
   workspaceId = null,
   autoFocus = false,
   onSubmitted,
+  onCompleted: onCompletedProp,
   onStop,
   credits,
 }: ComposerProps) {
@@ -486,6 +493,9 @@ export function Composer({
               useGenerationStore.getState().appendCitation(workspaceId, data);
             },
             onCompleted: (data) => {
+              // Put the finished answer in the list first, then end the
+              // stream: the final card replaces the streaming one in one go.
+              onCompletedProp?.(data, cleanPrompt);
               useGenerationStore.getState().completeStream(workspaceId, data.content, data.citations);
             },
             onError: (err) => {

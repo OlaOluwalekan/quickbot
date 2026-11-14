@@ -12,6 +12,7 @@ import {
   sanitizeDocumentTitle,
   sanitizeDocumentMarkdown,
   assertExportAllowed,
+  exportFormatsForOwner,
 } from "@/server/documents";
 import { quoteIsFromStoredText } from "@/server/services/quote-source";
 import { applySuggestion, toSuggestionTarget } from "@/lib/documents/apply-suggestion";
@@ -51,6 +52,10 @@ export interface DocumentWithDetails {
     canAsk: boolean;
     canExport: boolean;
   };
+  /** Formats the workspace owner's plan allows (Word / PDF gating in the UI). */
+  exportFormats: ExportFormat[];
+  /** The caller owns the workspace (an upgrade would unlock a format). */
+  isOwner: boolean;
 }
 
 /**
@@ -128,6 +133,8 @@ export async function getDocument(
       canAsk: access.capabilities.has("workspace.ask"),
       canExport: access.capabilities.has("workspace.export"),
     },
+    exportFormats: await exportFormatsForOwner(access.ws.ownerId),
+    isOwner: access.ws.ownerId === actor.userId,
   };
 }
 
@@ -355,7 +362,14 @@ export async function downloadDocument(
 ): Promise<{ buffer: Buffer; filename: string; contentType: string }> {
   const doc = await db.document.findUnique({
     where: { id: documentId, deletedAt: null },
-    select: { id: true, workspaceId: true, title: true, format: true, currentRevision: true },
+    select: {
+      id: true,
+      workspaceId: true,
+      title: true,
+      format: true,
+      currentRevision: true,
+      workspace: { select: { ownerId: true } },
+    },
   });
 
   if (!doc) {
@@ -371,7 +385,7 @@ export async function downloadDocument(
   const format = reqFormat as ExportFormat;
 
   // Markdown is the document's own text: anyone who can read it may take it.
-  // Word and PDF are exports (permission + the downloader's plan, as for
+  // Word and PDF are exports (permission + the workspace owner's plan, as for
   // response exports). Every download counts towards the daily export cap.
   if (format !== "md" && !access.capabilities.has("workspace.export")) {
     throw Errors.forbidden("Workspace export permission required");
@@ -391,7 +405,11 @@ export async function downloadDocument(
     throw Errors.notFound("DocumentRevision");
   }
 
-  await assertExportAllowed(actor.userId, format);
+  await assertExportAllowed({
+    ownerId: doc.workspace.ownerId,
+    downloaderId: actor.userId,
+    format,
+  });
 
   const buffer = await renderDocumentBuffer({
     format,

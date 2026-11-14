@@ -403,6 +403,14 @@ async function executeDetachedGeneration(params: {
 
     let stage: "preparing" | "thinking" | "writing" = "preparing";
     const usage = { inputTokens: 0, outputTokens: 0 };
+    // Documents created by the tool (F3.4): sent with `completed`, so the
+    // finished answer shows its cards at once (no shift when the list reloads).
+    const createdDocuments: Array<{
+      id: string;
+      title: string;
+      format: string;
+      currentRevision: number;
+    }> = [];
     let currentMessages: Msg[] = [...inputMessages];
     let toolIterations = 0;
     const MAX_TOOL_ITERATIONS = 2;
@@ -544,12 +552,14 @@ async function executeDetachedGeneration(params: {
             versionId,
             args: toolCallEmitted.args,
           });
-          broadcastEvent(active, "document", {
+          const docEvent = {
             id: docResult.documentId,
             title: docResult.title,
             format: docResult.format,
             currentRevision: docResult.currentRevision,
-          });
+          };
+          createdDocuments.push(docEvent);
+          broadcastEvent(active, "document", docEvent);
           toolResponse = {
             success: true,
             documentId: docResult.documentId,
@@ -687,6 +697,7 @@ async function executeDetachedGeneration(params: {
       versionId,
       content: active.currentContent,
       citations: savedCitations,
+      documents: createdDocuments,
     });
 
     if (isFirstTurn) {
@@ -875,6 +886,11 @@ export async function createAndStreamGeneration(
             where: { id: existingGen.versionId },
             include: {
               citations: { orderBy: { index: "asc" } },
+              documents: {
+                where: { deletedAt: null },
+                orderBy: { createdAt: "asc" },
+                select: { id: true, title: true, format: true, currentRevision: true },
+              },
             },
           })
         : null;
@@ -925,6 +941,7 @@ export async function createAndStreamGeneration(
                 versionId: existingGen.versionId,
                 content: version?.content ?? "",
                 citations: version?.citations ?? [],
+                documents: version?.documents ?? [],
               })
             )
           );
@@ -1561,6 +1578,11 @@ export async function getGenerationStatus(actor: Actor, generationId: string) {
         where: { id: gen.versionId },
         include: {
           citations: { orderBy: { index: "asc" } },
+          documents: {
+            where: { deletedAt: null },
+            orderBy: { createdAt: "asc" },
+            select: { id: true, title: true, format: true, currentRevision: true },
+          },
         },
       })
     : null;
@@ -1574,6 +1596,7 @@ export async function getGenerationStatus(actor: Actor, generationId: string) {
     content: version?.content ?? "",
     thoughtSummary: version?.thoughtSummary ?? null,
     citations: version?.citations ?? [],
+    documents: version?.documents ?? [],
     errorCode: gen.errorCode,
   };
 }

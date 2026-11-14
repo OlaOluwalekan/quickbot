@@ -38,7 +38,9 @@ export type GateReason =
   | { code: "member_limit"; limit: number }
   | { code: "daily_cap" }
   | { code: "no_permission"; capability: string }
-  | { code: "max_depth"; depth: number };
+  | { code: "max_depth"; depth: number }
+  /** The workspace owner's plan doesn't include it (the viewer can't upgrade it). */
+  | { code: "owner_plan"; plan: PlanKey };
 
 export type GateableFeature =
   | keyof EntitlementFeatures
@@ -129,4 +131,32 @@ export function getGateReason(
   }
 
   return { code: "requires_plan", plan: "PRO" };
+}
+
+/**
+ * Gate for one download format in a workspace. The workspace owner's plan
+ * decides the formats (decided 2026-11-14); Word and PDF also need the
+ * `workspace.export` capability (Markdown too when `markdownNeedsExport`).
+ */
+export function exportFormatGateReason(args: {
+  format: "md" | "pdf" | "docx";
+  /** Formats of the owner's plan; unknown (still loading) = allowed. */
+  ownerFormats: readonly string[] | undefined;
+  /** The viewer owns the workspace: an upgrade of their own plan unlocks it. */
+  isOwner: boolean;
+  /** Caller holds `workspace.export` (needed for Word / PDF). */
+  canExport?: boolean;
+  /** Markdown needs `workspace.export` too (response exports; not a generated document's own text). */
+  markdownNeedsExport?: boolean;
+  /** Label for the "no permission to …" tooltip. */
+  exportCapabilityLabel: string;
+}): GateReason | null {
+  const { format, ownerFormats, isOwner, canExport, exportCapabilityLabel } = args;
+  if ((format !== "md" || args.markdownNeedsExport) && canExport === false) {
+    return { code: "no_permission", capability: exportCapabilityLabel };
+  }
+  if (!ownerFormats || ownerFormats.includes(format)) return null;
+  const plan =
+    PLAN_ORDER.find((p) => PLANS[p].limits.exportFormats.includes(format)) ?? "PRO";
+  return isOwner ? { code: "requires_plan", plan } : { code: "owner_plan", plan };
 }

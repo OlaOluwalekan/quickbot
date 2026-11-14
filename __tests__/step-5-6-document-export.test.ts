@@ -543,6 +543,11 @@ describe("Step 5.6 — Document generation and export (Markdown, PDF, DOCX)", ()
     // and the stream announces it with a `document` event.
     expect(sseOutput).toContain("event: document");
     expect(sseOutput).not.toContain("/api/v1/attachments/");
+    // The final event carries the document, so the card shows with the answer.
+    const completed = /event: completed\ndata: (.*)/.exec(sseOutput)?.[1];
+    expect(JSON.parse(completed ?? "{}").documents).toEqual([
+      expect.objectContaining({ title: "Quarterly Plan 2026", format: "pdf", currentRevision: 1 }),
+    ]);
 
     const gen = await db.generation.findUnique({ where: { id: generationId } });
     expect(gen?.status).toBe("COMPLETED");
@@ -587,6 +592,31 @@ describe("Step 5.6 — Document generation and export (Markdown, PDF, DOCX)", ()
       params: Promise.resolve({ id: doc!.id }),
     });
     expect(outsiderDlRes.status).toBe(404);
+  });
+
+  test("4b. The workspace owner's plan decides the formats members may download (decided 2026-11-14)", async () => {
+    // Owner on Pro, editor on Free: the editor may download PDF.
+    setUserPlanOverride(ownerId, "PRO");
+    setUserPlanOverride(editorId, "FREE");
+    mockActorId = editorId;
+    const pdfReq = new NextRequest(
+      `http://localhost:3000/api/v1/responses/${responseId}/export?format=pdf`
+    );
+    const allowed = await exportResponseRoute(pdfReq, {
+      params: Promise.resolve({ id: responseId }),
+    });
+    expect(allowed.status).toBe(200);
+
+    // Owner on Free, editor on Pro: the editor may not.
+    setUserPlanOverride(ownerId, "FREE");
+    setUserPlanOverride(editorId, "PRO");
+    const refused = await exportResponseRoute(pdfReq, {
+      params: Promise.resolve({ id: responseId }),
+    });
+    expect(refused.status).toBe(403);
+    const body = await refused.json();
+    expect(body.error.code).toBe("plan_upgrade_required");
+    expect(body.error.message).toContain("workspace's plan");
   });
 
   test("6. Validation: create_document tool enforces title <= 120 chars, markdown <= 200k chars, and Cloudinary-only image rule", async () => {
