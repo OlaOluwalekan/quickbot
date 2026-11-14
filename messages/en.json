@@ -195,12 +195,17 @@
     "ai": {
       "title": "AI preferences",
       "subtitle": "Customize how Klecx thinks and answers your requests.",
+      "languageLabel": "Language Klecx answers in",
+      "auto": "Auto (match my message)",
       "searchLabel": "Search the web when helpful",
-      "searchHint": "Klecx can search the web for current facts, prices and documentation. Each search costs 3 credits.",
+      "searchHint": "Klecx searches only when a question needs current information. Each search uses 3 credits.",
       "searchOnToast": "Web search turned on",
       "searchOffToast": "Web search turned off",
+      "languageUpdatedToast": "AI response language updated",
       "saveError": "Couldn't save your AI preferences. Try again."
     },
+    "sessionsAndDevices": "Sessions & Devices",
+    "notifications": "Notifications",
     "title": "Workspace Settings",
     "subtitle": "Manage your profile, preferences, and token consumption.",
     "backToChat": "Back to Chat",

@@ -195,12 +195,17 @@
     "ai": {
       "title": "Préférences de l'IA",
       "subtitle": "Personnalisez la façon dont Klecx réfléchit et répond à vos demandes.",
+      "languageLabel": "Langue dans laquelle Klecx répond",
+      "auto": "Automatique (selon mon message)",
       "searchLabel": "Rechercher sur le web si utile",
-      "searchHint": "Klecx peut rechercher sur le web des faits récents, des prix et de la documentation. Chaque recherche coûte 3 crédits.",
+      "searchHint": "Klecx recherche uniquement lorsqu'une question nécessite des informations actuelles. Chaque recherche utilise 3 crédits.",
       "searchOnToast": "Recherche web activée",
       "searchOffToast": "Recherche web désactivée",
+      "languageUpdatedToast": "Langue de l'IA mise à jour",
       "saveError": "Impossible d'enregistrer vos préférences d'IA. Réessayez."
     },
+    "sessionsAndDevices": "Sessions et Appareils",
+    "notifications": "Notifications",
     "title": "Paramètres de l'espace",
     "subtitle": "Gérez votre profil, vos préférences et votre consommation de jetons.",
     "backToChat": "Retour au Chat",

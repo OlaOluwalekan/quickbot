@@ -46,6 +46,7 @@ import {
   getDailyCapForPlan,
 } from "@/server/billing/plans";
 import { getEntitlements, entitlementsForPlan } from "@/server/billing/entitlements";
+import { getUserPreferences } from "@/server/services/user-preferences";
 import { buildContext, estimateTokens } from "@/server/ai/context-builder";
 import { PROMPT_VERSION } from "@/server/ai/prompts/system";
 import {
@@ -1243,17 +1244,9 @@ export async function createAndStreamGeneration(
   let estimatedInputTokens = estimateTokens(input.prompt);
 
   if (kind === "TEXT") {
-    let targetLanguage = input.language;
-    if (!targetLanguage) {
-      const userPref = await db.userPreference.findUnique({
-        where: { userId: actor.userId },
-        select: { aiLanguage: true, uiLocale: true },
-      });
-      targetLanguage = resolveEffectiveAiLanguage({
-        savedAiLanguage: userPref?.aiLanguage,
-        uiLocale: userPref?.uiLocale,
-      });
-    }
+    // Step F4.2: AI language is a user preference (null = Auto / match my message)
+    const userPref = await getUserPreferences(actor.userId).catch(() => null);
+    const targetLanguage = userPref?.aiLanguage ?? null;
 
     const ctx = await buildContext({
       workspaceId,

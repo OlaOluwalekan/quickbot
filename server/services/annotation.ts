@@ -36,6 +36,7 @@ import { getEntitlements } from "@/server/billing/entitlements";
 import { streamAi, type AiProvider, validateCitationUrl } from "@/server/ai";
 import { AiError } from "@/server/ai/types";
 import { resolveEffectiveAiLanguage } from "@/lib/locale";
+import { getUserPreferences } from "@/server/services/user-preferences";
 import { getCustomProvider } from "@/server/services/generation";
 import { WEB_SEARCH_TOOL } from "@/server/ai/tools/web-search";
 import {
@@ -1219,15 +1220,9 @@ export async function streamAnnotationAnswer(
   }
 
   // Built before anything is reserved: its size is what gets billed.
-  const userPref = await db.userPreference.findUnique({
-    where: { userId: actor.userId },
-    select: { aiLanguage: true, uiLocale: true },
-  });
+  const userPref = await getUserPreferences(actor.userId).catch(() => null);
   const askContext = await buildAskContext(targetAnnotation.id, {
-    language: resolveEffectiveAiLanguage({
-      savedAiLanguage: userPref?.aiLanguage,
-      uiLocale: userPref?.uiLocale,
-    }),
+    language: userPref?.aiLanguage ?? null,
   });
 
   const generationId = crypto.randomUUID();

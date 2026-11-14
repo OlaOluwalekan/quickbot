@@ -31,18 +31,18 @@ const NameAndEmail = ({ user }: { user: SessionProps }) => {
 
     startTransition(async () => {
       try {
-        const res = await fetch("/api/user/profile", {
+        const res = await fetch("/api/v1/me", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ name: name.trim() }),
         });
         const json = await res.json();
-        if (json.success) {
-          toast.success(json.message || "Name updated");
+        if (res.ok && json.data) {
+          toast.success("Name updated");
           setIsEditing(false);
           router.refresh();
         } else {
-          toast.error(json.message || "Failed to update name");
+          toast.error(json?.error?.message || "Failed to update name");
         }
       } catch {
         toast.error("Failed to update name");

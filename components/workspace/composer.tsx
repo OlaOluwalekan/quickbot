@@ -9,7 +9,6 @@ import {
   AlertCircle,
   Brain,
   ChevronDown,
-  Globe,
   Image as ImageIcon,
   Layers,
   MessageSquare,
@@ -39,7 +38,6 @@ import {
 import { uploadAttachment } from "@/lib/api/attachments";
 import { navigateWithTransition } from "@/lib/navigation/view-transition";
 import { CLIENT_MODELS, type ClientModelOption } from "@/lib/ai/client-models";
-import { AI_LANGUAGES, type AiLanguage } from "@/lib/locale";
 import type { WorkspaceDto } from "@/lib/api/hooks/workspaces";
 import { useEntitlements } from "@/lib/api/hooks/entitlements";
 import { useUserPreferences } from "@/lib/api/hooks/me";
@@ -143,7 +141,6 @@ export function Composer({
   // F4.1: search is a Settings preference; only say so when it's off.
   const { data: preferences } = useUserPreferences(userId ?? "");
   const webSearchOff = preferences?.webSearchEnabled === false;
-  const [selectedLanguage, setSelectedLanguage] = React.useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [creationError, setCreationError] = React.useState<string | null>(null);
   const [liveAnnouncement, setLiveAnnouncement] = React.useState("");
@@ -476,7 +473,6 @@ export function Composer({
             modelKey: effectiveModelKey,
             kind: effectiveKind,
             think: thinkHarder,
-            language: selectedLanguage || undefined,
             attachmentIds: readyAttachmentIds.length > 0 ? readyAttachmentIds : undefined,
           },
           {
@@ -549,7 +545,6 @@ export function Composer({
         idempotencyKey,
         mode,
         thinkHarder,
-        language: selectedLanguage,
         attachmentIds: readyAttachmentIds.length > 0 ? readyAttachmentIds : undefined,
       });
 
@@ -1074,57 +1069,6 @@ export function Composer({
                       {m.minPlan}
                     </span>
                   )}
-                </button>
-              ))}
-            </PopoverContent>
-          </Popover>
-
-          {/* Language Chip */}
-          <Popover>
-            <PopoverTrigger asChild>
-              <button
-                type="button"
-                aria-label={t("language")}
-                className={cn(
-                  "inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium transition-colors cursor-pointer border border-border/50",
-                  selectedLanguage
-                    ? "bg-accent-soft text-accent"
-                    : "bg-surface-2 text-muted hover:text-fg hover:bg-surface-3",
-                )}
-              >
-                <Globe className="h-3 w-3" />
-                <span className="uppercase text-[11px]">
-                  {selectedLanguage || t("languageAuto")}
-                </span>
-                <ChevronDown className="h-2.5 w-2.5 opacity-70" />
-              </button>
-            </PopoverTrigger>
-            <PopoverContent align="start" className="w-44 max-h-56 overflow-y-auto p-1 space-y-0.5">
-              <button
-                type="button"
-                onClick={() => setSelectedLanguage(null)}
-                className={cn(
-                  "w-full rounded-md px-2 py-1 text-xs text-left cursor-pointer transition-colors",
-                  selectedLanguage === null
-                    ? "bg-accent-soft text-accent font-medium"
-                    : "hover:bg-surface-2 text-fg",
-                )}
-              >
-                {t("languageAuto")}
-              </button>
-              {AI_LANGUAGES.map((lang: AiLanguage) => (
-                <button
-                  key={lang}
-                  type="button"
-                  onClick={() => setSelectedLanguage(lang)}
-                  className={cn(
-                    "w-full rounded-md px-2 py-1 text-xs text-left uppercase cursor-pointer transition-colors",
-                    selectedLanguage === lang
-                      ? "bg-accent-soft text-accent font-medium"
-                      : "hover:bg-surface-2 text-fg",
-                  )}
-                >
-                  {lang}
                 </button>
               ))}
             </PopoverContent>

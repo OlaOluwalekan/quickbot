@@ -195,12 +195,17 @@
     "ai": {
       "title": "Preferencias de IA",
       "subtitle": "Personaliza cómo piensa y responde Klecx a tus solicitudes.",
+      "languageLabel": "Idioma en el que responde Klecx",
+      "auto": "Automático (coincidir con mi mensaje)",
       "searchLabel": "Buscar en la web cuando sea útil",
-      "searchHint": "Klecx puede buscar en la web datos actuales, precios y documentación. Cada búsqueda cuesta 3 créditos.",
+      "searchHint": "Klecx busca solo cuando una pregunta necesita información actual. Cada búsqueda usa 3 créditos.",
       "searchOnToast": "Búsqueda web activada",
       "searchOffToast": "Búsqueda web desactivada",
+      "languageUpdatedToast": "Idioma de IA actualizado",
       "saveError": "No se pudieron guardar tus preferencias de IA. Inténtalo de nuevo."
     },
+    "sessionsAndDevices": "Sesiones y Dispositivos",
+    "notifications": "Notificaciones",
     "title": "Configuración del Espacio",
     "subtitle": "Administra tu perfil, preferencias y consumo de tokens.",
     "backToChat": "Volver al Chat",
