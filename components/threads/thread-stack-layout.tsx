@@ -14,6 +14,14 @@ import {
   DEFAULT_LAYOUT_PREFS,
 } from "@/lib/annotations/thread-stack";
 import { useThreadStackStore, useThreadStackUrlSync } from "@/lib/stores/thread-stack";
+import { useUiStore } from "@/lib/stores/ui";
+import { useSidebarAutoStore } from "@/lib/stores/sidebar-auto";
+import {
+  columnsNeedSidebarRoom,
+  resolveSidebar,
+  SIDEBAR_EXPANDED_PX,
+  SIDEBAR_RAIL_PX,
+} from "@/lib/layout/sidebar-auto";
 import { ThreadColumn } from "./thread-column";
 import { BatchColumn } from "./batch-column";
 import { DocumentColumn } from "@/components/documents/document-column";
@@ -127,6 +135,32 @@ export function ThreadStackLayout({
     mq.addEventListener?.("change", onChange);
     return () => mq.removeEventListener?.("change", onChange);
   }, []);
+
+  // Auto-closing sidebar: tell the app shell when the open columns don't fit
+  // beside the expanded sidebar. The measured width is normalised to "sidebar
+  // expanded", so collapsing it doesn't feed back into the decision.
+  const userCollapsed = useUiStore((s) => s.sidebarCollapsed);
+  const pinnedOpen = useSidebarAutoStore((s) => s.pinnedOpen);
+  const columnsNeedRoomNow = useSidebarAutoStore((s) => s.columnsNeedRoom);
+  const setColumnsNeedRoom = useSidebarAutoStore((s) => s.setColumnsNeedRoom);
+  const sidebarIsRail = resolveSidebar({
+    userCollapsed,
+    columnsNeedRoom: columnsNeedRoomNow,
+    pinnedOpen,
+  }).collapsed;
+  React.useEffect(() => {
+    if (isSingleColumn || containerWidth <= 0) {
+      setColumnsNeedRoom(false);
+      return;
+    }
+    const widthWithExpanded =
+      containerWidth + (sidebarIsRail ? SIDEBAR_EXPANDED_PX - SIDEBAR_RAIL_PX : 0);
+    setColumnsNeedRoom(
+      columnsNeedSidebarRoom(widthWithExpanded, stack.length, DEFAULT_LAYOUT_PREFS)
+    );
+  }, [containerWidth, stack.length, isSingleColumn, sidebarIsRail, setColumnsNeedRoom]);
+  // Leaving the workspace closes its columns: the person's own choice applies again.
+  React.useEffect(() => () => setColumnsNeedRoom(false), [setColumnsNeedRoom]);
 
   // Alt+← = Back, Alt+Home = Main conversation
   const hasColumns = stack.length > 0;

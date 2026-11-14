@@ -21,6 +21,7 @@ import {
   Moon,
   MoreHorizontal,
   PanelLeftClose,
+  Pin,
   PanelLeftOpen,
   Pencil,
   Plus,
@@ -103,6 +104,8 @@ export interface SidebarProps {
   onArchiveWorkspace: (workspaceId: string) => Promise<void>;
   onRequestDeleteWorkspace: (workspace: SidebarWorkspaceItem) => void;
   isMobileDrawer?: boolean;
+  /** Shown as an overlay over auto-collapsed columns: the toggle pins it open. */
+  pinLabel?: boolean;
 }
 
 export function Sidebar({
@@ -120,6 +123,7 @@ export function Sidebar({
   onArchiveWorkspace,
   onRequestDeleteWorkspace,
   isMobileDrawer = false,
+  pinLabel = false,
 }: SidebarProps) {
   const t = useTranslations("AppShell");
   const router = useRouter();
@@ -316,6 +320,11 @@ export function Sidebar({
     .toUpperCase();
 
   const isCollapsedRail = collapsed && !isMobileDrawer;
+  const toggleLabel = pinLabel
+    ? t("pinSidebar")
+    : isCollapsedRail
+      ? t("expandSidebar")
+      : t("collapseSidebar");
 
   return (
     <TooltipProvider delayDuration={150}>
@@ -351,9 +360,7 @@ export function Sidebar({
                   type="button"
                   variant="ghost"
                   size="icon"
-                  aria-label={
-                    isCollapsedRail ? t("expandSidebar") : t("collapseSidebar")
-                  }
+                  aria-label={toggleLabel}
                   aria-expanded={!isCollapsedRail}
                   onClick={onToggleCollapsed}
                   className={cn(
@@ -366,13 +373,17 @@ export function Sidebar({
                   {isCollapsedRail ? (
                     <PanelLeftOpen className="h-4 w-4" strokeWidth={1.5} />
                   ) : (
-                    <PanelLeftClose className="h-4 w-4" strokeWidth={1.5} />
+                    pinLabel ? (
+                      <Pin className="h-4 w-4" strokeWidth={1.5} />
+                    ) : (
+                      <PanelLeftClose className="h-4 w-4" strokeWidth={1.5} />
+                    )
                   )}
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="right">
                 <span>
-                  {isCollapsedRail ? t("expandSidebar") : t("collapseSidebar")}{" "}
+                  {toggleLabel}{" "}
                   <kbd className="bg-surface-3 ml-1 rounded px-1 py-0.5 font-mono text-[10px]">
                     [
                   </kbd>

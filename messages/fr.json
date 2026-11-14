@@ -375,6 +375,7 @@
     "noShared": "Aucun espace partagé",
     "collapseSidebar": "Réduire la barre latérale",
     "expandSidebar": "Développer la barre latérale",
+    "pinSidebar": "Garder la barre latérale ouverte",
     "openNavigation": "Ouvrir le menu de navigation",
     "closeNavigation": "Fermer le menu de navigation",
     "rename": "Renommer",
