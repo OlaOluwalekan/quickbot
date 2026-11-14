@@ -1,5 +1,7 @@
 import { ingestLinkAttachment } from "./attachment";
 import { CREATE_DOCUMENT_TOOL, executeCreateDocumentToolCall } from "@/server/documents";
+import { WEB_SEARCH_TOOL, runWebSearch } from "@/server/ai/tools/web-search";
+import { getUserPreferences } from "@/server/services/user-preferences";
 import "server-only";
 import crypto from "node:crypto";
 import { db } from "@/server/db/client";
@@ -46,7 +48,7 @@ import {
   CreateGenerationInput,
 } from "@/lib/schemas/generation";
 import { getStorageProvider } from "@/server/storage";
-import type { Msg, Part } from "@/server/ai/types";
+import type { Msg, Part, ToolSpec } from "@/server/ai/types";
 import { normalizeGeminiError } from "@/server/ai/errors";
 import { resolveEffectiveAiLanguage } from "@/lib/locale";
 
@@ -170,6 +172,34 @@ async function generateWorkspaceTitle(
       })
       .catch(() => {});
   }
+}
+
+/**
+ * Returns the count of executed web searches for the actor during the current UTC day.
+ */
+export async function getSearchesCountToday(actorId: string): Promise<number> {
+  const startOfDay = new Date();
+  startOfDay.setUTCHours(0, 0, 0, 0);
+
+  const generations = await db.generation.findMany({
+    where: {
+      actorId,
+      createdAt: { gte: startOfDay },
+      status: "COMPLETED",
+    },
+    select: { usage: true },
+  });
+
+  let total = 0;
+  for (const g of generations) {
+    if (g.usage && typeof g.usage === "object" && "searches" in (g.usage as Record<string, unknown>)) {
+      const s = (g.usage as { searches?: unknown }).searches;
+      if (typeof s === "number" && Number.isFinite(s)) {
+        total += s;
+      }
+    }
+  }
+  return total;
 }
 
 /**
@@ -401,8 +431,25 @@ async function executeDetachedGeneration(params: {
         }
       : { summaries: false };
 
+    const actorPref = await getUserPreferences(actorId).catch(() => ({ webSearchEnabled: true }));
+    const searchesCountToday = await getSearchesCountToday(actorId);
+    const limits = PLANS[userPlan]?.limits ?? PLANS.FREE.limits;
+    const reachedDailyCap = searchesCountToday >= limits.searchesPerDay;
+    const webSearchAllowed =
+      Boolean(actorPref.webSearchEnabled) &&
+      Boolean(limits.grounding) &&
+      !reachedDailyCap;
+
+    if (reachedDailyCap) {
+      const limitNotice = "Web search limit reached for today";
+      active.currentThought = limitNotice;
+      broadcastEvent(active, "thought", { text: `${limitNotice}\n\n` });
+    }
+
     let stage: "preparing" | "thinking" | "writing" = "preparing";
-    const usage = { inputTokens: 0, outputTokens: 0 };
+    const usage = { inputTokens: 0, outputTokens: 0, searches: 0 };
+    const MAX_SEARCHES = 3;
+    let searchesExecuted = 0;
     // Documents created by the tool (F3.4): sent with `completed`, so the
     // finished answer shows its cards at once (no shift when the list reloads).
     const createdDocuments: Array<{
@@ -413,21 +460,26 @@ async function executeDetachedGeneration(params: {
     }> = [];
     let currentMessages: Msg[] = [...inputMessages];
     let toolIterations = 0;
-    const MAX_TOOL_ITERATIONS = 2;
+    const MAX_TOOL_ITERATIONS = 4;
 
     while (toolIterations <= MAX_TOOL_ITERATIONS) {
+      const availableTools: ToolSpec[] = [];
+      if (modelDef.caps.tools && toolIterations < MAX_TOOL_ITERATIONS) {
+        if (createdDocuments.length === 0) {
+          availableTools.push(CREATE_DOCUMENT_TOOL);
+        }
+        if (webSearchAllowed && searchesExecuted < MAX_SEARCHES) {
+          availableTools.push(WEB_SEARCH_TOOL);
+        }
+      }
+
       const stream = streamAi(
         {
           modelKey,
           messages: currentMessages,
           system: systemPrompt,
           thinking: thinkingConfig,
-          // After the last allowed tool call the model only writes text.
-          tools:
-            !grounding && modelDef.caps.tools && toolIterations < MAX_TOOL_ITERATIONS
-              ? [CREATE_DOCUMENT_TOOL]
-              : undefined,
-          grounding: Boolean(grounding),
+          tools: availableTools.length > 0 ? availableTools : undefined,
         },
         {
           userPlan,
@@ -475,56 +527,62 @@ async function executeDetachedGeneration(params: {
           broadcastEvent(active, "delta", { text: event.text });
         } else if (
           event.type === "tool_call" &&
-          (event.name === "create_document" || event.name.endsWith("create_document"))
+          (event.name === "create_document" ||
+            event.name.endsWith("create_document") ||
+            event.name === "web_search" ||
+            event.name.endsWith("web_search"))
         ) {
           toolCallEmitted = {
-            name: event.name,
+            name: event.name.endsWith("web_search")
+              ? "web_search"
+              : event.name.endsWith("create_document")
+              ? "create_document"
+              : event.name,
             args: event.args,
             thoughtSignature: event.thoughtSignature,
           };
         } else if (event.type === "citation") {
-          // Step 5.5: Only record provider citations when grounding is enabled.
-          // Validate URL (http/https only) and never parse URLs from model text.
-          if (grounding) {
+          // Provider citations are only recorded when web search has been executed
+          if (searchesExecuted > 0) {
             const check = validateCitationUrl(event.url);
-            if (check.valid && check.normalizedUrl) {
-              const existing = active.citations.find(
-                (c) => c.url === check.normalizedUrl
-              );
-              if (existing) {
-                if (!existing.title && event.title) {
-                  existing.title = event.title;
-                }
-                if (!existing.snippet && event.snippet) {
-                  existing.snippet = event.snippet;
-                }
-                if (event.segments && event.segments.length > 0) {
-                  existing.segments = [
-                    ...(existing.segments || []),
-                    ...event.segments,
-                  ];
-                }
-              } else {
-                const nextIndex = active.citations.length + 1;
-                const newCit: CitationItem = {
-                  index: nextIndex,
-                  url: check.normalizedUrl,
-                  title: event.title || check.hostname || null,
-                  snippet: event.snippet || null,
-                  source: "GROUNDING",
-                  segments: event.segments,
-                };
-                active.citations.push(newCit);
-                broadcastEvent(active, "citation", {
-                  index: newCit.index,
-                  url: newCit.url,
-                  title: newCit.title,
-                  snippet: newCit.snippet,
-                  source: newCit.source,
-                });
+          if (check.valid && check.normalizedUrl) {
+            const existing = active.citations.find(
+              (c) => c.url === check.normalizedUrl
+            );
+            if (existing) {
+              if (!existing.title && event.title) {
+                existing.title = event.title;
               }
+              if (!existing.snippet && event.snippet) {
+                existing.snippet = event.snippet;
+              }
+              if (event.segments && event.segments.length > 0) {
+                existing.segments = [
+                  ...(existing.segments || []),
+                  ...event.segments,
+                ];
+              }
+            } else {
+              const nextIndex = active.citations.length + 1;
+              const newCit: CitationItem = {
+                index: nextIndex,
+                url: check.normalizedUrl,
+                title: event.title || check.hostname || null,
+                snippet: event.snippet || null,
+                source: "GROUNDING",
+                segments: event.segments,
+              };
+              active.citations.push(newCit);
+              broadcastEvent(active, "citation", {
+                index: newCit.index,
+                url: newCit.url,
+                title: newCit.title,
+                snippet: newCit.snippet,
+                source: newCit.source,
+              });
             }
           }
+        }
         } else if (event.type === "usage") {
           callUsage = {
             inputTokens: event.inputTokens,
@@ -542,33 +600,93 @@ async function executeDetachedGeneration(params: {
           stage = "writing";
           broadcastEvent(active, "status", { stage: "writing" });
         }
-        // A refused document (title too long, bad format…) is reported back
-        // to the model, which tells the user; the generation goes on.
+
         let toolResponse: Record<string, unknown>;
-        try {
-          const docResult = await executeCreateDocumentToolCall({
-            actorId,
-            workspaceId,
-            versionId,
-            args: toolCallEmitted.args,
-          });
-          const docEvent = {
-            id: docResult.documentId,
-            title: docResult.title,
-            format: docResult.format,
-            currentRevision: docResult.currentRevision,
-          };
-          createdDocuments.push(docEvent);
-          broadcastEvent(active, "document", docEvent);
+
+        if (toolCallEmitted.name === "web_search") {
+          const queryStr =
+            typeof (toolCallEmitted.args as any)?.query === "string"
+              ? (toolCallEmitted.args as any).query
+              : "";
+          broadcastEvent(active, "status", { stage: "searching", query: queryStr });
+          const searchThought = `Searched the web for “${queryStr}”`;
+          active.currentThought = active.currentThought
+            ? `${active.currentThought}\n\n${searchThought}`
+            : searchThought;
+          broadcastEvent(active, "thought", { text: `\n\n${searchThought}\n\n` });
+
+          let searchSummary = "No relevant search results found.";
+          let searchSources: Array<{ url: string; title?: string; snippet?: string }> = [];
+
+          if (queryStr.trim()) {
+            try {
+              searchesExecuted++;
+              const searchRes = await runWebSearch(queryStr, {
+                modelKey: "text-economy",
+                providerInstance: activeProvider,
+              });
+              searchSummary = searchRes.summary;
+              searchSources = searchRes.sources;
+
+              for (const s of searchRes.sources) {
+                const check = validateCitationUrl(s.url);
+                if (check.valid && check.normalizedUrl) {
+                  if (!active.citations.some((c) => c.url === check.normalizedUrl)) {
+                    const nextIndex = active.citations.length + 1;
+                    const newCit: CitationItem = {
+                      index: nextIndex,
+                      url: check.normalizedUrl,
+                      title: s.title || check.hostname || null,
+                      snippet: s.snippet || null,
+                      source: "GROUNDING",
+                    };
+                    active.citations.push(newCit);
+                    broadcastEvent(active, "citation", {
+                      index: newCit.index,
+                      url: newCit.url,
+                      title: newCit.title,
+                      snippet: newCit.snippet,
+                      source: newCit.source,
+                    });
+                  }
+                }
+              }
+            } catch {
+              searchSummary = "Failed to retrieve search results.";
+            }
+          }
+
           toolResponse = {
-            success: true,
-            documentId: docResult.documentId,
-            title: docResult.title,
-            format: docResult.format,
+            summary: searchSummary,
+            sources: searchSources,
           };
-        } catch (err) {
-          if (!(err instanceof ApiError)) throw err;
-          toolResponse = { success: false, error: err.message };
+        } else {
+          // create_document
+          try {
+            const docResult = await executeCreateDocumentToolCall({
+              actorId,
+              workspaceId,
+              versionId,
+              args: toolCallEmitted.args,
+            });
+            const docEvent = {
+              id: docResult.documentId,
+              title: docResult.title,
+              format: docResult.format,
+              currentRevision: docResult.currentRevision,
+            };
+            createdDocuments.push(docEvent);
+            broadcastEvent(active, "document", docEvent);
+            toolResponse = {
+              success: true,
+              documentId: docResult.documentId,
+              title: docResult.title,
+              format: docResult.format,
+            };
+          } catch (err) {
+            if (!(err instanceof ApiError)) throw err;
+            toolResponse = { success: false, error: err.message };
+          }
         }
 
         currentMessages = [
@@ -613,7 +731,7 @@ async function executeDetachedGeneration(params: {
     broadcastEvent(active, "status", { stage: "saving" });
 
     // Position inline [n] markers if grounding segments provided exact offsets
-    if (grounding && active.citations.some((c) => c.segments && c.segments.length > 0)) {
+    if (active.citations.some((c) => c.segments && c.segments.length > 0)) {
       active.currentContent = applyGroundingInlineMarkers(
         active.currentContent,
         active.citations
@@ -625,11 +743,13 @@ async function executeDetachedGeneration(params: {
       usage.outputTokens = estimateTokens(active.currentContent);
     }
 
-    // Settle credits (including +3 surcharge when grounded)
+    usage.searches = searchesExecuted;
+
+    // Settle credits (including +3 surcharge per executed web search)
     const chargedCredits = creditsFor(modelKey, {
       inputTokens: usage.inputTokens,
       outputTokens: usage.outputTokens,
-      grounding: Boolean(grounding),
+      searches: searchesExecuted,
     });
 
     await settle(billedAccountId, generationId, chargedCredits, settleKey);
@@ -671,7 +791,11 @@ async function executeDetachedGeneration(params: {
         data: {
           status: "COMPLETED",
           chargedCredits,
-          usage,
+          usage: {
+            inputTokens: usage.inputTokens,
+            outputTokens: usage.outputTokens,
+            searches: searchesExecuted,
+          },
           finishedAt: new Date(),
         },
       });
@@ -718,9 +842,9 @@ async function executeDetachedGeneration(params: {
         const chargedCredits =
           active.currentContent.length > 0
             ? creditsFor(modelKey, {
+                inputTokens: usage.inputTokens,
                 outputTokens: estimatedOutput,
-                grounding: Boolean(grounding),
-
+                searches: searchesExecuted,
               })
             : 0;
 
@@ -736,6 +860,11 @@ async function executeDetachedGeneration(params: {
             data: {
               status: "CANCELLED",
               chargedCredits,
+              usage: {
+                inputTokens: usage.inputTokens,
+                outputTokens: estimatedOutput,
+                searches: searchesExecuted,
+              },
               finishedAt: new Date(),
             },
           })
@@ -1052,13 +1181,6 @@ export async function createAndStreamGeneration(
     modelKey = (input.modelKey ?? "text-economy") as ModelKey;
   }
 
-  const groundingEnabled = Boolean(input.grounding && kind === "TEXT");
-  if (groundingEnabled && !PLANS[userPlan].limits.grounding) {
-    throw Errors.forbidden(
-      "Web search grounding is not available on the Free plan. Please upgrade to Lite, Standard, or Pro."
-    );
-  }
-
   const model = getModel(modelKey);
   try {
     assertModelAccess(modelKey, ownerEntitlements.plan);
@@ -1250,7 +1372,6 @@ export async function createAndStreamGeneration(
       : creditsFor(modelKey, {
           inputTokens: estimatedInputTokens,
           outputTokens: 4096,
-          grounding: groundingEnabled,
         });
 
   // Daily cap check for image generation (Step 5.4)
@@ -1440,7 +1561,6 @@ export async function createAndStreamGeneration(
     inputMessages: messages,
     systemPrompt,
     think: input.think,
-    grounding: groundingEnabled,
     initialCitations: initialAttachmentCitations,
     providerInstance: options.providerInstance || customProviderForTesting || undefined,
     isFirstTurn,

@@ -442,6 +442,7 @@ model UserPreference {
   userId            String   @id @map("user_id")
   uiLocale          String?  @map("ui_locale")
   aiLanguage        String?  @map("ai_language")
+  webSearchEnabled  Boolean  @default(true) @map("web_search_enabled")
   notificationPrefs Json?    @map("notification_prefs")
   updatedAt         DateTime @updatedAt @map("updated_at")
   user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)

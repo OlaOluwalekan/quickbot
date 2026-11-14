@@ -33,10 +33,13 @@ import {
   ModelKey,
 } from "@/server/ai/registry";
 import { getEntitlements } from "@/server/billing/entitlements";
-import { streamAi, type AiProvider } from "@/server/ai";
-import { AiError } from "@/server/ai/types";
+import { PLANS } from "@/server/billing/plans";
+import { streamAi, type AiProvider, validateCitationUrl } from "@/server/ai";
+import { AiError, type ToolSpec } from "@/server/ai/types";
 import { resolveEffectiveAiLanguage } from "@/lib/locale";
-import { getCustomProvider } from "@/server/services/generation";
+import { getCustomProvider, getSearchesCountToday } from "@/server/services/generation";
+import { WEB_SEARCH_TOOL, runWebSearch } from "@/server/ai/tools/web-search";
+import { getUserPreferences } from "@/server/services/user-preferences";
 import { ANNOTATION_PROMPT_VERSION } from "@/server/ai/prompts/annotation";
 import {
   buildAskContext,
@@ -1311,43 +1314,151 @@ export async function streamAnnotationAnswer(
         });
         send("status", { stage: "writing" });
 
-        const aiStream = streamAi(
-          {
-            modelKey,
-            system: askContext.system,
-            messages: askContext.messages,
-            thinking: { summaries: true },
-          },
-          {
-            userPlan: ownerEntitlements.plan,
-            providerInstance: activeProvider,
-          }
-        );
+        const actorPref = await getUserPreferences(actor.userId).catch(() => ({ webSearchEnabled: true }));
+        const searchesCountToday = await getSearchesCountToday(actor.userId);
+        const limits = PLANS[ownerEntitlements.plan]?.limits ?? PLANS.FREE.limits;
+        const reachedDailyCap = searchesCountToday >= limits.searchesPerDay;
+        const webSearchAllowed =
+          Boolean(actorPref.webSearchEnabled) &&
+          Boolean(limits.grounding) &&
+          !reachedDailyCap;
 
-        for await (const chunk of aiStream) {
-          if (chunk.type === "text_delta" && chunk.text) {
-            fullAssistantText += chunk.text;
-            send("delta", { text: chunk.text });
-          } else if (chunk.type === "thought_delta" && chunk.text) {
-            fullThoughtText += chunk.text;
-            send("thought", { text: chunk.text });
-          } else if (chunk.type === "citation") {
-            if (!chunk.url || citations.some((c) => c.url === chunk.url)) continue;
-            const citation: AnswerCitation = {
-              index: citations.length + 1,
-              url: chunk.url,
-              title: chunk.title ?? null,
-              snippet: chunk.snippet ?? null,
-              source: chunk.source ?? "MODEL_PROVIDED",
-            };
-            citations.push(citation);
-            send("citation", citation);
-          } else if (chunk.type === "usage") {
-            usage = {
-              inputTokens: chunk.inputTokens,
-              outputTokens: chunk.outputTokens,
-            };
+        if (reachedDailyCap) {
+          send("thought", { text: "Web search limit reached for today\n\n" });
+        }
+
+        let searchesExecuted = 0;
+        let toolIterations = 0;
+        const MAX_TOOL_ITERATIONS = 4;
+        let currentMessages = [...askContext.messages];
+
+        while (toolIterations <= MAX_TOOL_ITERATIONS) {
+          const availableTools: ToolSpec[] = [];
+          if (webSearchAllowed && searchesExecuted < 3 && toolIterations < MAX_TOOL_ITERATIONS) {
+            availableTools.push(WEB_SEARCH_TOOL);
           }
+
+          const aiStream = streamAi(
+            {
+              modelKey,
+              system: askContext.system,
+              messages: currentMessages,
+              thinking: { summaries: true },
+              tools: availableTools.length > 0 ? availableTools : undefined,
+            },
+            {
+              userPlan: ownerEntitlements.plan,
+              providerInstance: activeProvider,
+            }
+          );
+
+          let toolCallEmitted: { name: string; args: unknown; thoughtSignature?: string } | null = null;
+          let turnAssistantText = "";
+
+          for await (const chunk of aiStream) {
+            if (chunk.type === "text_delta" && chunk.text) {
+              fullAssistantText += chunk.text;
+              turnAssistantText += chunk.text;
+              send("delta", { text: chunk.text });
+            } else if (chunk.type === "thought_delta" && chunk.text) {
+              fullThoughtText += chunk.text;
+              send("thought", { text: chunk.text });
+            } else if (chunk.type === "tool_call" && (chunk.name === "web_search" || chunk.name.endsWith("web_search"))) {
+              toolCallEmitted = {
+                name: "web_search",
+                args: chunk.args,
+                thoughtSignature: chunk.thoughtSignature,
+              };
+            } else if (chunk.type === "citation") {
+              if (!chunk.url || citations.some((c) => c.url === chunk.url)) continue;
+              const check = validateCitationUrl(chunk.url);
+              if (check.valid && check.normalizedUrl) {
+                const citation: AnswerCitation = {
+                  index: citations.length + 1,
+                  url: check.normalizedUrl,
+                  title: chunk.title || check.hostname || null,
+                  snippet: chunk.snippet ?? null,
+                  source: chunk.source ?? "GROUNDING",
+                };
+                citations.push(citation);
+                send("citation", citation);
+              }
+            } else if (chunk.type === "usage") {
+              usage = {
+                inputTokens: (usage?.inputTokens || 0) + chunk.inputTokens,
+                outputTokens: (usage?.outputTokens || 0) + chunk.outputTokens,
+              };
+            }
+          }
+
+          if (toolCallEmitted && toolIterations < MAX_TOOL_ITERATIONS) {
+            toolIterations++;
+            searchesExecuted++;
+            const queryStr = typeof (toolCallEmitted.args as any)?.query === "string" ? (toolCallEmitted.args as any).query : "";
+            send("status", { stage: "searching", query: queryStr });
+            send("thought", { text: `\n\nSearched the web for “${queryStr}”\n\n` });
+
+            let searchSummary = "No relevant search results found.";
+            let searchSources: Array<{ url: string; title?: string; snippet?: string }> = [];
+
+            if (queryStr.trim()) {
+              try {
+                const searchRes = await runWebSearch(queryStr, {
+                  modelKey: "text-economy",
+                  providerInstance: activeProvider,
+                });
+                searchSummary = searchRes.summary;
+                searchSources = searchRes.sources;
+
+                for (const s of searchRes.sources) {
+                  const check = validateCitationUrl(s.url);
+                  if (check.valid && check.normalizedUrl && !citations.some((c) => c.url === check.normalizedUrl)) {
+                    const nextIndex = citations.length + 1;
+                    const newCit: AnswerCitation = {
+                      index: nextIndex,
+                      url: check.normalizedUrl,
+                      title: s.title || check.hostname || null,
+                      snippet: s.snippet || null,
+                      source: "GROUNDING",
+                    };
+                    citations.push(newCit);
+                    send("citation", newCit);
+                  }
+                }
+              } catch {
+                searchSummary = "Failed to retrieve search results.";
+              }
+            }
+
+            currentMessages = [
+              ...currentMessages,
+              {
+                role: "assistant",
+                parts: [
+                  ...(turnAssistantText ? [{ type: "text" as const, text: turnAssistantText }] : []),
+                  {
+                    type: "tool_call" as const,
+                    name: "web_search",
+                    args: toolCallEmitted.args,
+                    thoughtSignature: toolCallEmitted.thoughtSignature,
+                  },
+                ],
+              },
+              {
+                role: "user",
+                parts: [
+                  {
+                    type: "tool_response" as const,
+                    name: "web_search",
+                    response: { summary: searchSummary, sources: searchSources },
+                  },
+                ],
+              },
+            ];
+            continue;
+          }
+
+          break;
         }
 
         if (!fullAssistantText.trim()) {
@@ -1368,6 +1479,7 @@ export async function streamAnnotationAnswer(
         const chargedCredits = creditsFor(modelKey, {
           inputTokens: usage?.inputTokens || estimatedInputTokens,
           outputTokens: usage?.outputTokens || estimateTokens(fullAssistantText),
+          searches: searchesExecuted,
         });
         await settle(billedAccountId, generationId, chargedCredits, settleKey);
 
@@ -1377,6 +1489,11 @@ export async function streamAnnotationAnswer(
             status: "COMPLETED",
             finishedAt: new Date(),
             chargedCredits,
+            usage: {
+              inputTokens: usage?.inputTokens || estimatedInputTokens,
+              outputTokens: usage?.outputTokens || estimateTokens(fullAssistantText),
+              searches: searchesExecuted,
+            },
           },
         });
 

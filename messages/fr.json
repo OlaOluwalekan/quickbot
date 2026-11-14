@@ -188,10 +188,16 @@
     "attachLimitReached": "Maximum 3 pièces jointes autorisées pour votre forfait",
     "attachSizeExceeded": "La taille du fichier dépasse la limite de 5 Mo",
     "dropFilesHere": "Déposez les fichiers à joindre",
-    "searchWeb": "Rechercher sur le Web",
-    "searchWebDesc": "Ancrer les r?ponses avec Google Search (+3 cr?dits)"
+    "webSearchOff": "La recherche web est désactivée",
+    "changeInSettings": "Modifier dans les paramètres"
   },
   "Settings": {
+    "ai": {
+      "title": "Préférences de l'IA",
+      "subtitle": "Personnalisez la façon dont Klecx réfléchit et répond à vos demandes.",
+      "searchLabel": "Rechercher sur le web si utile",
+      "searchHint": "Klecx peut rechercher sur le web des faits récents, des prix et de la documentation."
+    },
     "title": "Paramètres de l'espace",
     "subtitle": "Gérez votre profil, vos préférences et votre consommation de jetons.",
     "backToChat": "Retour au Chat",
@@ -521,6 +527,7 @@
     "preparing": "Preparing…",
     "writing": "Writing…",
     "saving": "Saving…",
+    "searching": "Recherche sur le web…",
     "tryAgain": "Try again",
     "jumpToLatest": "Jump to latest",
     "offline": "You are currently offline. Check your network connection.",

@@ -43,6 +43,7 @@ export function ThinkingPanel({
     if (lower === "thinking") return t("thinking");
     if (lower === "writing") return t("writing");
     if (lower === "saving") return t("saving");
+    if (lower === "searching") return t("searching");
     return s.charAt(0).toUpperCase() + s.slice(1);
   };
 
