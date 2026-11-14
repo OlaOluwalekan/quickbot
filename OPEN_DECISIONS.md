@@ -79,3 +79,27 @@ Review items that are already decided and only wait for a later step live in `CL
 | 4 | Billing mechanics | Seat changes mid-period (prorated with the merchant of record), minimum seats on downgrade, what happens to content when a seat is removed (same grace → read-only rule as today). |
 | 5 | When | After launch, once there are teams asking for it. |
 
+
+---
+
+## 4. An owner-wide daily web search cap
+
+**The situation.** Web search costs +3 credits per executed search, paid by the workspace owner. The daily search limit is counted **per person, per owner** (decided 2026-11-14, see "Web search" in `CLAUDE.md`): each member may run up to the owner's plan `searchesPerDay` in that owner's workspaces. With several members, the owner can pay for several times that number of searches a day (Pro, 5 collaborators: up to 6 × 200).
+
+**Today.** No owner-wide cap. The owner's spending is already limited by:
+
+- their credit balance (searches are paid from it, never beyond it);
+- the per-member monthly credit cap the owner can set (Step 7.5, `collaborator_cap_exceeded`), which covers searches;
+- the number of collaborators per plan (Step 8.1: Free/Lite 0, Standard 3, Pro 5).
+
+Known gap: the credit hold before an answer covers the base cost only (decided 2026-11-14), so a member at their monthly cap can go over it by up to 9 credits (3 searches in one answer).
+
+**Options.**
+
+| | Option | Effect |
+|---|---|---|
+| A | No owner-wide cap (today, recommended) | Members never block each other. The owner controls spending with per-member caps. |
+| B | Owner-wide cap | All searches in one owner's workspaces share one daily number (e.g. `searchesPerDay`). Caps the owner's daily search spend, but one busy member can turn search off for everyone that day, which is confusing. |
+| C | A + search usage per member | Show searches (and their credits) per member in the owner's usage view, so the owner sees who spends and can set caps. Visibility, no new limit. |
+
+**If nothing is decided:** stays at A. If owners worry about cost later, add C before considering B.
