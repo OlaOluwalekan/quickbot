@@ -33,10 +33,17 @@ import {
   ModelKey,
 } from "@/server/ai/registry";
 import { getEntitlements } from "@/server/billing/entitlements";
-import { streamAi, type AiProvider } from "@/server/ai";
+import { streamAi, type AiProvider, validateCitationUrl } from "@/server/ai";
 import { AiError } from "@/server/ai/types";
 import { resolveEffectiveAiLanguage } from "@/lib/locale";
 import { getCustomProvider } from "@/server/services/generation";
+import { WEB_SEARCH_TOOL } from "@/server/ai/tools/web-search";
+import {
+  MAX_SEARCHES_PER_GENERATION,
+  executeWebSearchTool,
+  resolveWebSearchAccess,
+  webSearchNotice,
+} from "@/server/services/web-search";
 import { ANNOTATION_PROMPT_VERSION } from "@/server/ai/prompts/annotation";
 import {
   buildAskContext,
@@ -1302,6 +1309,7 @@ export async function streamAnnotationAnswer(
       let fullThoughtText = "";
       const citations: AnswerCitation[] = [];
       let usage: { inputTokens: number; outputTokens: number } | null = null;
+      let searchesExecuted = 0;
 
       try {
         send("started", {
@@ -1311,43 +1319,153 @@ export async function streamAnnotationAnswer(
         });
         send("status", { stage: "writing" });
 
-        const aiStream = streamAi(
-          {
-            modelKey,
-            system: askContext.system,
-            messages: askContext.messages,
-            thinking: { summaries: true },
-          },
-          {
-            userPlan: ownerEntitlements.plan,
-            providerInstance: activeProvider,
-          }
-        );
+        // F4.1: Asks use the same web_search tool rule as main answers.
+        const webSearch = model.caps.tools
+          ? await resolveWebSearchAccess(actor.userId, billedAccountId, ownerEntitlements)
+          : { allowed: false, reachedDailyCap: false, locale: null };
 
-        for await (const chunk of aiStream) {
-          if (chunk.type === "text_delta" && chunk.text) {
-            fullAssistantText += chunk.text;
-            send("delta", { text: chunk.text });
-          } else if (chunk.type === "thought_delta" && chunk.text) {
-            fullThoughtText += chunk.text;
-            send("thought", { text: chunk.text });
-          } else if (chunk.type === "citation") {
-            if (!chunk.url || citations.some((c) => c.url === chunk.url)) continue;
-            const citation: AnswerCitation = {
-              index: citations.length + 1,
-              url: chunk.url,
-              title: chunk.title ?? null,
-              snippet: chunk.snippet ?? null,
-              source: chunk.source ?? "MODEL_PROVIDED",
-            };
-            citations.push(citation);
-            send("citation", citation);
-          } else if (chunk.type === "usage") {
-            usage = {
-              inputTokens: chunk.inputTokens,
-              outputTokens: chunk.outputTokens,
-            };
+        if (webSearch.reachedDailyCap) {
+          const notice = webSearchNotice(webSearch.locale, "searchLimitReached");
+          fullThoughtText += `${notice}\n\n`;
+          send("thought", { text: `${notice}\n\n` });
+        }
+
+        const MAX_TOOL_ITERATIONS = MAX_SEARCHES_PER_GENERATION;
+        let toolIterations = 0;
+        let currentMessages = [...askContext.messages];
+        let inputTokens = 0;
+        let outputTokens = 0;
+        let gotUsage = false;
+
+        while (true) {
+          const offerSearch =
+            webSearch.allowed &&
+            searchesExecuted < MAX_SEARCHES_PER_GENERATION &&
+            toolIterations < MAX_TOOL_ITERATIONS;
+
+          const aiStream = streamAi(
+            {
+              modelKey,
+              system: askContext.system,
+              messages: currentMessages,
+              thinking: { summaries: true },
+              tools: offerSearch ? [WEB_SEARCH_TOOL] : undefined,
+            },
+            {
+              userPlan: ownerEntitlements.plan,
+              providerInstance: activeProvider,
+            }
+          );
+
+          let toolCall: { args: unknown; thoughtSignature?: string } | null = null;
+          let turnText = "";
+          // Usage chunks are running totals for one call: keep the last.
+          let callUsage: { inputTokens: number; outputTokens: number } | null = null;
+
+          for await (const chunk of aiStream) {
+            if (chunk.type === "text_delta" && chunk.text) {
+              fullAssistantText += chunk.text;
+              turnText += chunk.text;
+              send("delta", { text: chunk.text });
+            } else if (chunk.type === "thought_delta" && chunk.text) {
+              fullThoughtText += chunk.text;
+              send("thought", { text: chunk.text });
+            } else if (chunk.type === "thought_signature") {
+              if (toolCall && !toolCall.thoughtSignature) {
+                toolCall.thoughtSignature = chunk.signature;
+              }
+            } else if (chunk.type === "tool_call" && chunk.name.endsWith("web_search")) {
+              toolCall = { args: chunk.args, thoughtSignature: chunk.thoughtSignature };
+            } else if (chunk.type === "citation") {
+              if (!chunk.url) continue;
+              const check = validateCitationUrl(chunk.url);
+              if (!check.valid || !check.normalizedUrl) continue;
+              if (citations.some((c) => c.url === check.normalizedUrl)) continue;
+              const citation: AnswerCitation = {
+                index: citations.length + 1,
+                url: check.normalizedUrl,
+                title: chunk.title || check.hostname || null,
+                snippet: chunk.snippet ?? null,
+                source: chunk.source ?? "MODEL_PROVIDED",
+              };
+              citations.push(citation);
+              send("citation", citation);
+            } else if (chunk.type === "usage") {
+              callUsage = {
+                inputTokens: chunk.inputTokens,
+                outputTokens: chunk.outputTokens,
+              };
+            }
           }
+
+          if (callUsage) {
+            gotUsage = true;
+            inputTokens += callUsage.inputTokens;
+            outputTokens += callUsage.outputTokens;
+          }
+
+          if (!toolCall) break;
+
+          toolIterations++;
+          let toolResponse: Record<string, unknown>;
+          if (offerSearch) {
+            const result = await executeWebSearchTool({
+              args: toolCall.args,
+              providerInstance: activeProvider,
+              citations,
+              onCitation: (citation) => {
+                citations.push(citation);
+                send("citation", citation);
+              },
+              onSearchStart: (query) => send("status", { stage: "searching", query }),
+            });
+            if (result.executed) {
+              searchesExecuted++;
+              const notice = webSearchNotice(webSearch.locale, "searchedWeb", {
+                query: result.query,
+              });
+              fullThoughtText += `\n\n${notice}\n\n`;
+              send("thought", { text: `\n\n${notice}\n\n` });
+              send("status", { stage: "writing" });
+            }
+            toolResponse = result.response;
+          } else {
+            // Called without being offered (search off or limit reached).
+            toolResponse = { error: "Web search is not available now. Answer without it." };
+          }
+
+          currentMessages = [
+            ...currentMessages,
+            {
+              role: "assistant",
+              parts: [
+                ...(turnText ? [{ type: "text" as const, text: turnText }] : []),
+                {
+                  type: "tool_call" as const,
+                  name: "web_search",
+                  args: toolCall.args,
+                  thoughtSignature: toolCall.thoughtSignature,
+                },
+              ],
+            },
+            {
+              role: "user",
+              parts: [
+                {
+                  type: "tool_response" as const,
+                  name: "web_search",
+                  response: toolResponse,
+                },
+              ],
+            },
+          ];
+
+          // Last round: the model must answer in text.
+          if (toolIterations > MAX_TOOL_ITERATIONS) break;
+        }
+
+        if (gotUsage) {
+          usage = { inputTokens, outputTokens };
         }
 
         if (!fullAssistantText.trim()) {
@@ -1368,6 +1486,7 @@ export async function streamAnnotationAnswer(
         const chargedCredits = creditsFor(modelKey, {
           inputTokens: usage?.inputTokens || estimatedInputTokens,
           outputTokens: usage?.outputTokens || estimateTokens(fullAssistantText),
+          searches: searchesExecuted,
         });
         await settle(billedAccountId, generationId, chargedCredits, settleKey);
 
@@ -1377,6 +1496,11 @@ export async function streamAnnotationAnswer(
             status: "COMPLETED",
             finishedAt: new Date(),
             chargedCredits,
+            usage: {
+              inputTokens: usage?.inputTokens || estimatedInputTokens,
+              outputTokens: usage?.outputTokens || estimateTokens(fullAssistantText),
+              searches: searchesExecuted,
+            },
           },
         });
 

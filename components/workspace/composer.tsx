@@ -19,7 +19,6 @@ import {
   Check,
   Loader2,
   RotateCcw,
-  Search,
   Send,
   Sparkles,
   Square,
@@ -43,6 +42,7 @@ import { CLIENT_MODELS, type ClientModelOption } from "@/lib/ai/client-models";
 import { AI_LANGUAGES, type AiLanguage } from "@/lib/locale";
 import type { WorkspaceDto } from "@/lib/api/hooks/workspaces";
 import { useEntitlements } from "@/lib/api/hooks/entitlements";
+import { useUserPreferences } from "@/lib/api/hooks/me";
 import { QuestionQueuePopover } from "@/components/workspace/question-queue-popover";
 import {
   Popover,
@@ -76,6 +76,8 @@ export interface ComposerProps {
   ) => void;
   onStop?: () => void;
   credits?: { plan: string; balance: number };
+  /** Signed-in user: reads their preferences (the "web search is off" line). */
+  userId?: string;
 }
 
 export interface ComposerAttachment {
@@ -104,6 +106,7 @@ export function Composer({
   onCompleted: onCompletedProp,
   onStop,
   credits,
+  userId,
 }: ComposerProps) {
   const t = useTranslations("Chat");
   const tHome = useTranslations("Home");
@@ -137,7 +140,9 @@ export function Composer({
   );
   const [selectedModel, setSelectedModel] = React.useState<string>("text-economy");
   const [thinkHarder, setThinkHarder] = React.useState(false);
-  const [grounding, setGrounding] = React.useState(false);
+  // F4.1: search is a Settings preference; only say so when it's off.
+  const { data: preferences } = useUserPreferences(userId ?? "");
+  const webSearchOff = preferences?.webSearchEnabled === false;
   const [selectedLanguage, setSelectedLanguage] = React.useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [creationError, setCreationError] = React.useState<string | null>(null);
@@ -441,7 +446,6 @@ export function Composer({
 
     const effectiveModelKey = mode === "image" ? "image-standard" : selectedModel;
     const effectiveKind = mode === "image" ? "IMAGE" : "TEXT";
-    const effectiveGrounding = mode === "text" && grounding ? true : undefined;
 
     setIsSubmitting(true);
     setCreationError(null);
@@ -472,7 +476,6 @@ export function Composer({
             modelKey: effectiveModelKey,
             kind: effectiveKind,
             think: thinkHarder,
-            grounding: effectiveGrounding,
             language: selectedLanguage || undefined,
             attachmentIds: readyAttachmentIds.length > 0 ? readyAttachmentIds : undefined,
           },
@@ -546,7 +549,6 @@ export function Composer({
         idempotencyKey,
         mode,
         thinkHarder,
-        grounding: effectiveGrounding,
         language: selectedLanguage,
         attachmentIds: readyAttachmentIds.length > 0 ? readyAttachmentIds : undefined,
       });
@@ -1145,28 +1147,6 @@ export function Composer({
             <span className="hidden sm:inline">{t("thinkHarder")}</span>
           </button>
 
-          {/* Search the web (Grounding) Toggle */}
-          {mode === "text" && (
-            <button
-              type="button"
-              data-testid="composer-grounding-toggle"
-              onClick={() => setGrounding((prev) => !prev)}
-              title={t("searchWebDesc" as any) || "Search the web (+3 credits)"}
-              aria-pressed={grounding}
-              className={cn(
-                "inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium transition-colors cursor-pointer border",
-                grounding
-                  ? "bg-accent text-accent-fg border-accent shadow-xs"
-                  : "bg-surface-2 text-muted hover:text-fg hover:bg-surface-3 border-border/50",
-              )}
-            >
-              <Search className="h-3 w-3" />
-              <span className="hidden sm:inline">
-                {t("searchWeb" as any) || "Search the web"}
-              </span>
-            </button>
-          )}
-
           {/* Question Queue Popover (Step 6.5) */}
           <QuestionQueuePopover workspaceId={workspaceId} />
         </div>
@@ -1212,6 +1192,14 @@ export function Composer({
           )}
         </div>
       </div>
+      {webSearchOff && (
+        <p className="mt-1.5 text-center text-[11px] text-muted">
+          {t("webSearchOff")} ·{" "}
+          <Link href="/settings" className="underline hover:text-fg">
+            {t("changeInSettings")}
+          </Link>
+        </p>
+      )}
     </form>
   );
 }

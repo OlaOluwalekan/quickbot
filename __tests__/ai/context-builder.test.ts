@@ -470,13 +470,13 @@ describe("Context builder and system prompts (Step 2.3)", () => {
       });
 
       expect(result.system).toContain("Response language: de.");
-      expect(PROMPT_VERSION).toBe("2026-11-1"); // bumped in F2.3 (Klecx notes)
+      expect(PROMPT_VERSION).toBe("2026-11-14"); // bumped in F4.1 (web_search tool, inline citations)
     });
   });
 
   describe("6. Annotation prompt templates", () => {
     it("builds annotation reply and batch questions prompts with versioning", () => {
-      expect(ANNOTATION_PROMPT_VERSION).toBe("2026-11-1"); // bumped in F2.5 (focused Ask context)
+      expect(ANNOTATION_PROMPT_VERSION).toBe("2026-11-14"); // bumped in F4.1 (inline citations from web search)
 
       const askMessage = buildAskUserMessage({
         containingText: "The contract has a crucial contract clause about fees.",

@@ -112,6 +112,7 @@ export interface TokenUsageInput {
   thoughtTokens?: number;
   images?: number;
   grounding?: boolean;
+  searches?: number;
 }
 
 export function creditsFor(modelKey: string, u: TokenUsageInput = {}): number {
@@ -131,8 +132,10 @@ export function creditsFor(modelKey: string, u: TokenUsageInput = {}): number {
   }
 
   const baseCredits = Math.max(1, Math.ceil(costUsd / CREDIT_USD));
+  const searchCount =
+    u.searches !== undefined ? u.searches : u.grounding ? 1 : 0;
   const surcharge =
-    model.kind === "TEXT" && u.grounding ? GROUNDING_SURCHARGE_CREDITS : 0;
+    model.kind === "TEXT" ? searchCount * GROUNDING_SURCHARGE_CREDITS : 0;
 
   return baseCredits + surcharge;
 }

@@ -188,10 +188,19 @@
     "attachLimitReached": "Maximum 3 attachments allowed for your plan",
     "attachSizeExceeded": "File size exceeds 5 MB limit",
     "dropFilesHere": "Drop files to attach",
-    "searchWeb": "Search the web",
-    "searchWebDesc": "Ground answers with Google Search (+3 credits)"
+    "webSearchOff": "Web search is off",
+    "changeInSettings": "Change in Settings"
   },
   "Settings": {
+    "ai": {
+      "title": "AI preferences",
+      "subtitle": "Customize how Klecx thinks and answers your requests.",
+      "searchLabel": "Search the web when helpful",
+      "searchHint": "Klecx can search the web for current facts, prices and documentation. Each search costs 3 credits.",
+      "searchOnToast": "Web search turned on",
+      "searchOffToast": "Web search turned off",
+      "saveError": "Couldn't save your AI preferences. Try again."
+    },
     "title": "Workspace Settings",
     "subtitle": "Manage your profile, preferences, and token consumption.",
     "backToChat": "Back to Chat",
@@ -521,6 +530,9 @@
     "preparing": "Preparing…",
     "writing": "Writing…",
     "saving": "Saving…",
+    "searching": "Searching the web…",
+    "searchedWeb": "Searched the web for “{query}”",
+    "searchLimitReached": "Web search limit reached for today",
     "tryAgain": "Try again",
     "jumpToLatest": "Jump to latest",
     "offline": "You are currently offline. Check your network connection.",

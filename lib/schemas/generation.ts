@@ -8,7 +8,6 @@ export const createGenerationSchema = z.object({
   attachmentIds: z.array(z.string()).optional(),
   regenerateResponseId: z.string().optional(),
   think: z.boolean().optional(),
-  grounding: z.boolean().optional(),
   language: z.string().optional(),
 });
 

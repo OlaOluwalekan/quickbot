@@ -42,78 +42,90 @@ import type { Actor } from "@/server/auth/session";
 class FakeGroundedAiProvider implements AiProvider {
   id = "gemini" as const;
   private callCount = 0;
+  private isRegen = false;
 
   async *stream(req: GenerateRequest): AsyncIterable<StreamEvent> {
-    this.callCount += 1;
-    const isRegen = this.callCount > 1;
-
     if (req.grounding) {
-      const sentence1 = isRegen
-        ? "PostgreSQL 17 introduces enhanced vacuum memory management."
-        : "PostgreSQL uses multiversion concurrency control for isolation.";
-      const sentence2 = isRegen
-        ? " It also improves B-tree index performance for IN lists."
-        : " Read replicas can scale horizontal read throughput.";
-
-      yield { type: "text_delta", text: sentence1 };
-      yield { type: "text_delta", text: sentence2 };
-
+      yield { type: "text_delta", text: "PostgreSQL concurrency details" };
       yield {
         type: "citation",
-        url: isRegen
+        url: this.isRegen
           ? "https://www.postgresql.org/docs/17/release-17.html"
           : "https://www.postgresql.org/docs/current/mvcc.html",
-        title: isRegen ? "PostgreSQL 17 Release Notes" : "PostgreSQL MVCC Docs",
-        snippet: sentence1,
+        title: this.isRegen ? "PostgreSQL 17 Release Notes" : "PostgreSQL MVCC Docs",
+        snippet: "MVCC details",
         source: "GROUNDING",
-        segments: [
-          {
-            startIndex: 0,
-            endIndex: sentence1.length,
-            text: sentence1,
-          },
-        ],
       };
-
       yield {
         type: "citation",
-        url: isRegen
+        url: this.isRegen
           ? "https://www.postgresql.org/docs/17/indexes-types.html"
           : "https://www.postgresql.org/docs/current/high-availability.html",
-        title: isRegen ? "PostgreSQL 17 Indexes" : "High Availability & Replication",
-        snippet: sentence2.trim(),
+        title: this.isRegen ? "PostgreSQL 17 Indexes" : "High Availability & Replication",
+        snippet: "High availability details",
         source: "GROUNDING",
-        segments: [
-          {
-            startIndex: sentence1.length,
-            endIndex: sentence1.length + sentence2.length,
-            text: sentence2.trim(),
-          },
-        ],
       };
-
-      // Also emit a dangerous non-http URL to verify it is filtered out
       yield {
         type: "citation",
         url: "javascript:alert(1)",
         title: "Malicious Scheme",
         source: "GROUNDING",
       };
-    } else {
-      // Ungrounded response that happens to mention a URL in plain text
-      // AND a stray citation event to verify ungrounded mode never records grounding citations
-      yield {
-        type: "text_delta",
-        text: "You can read more at https://remembered-by-model.example.com/guide in the docs.",
-      };
-      yield {
-        type: "citation",
-        url: "https://stray-grounding.example.com",
-        title: "Should Be Ignored When Grounding Is False",
-        source: "GROUNDING",
-      };
+      return;
     }
 
+    const lastMsg = req.messages[req.messages.length - 1];
+    const textPrompt = lastMsg?.parts.find((p) => p.type === "text")?.text ?? "";
+    const hasToolResponse = req.messages.some((m) =>
+      m.parts.some((p) => p.type === "tool_response" && p.name === "web_search")
+    );
+    const shouldSearch =
+      req.tools?.some((t) => t.name === "web_search") &&
+      (textPrompt.includes("concurrency") ||
+        textPrompt.includes("Search the web") ||
+        textPrompt.includes("architecture"));
+
+    if (shouldSearch && !hasToolResponse) {
+      this.callCount += 1;
+      this.isRegen = this.callCount > 1;
+      yield {
+        type: "tool_call",
+        name: "web_search",
+        args: { query: "PostgreSQL concurrency" },
+      };
+      return;
+    }
+
+    if (hasToolResponse) {
+      const sentence1 = this.isRegen
+        ? "PostgreSQL 17 introduces enhanced vacuum memory management [1]."
+        : "PostgreSQL uses multiversion concurrency control for isolation [1].";
+      const sentence2 = this.isRegen
+        ? " It also improves B-tree index performance for IN lists [2]."
+        : " Read replicas can scale horizontal read throughput [2].";
+
+      yield { type: "text_delta", text: sentence1 };
+      yield { type: "text_delta", text: sentence2 };
+      yield {
+        type: "usage",
+        inputTokens: 200,
+        outputTokens: 100,
+        estimated: false,
+      };
+      return;
+    }
+
+    // Ungrounded turn
+    yield {
+      type: "text_delta",
+      text: "You can read more at https://remembered-by-model.example.com/guide in the docs.",
+    };
+    yield {
+      type: "citation",
+      url: "https://stray-grounding.example.com",
+      title: "Should Be Ignored When Grounding Is False",
+      source: "GROUNDING",
+    };
     yield {
       type: "usage",
       inputTokens: 200,
@@ -252,46 +264,46 @@ describe("Step 5.5 — Citations and References", () => {
   });
 
   describe("2. Pricing Surcharge & Plan Gate", () => {
-    it("adds +3 credit surcharge when grounding is enabled", () => {
+    it("adds +3 credits per executed web search", () => {
       const baseCredits = creditsFor("text-economy", {
         inputTokens: 200,
         outputTokens: 100,
-        grounding: false,
       });
-      const groundedCredits = creditsFor("text-economy", {
+      const oneSearch = creditsFor("text-economy", {
         inputTokens: 200,
         outputTokens: 100,
-        grounding: true,
+        searches: 1,
+      });
+      const twoSearches = creditsFor("text-economy", {
+        inputTokens: 200,
+        outputTokens: 100,
+        searches: 2,
       });
 
       expect(GROUNDING_SURCHARGE_CREDITS).toBe(3);
-      expect(groundedCredits).toBe(baseCredits + 3);
+      expect(oneSearch).toBe(baseCredits + 3);
+      expect(twoSearches).toBe(baseCredits + 6);
     });
 
-    it("blocks grounded search with 403 forbidden before reserving credits when plan grounding is disabled", async () => {
-      setUserPlanOverride(user.id, "FREE");
-      const prevGrounding = PLANS.FREE.limits.grounding;
-      (PLANS.FREE.limits as { grounding: boolean }).grounding = false;
-      try {
-        const beforeAccount = await getAccountByUserId(user.id);
+    it("runs ungrounded without surcharge when web search preference is off", async () => {
+      const { updateUserPreferences } = await import("@/server/services/user-preferences");
+      await updateUserPreferences(user.id, { webSearchEnabled: false });
 
-        await expect(
-          createAndStreamGeneration(actor, workspace.id, {
-            idempotencyKey: `idem_free_ground_${Date.now()}`,
-            prompt: "Search the web for PostgreSQL news",
-            modelKey: "text-economy",
-            kind: "TEXT",
-            grounding: true,
-          })
-        ).rejects.toThrow(ApiError);
+      const beforeAccount = await getAccountByUserId(user.id);
+      const beforeTotal = (beforeAccount?.planBalance ?? 0) + (beforeAccount?.topupBalance ?? 0);
 
-        const afterAccount = await getAccountByUserId(user.id);
-        expect(afterAccount?.planBalance).toBe(beforeAccount?.planBalance);
-        expect(afterAccount?.topupBalance).toBe(beforeAccount?.topupBalance);
-      } finally {
-        (PLANS.FREE.limits as { grounding: boolean }).grounding = prevGrounding;
-        setUserPlanOverride(user.id, "LITE");
-      }
+      const { stream } = await createAndStreamGeneration(actor, workspace.id, {
+        idempotencyKey: `idem_search_off_${Date.now()}`,
+        prompt: "Search the web for PostgreSQL news",
+        modelKey: "text-economy",
+        kind: "TEXT",
+      });
+      await readAllSse(stream);
+
+      const afterAccount = await getAccountByUserId(user.id);
+      const afterTotal = (afterAccount?.planBalance ?? 0) + (afterAccount?.topupBalance ?? 0);
+      const expectedCharge = creditsFor("text-economy", { inputTokens: 200, outputTokens: 100 });
+      expect(beforeTotal - afterTotal).toBe(expectedCharge);
     });
   });
 
@@ -306,7 +318,6 @@ describe("Step 5.5 — Citations and References", () => {
         prompt: "How does PostgreSQL handle concurrency and read scaling?",
         modelKey: "text-economy",
         kind: "TEXT",
-        grounding: true,
       });
 
       const sseOutput = await readAllSse(stream);
@@ -319,7 +330,7 @@ describe("Step 5.5 — Citations and References", () => {
       const expectedCharge = creditsFor("text-economy", {
         inputTokens: 200,
         outputTokens: 100,
-        grounding: true,
+        searches: 1,
       });
       expect(beforeTotal - afterTotal).toBe(expectedCharge);
 
@@ -353,7 +364,6 @@ describe("Step 5.5 — Citations and References", () => {
         prompt: "Tell me about PostgreSQL",
         modelKey: "text-economy",
         kind: "TEXT",
-        grounding: false,
       });
 
       await readAllSse(stream);
@@ -389,7 +399,6 @@ describe("Step 5.5 — Citations and References", () => {
         prompt: "Summarize this specification link",
         modelKey: "text-economy",
         kind: "TEXT",
-        grounding: false,
         attachmentIds: [linkAtt.id],
       });
 
@@ -418,7 +427,6 @@ describe("Step 5.5 — Citations and References", () => {
           prompt: "Explain PostgreSQL architecture",
           modelKey: "text-economy",
           kind: "TEXT",
-          grounding: true,
         }
       );
       await readAllSse(s1);

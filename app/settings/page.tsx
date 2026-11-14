@@ -8,7 +8,9 @@ import NameAndEmail from "@/components/settings/NameAndEmail";
 import SettingsCard from "@/components/settings/SettingsCard";
 import TokensDisplay from "@/components/settings/TokensDisplay";
 import UserProfileImage from "@/components/settings/UserProfileImage";
+import AiPreferences from "@/components/settings/AiPreferences";
 import { getUserAvatar } from "@/server/services/avatar";
+import { getUserPreferences } from "@/server/services/user-preferences";
 import { Button } from "@/components/ui/button";
 import { SessionProps } from "@/types/user";
 import { getTranslations } from "next-intl/server";
@@ -27,6 +29,7 @@ const SettingsPage = async () => {
   const actor = await requireActor();
   const t = await getTranslations("Settings");
   const avatarData = await getUserAvatar(actor.userId).catch(() => null);
+  const userPref = await getUserPreferences(actor.userId).catch(() => null);
 
   const sessionUser: SessionProps = {
     id: actor.userId,
@@ -117,7 +120,11 @@ const SettingsPage = async () => {
             </div>
 
             {/* Token Usage Column */}
-            <div className="lg:col-span-7">
+            <div className="lg:col-span-7 flex flex-col gap-6">
+              <AiPreferences
+                userId={actor.userId}
+                initialWebSearchEnabled={userPref?.webSearchEnabled ?? true}
+              />
               <TokensDisplay user={sessionUser} />
             </div>
           </div>
