@@ -11,7 +11,11 @@ import {
   useGenerationStore,
 } from "@/lib/stores/generation";
 import { streamGeneration, streamRegeneration, type CitationDto } from "@/lib/api/sse";
-import { useResponses } from "@/lib/api/hooks/responses";
+import {
+  insertCompletedResponse,
+  useResponses,
+  type GeneratedDocumentDto,
+} from "@/lib/api/hooks/responses";
 import { queryKeys } from "@/lib/api/hooks/query-keys";
 import { Composer } from "@/components/workspace/composer";
 import { ResponseList } from "@/components/response/response-list";
@@ -42,6 +46,7 @@ export interface WorkspaceViewProps {
       avatarUrl?: string;
     };
     citations?: CitationDto[];
+    documents?: GeneratedDocumentDto[];
     attachments?: Array<{
       id: string;
       kind: string;
@@ -147,6 +152,7 @@ export function WorkspaceView({
               } | null;
               latestEditContent?: string | null;
               citations?: CitationDto[];
+              documents?: GeneratedDocumentDto[];
             };
             response?: string;
             latestEdit?: { id?: string; revision?: number; content?: string };
@@ -222,6 +228,7 @@ export function WorkspaceView({
                   hasEdits: Boolean(activeVer.hasEdits || latestEdit),
                   latestEdit: activeVer.latestEdit ?? null,
                   latestEditContent: latestEdit,
+                  documents: activeVer.documents ?? [],
                   citations: verCitations,
                 }
               : null,
@@ -257,6 +264,7 @@ export function WorkspaceView({
         content: r.content || "",
         originalContent: r.content || "",
         citations: r.citations ?? [],
+        documents: r.documents ?? [],
       },
     }));
   }, [responsesData, localResponses, workspace.id]);
@@ -302,6 +310,10 @@ export function WorkspaceView({
             useGenerationStore.getState().appendCitation(workspace.id, data);
           },
           onCompleted: (data) => {
+            insertCompletedResponse(queryClient, actor.userId, workspace.id, {
+              ...data,
+              prompt: promptText,
+            });
             useGenerationStore.getState().completeStream(workspace.id, data.content, data.citations);
             setLocalResponses((prev) => [
               ...prev,
@@ -311,6 +323,7 @@ export function WorkspaceView({
                 kind: effectiveKind,
                 content: data.content,
                 citations: data.citations ?? [],
+                documents: data.documents ?? [],
                 createdAt: new Date(),
               },
             ]);
@@ -567,6 +580,12 @@ export function WorkspaceView({
               workspaceId={workspace.id}
               size="compact"
               className="vt-composer shadow-lg"
+              onCompleted={(data, prompt) =>
+                insertCompletedResponse(queryClient, actor.userId, workspace.id, {
+                  ...data,
+                  prompt,
+                })
+              }
               onSubmitted={() => {
                 refetchResponses();
                 queryClient.invalidateQueries({

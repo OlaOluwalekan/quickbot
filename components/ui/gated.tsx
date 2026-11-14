@@ -38,6 +38,10 @@ function gateMessage(reason: GateReason, t: GateTranslator): string {
       return t("no_permission", { capability: reason.capability });
     case "max_depth":
       return t("max_depth", { depth: reason.depth });
+    case "owner_plan":
+      return t("owner_plan", {
+        plan: PLANS[reason.plan]?.name ?? reason.plan,
+      });
   }
 }
 

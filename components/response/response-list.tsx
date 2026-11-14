@@ -250,6 +250,9 @@ export function ResponseList({
                     ? capabilities.includes("workspace.edit_response")
                     : undefined
                 }
+                canExport={
+                  capabilities ? capabilities.includes("workspace.export") : undefined
+                }
                 onRegenerate={onRegenerateTurn}
                 onDelete={onDeleteResponse}
                 isFirstPrompt={idx === 0 && !optimisticPrompt}

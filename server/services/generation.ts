@@ -4,7 +4,7 @@ import "server-only";
 import crypto from "node:crypto";
 import { db } from "@/server/db/client";
 import { env } from "@/server/env";
-import { Errors } from "@/server/http/errors";
+import { ApiError, Errors } from "@/server/http/errors";
 import type { Actor } from "@/server/auth/session";
 import { requireWorkspace } from "@/server/authz/access";
 import { logActivity } from "./activity";
@@ -46,7 +46,7 @@ import {
   CreateGenerationInput,
 } from "@/lib/schemas/generation";
 import { getStorageProvider } from "@/server/storage";
-import type { Part } from "@/server/ai/types";
+import type { Msg, Part } from "@/server/ai/types";
 import { normalizeGeminiError } from "@/server/ai/errors";
 import { resolveEffectiveAiLanguage } from "@/lib/locale";
 
@@ -401,120 +401,208 @@ async function executeDetachedGeneration(params: {
         }
       : { summaries: false };
 
-    const stream = streamAi(
-      {
-        modelKey,
-        messages: inputMessages,
-        system: systemPrompt,
-        thinking: thinkingConfig,
-        tools: !grounding && modelDef.caps.tools ? [CREATE_DOCUMENT_TOOL] : undefined,
-
-        grounding: Boolean(grounding),
-
-      },
-      {
-        userPlan,
-        providerInstance: activeProvider,
-      }
-    );
-
     let stage: "preparing" | "thinking" | "writing" = "preparing";
-    let usage = { inputTokens: 0, outputTokens: 0 };
+    const usage = { inputTokens: 0, outputTokens: 0 };
+    // Documents created by the tool (F3.4): sent with `completed`, so the
+    // finished answer shows its cards at once (no shift when the list reloads).
+    const createdDocuments: Array<{
+      id: string;
+      title: string;
+      format: string;
+      currentRevision: number;
+    }> = [];
+    let currentMessages: Msg[] = [...inputMessages];
+    let toolIterations = 0;
+    const MAX_TOOL_ITERATIONS = 2;
 
-    for await (const event of stream) {
-      if (abortController.signal.aborted) {
-        throw new Error("Cancelled");
-      }
-
-      if (event.type === "thought_delta") {
-        if (supportsThinking) {
-          if (stage !== "thinking") {
-            stage = "thinking";
-            broadcastEvent(active, "status", { stage: "thinking" });
-          }
-          active.currentThought += event.text;
-          active.tokensEmitted = true;
-          broadcastEvent(active, "thought", { text: event.text });
-        }
-      } else if (event.type === "text_delta") {
-        if (stage !== "writing") {
-          stage = "writing";
-          broadcastEvent(active, "status", { stage: "writing" });
-        }
-        active.currentContent += event.text;
-        active.tokensEmitted = true;
-        broadcastEvent(active, "delta", { text: event.text });
-      } else if (event.type === "tool_call" && event.name === "create_document") {
-        if (stage !== "writing") {
-          stage = "writing";
-          broadcastEvent(active, "status", { stage: "writing" });
-        }
-        const docResult = await executeCreateDocumentToolCall({
-          actorId,
-          workspaceId,
-          responseId,
+    while (toolIterations <= MAX_TOOL_ITERATIONS) {
+      const stream = streamAi(
+        {
           modelKey,
-          args: event.args,
-        });
-        active.currentContent += docResult.cardMarkdown;
-        active.tokensEmitted = true;
-        broadcastEvent(active, "delta", {
-          text: docResult.cardMarkdown,
-          generatedDocument: {
-            id: docResult.attachment.id,
-            name: docResult.filename,
-            downloadUrl: docResult.downloadUrl,
-          },
-        });
-      } else if (event.type === "citation") {
-        // Step 5.5: Only record provider citations when grounding is enabled.
-        // Validate URL (http/https only) and never parse URLs from model text.
-        if (grounding) {
-          const check = validateCitationUrl(event.url);
-          if (check.valid && check.normalizedUrl) {
-            const existing = active.citations.find(
-              (c) => c.url === check.normalizedUrl
-            );
-            if (existing) {
-              if (!existing.title && event.title) {
-                existing.title = event.title;
+          messages: currentMessages,
+          system: systemPrompt,
+          thinking: thinkingConfig,
+          // After the last allowed tool call the model only writes text.
+          tools:
+            !grounding && modelDef.caps.tools && toolIterations < MAX_TOOL_ITERATIONS
+              ? [CREATE_DOCUMENT_TOOL]
+              : undefined,
+          grounding: Boolean(grounding),
+        },
+        {
+          userPlan,
+          providerInstance: activeProvider,
+        }
+      );
+
+      let toolCallEmitted: {
+        name: string;
+        args: unknown;
+        thoughtSignature?: string;
+      } | null = null;
+      let assistantTextInThisTurn = "";
+      // A provider may report usage on several chunks, each a running total
+      // for this call: keep the last one, then add the calls together.
+      let callUsage = { inputTokens: 0, outputTokens: 0 };
+
+      for await (const event of stream) {
+        if (abortController.signal.aborted) {
+          throw new Error("Cancelled");
+        }
+
+        if (event.type === "thought_delta") {
+          if (supportsThinking) {
+            if (stage !== "thinking") {
+              stage = "thinking";
+              broadcastEvent(active, "status", { stage: "thinking" });
+            }
+            active.currentThought += event.text;
+            active.tokensEmitted = true;
+            broadcastEvent(active, "thought", { text: event.text });
+          }
+        } else if (event.type === "thought_signature") {
+          if (toolCallEmitted && !toolCallEmitted.thoughtSignature) {
+            toolCallEmitted.thoughtSignature = event.signature;
+          }
+        } else if (event.type === "text_delta") {
+          if (stage !== "writing") {
+            stage = "writing";
+            broadcastEvent(active, "status", { stage: "writing" });
+          }
+          active.currentContent += event.text;
+          assistantTextInThisTurn += event.text;
+          active.tokensEmitted = true;
+          broadcastEvent(active, "delta", { text: event.text });
+        } else if (
+          event.type === "tool_call" &&
+          (event.name === "create_document" || event.name.endsWith("create_document"))
+        ) {
+          toolCallEmitted = {
+            name: event.name,
+            args: event.args,
+            thoughtSignature: event.thoughtSignature,
+          };
+        } else if (event.type === "citation") {
+          // Step 5.5: Only record provider citations when grounding is enabled.
+          // Validate URL (http/https only) and never parse URLs from model text.
+          if (grounding) {
+            const check = validateCitationUrl(event.url);
+            if (check.valid && check.normalizedUrl) {
+              const existing = active.citations.find(
+                (c) => c.url === check.normalizedUrl
+              );
+              if (existing) {
+                if (!existing.title && event.title) {
+                  existing.title = event.title;
+                }
+                if (!existing.snippet && event.snippet) {
+                  existing.snippet = event.snippet;
+                }
+                if (event.segments && event.segments.length > 0) {
+                  existing.segments = [
+                    ...(existing.segments || []),
+                    ...event.segments,
+                  ];
+                }
+              } else {
+                const nextIndex = active.citations.length + 1;
+                const newCit: CitationItem = {
+                  index: nextIndex,
+                  url: check.normalizedUrl,
+                  title: event.title || check.hostname || null,
+                  snippet: event.snippet || null,
+                  source: "GROUNDING",
+                  segments: event.segments,
+                };
+                active.citations.push(newCit);
+                broadcastEvent(active, "citation", {
+                  index: newCit.index,
+                  url: newCit.url,
+                  title: newCit.title,
+                  snippet: newCit.snippet,
+                  source: newCit.source,
+                });
               }
-              if (!existing.snippet && event.snippet) {
-                existing.snippet = event.snippet;
-              }
-              if (event.segments && event.segments.length > 0) {
-                existing.segments = [
-                  ...(existing.segments || []),
-                  ...event.segments,
-                ];
-              }
-            } else {
-              const nextIndex = active.citations.length + 1;
-              const newCit: CitationItem = {
-                index: nextIndex,
-                url: check.normalizedUrl,
-                title: event.title || check.hostname || null,
-                snippet: event.snippet || null,
-                source: "GROUNDING",
-                segments: event.segments,
-              };
-              active.citations.push(newCit);
-              broadcastEvent(active, "citation", {
-                index: newCit.index,
-                url: newCit.url,
-                title: newCit.title,
-                snippet: newCit.snippet,
-                source: newCit.source,
-              });
             }
           }
+        } else if (event.type === "usage") {
+          callUsage = {
+            inputTokens: event.inputTokens,
+            outputTokens: event.outputTokens,
+          };
         }
-      } else if (event.type === "usage") {
-        usage = {
-          inputTokens: event.inputTokens,
-          outputTokens: event.outputTokens,
-        };
       }
+
+      usage.inputTokens += callUsage.inputTokens;
+      usage.outputTokens += callUsage.outputTokens;
+
+      if (toolCallEmitted && toolIterations < MAX_TOOL_ITERATIONS) {
+        toolIterations++;
+        if (stage !== "writing") {
+          stage = "writing";
+          broadcastEvent(active, "status", { stage: "writing" });
+        }
+        // A refused document (title too long, bad format…) is reported back
+        // to the model, which tells the user; the generation goes on.
+        let toolResponse: Record<string, unknown>;
+        try {
+          const docResult = await executeCreateDocumentToolCall({
+            actorId,
+            workspaceId,
+            versionId,
+            args: toolCallEmitted.args,
+          });
+          const docEvent = {
+            id: docResult.documentId,
+            title: docResult.title,
+            format: docResult.format,
+            currentRevision: docResult.currentRevision,
+          };
+          createdDocuments.push(docEvent);
+          broadcastEvent(active, "document", docEvent);
+          toolResponse = {
+            success: true,
+            documentId: docResult.documentId,
+            title: docResult.title,
+            format: docResult.format,
+          };
+        } catch (err) {
+          if (!(err instanceof ApiError)) throw err;
+          toolResponse = { success: false, error: err.message };
+        }
+
+        currentMessages = [
+          ...currentMessages,
+          {
+            role: "assistant",
+            parts: [
+              ...(assistantTextInThisTurn
+                ? [{ type: "text" as const, text: assistantTextInThisTurn }]
+                : []),
+              {
+                type: "tool_call" as const,
+                name: toolCallEmitted.name,
+                args: toolCallEmitted.args,
+                thoughtSignature: toolCallEmitted.thoughtSignature,
+              },
+            ],
+          },
+          {
+            role: "user",
+            parts: [
+              {
+                type: "tool_response" as const,
+                name: toolCallEmitted.name,
+                response: toolResponse,
+              },
+            ],
+          },
+        ];
+
+        continue;
+      }
+
+      break;
     }
 
     if (abortController.signal.aborted) {
@@ -609,6 +697,7 @@ async function executeDetachedGeneration(params: {
       versionId,
       content: active.currentContent,
       citations: savedCitations,
+      documents: createdDocuments,
     });
 
     if (isFirstTurn) {
@@ -797,6 +886,11 @@ export async function createAndStreamGeneration(
             where: { id: existingGen.versionId },
             include: {
               citations: { orderBy: { index: "asc" } },
+              documents: {
+                where: { deletedAt: null },
+                orderBy: { createdAt: "asc" },
+                select: { id: true, title: true, format: true, currentRevision: true },
+              },
             },
           })
         : null;
@@ -847,6 +941,7 @@ export async function createAndStreamGeneration(
                 versionId: existingGen.versionId,
                 content: version?.content ?? "",
                 citations: version?.citations ?? [],
+                documents: version?.documents ?? [],
               })
             )
           );
@@ -1483,6 +1578,11 @@ export async function getGenerationStatus(actor: Actor, generationId: string) {
         where: { id: gen.versionId },
         include: {
           citations: { orderBy: { index: "asc" } },
+          documents: {
+            where: { deletedAt: null },
+            orderBy: { createdAt: "asc" },
+            select: { id: true, title: true, format: true, currentRevision: true },
+          },
         },
       })
     : null;
@@ -1496,6 +1596,7 @@ export async function getGenerationStatus(actor: Actor, generationId: string) {
     content: version?.content ?? "",
     thoughtSummary: version?.thoughtSummary ?? null,
     citations: version?.citations ?? [],
+    documents: version?.documents ?? [],
     errorCode: gen.errorCode,
   };
 }

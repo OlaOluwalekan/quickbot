@@ -1110,7 +1110,8 @@
     "daily_cap": "Vous avez atteint votre limite quotidienne pour cette fonctionnalité",
     "no_permission": "Vous n'avez pas la permission pour {capability}",
     "max_depth": "Profondeur maximale de fil atteinte ({depth}). Promouvez cette réponse dans un nouvel espace pour continuer.",
-    "upgrade": "Mettre à niveau"
+    "upgrade": "Mettre à niveau",
+    "owner_plan": "Le forfait du propriétaire de l'espace n'inclut pas cette option (disponible à partir de {plan})"
   },
   "Members": {
     "errors": {
@@ -1777,5 +1778,39 @@
       "medium": "Moyenne",
       "high": "Élevée"
     }
+  },
+  "GeneratedDocs": {
+    "open": "Ouvrir",
+    "download": "Télécharger",
+    "downloadAs": "Télécharger sous…",
+    "edited": "Modifié",
+    "revision": "Révision {revision}",
+    "editPdfSource": "Modification de la source Markdown de ce PDF. Le PDF est regénéré lors du téléchargement.",
+    "assumptions": "Hypothèses :",
+    "questions": "Questions :",
+    "preview": "Aperçu",
+    "edit": "Modifier",
+    "save": "Enregistrer",
+    "discard": "Ignorer",
+    "unsavedChanges": "Modifications non enregistrées",
+    "saveSuccess": "Nouvelle révision enregistrée",
+    "discarded": "Modifications ignorées",
+    "openDocument": "Ouvrir le document {title}",
+    "loading": "Chargement du document…",
+    "notFound": "Ce document n'est plus disponible.",
+    "saveFailed": "La révision n'a pas pu être enregistrée.",
+    "saveConflict": "Quelqu'un a enregistré une révision plus récente. Copiez vos modifications, rechargez le document et réessayez.",
+    "rename": "Renommer",
+    "renamed": "Document renommé",
+    "renameFailed": "Le document n'a pas pu être renommé.",
+    "titleLabel": "Titre du document",
+    "saveTitle": "Enregistrer le titre",
+    "cancelRename": "Annuler",
+    "moreActions": "Plus d'actions",
+    "revisionHistory": "Historique des révisions",
+    "revisionBy": "Révision {revision} · {name} · {when}",
+    "editorLabel": "Texte du document (Markdown)",
+    "editorPlaceholder": "Rédigez le document en Markdown…",
+    "oldRevisionReadOnly": "Ceci est une ancienne révision. Passez à la dernière révision pour la modifier."
   }
 }

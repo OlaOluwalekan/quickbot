@@ -53,6 +53,7 @@ import { PromptAttachmentPreview } from "./prompt-attachment-preview";
 import { EditResponse } from "./edit-response";
 import { DocumentReview, DocumentReviewProgress } from "./document-review-popover";
 import { DocumentDraftBar } from "./document-draft-bar";
+import { GeneratedDocumentCard } from "@/components/documents/generated-document-card";
 import { useDocumentDraftsStore } from "@/lib/stores/document-drafts";
 import { ShareAndPeopleDialog } from "@/components/workspace/ShareAndPeopleDialog";
 import { useUiStore } from "@/lib/stores/ui";
@@ -65,6 +66,9 @@ import {
 } from "@/lib/api/hooks/responses";
 import { useWorkspace } from "@/lib/api/hooks/workspaces";
 import type { CitationDto } from "@/lib/api/sse";
+import type { GeneratedDocumentDto } from "@/lib/api/hooks/responses";
+import { Gated } from "@/components/ui/gated";
+import { exportFormatGateReason } from "@/lib/entitlements/shared";
 
 export interface ResponseItemData {
   id: string;
@@ -102,6 +106,7 @@ export interface ResponseItemData {
     } | null;
     latestEditContent?: string | null;
     citations?: CitationDto[];
+    documents?: GeneratedDocumentDto[];
   } | null;
   author?: {
     name?: string;
@@ -144,6 +149,8 @@ export interface ResponseCardProps {
   canAsk?: boolean;
   /** False when the member may not edit responses. The server re-checks. */
   canEditResponse?: boolean;
+  /** Member holds `workspace.export` (Word / PDF downloads). The server re-checks. */
+  canExport?: boolean;
   onRegenerate?: (responseId: string) => void;
   onDelete?: (responseId: string) => void;
   isRegenerating?: boolean;
@@ -166,6 +173,7 @@ export function ResponseCard({
   memberCount = 1,
   canAsk = true,
   canEditResponse,
+  canExport: canExportProp,
   onRegenerate,
   onDelete,
   isRegenerating = false,
@@ -173,6 +181,8 @@ export function ResponseCard({
   className,
 }: ResponseCardProps) {
   const t = useTranslations("Response");
+  const tExportFormats = useTranslations("Documents.downloadFormats");
+  const tExportCaps = useTranslations("Documents.caps");
   const tReview = useTranslations("Review");
   const [isEditing, setIsEditing] = React.useState(false);
   const [reviewOpen, setReviewOpen] = React.useState(false);
@@ -188,6 +198,8 @@ export function ResponseCard({
   const { data: workspace } = useWorkspace(userId, workspaceId);
   const canShare = workspace?.role === "OWNER" || workspace?.role === "ADMIN";
   const canEdit = canEditResponse ?? workspace?.role !== "VIEWER";
+  const canExport =
+    canExportProp ?? workspace?.capabilities?.includes("workspace.export") ?? false;
   const currentPageTitle = useUiStore((s) => s.currentPageTitle);
   const [signedUrlsByAttachmentId, setSignedUrlsByAttachmentId] = React.useState<
     Record<string, string>
@@ -935,6 +947,20 @@ export function ResponseCard({
             </AnswerBody>
           )}
 
+          {activeVer?.documents && activeVer.documents.length > 0 && (
+            <div className="flex flex-col gap-2 pt-2" data-testid="generated-documents-container">
+              {activeVer.documents.map((doc) => (
+                <GeneratedDocumentCard
+                  key={doc.id}
+                  document={doc}
+                  canExport={canExport}
+                  ownerFormats={workspace?.exportFormats}
+                  isOwner={workspace?.role === "OWNER"}
+                />
+              ))}
+            </div>
+          )}
+
           {reviewVersionId && <DocumentReviewProgress versionId={reviewVersionId} />}
 
           {showsDraft && draft && canEdit && !isEditing && (
@@ -1092,30 +1118,30 @@ export function ResponseCard({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="start" className="w-44">
-                        <DropdownMenuItem asChild className="cursor-pointer">
-                          <a
-                            href={`/api/v1/responses/${response.id}/export?format=md&view=${viewMode}`}
-                            download
+                        {(["md", "pdf", "docx"] as const).map((format) => (
+                          <Gated
+                            key={format}
+                            side="right"
+                            className="flex w-full"
+                            reason={exportFormatGateReason({
+                              format,
+                              ownerFormats: workspace?.exportFormats,
+                              isOwner: workspace?.role === "OWNER",
+                              canExport,
+                              markdownNeedsExport: true,
+                              exportCapabilityLabel: tExportCaps("export"),
+                            })}
                           >
-                            <span>Markdown (.md)</span>
-                          </a>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild className="cursor-pointer">
-                          <a
-                            href={`/api/v1/responses/${response.id}/export?format=pdf&view=${viewMode}`}
-                            download
-                          >
-                            <span>PDF (.pdf)</span>
-                          </a>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild className="cursor-pointer">
-                          <a
-                            href={`/api/v1/responses/${response.id}/export?format=docx&view=${viewMode}`}
-                            download
-                          >
-                            <span>Word (.docx)</span>
-                          </a>
-                        </DropdownMenuItem>
+                            <DropdownMenuItem asChild className="w-full cursor-pointer">
+                              <a
+                                href={`/api/v1/responses/${response.id}/export?format=${format}&view=${viewMode}`}
+                                download
+                              >
+                                <span>{tExportFormats(format)}</span>
+                              </a>
+                            </DropdownMenuItem>
+                          </Gated>
+                        ))}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   )}

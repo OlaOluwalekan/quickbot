@@ -4,6 +4,7 @@ import type { Actor } from "@/server/auth/session";
 import { Errors } from "@/server/http/errors";
 import { logActivity } from "./activity";
 import { countWorkspaceMembers } from "./members";
+import { getEntitlements } from "@/server/billing/entitlements";
 import { toPage } from "@/server/http/pagination";
 import {
   requireProject,
@@ -244,13 +245,14 @@ export async function getWorkspace(actor: Actor, workspaceId: string) {
 
   if (!workspace) throw Errors.notFound("Workspace");
 
-  const [memberCount, sourceProvenance] = await Promise.all([
+  const [memberCount, sourceProvenance, ownerEntitlements] = await Promise.all([
     countWorkspaceMembers(workspaceId),
     resolveWorkspaceSourceProvenance(
       actor,
       workspace.sourceWorkspaceId,
       workspace.sourceAnnotationId
     ),
+    getEntitlements(workspace.ownerId),
   ]);
 
   return {
@@ -261,6 +263,8 @@ export async function getWorkspace(actor: Actor, workspaceId: string) {
     // `_count.members` would miss inherited access.
     memberCount,
     sourceProvenance,
+    // Download formats come from the owner's plan (decided 2026-11-14).
+    exportFormats: [...ownerEntitlements.limits.exportFormats],
   };
 }
 

@@ -1,7 +1,9 @@
 export type Part =
   | { type: "text"; text: string }
   | { type: "image"; url: string; mime: string }
-  | { type: "file"; url: string; mime: string; name?: string };
+  | { type: "file"; url: string; mime: string; name?: string }
+  | { type: "tool_call"; name: string; args: unknown; id?: string; thoughtSignature?: string }
+  | { type: "tool_response"; name: string; response: unknown; id?: string };
 
 export type Msg = { role: "user" | "assistant"; parts: Part[] };
 
@@ -26,8 +28,9 @@ export type GenerateRequest = {
 
 export type StreamEvent =
   | { type: "thought_delta"; text: string }
+  | { type: "thought_signature"; signature: string }
   | { type: "text_delta"; text: string }
-  | { type: "tool_call"; name: string; args: unknown }
+  | { type: "tool_call"; name: string; args: unknown; thoughtSignature?: string }
   | {
       type: "citation";
       url: string;

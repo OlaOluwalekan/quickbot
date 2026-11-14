@@ -1110,7 +1110,8 @@
     "daily_cap": "You have reached your daily limit for this feature",
     "no_permission": "You do not have permission to {capability}",
     "max_depth": "Maximum thread depth ({depth}) reached. Promote this answer to a new workspace to continue.",
-    "upgrade": "Upgrade"
+    "upgrade": "Upgrade",
+    "owner_plan": "The workspace owner's plan doesn't include this (available on {plan} and above)"
   },
   "Members": {
     "errors": {
@@ -1777,5 +1778,39 @@
       "medium": "Medium",
       "high": "High"
     }
+  },
+  "GeneratedDocs": {
+    "open": "Open",
+    "download": "Download",
+    "downloadAs": "Download as…",
+    "edited": "Edited",
+    "revision": "Revision {revision}",
+    "editPdfSource": "Editing the Markdown source of this PDF. The PDF is re-rendered on download.",
+    "assumptions": "Assumptions:",
+    "questions": "Questions:",
+    "preview": "Preview",
+    "edit": "Edit",
+    "save": "Save",
+    "discard": "Discard",
+    "unsavedChanges": "Unsaved changes",
+    "saveSuccess": "Saved new revision",
+    "discarded": "Discarded changes",
+    "openDocument": "Open document {title}",
+    "loading": "Loading document…",
+    "notFound": "This document is no longer available.",
+    "saveFailed": "The revision couldn't be saved.",
+    "saveConflict": "Someone saved a newer revision. Copy your changes, reload the document and try again.",
+    "rename": "Rename",
+    "renamed": "Document renamed",
+    "renameFailed": "The document couldn't be renamed.",
+    "titleLabel": "Document title",
+    "saveTitle": "Save title",
+    "cancelRename": "Cancel",
+    "moreActions": "More actions",
+    "revisionHistory": "Revision history",
+    "revisionBy": "Revision {revision} · {name} · {when}",
+    "editorLabel": "Document text (Markdown)",
+    "editorPlaceholder": "Write the document in Markdown…",
+    "oldRevisionReadOnly": "This is an older revision. Switch to the latest revision to edit."
   }
 }

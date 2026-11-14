@@ -28,6 +28,8 @@ export interface AnswerBodyProps {
   depth?: number;
   workspaceId?: string;
   responseId?: string;
+  documentId?: string;
+  documentRevision?: number;
   contentSource?: "ORIGINAL" | "EDIT";
   editRevision?: number;
   showCopyButton?: boolean;
@@ -61,6 +63,8 @@ export function AnswerBody({
   depth = 0,
   workspaceId,
   responseId,
+  documentId,
+  documentRevision,
   contentSource = "ORIGINAL",
   editRevision,
   showCopyButton = false,
@@ -109,6 +113,12 @@ export function AnswerBody({
           data-workspace-id={workspaceId}
           data-response-id={responseId}
           data-version-id={isVersion ? targetId : undefined}
+          data-document-id={targetType === "DOCUMENT_REVISION" ? (documentId || targetId) : undefined}
+          data-document-revision={
+            targetType === "DOCUMENT_REVISION" && documentRevision !== undefined
+              ? String(documentRevision)
+              : undefined
+          }
           data-content-source={isVersion ? contentSource : undefined}
           data-edit-revision={
             isVersion && editRevision !== undefined ? String(editRevision) : undefined
@@ -119,6 +129,12 @@ export function AnswerBody({
             responseId={isVersion ? responseId : undefined}
             versionId={isVersion ? targetId : undefined}
             messageId={targetType === "ANNOTATION_MESSAGE" ? targetId : undefined}
+            documentId={
+              targetType === "DOCUMENT_REVISION" ? (documentId || targetId) : undefined
+            }
+            documentRevision={
+              targetType === "DOCUMENT_REVISION" ? documentRevision : undefined
+            }
             content={content}
             quickFix={quickFix}
             onAnnotationsChange={onAnnotationsChange}

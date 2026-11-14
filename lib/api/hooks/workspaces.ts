@@ -38,6 +38,8 @@ export interface WorkspaceDto {
   /** Caller's capabilities on this workspace (server-computed, UI gating only). */
   capabilities?: string[];
   sourceProvenance?: WorkspaceSourceProvenanceDto | null;
+  /** Download formats allowed by the workspace owner's plan (GET /api/v1/workspaces/:id). */
+  exportFormats?: Array<"md" | "pdf" | "docx">;
   createdAt: string;
   updatedAt: string;
 }

@@ -36,8 +36,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { useEntitlements } from "@/lib/api/hooks/entitlements";
-import { getGateReason } from "@/lib/entitlements/shared";
+import { useWorkspace } from "@/lib/api/hooks/workspaces";
+import { exportFormatGateReason } from "@/lib/entitlements/shared";
 import {
   applySuggestion,
   toSuggestionTarget,
@@ -109,7 +109,8 @@ export function DocumentCard({
   const t = useTranslations("Documents");
   const tReview = useTranslations("Review");
   const tGates = useTranslations("Documents.caps");
-  const { data: entitlements } = useEntitlements();
+  // Download formats come from the workspace owner's plan (decided 2026-11-14).
+  const { data: workspace } = useWorkspace(userId, workspaceId);
   const [annotations, setAnnotations] = React.useState<AnnotationItem[]>([]);
   const [expanded, setExpanded] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
@@ -344,9 +345,14 @@ export function DocumentCard({
                 {hasSavedEdits ? t("downloadEditedLabel") : t("downloadCurrentLabel")}
               </DropdownMenuLabel>
               {(["docx", "pdf", "md"] as const).map((format) => {
-                const reason = !canExport
-                  ? ({ code: "no_permission", capability: tGates("export") } as const)
-                  : getGateReason(entitlements, format);
+                const reason = exportFormatGateReason({
+                  format,
+                  ownerFormats: workspace?.exportFormats,
+                  isOwner: workspace?.role === "OWNER",
+                  canExport,
+                  markdownNeedsExport: true,
+                  exportCapabilityLabel: tGates("export"),
+                });
                 return (
                   <Gated key={format} reason={reason} side="left" className="flex w-full">
                     <DropdownMenuItem asChild className="w-full cursor-pointer">

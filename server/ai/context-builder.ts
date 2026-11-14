@@ -334,6 +334,34 @@ export async function buildContext(
     }
   }
 
+  // Include latest revision of generated documents in the workspace as pinned turns (F3.4)
+  const workspaceDocuments = await db.document.findMany({
+    where: { workspaceId: args.workspaceId, deletedAt: null },
+    orderBy: { createdAt: "desc" },
+    take: 3,
+    include: {
+      revisions: {
+        orderBy: { revision: "desc" },
+        take: 1,
+      },
+    },
+  });
+
+  for (const doc of workspaceDocuments) {
+    const rev = doc.revisions[0];
+    if (rev?.content) {
+      turns.push({
+        responseId: `doc-${doc.id}`,
+        prompt: `Document: ${doc.title}`,
+        assistantText: rev.content,
+        kind: "DOCUMENT",
+        documentName: doc.title,
+        uploadedBy: "Klecx",
+        pinned: true,
+      });
+    }
+  }
+
   // 2) Token budget truncation & message assembly
   const { messages, truncated } = assembleContextMessages({
     turns,

@@ -1,3 +1,4 @@
+import type { GeneratedDocumentDto } from "@/lib/api/hooks/responses";
 import { createParser } from "eventsource-parser";
 import { CreateGenerationInput } from "@/lib/schemas/generation";
 
@@ -30,6 +31,8 @@ export type GenerationSSEHandlers = {
     versionId: string;
     content: string;
     citations?: CitationDto[];
+    /** Documents Klecx generated in this answer (F3.4). */
+    documents?: GeneratedDocumentDto[];
   }) => void;
   onError?: (data: { code: string; message?: string }) => void;
 };
@@ -154,6 +157,7 @@ export async function streamGeneration(
                 versionId: gen.versionId,
                 content: gen.content,
                 citations: gen.citations,
+                documents: gen.documents,
               });
               return;
             }

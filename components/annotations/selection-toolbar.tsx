@@ -24,6 +24,8 @@ export interface SelectionTargetMetadata {
   targetId: string;
   responseId?: string;
   versionId?: string;
+  documentId?: string;
+  documentRevision?: number;
   depth: number;
   contentSource: "ORIGINAL" | "EDIT";
   editRevision?: number;
@@ -259,6 +261,15 @@ export function SelectionToolbar({
           startRoot.getAttribute("data-annot-edit-revision") ||
           startRoot.getAttribute("data-edit-revision");
         const editRevision = revAttr ? parseInt(revAttr, 10) : undefined;
+
+        const documentId =
+          startRoot.getAttribute("data-document-id") ||
+          (targetType === "DOCUMENT_REVISION" ? targetId : undefined);
+        const docRevAttr =
+          startRoot.getAttribute("data-document-revision") ||
+          startRoot.getAttribute("data-annot-document-revision");
+        const documentRevision = docRevAttr ? parseInt(docRevAttr, 10) : 1;
+
         const workspaceId =
           startRoot.closest("[data-workspace-id]")?.getAttribute("data-workspace-id") ||
           workspaceIdProp;
@@ -277,6 +288,8 @@ export function SelectionToolbar({
           targetId,
           responseId,
           versionId,
+          documentId,
+          documentRevision,
           depth,
           contentSource,
           editRevision,
@@ -351,9 +364,11 @@ export function SelectionToolbar({
     try {
       setIsSubmitting(true);
       const endpoint =
-        metadata.targetType === "ANNOTATION_MESSAGE"
-          ? `/api/v1/annotation-messages/${metadata.targetId}/annotations`
-          : `/api/v1/response-versions/${metadata.targetId || metadata.versionId}/annotations`;
+        metadata.targetType === "DOCUMENT_REVISION"
+          ? `/api/v1/documents/${metadata.documentId || metadata.targetId}/revisions/${metadata.documentRevision || 1}/annotations`
+          : metadata.targetType === "ANNOTATION_MESSAGE"
+            ? `/api/v1/annotation-messages/${metadata.targetId}/annotations`
+            : `/api/v1/response-versions/${metadata.targetId || metadata.versionId}/annotations`;
 
       const text = commentText.trim();
       const res = await api(endpoint, {
@@ -406,9 +421,11 @@ export function SelectionToolbar({
     try {
       setIsSubmitting(true);
       const endpoint =
-        metadata.targetType === "ANNOTATION_MESSAGE"
-          ? `/api/v1/annotation-messages/${metadata.targetId}/annotations`
-          : `/api/v1/response-versions/${metadata.targetId || metadata.versionId}/annotations`;
+        metadata.targetType === "DOCUMENT_REVISION"
+          ? `/api/v1/documents/${metadata.documentId || metadata.targetId}/revisions/${metadata.documentRevision || 1}/annotations`
+          : metadata.targetType === "ANNOTATION_MESSAGE"
+            ? `/api/v1/annotation-messages/${metadata.targetId}/annotations`
+            : `/api/v1/response-versions/${metadata.targetId || metadata.versionId}/annotations`;
 
       const res = await api(endpoint, {
         method: "POST",

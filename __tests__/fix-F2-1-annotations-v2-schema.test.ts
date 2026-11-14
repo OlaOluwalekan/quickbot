@@ -192,6 +192,18 @@ describe("Step F2.1 — Annotations v2 Schema & Database Constraints", () => {
     });
 
     it("accepts valid DOCUMENT_REVISION target", async () => {
+      // F3.4 adds the foreign key: the document must exist.
+      await db.document.create({
+        data: {
+          id: "doc_dummy_123",
+          workspaceId,
+          versionId,
+          title: "Scope",
+          format: "md",
+          createdById: userId,
+          revisions: { create: { revision: 1, content: "## Project Scope" } },
+        },
+      });
       const docAnnot = await db.annotation.create({
         data: {
           workspaceId,
@@ -214,6 +226,7 @@ describe("Step F2.1 — Annotations v2 Schema & Database Constraints", () => {
       expect(docAnnot.documentRevision).toBe(1);
 
       await db.annotation.delete({ where: { id: docAnnot.id } });
+      await db.document.delete({ where: { id: "doc_dummy_123" } });
     });
   });
 

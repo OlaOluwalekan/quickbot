@@ -1110,7 +1110,8 @@
     "daily_cap": "Has alcanzado tu límite diario para esta función",
     "no_permission": "No tienes permiso para {capability}",
     "max_depth": "Se alcanzó la profundidad máxima de hilo ({depth}). Promueve esta respuesta a un nuevo espacio para continuar.",
-    "upgrade": "Mejorar plan"
+    "upgrade": "Mejorar plan",
+    "owner_plan": "El plan del propietario del espacio no incluye esto (disponible en {plan} y superiores)"
   },
   "Members": {
     "errors": {
@@ -1777,5 +1778,39 @@
       "medium": "Media",
       "high": "Alta"
     }
+  },
+  "GeneratedDocs": {
+    "open": "Abrir",
+    "download": "Descargar",
+    "downloadAs": "Descargar como…",
+    "edited": "Editado",
+    "revision": "Revisión {revision}",
+    "editPdfSource": "Editando la fuente Markdown de este PDF. El PDF se vuelve a generar al descargar.",
+    "assumptions": "Suposiciones:",
+    "questions": "Preguntas:",
+    "preview": "Vista previa",
+    "edit": "Editar",
+    "save": "Guardar",
+    "discard": "Descartar",
+    "unsavedChanges": "Cambios no guardados",
+    "saveSuccess": "Nueva revisión guardada",
+    "discarded": "Cambios descartados",
+    "openDocument": "Abrir el documento {title}",
+    "loading": "Cargando documento…",
+    "notFound": "Este documento ya no está disponible.",
+    "saveFailed": "No se pudo guardar la revisión.",
+    "saveConflict": "Alguien guardó una revisión más reciente. Copia tus cambios, vuelve a cargar el documento e inténtalo de nuevo.",
+    "rename": "Cambiar nombre",
+    "renamed": "Documento renombrado",
+    "renameFailed": "No se pudo cambiar el nombre del documento.",
+    "titleLabel": "Título del documento",
+    "saveTitle": "Guardar título",
+    "cancelRename": "Cancelar",
+    "moreActions": "Más acciones",
+    "revisionHistory": "Historial de revisiones",
+    "revisionBy": "Revisión {revision} · {name} · {when}",
+    "editorLabel": "Texto del documento (Markdown)",
+    "editorPlaceholder": "Escribe el documento en Markdown…",
+    "oldRevisionReadOnly": "Esta es una revisión anterior. Cambia a la revisión más reciente para editar."
   }
 }
