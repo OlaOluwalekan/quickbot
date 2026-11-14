@@ -10,9 +10,11 @@ import type { HomeCredits } from "@/lib/api/hooks/home";
 
 export interface CreditsCardProps {
   credits: HomeCredits;
+  /** Hide the plan button, e.g. on the Settings page it links to. */
+  showPlanAction?: boolean;
 }
 
-export function CreditsCard({ credits }: CreditsCardProps) {
+export function CreditsCard({ credits, showPlanAction = true }: CreditsCardProps) {
   const tHome = useTranslations("Home");
   const isFree = credits.plan.toLowerCase() === "free";
 
@@ -33,19 +35,21 @@ export function CreditsCard({ credits }: CreditsCardProps) {
             <span className="font-semibold text-fg text-sm">
               {formatNumber(credits.balance)}
             </span>{" "}
-            credits remaining
+            {tHome("creditsRemaining", { count: credits.balance })}
           </p>
         </div>
       </div>
 
-      <div className="flex items-center gap-2 shrink-0">
-        <Button asChild size="sm" variant={isFree ? "default" : "outline"}>
-          <Link href="/settings" className="gap-1.5 text-xs font-semibold">
-            {isFree && <Sparkles className="h-3.5 w-3.5" strokeWidth={1.5} />}
-            <span>{isFree ? tHome("upgradePlan") : tHome("managePlan")}</span>
-          </Link>
-        </Button>
-      </div>
+      {showPlanAction && (
+        <div className="flex items-center gap-2 shrink-0">
+          <Button asChild size="sm" variant={isFree ? "default" : "outline"}>
+            <Link href="/settings" className="gap-1.5 text-xs font-semibold">
+              {isFree && <Sparkles className="h-3.5 w-3.5" strokeWidth={1.5} />}
+              <span>{isFree ? tHome("upgradePlan") : tHome("managePlan")}</span>
+            </Link>
+          </Button>
+        </div>
+      )}
     </section>
   );
 }

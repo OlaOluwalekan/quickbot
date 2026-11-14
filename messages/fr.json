@@ -171,8 +171,6 @@
     "model": "Modèle",
     "thinkHarder": "Approfondir la réflexion",
     "thinkHarderDesc": "Activer le raisonnement approfondi et les résumés de réflexion",
-    "language": "Langue",
-    "languageAuto": "Automatique",
     "queue": "File d'attente de requêtes",
     "queueDisabled": "La file d'attente est vide",
     "stop": "Arrêter la génération",
@@ -195,17 +193,21 @@
     "ai": {
       "title": "Préférences de l'IA",
       "subtitle": "Personnalisez la façon dont Klecx réfléchit et répond à vos demandes.",
+      "languageLabel": "Langue dans laquelle Klecx répond",
+      "auto": "Automatique (selon mon message)",
       "searchLabel": "Rechercher sur le web si utile",
-      "searchHint": "Klecx peut rechercher sur le web des faits récents, des prix et de la documentation. Chaque recherche coûte 3 crédits.",
+      "searchHint": "Klecx recherche uniquement lorsqu'une question nécessite des informations actuelles. Chaque recherche utilise 3 crédits.",
       "searchOnToast": "Recherche web activée",
       "searchOffToast": "Recherche web désactivée",
+      "languageUpdatedToast": "Langue de l'IA mise à jour",
       "saveError": "Impossible d'enregistrer vos préférences d'IA. Réessayez."
     },
+    "sessionsAndDevices": "Sessions et Appareils",
+    "notifications": "Notifications",
     "title": "Paramètres de l'espace",
-    "subtitle": "Gérez votre profil, vos préférences et votre consommation de jetons.",
+    "subtitle": "Gérez votre profil, vos préférences et vos crédits.",
     "backToChat": "Retour au Chat",
     "generalTab": "Profil & Préférences",
-    "tokensTab": "Utilisation des Jetons",
     "profileHeading": "Informations personnelles",
     "profileSubheading": "Modifiez la façon dont votre nom apparaît sur Klecx.",
     "fullName": "Nom complet",
@@ -221,13 +223,14 @@
     "dangerZone": "Session du compte",
     "logoutDescription": "Déconnectez-vous de votre espace Klecx sur cet appareil.",
     "logoutButton": "Se déconnecter",
-    "tokenBalanceTitle": "Solde de jetons disponible",
-    "tokenBalanceSubtitle": "Les jetons sont consommés selon la longueur des échanges ou la génération d'images.",
-    "usageHistoryTitle": "Activité récente des jetons",
-    "usageDate": "Date et heure",
-    "usageResponseId": "ID d'interaction / réponse",
-    "usageTokens": "Jetons utilisés",
-    "noTokenUsage": "Aucune utilisation de jetons enregistrée pour le moment."
+    "profile": {
+      "nameRequired": "Saisissez votre nom.",
+      "nameUpdated": "Nom mis à jour",
+      "nameUpdateError": "Impossible de mettre à jour votre nom. Réessayez.",
+      "saveName": "Enregistrer le nom",
+      "cancelEdit": "Annuler",
+      "editName": "Modifier le nom"
+    }
   },
   "Email": {
     "common": {
@@ -446,7 +449,8 @@
     "managePlan": "Gérer",
     "retry": "Réessayer",
     "errorLoadingHome": "Impossible de charger la page d'accueil de l'espace.",
-    "studioBadge": "{appName} Studio"
+    "studioBadge": "{appName} Studio",
+    "creditsRemaining": "{count, plural, one {crédit restant} other {crédits restants}}"
   },
   "Templates": {
     "catWrite": "Écrire",

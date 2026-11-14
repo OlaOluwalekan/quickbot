@@ -10,7 +10,7 @@ export type BuildContextArgs = {
   upToResponseId?: string;
   newPrompt: string;
   modelKey: string;
-  language: string;
+  language?: string | null;
   attachments?: Part[];
   reservedOutputTokens?: number;
   excludeUpToResponseId?: boolean;

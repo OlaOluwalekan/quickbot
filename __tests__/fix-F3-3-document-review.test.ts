@@ -509,6 +509,52 @@ describe("Step F3.3 — Document Review Service & Validation", () => {
       expect(generation?.chargedCredits ?? 0).toBe(0);
     });
 
+    it("writes comments in the language of the person asking, not the owner's", async () => {
+      // F4.2: the owner's preferences must never set the language of a member's review.
+      const prefs = (userId: string, aiLanguage: "es" | "yo" | null, uiLocale: "en" | "fr" | "es") =>
+        db.userPreference.upsert({
+          where: { userId },
+          create: { userId, aiLanguage, uiLocale },
+          update: { aiLanguage, uiLocale },
+        });
+      await prefs(ownerId, "es", "es");
+
+      const capture = (systems: string[]): AiProvider => ({
+        id: "gemini",
+        stream: async function* (req): AsyncIterable<StreamEvent> {
+          systems.push(req.system ?? "");
+          yield { type: "text_delta", text: "[]" };
+          yield { type: "usage", inputTokens: 10, outputTokens: 5, estimated: false };
+        },
+      });
+      const review = async (systems: string[]) => {
+        const { stream } = await startDocumentReview(
+          actorOf(editorId),
+          versionId,
+          { preset: "errors", visibility: "PRIVATE", idempotencyKey: `review-${crypto.randomUUID()}` },
+          { providerInstance: capture(systems) }
+        );
+        await readEvents(stream);
+      };
+
+      try {
+        // Auto: falls back to the member's own interface language.
+        await prefs(editorId, null, "fr");
+        const auto: string[] = [];
+        await review(auto);
+        expect(auto[0]).toContain("in this language: fr.");
+        expect(auto[0]).not.toContain("in this language: es.");
+
+        // A saved AI language wins over the member's interface language.
+        await prefs(editorId, "yo", "fr");
+        const saved: string[] = [];
+        await review(saved);
+        expect(saved[0]).toContain("in this language: yo.");
+      } finally {
+        await db.userPreference.deleteMany({ where: { userId: { in: [ownerId, editorId] } } });
+      }
+    });
+
     it("a viewer without workspace.ask can't start a review (403), before any stream", async () => {
       const provider = providerReturning([typoFinding]);
       await expect(

@@ -6,11 +6,12 @@ import AppName from "@/components/logo/AppName";
 import Logo from "@/components/logo/Logo";
 import NameAndEmail from "@/components/settings/NameAndEmail";
 import SettingsCard from "@/components/settings/SettingsCard";
-import TokensDisplay from "@/components/settings/TokensDisplay";
+import CreditsCard from "@/components/home/credits-card";
 import UserProfileImage from "@/components/settings/UserProfileImage";
 import AiPreferences from "@/components/settings/AiPreferences";
 import { getUserAvatar } from "@/server/services/avatar";
 import { getUserPreferences } from "@/server/services/user-preferences";
+import { getHomeCredits } from "@/server/services/home";
 import { Button } from "@/components/ui/button";
 import { SessionProps } from "@/types/user";
 import { getTranslations } from "next-intl/server";
@@ -30,6 +31,7 @@ const SettingsPage = async () => {
   const t = await getTranslations("Settings");
   const avatarData = await getUserAvatar(actor.userId).catch(() => null);
   const userPref = await getUserPreferences(actor.userId).catch(() => null);
+  const credits = await getHomeCredits(actor.userId).catch(() => null);
 
   const sessionUser: SessionProps = {
     id: actor.userId,
@@ -94,7 +96,7 @@ const SettingsPage = async () => {
                     <Link href="/settings/sessions">
                       <span className="flex items-center gap-2">
                         <Laptop className="w-3.5 h-3.5 text-muted" />
-                        Sessions & Devices
+                        {t("sessionsAndDevices")}
                       </span>
                       <ChevronRight className="w-3.5 h-3.5 text-muted" />
                     </Link>
@@ -106,7 +108,7 @@ const SettingsPage = async () => {
                     <Link href="/settings/notifications">
                       <span className="flex items-center gap-2">
                         <Bell className="w-3.5 h-3.5 text-muted" />
-                        Notifications
+                        {t("notifications")}
                       </span>
                       <ChevronRight className="w-3.5 h-3.5 text-muted" />
                     </Link>
@@ -119,13 +121,14 @@ const SettingsPage = async () => {
               </div>
             </div>
 
-            {/* Token Usage Column */}
+            {/* AI Preferences & Credits Column */}
             <div className="lg:col-span-7 flex flex-col gap-6">
               <AiPreferences
                 userId={actor.userId}
                 initialWebSearchEnabled={userPref?.webSearchEnabled ?? true}
+                initialAiLanguage={userPref?.aiLanguage ?? null}
               />
-              <TokensDisplay user={sessionUser} />
+              {credits && <CreditsCard credits={credits} showPlanAction={false} />}
             </div>
           </div>
         </SettingsCard>

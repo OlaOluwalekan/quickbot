@@ -29,7 +29,6 @@ import {
   windowTargetText,
   type AskTarget,
 } from "@/server/ai/ask-context";
-import { resolveEffectiveAiLanguage } from "@/lib/locale";
 import { buildSystemPrompt } from "@/server/ai/prompts/system";
 import {
   buildQuestionBatchPrompt,
@@ -293,14 +292,9 @@ export async function runQuestionBatch(
 
         const userPref = await db.userPreference.findUnique({
           where: { userId: actor.userId },
-          select: { aiLanguage: true, uiLocale: true },
+          select: { aiLanguage: true },
         });
-        const baseSystem = buildSystemPrompt(
-          resolveEffectiveAiLanguage({
-            savedAiLanguage: userPref?.aiLanguage,
-            uiLocale: userPref?.uiLocale,
-          })
-        );
+        const baseSystem = buildSystemPrompt(userPref?.aiLanguage ?? null);
         const notesPrompt = await loadActiveNotes(workspaceId);
         const system = [baseSystem, notesPrompt].filter(Boolean).join("\n\n");
 

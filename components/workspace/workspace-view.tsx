@@ -273,7 +273,7 @@ export function WorkspaceView({
 
   // Execute or retry stream generation
   const startStreamTurn = React.useCallback(
-    (promptText: string, idempotencyKey: string, options?: { modelKey?: string; kind?: "TEXT" | "IMAGE"; think?: boolean; language?: string; attachmentIds?: string[] }) => {
+    (promptText: string, idempotencyKey: string, options?: { modelKey?: string; kind?: "TEXT" | "IMAGE"; think?: boolean; attachmentIds?: string[] }) => {
       const genStore = useGenerationStore.getState();
       const effectiveKind = options?.kind || "TEXT";
       genStore.startStream(workspace.id, { prompt: promptText, kind: effectiveKind });
@@ -289,7 +289,6 @@ export function WorkspaceView({
           modelKey: options?.modelKey || (effectiveKind === "IMAGE" ? "image-standard" : "text-economy"),
           kind: effectiveKind,
           think: options?.think,
-          language: options?.language,
           attachmentIds: options?.attachmentIds,
         },
         {
@@ -385,7 +384,6 @@ export function WorkspaceView({
       modelKey: pending.modelKey,
       kind: pending.mode === "image" ? "IMAGE" : "TEXT",
       think: pending.thinkHarder,
-      language: pending.language || undefined,
       attachmentIds: pending.attachmentIds,
     });
   }, [workspace.id, startStreamTurn]);
