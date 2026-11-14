@@ -1321,7 +1321,7 @@ export async function streamAnnotationAnswer(
 
         // F4.1: Asks use the same web_search tool rule as main answers.
         const webSearch = model.caps.tools
-          ? await resolveWebSearchAccess(actor.userId, ownerEntitlements)
+          ? await resolveWebSearchAccess(actor.userId, billedAccountId, ownerEntitlements)
           : { allowed: false, reachedDailyCap: false, locale: null };
 
         if (webSearch.reachedDailyCap) {

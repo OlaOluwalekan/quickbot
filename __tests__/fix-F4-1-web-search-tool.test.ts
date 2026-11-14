@@ -281,7 +281,7 @@ describe("Step F4.1 — Web search tool, switchable in Settings, and plan caps",
       });
     }
 
-    const todayCount = await countSearchesToday(actor.userId);
+    const todayCount = await countSearchesToday(actor.userId, (await getAccountByUserId(user.id))!.id);
     expect(todayCount).toBeGreaterThanOrEqual(10);
 
     const { stream } = await createAndStreamGeneration(actor, workspace.id, {
@@ -325,5 +325,43 @@ describe("Step F4.1 — Web search tool, switchable in Settings, and plan caps",
 
     expect(mockProvider.offeredTools).toContain("create_document");
     expect(mockProvider.offeredTools).toContain("web_search");
+  });
+});
+
+describe("Step F4.1 — daily search count is per person, per owner", () => {
+  it("searches in another owner's workspace count only against that owner's limit", async () => {
+    const unique = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const ada = await db.user.create({
+      data: { id: `ada_${unique}`, name: "Ada", email: `ada_${unique}@example.com`, emailVerified: true },
+    });
+    const ben = await db.user.create({
+      data: { id: `ben_${unique}`, name: "Ben", email: `ben_${unique}@example.com`, emailVerified: true },
+    });
+    const adaAcc = await createAccountWithFreeGrant(ada.id);
+    const benAcc = await createAccountWithFreeGrant(ben.id);
+    const adaWs = await db.workspace.create({ data: { ownerId: ada.id, title: "Ada's" } });
+
+    // Ben ran 4 searches in Ada's workspace (billed to Ada).
+    await db.generation.create({
+      data: {
+        id: `gen_ben_in_ada_${unique}`,
+        workspaceId: adaWs.id,
+        actorId: ben.id,
+        billedAccountId: adaAcc.id,
+        kind: "TEXT",
+        status: "COMPLETED",
+        modelKey: "text-economy",
+        providerModelId: "mock-model",
+        promptVersion: "2026-11-14",
+        idempotencyKey: `ben_in_ada_${unique}`,
+        usage: { inputTokens: 10, outputTokens: 10, searches: 4 },
+      },
+    });
+
+    expect(await countSearchesToday(ben.id, adaAcc.id)).toBe(4);
+    // Ben's own workspaces keep their full limit.
+    expect(await countSearchesToday(ben.id, benAcc.id)).toBe(0);
+    // Ada's own count is separate from Ben's.
+    expect(await countSearchesToday(ada.id, adaAcc.id)).toBe(0);
   });
 });

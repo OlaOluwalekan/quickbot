@@ -16,16 +16,22 @@ import frMessages from "@/messages/fr.json";
 export const MAX_SEARCHES_PER_GENERATION = 3;
 
 /**
- * Executed web searches by `actorId` since 00:00 UTC today, read from
- * `Generation.usage.searches`. Cancelled and failed generations count too:
- * their searches ran and were billed.
+ * Executed web searches since 00:00 UTC today by `actorId`, billed to
+ * `billedAccountId` (the workspace owner's credit account), read from
+ * `Generation.usage.searches`. Counted per person **per owner** (decided
+ * 2026-11-14): searching in someone else's workspace uses that owner's limit,
+ * not the searches of the person's own workspaces. Cancelled and failed
+ * generations count too: their searches ran and were billed.
  */
-export async function countSearchesToday(actorId: string): Promise<number> {
+export async function countSearchesToday(
+  actorId: string,
+  billedAccountId: string
+): Promise<number> {
   const startOfDay = new Date();
   startOfDay.setUTCHours(0, 0, 0, 0);
 
   const generations = await db.generation.findMany({
-    where: { actorId, createdAt: { gte: startOfDay } },
+    where: { billedAccountId, actorId, createdAt: { gte: startOfDay } },
     select: { usage: true },
   });
 
@@ -51,11 +57,13 @@ export interface WebSearchAccess {
 
 /**
  * Whether a generation may search the web: the actor's preference (on by
- * default), the workspace owner's plan (the owner pays) and the actor's daily
- * search count against that plan's `searchesPerDay`.
+ * default), the workspace owner's plan (the owner pays) and the actor's
+ * searches today in this owner's workspaces against that plan's
+ * `searchesPerDay`.
  */
 export async function resolveWebSearchAccess(
   actorId: string,
+  billedAccountId: string,
   ownerEntitlements: Entitlements
 ): Promise<WebSearchAccess> {
   const pref = await db.userPreference.findUnique({
@@ -69,7 +77,7 @@ export async function resolveWebSearchAccess(
     return { allowed: false, reachedDailyCap: false, locale };
   }
 
-  const usedToday = await countSearchesToday(actorId);
+  const usedToday = await countSearchesToday(actorId, billedAccountId);
   const reachedDailyCap = usedToday >= ownerEntitlements.limits.searchesPerDay;
   return { allowed: !reachedDailyCap, reachedDailyCap, locale };
 }

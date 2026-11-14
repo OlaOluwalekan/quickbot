@@ -414,7 +414,7 @@ async function executeDetachedGeneration(params: {
     // F4.1: web search is a tool, offered per the actor's preference, the
     // owner's plan (the owner pays) and the actor's daily search count.
     const webSearch = modelDef.caps.tools
-      ? await resolveWebSearchAccess(actorId, entitlementsForPlan(userPlan))
+      ? await resolveWebSearchAccess(actorId, billedAccountId, entitlementsForPlan(userPlan))
       : { allowed: false, reachedDailyCap: false, locale: null };
 
     if (webSearch.reachedDailyCap) {
