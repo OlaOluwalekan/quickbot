@@ -210,6 +210,68 @@ describe("Step F4.2 — AI language preference, system prompt, and settings", ()
     });
   });
 
+  describe("3b. Collaboration: the language is the person asking's, not the owner's", () => {
+    it("a member's answer uses the member's AI language even when the owner chose another", async () => {
+      const unique = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      const member = await db.user.create({
+        data: {
+          id: `user_f42_member_${unique}`,
+          name: "Member",
+          email: `member_${unique}@example.com`,
+          emailVerified: true,
+        },
+      });
+      await db.workspaceMember.create({
+        data: { workspaceId: workspace.id, userId: member.id, role: "EDITOR", invitedById: user.id },
+      });
+      const memberActor: Actor = {
+        userId: member.id,
+        email: member.email,
+        role: "USER",
+        sessionId: `sess_f42_member_${unique}`,
+      };
+
+      await updateUserPreferences(user.id, { aiLanguage: "es" });
+      await updateUserPreferences(member.id, { aiLanguage: "fr" });
+
+      const { stream } = await createAndStreamGeneration(
+        memberActor,
+        workspace.id,
+        {
+          idempotencyKey: `idem_lang_member_${unique}`,
+          prompt: "Tell me about cars",
+          modelKey: "text-economy",
+          kind: "TEXT",
+        },
+        { providerInstance: mockProvider }
+      );
+      await readAllSse(stream);
+
+      const mainReq = mockProvider.requests.find((r) => r.system);
+      expect(mainReq?.system).toContain("Response language: French.");
+      expect(mainReq?.system).not.toContain("Spanish");
+
+      // Auto for the member stays Auto, even though the owner chose Spanish.
+      await updateUserPreferences(member.id, { aiLanguage: null });
+      mockProvider.requests = [];
+      const second = await createAndStreamGeneration(
+        memberActor,
+        workspace.id,
+        {
+          idempotencyKey: `idem_lang_member_auto_${unique}`,
+          prompt: "Tell me about cars",
+          modelKey: "text-economy",
+          kind: "TEXT",
+        },
+        { providerInstance: mockProvider }
+      );
+      await readAllSse(second.stream);
+      const autoReq = mockProvider.requests.find((r) => r.system);
+      expect(autoReq?.system).toContain("Reply in the language of the user's latest message.");
+      expect(autoReq?.system).not.toContain("Spanish");
+    });
+  });
+
   describe("4. PATCH /api/v1/me Profile Endpoint", () => {
     it("updates user full name via PATCH /api/v1/me and reflects in GET /api/v1/me", async () => {
       const patchReq = new NextRequest("http://localhost:3000/api/v1/me", {
