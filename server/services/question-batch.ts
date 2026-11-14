@@ -29,7 +29,6 @@ import {
   windowTargetText,
   type AskTarget,
 } from "@/server/ai/ask-context";
-import { resolveEffectiveAiLanguage } from "@/lib/locale";
 import { buildSystemPrompt } from "@/server/ai/prompts/system";
 import {
   buildQuestionBatchPrompt,

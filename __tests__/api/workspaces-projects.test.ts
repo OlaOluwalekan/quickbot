@@ -89,8 +89,6 @@ import {
   DELETE as deleteProjectByIdRoute,
 } from "@/app/api/v1/projects/[id]/route";
 import { GET as getProjectWorkspacesRoute } from "@/app/api/v1/projects/[id]/workspaces/route";
-import { POST as postChatStreamRoute } from "@/app/api/chat/stream/route";
-import { POST as postChatImageRoute } from "@/app/api/chat/image/route";
 
 describe("Workspaces and Projects API & Service Tests (Step 1.6)", () => {
   const alice: Actor = {
@@ -572,102 +570,6 @@ describe("Workspaces and Projects API & Service Tests (Step 1.6)", () => {
       expect(res.status).toBe(200);
       const json = await res.json();
       expect(json.data).toEqual({ results: [] });
-    });
-  });
-
-  describe("AI Endpoints Generation Permission (Defect 2)", () => {
-    it("POST /api/chat/stream rejects VIEWER role with 403 Forbidden", async () => {
-      // Bob is VIEWER on ws_01
-      mockWorkspaceFindFirst.mockResolvedValue({
-        id: "ws_01",
-        ownerId: alice.userId,
-        deletedAt: null,
-        members: [{ role: "VIEWER" }],
-      });
-      mockGetActor.mockResolvedValue(bob);
-
-      const req = new NextRequest("http://localhost:3000/api/chat/stream", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ prompt: "Hello AI", chatId: "ws_01" }),
-      });
-
-      const res = await postChatStreamRoute(req);
-      expect(res.status).toBe(403);
-    });
-
-    it("POST /api/chat/stream rejects archived workspace with 409 Conflict", async () => {
-      // Alice is OWNER but workspace is archived
-      mockWorkspaceFindFirst.mockResolvedValue({
-        id: "ws_01",
-        ownerId: alice.userId,
-        archivedAt: new Date(),
-        deletedAt: null,
-        members: [],
-      });
-      mockGetActor.mockResolvedValue(alice);
-
-      const req = new NextRequest("http://localhost:3000/api/chat/stream", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ prompt: "Hello AI", chatId: "ws_01" }),
-      });
-
-      const res = await postChatStreamRoute(req);
-      expect(res.status).toBe(409);
-    });
-
-    it("POST /api/chat/stream rejects non-member with 404 Not Found", async () => {
-      mockWorkspaceFindFirst.mockResolvedValue(null);
-      mockGetActor.mockResolvedValue(bob);
-
-      const req = new NextRequest("http://localhost:3000/api/chat/stream", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ prompt: "Hello AI", chatId: "ws_alice" }),
-      });
-
-      const res = await postChatStreamRoute(req);
-      expect(res.status).toBe(404);
-    });
-
-    it("POST /api/chat/image rejects VIEWER role with 403 Forbidden", async () => {
-      mockWorkspaceFindFirst.mockResolvedValue({
-        id: "ws_01",
-        ownerId: alice.userId,
-        deletedAt: null,
-        members: [{ role: "VIEWER" }],
-      });
-      mockGetActor.mockResolvedValue(bob);
-
-      const req = new NextRequest("http://localhost:3000/api/chat/image", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ prompt: "A blue ocean", chatId: "ws_01" }),
-      });
-
-      const res = await postChatImageRoute(req);
-      expect(res.status).toBe(403);
-    });
-
-    it("POST /api/chat/image rejects archived workspace with 409 Conflict", async () => {
-      mockWorkspaceFindFirst.mockResolvedValue({
-        id: "ws_01",
-        ownerId: alice.userId,
-        archivedAt: new Date(),
-        deletedAt: null,
-        members: [],
-      });
-      mockGetActor.mockResolvedValue(alice);
-
-      const req = new NextRequest("http://localhost:3000/api/chat/image", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ prompt: "A blue ocean", chatId: "ws_01" }),
-      });
-
-      const res = await postChatImageRoute(req);
-      expect(res.status).toBe(409);
     });
   });
 

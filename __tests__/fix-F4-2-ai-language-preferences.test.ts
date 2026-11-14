@@ -230,5 +230,36 @@ describe("Step F4.2 — AI language preference, system prompt, and settings", ()
       const getBody = await getRes.json();
       expect(getBody.data.name).toBe("Updated Klecx User");
     });
+
+    it("rejects an empty name with 422 and leaves the name unchanged", async () => {
+      const res = await updateMe(
+        new NextRequest("http://localhost:3000/api/v1/me", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: "   " }),
+        })
+      );
+      expect(res.status).toBe(422);
+      const row = await db.user.findUnique({ where: { id: user.id }, select: { name: true } });
+      expect(row?.name).toBe("Language Test User");
+    });
+
+    it("returns 401 for GET and PATCH without a session", async () => {
+      (getActor as jest.Mock).mockResolvedValue(null);
+
+      const getRes = await getMe(new NextRequest("http://localhost:3000/api/v1/me"));
+      expect(getRes.status).toBe(401);
+
+      const patchRes = await updateMe(
+        new NextRequest("http://localhost:3000/api/v1/me", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: "Intruder" }),
+        })
+      );
+      expect(patchRes.status).toBe(401);
+      const row = await db.user.findUnique({ where: { id: user.id }, select: { name: true } });
+      expect(row?.name).toBe("Language Test User");
+    });
   });
 });

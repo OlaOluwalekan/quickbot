@@ -35,7 +35,6 @@ import {
 import { getEntitlements } from "@/server/billing/entitlements";
 import { streamAi, type AiProvider, validateCitationUrl } from "@/server/ai";
 import { AiError } from "@/server/ai/types";
-import { resolveEffectiveAiLanguage } from "@/lib/locale";
 import { getUserPreferences } from "@/server/services/user-preferences";
 import { getCustomProvider } from "@/server/services/generation";
 import { WEB_SEARCH_TOOL } from "@/server/ai/tools/web-search";

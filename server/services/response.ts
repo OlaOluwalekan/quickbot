@@ -597,7 +597,6 @@ export async function regenerateResponse(
       kind: isImageTurn ? "IMAGE" : "TEXT",
       regenerateResponseId: responseId,
       think: input.think,
-      language: input.language,
       attachmentIds: isImageTurn
         ? undefined
         : targetResponse.attachments.map((a) => a.id),

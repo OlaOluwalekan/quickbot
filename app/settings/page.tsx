@@ -11,7 +11,7 @@ import UserProfileImage from "@/components/settings/UserProfileImage";
 import AiPreferences from "@/components/settings/AiPreferences";
 import { getUserAvatar } from "@/server/services/avatar";
 import { getUserPreferences } from "@/server/services/user-preferences";
-import { getHomeData } from "@/server/services/home";
+import { getHomeCredits } from "@/server/services/home";
 import { Button } from "@/components/ui/button";
 import { SessionProps } from "@/types/user";
 import { getTranslations } from "next-intl/server";
@@ -31,7 +31,7 @@ const SettingsPage = async () => {
   const t = await getTranslations("Settings");
   const avatarData = await getUserAvatar(actor.userId).catch(() => null);
   const userPref = await getUserPreferences(actor.userId).catch(() => null);
-  const homeData = await getHomeData(actor).catch(() => null);
+  const credits = await getHomeCredits(actor.userId).catch(() => null);
 
   const sessionUser: SessionProps = {
     id: actor.userId,
@@ -128,7 +128,7 @@ const SettingsPage = async () => {
                 initialWebSearchEnabled={userPref?.webSearchEnabled ?? true}
                 initialAiLanguage={userPref?.aiLanguage ?? null}
               />
-              {homeData?.credits && <CreditsCard credits={homeData.credits} />}
+              {credits && <CreditsCard credits={credits} showPlanAction={false} />}
             </div>
           </div>
         </SettingsCard>

@@ -171,8 +171,6 @@
     "model": "Model",
     "thinkHarder": "Think harder",
     "thinkHarderDesc": "Enable deeper reasoning and thinking summaries",
-    "language": "Language",
-    "languageAuto": "Auto",
     "queue": "Prompt Queue",
     "queueDisabled": "Queue is empty",
     "stop": "Stop generating",
@@ -207,10 +205,9 @@
     "sessionsAndDevices": "Sessions & Devices",
     "notifications": "Notifications",
     "title": "Workspace Settings",
-    "subtitle": "Manage your profile, preferences, and token consumption.",
+    "subtitle": "Manage your profile, preferences and credits.",
     "backToChat": "Back to Chat",
     "generalTab": "Profile & Preferences",
-    "tokensTab": "Token Usage",
     "profileHeading": "Personal Information",
     "profileSubheading": "Update how your name appears across Klecx.",
     "fullName": "Full Name",
@@ -226,13 +223,14 @@
     "dangerZone": "Account Session",
     "logoutDescription": "Sign out of your Klecx workspace on this device.",
     "logoutButton": "Sign Out",
-    "tokenBalanceTitle": "Available Token Balance",
-    "tokenBalanceSubtitle": "Tokens are consumed based on prompt and response length or image synthesis.",
-    "usageHistoryTitle": "Recent Token Activity",
-    "usageDate": "Date & Time",
-    "usageResponseId": "Interaction / Response ID",
-    "usageTokens": "Tokens Used",
-    "noTokenUsage": "No token usage recorded yet."
+    "profile": {
+      "nameRequired": "Enter your name.",
+      "nameUpdated": "Name updated",
+      "nameUpdateError": "Couldn't update your name. Try again.",
+      "saveName": "Save name",
+      "cancelEdit": "Cancel",
+      "editName": "Edit name"
+    }
   },
   "Email": {
     "common": {
@@ -451,7 +449,8 @@
     "managePlan": "Manage",
     "retry": "Retry",
     "errorLoadingHome": "Unable to load workspace home.",
-    "studioBadge": "{appName} Studio"
+    "studioBadge": "{appName} Studio",
+    "creditsRemaining": "{count, plural, one {credit} other {credits}} remaining"
   },
   "Templates": {
     "catWrite": "Write",

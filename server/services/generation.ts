@@ -56,7 +56,6 @@ import {
 import { getStorageProvider } from "@/server/storage";
 import type { Msg, Part, ToolSpec } from "@/server/ai/types";
 import { normalizeGeminiError } from "@/server/ai/errors";
-import { resolveEffectiveAiLanguage } from "@/lib/locale";
 
 // In-memory active generation tracking
 export type ActiveSubscriber = {

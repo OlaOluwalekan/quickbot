@@ -57,9 +57,27 @@ function truncateSnippet(text: string, maxLength = 160): string {
   return cleaned.slice(0, maxLength).trim() + "…";
 }
 
+function nextMonthResetIso(now = new Date()): string {
+  return new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
+}
+
+function toHomeCredits(
+  account: { planBalance: number; topupBalance: number } | null
+): HomeCredits {
+  return {
+    plan: "Free",
+    balance: (account?.planBalance ?? 0) + (account?.topupBalance ?? 0),
+    resetsAt: nextMonthResetIso(),
+  };
+}
+
+/** Credits summary only (Settings), without the rest of the home dashboard. */
+export async function getHomeCredits(userId: string): Promise<HomeCredits> {
+  const account = await getAccountByUserId(userId).catch(() => null);
+  return toHomeCredits(account);
+}
+
 export async function getHomeData(actor: Actor): Promise<HomeData> {
-  const now = new Date();
-  const nextMonthReset = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
 
   // Run independent database fetches in parallel
   const [userRecord, creditAccount, recentRows, projectRows, sharedRows, workspaceCount, projectCount] =
@@ -233,9 +251,6 @@ export async function getHomeData(actor: Actor): Promise<HomeData> {
     updatedAt: ws.updatedAt.toISOString(),
   }));
 
-  const balance =
-    (creditAccount?.planBalance ?? 0) + (creditAccount?.topupBalance ?? 0);
-
   const email = userRecord?.email ?? actor.email;
   const name = userRecord?.name ?? actor.name ?? "";
   const emailPrefix = email.split("@")[0] || "";
@@ -247,11 +262,7 @@ export async function getHomeData(actor: Actor): Promise<HomeData> {
     recent,
     projects,
     sharedWithMe,
-    credits: {
-      plan: "Free",
-      balance,
-      resetsAt: nextMonthReset,
-    },
+    credits: toHomeCredits(creditAccount),
     onboarding: {
       emailVerified: Boolean(userRecord?.emailVerified),
       usernameChosen,

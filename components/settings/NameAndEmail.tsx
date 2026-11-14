@@ -25,7 +25,7 @@ const NameAndEmail = ({ user }: { user: SessionProps }) => {
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!name.trim()) {
-      toast.error(t("fullName"));
+      toast.error(t("profile.nameRequired"));
       return;
     }
 
@@ -38,14 +38,14 @@ const NameAndEmail = ({ user }: { user: SessionProps }) => {
         });
         const json = await res.json();
         if (res.ok && json.data) {
-          toast.success("Name updated");
+          toast.success(t("profile.nameUpdated"));
           setIsEditing(false);
           router.refresh();
         } else {
-          toast.error(json?.error?.message || "Failed to update name");
+          toast.error(t("profile.nameUpdateError"));
         }
       } catch {
-        toast.error("Failed to update name");
+        toast.error(t("profile.nameUpdateError"));
       }
     });
   };
@@ -79,8 +79,8 @@ const NameAndEmail = ({ user }: { user: SessionProps }) => {
                 type="submit"
                 variant="ghost"
                 size="icon"
-                aria-label="Save name"
-                tooltip="Save name"
+                aria-label={t("profile.saveName")}
+                tooltip={t("profile.saveName")}
                 className="text-success hover:bg-success/15"
               >
                 <Check className="h-4 w-4" strokeWidth={1.5} />
@@ -89,8 +89,8 @@ const NameAndEmail = ({ user }: { user: SessionProps }) => {
                 type="button"
                 variant="ghost"
                 size="icon"
-                aria-label="Cancel edit"
-                tooltip="Cancel edit"
+                aria-label={t("profile.cancelEdit")}
+                tooltip={t("profile.cancelEdit")}
                 className="text-danger hover:bg-danger/15"
                 onClick={handleCancel}
               >
@@ -106,8 +106,8 @@ const NameAndEmail = ({ user }: { user: SessionProps }) => {
             type="button"
             variant="ghost"
             size="icon"
-            aria-label="Edit name"
-            tooltip="Edit name"
+            aria-label={t("profile.editName")}
+            tooltip={t("profile.editName")}
             onClick={() => setIsEditing(true)}
           >
             <Pencil className="h-3.5 w-3.5" strokeWidth={1.5} />

@@ -289,38 +289,7 @@ describe("Step 2.8 — Language: UI locale vs AI response language", () => {
 
       const mainRequest = capturingProvider.requests.find((r) => r.system);
       expect(mainRequest).toBeDefined();
-      expect(mainRequest?.system).toContain("Response language: fr");
-    });
-
-    it("honors one-off composer language override over saved AI language preference", async () => {
-      await updateUserPreferences(user.id, {
-        uiLocale: "en",
-        aiLanguage: "fr",
-      });
-
-      const capturingProvider = new CapturingAiProvider();
-      setCustomProvider(capturingProvider);
-
-      const { stream } = await createAndStreamGeneration(
-        actor,
-        workspace.id,
-        {
-          idempotencyKey: `lang_gen_override_${Date.now()}`,
-          prompt: "Tell me a joke",
-          modelKey: "text-economy",
-          language: "yo", // One-off override from composer
-        },
-        { providerInstance: capturingProvider }
-      );
-      await readAllSse(stream);
-
-      const mainRequest = capturingProvider.requests.find((r) => r.system);
-      expect(mainRequest).toBeDefined();
-      expect(mainRequest?.system).toContain("Response language: yo");
-
-      // Saved preference in DB remains unchanged
-      const savedPref = await getUserPreferences(user.id);
-      expect(savedPref.aiLanguage).toBe("fr");
+      expect(mainRequest?.system).toContain("Response language: French.");
     });
   });
 });

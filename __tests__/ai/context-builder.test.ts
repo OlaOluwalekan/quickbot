@@ -450,14 +450,14 @@ describe("Context builder and system prompts (Step 2.3)", () => {
   describe("5. Language placeholder is filled", () => {
     it("fills the language placeholder properly in buildSystemPrompt", () => {
       const promptEn = buildSystemPrompt("en");
-      expect(promptEn).toContain("Response language: en.");
+      expect(promptEn).toContain("Response language: English.");
       expect(promptEn).toContain("You are Klecx");
       expect(promptEn).toContain("Acceptable Use Policy");
 
-      const promptFr = buildSystemPrompt("French");
+      const promptFr = buildSystemPrompt("fr");
       expect(promptFr).toContain("Response language: French.");
 
-      const promptEs = buildSystemPrompt("Spanish");
+      const promptEs = buildSystemPrompt("es");
       expect(promptEs).toContain("Response language: Spanish.");
     });
 
@@ -469,8 +469,8 @@ describe("Context builder and system prompts (Step 2.3)", () => {
         language: "de",
       });
 
-      expect(result.system).toContain("Response language: de.");
-      expect(PROMPT_VERSION).toBe("2026-11-14"); // bumped in F4.1 (web_search tool, inline citations)
+      expect(result.system).toContain("Response language: German.");
+      expect(PROMPT_VERSION).toBe("2026-11-14.1"); // bumped in F4.2 (Auto language instruction)
     });
   });
 
