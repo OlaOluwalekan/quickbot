@@ -14,6 +14,11 @@ import {
   DEFAULT_LAYOUT_PREFS,
 } from "@/lib/annotations/thread-stack";
 import { useThreadStackStore, useThreadStackUrlSync } from "@/lib/stores/thread-stack";
+import { useSidebarAutoStore } from "@/lib/stores/sidebar-auto";
+import {
+  columnsNeedSidebarRoom,
+  SIDEBAR_EXPANDED_PX,
+} from "@/lib/layout/sidebar-auto";
 import { ThreadColumn } from "./thread-column";
 import { BatchColumn } from "./batch-column";
 import { DocumentColumn } from "@/components/documents/document-column";
@@ -105,17 +110,31 @@ export function ThreadStackLayout({
     }
   }, []);
 
+  // Right edge of the column area (window side). Unlike the width, it doesn't
+  // move when the sidebar changes width, so the auto-closing sidebar can
+  // decide from it without feeding back into itself.
+  const [containerRight, setContainerRight] = React.useState(0);
+
   React.useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
+    const measureRight = () => setContainerRight(el.getBoundingClientRect().right);
     setContainerWidth(el.getBoundingClientRect().width);
-    if (typeof ResizeObserver === "undefined") return;
+    measureRight();
+    window.addEventListener("resize", measureRight);
+    if (typeof ResizeObserver === "undefined") {
+      return () => window.removeEventListener("resize", measureRight);
+    }
     const observer = new ResizeObserver((entries) => {
       const width = entries[0]?.contentRect.width ?? 0;
       if (width > 0) setContainerWidth(width);
+      measureRight();
     });
     observer.observe(el);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", measureRight);
+    };
   }, []);
 
   // Phone / small tablet: by viewport, not by the space left next to the sidebar.
@@ -127,6 +146,28 @@ export function ThreadStackLayout({
     mq.addEventListener?.("change", onChange);
     return () => mq.removeEventListener?.("change", onChange);
   }, []);
+
+  // Auto-closing sidebar: tell the app shell when the open columns don't fit
+  // beside the expanded sidebar. The space they'd have is measured from the
+  // window side (right edge minus the expanded sidebar), never from the
+  // current width: that width changes when the sidebar collapses, and using
+  // it flipped the decision back and forth ("Maximum update depth exceeded").
+  const setColumnsNeedRoom = useSidebarAutoStore((s) => s.setColumnsNeedRoom);
+  React.useEffect(() => {
+    if (isSingleColumn || containerRight <= 0) {
+      setColumnsNeedRoom(false);
+      return;
+    }
+    setColumnsNeedRoom(
+      columnsNeedSidebarRoom(
+        containerRight - SIDEBAR_EXPANDED_PX,
+        stack.length,
+        DEFAULT_LAYOUT_PREFS
+      )
+    );
+  }, [containerRight, stack.length, isSingleColumn, setColumnsNeedRoom]);
+  // Leaving the workspace closes its columns: the person's own choice applies again.
+  React.useEffect(() => () => setColumnsNeedRoom(false), [setColumnsNeedRoom]);
 
   // Alt+← = Back, Alt+Home = Main conversation
   const hasColumns = stack.length > 0;

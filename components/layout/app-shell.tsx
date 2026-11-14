@@ -9,6 +9,8 @@ import { X } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api/client";
 import { useUiStore, writeSidebarCookie } from "@/lib/stores/ui";
+import { useSidebarAutoStore } from "@/lib/stores/sidebar-auto";
+import { resolveSidebar, toggleSidebar } from "@/lib/layout/sidebar-auto";
 import {
   createProjectSchema,
   updateWorkspaceSchema,
@@ -59,6 +61,10 @@ export interface AppShellProps {
   children: React.ReactNode;
 }
 
+/** Hover delay before the overlay opens, so passing the pointer by doesn't flicker it. */
+const OVERLAY_OPEN_DELAY_MS = 250;
+const OVERLAY_CLOSE_DELAY_MS = 200;
+
 function isEditableElement(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   const tag = target.tagName.toLowerCase();
@@ -90,13 +96,121 @@ export function AppShell({
     setHydrated(true);
   }, [initialSidebarCollapsed, setStoreSidebarCollapsed]);
 
-  const collapsed = hydrated ? storeCollapsed : initialSidebarCollapsed;
+  const userCollapsed = hydrated ? storeCollapsed : initialSidebarCollapsed;
+
+  // Auto-closing sidebar: open columns may collapse it to the rail. Whenever
+  // it's a rail, hovering it opens the full sidebar as an overlay; the toggle
+  // keeps it open. See lib/layout/sidebar-auto.ts.
+  const columnsNeedRoom = useSidebarAutoStore((s) => s.columnsNeedRoom);
+  const pinnedOpen = useSidebarAutoStore((s) => s.pinnedOpen);
+  const setPinnedOpen = useSidebarAutoStore((s) => s.setPinnedOpen);
+  const hydratePinned = useSidebarAutoStore((s) => s.hydratePinned);
+  React.useEffect(() => hydratePinned(), [hydratePinned]);
+
+  const sidebarState = { userCollapsed, columnsNeedRoom, pinnedOpen };
+  const { collapsed, auto: autoCollapsed } = resolveSidebar(sidebarState);
+
+  const [overlayOpen, setOverlayOpen] = React.useState(false);
+  const overlayRef = React.useRef<HTMLDivElement>(null);
+  const railRef = React.useRef<HTMLDivElement>(null);
+  const openTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const closeTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clearTimers = React.useCallback(() => {
+    if (openTimer.current) clearTimeout(openTimer.current);
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    openTimer.current = null;
+    closeTimer.current = null;
+  }, []);
+  React.useEffect(() => clearTimers, [clearTimers]);
+  // Nothing to overlay once the sidebar is expanded again.
+  React.useEffect(() => {
+    if (!collapsed) {
+      clearTimers();
+      setOverlayOpen(false);
+    }
+  }, [collapsed, clearTimers]);
+
+  // When focus last left the overlay: focus landing on the rail right after
+  // (Shift+Tab, or Escape returning it) must not reopen it.
+  const leftOverlayAt = React.useRef(0);
+  const closeOverlay = React.useCallback(
+    (returnFocus = false) => {
+      clearTimers();
+      setOverlayOpen(false);
+      if (returnFocus) {
+        leftOverlayAt.current = Date.now();
+        railRef.current
+          ?.querySelector<HTMLElement>("a, button")
+          ?.focus({ preventScroll: true });
+      }
+    },
+    [clearTimers]
+  );
 
   const handleToggleCollapsed = React.useCallback(() => {
-    const next = !collapsed;
-    writeSidebarCookie(next);
-    setStoreSidebarCollapsed(next);
-  }, [collapsed, setStoreSidebarCollapsed]);
+    const next = toggleSidebar(sidebarState);
+    if (next.pinnedOpen !== pinnedOpen) setPinnedOpen(next.pinnedOpen);
+    if (next.userCollapsed !== userCollapsed) {
+      writeSidebarCookie(next.userCollapsed);
+      setStoreSidebarCollapsed(next.userCollapsed);
+    }
+    closeOverlay();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userCollapsed, columnsNeedRoom, pinnedOpen, setPinnedOpen, setStoreSidebarCollapsed, closeOverlay]);
+
+  /** Mouse (not touch) on the rail: open the overlay after a short delay. */
+  const handleRailPointerEnter = (e: React.PointerEvent) => {
+    if (!collapsed || e.pointerType !== "mouse") return;
+    clearTimers();
+    openTimer.current = setTimeout(() => setOverlayOpen(true), OVERLAY_OPEN_DELAY_MS);
+  };
+  const handleRailPointerLeave = () => {
+    if (openTimer.current) clearTimeout(openTimer.current);
+    openTimer.current = null;
+  };
+  /** Keyboard: reaching the rail with Tab opens the overlay and moves focus into it. */
+  const handleRailFocus = (e: React.FocusEvent) => {
+    if (!collapsed || overlayOpen) return;
+    if (Date.now() - leftOverlayAt.current < 300) return;
+    const target = e.target as HTMLElement;
+    if (!target.matches?.(":focus-visible")) return;
+    setOverlayOpen(true);
+    requestAnimationFrame(() =>
+      overlayRef.current
+        ?.querySelector<HTMLElement>("a, button")
+        ?.focus({ preventScroll: true })
+    );
+  };
+  const handleOverlayPointerLeave = (e: React.PointerEvent) => {
+    if (e.pointerType !== "mouse") return;
+    clearTimers();
+    closeTimer.current = setTimeout(() => {
+      // Keep it while one of its menus is open (menus render outside it).
+      if (overlayRef.current?.querySelector('[aria-haspopup][aria-expanded="true"]')) return;
+      setOverlayOpen(false);
+    }, OVERLAY_CLOSE_DELAY_MS);
+  };
+
+  // Click outside or Escape closes the overlay.
+  React.useEffect(() => {
+    if (!overlayOpen) return;
+    const onPointerDown = (e: PointerEvent) => {
+      const target = e.target as Node;
+      if (overlayRef.current?.contains(target)) return;
+      // Menus opened from the overlay live in portals.
+      if ((target as HTMLElement).closest?.("[data-radix-popper-content-wrapper]")) return;
+      closeOverlay();
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeOverlay(true);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [overlayOpen, closeOverlay]);
 
   const mobileNavIsOpen = useUiStore((s) => s.mobileNavIsOpen);
   const toggleMobileNavOpen = useUiStore((s) => s.toggleMobileNavOpen);
@@ -339,34 +453,81 @@ export function AppShell({
 
   const sidebarWidthVar = collapsed ? "64px" : "280px";
 
+  const desktopSidebarProps = {
+    user,
+    activeWorkspaceId,
+    projects,
+    workspaces,
+    onOpenSearch: () => {
+      closeOverlay();
+      setCommandPaletteOpen(true);
+    },
+    onRequestCreateProject: () => {
+      closeOverlay();
+      createProjectForm.reset({ name: "" });
+      setCreateProjectOpen(true);
+    },
+    onRequestRenameWorkspace: (ws: SidebarWorkspaceItem) => {
+      closeOverlay();
+      renameForm.reset({ title: ws.title });
+      setRenamingWorkspace(ws);
+    },
+    onMoveWorkspace: handleMoveWorkspace,
+    onArchiveWorkspace: handleArchiveWorkspace,
+    onRequestDeleteWorkspace: (ws: SidebarWorkspaceItem) => {
+      closeOverlay();
+      setDeletingWorkspace(ws);
+    },
+  };
+
   return (
     <div
       style={{ "--sidebar-w": sidebarWidthVar } as React.CSSProperties}
       className="bg-bg text-fg grid h-dvh w-full grid-cols-1 overflow-hidden pb-[env(safe-area-inset-bottom)] md:grid-cols-[var(--sidebar-w)_minmax(0,1fr)_auto]"
     >
       {/* Desktop Sidebar Column */}
-      <div className="hidden h-full min-h-0 overflow-hidden md:flex">
+      <div
+        ref={railRef}
+        className="hidden h-full min-h-0 overflow-hidden md:flex"
+        data-sidebar-auto={autoCollapsed ? "true" : undefined}
+        onPointerEnter={handleRailPointerEnter}
+        onPointerLeave={handleRailPointerLeave}
+        onFocus={handleRailFocus}
+      >
         <Sidebar
-          user={user}
+          {...desktopSidebarProps}
           collapsed={collapsed}
           onToggleCollapsed={handleToggleCollapsed}
-          activeWorkspaceId={activeWorkspaceId}
-          projects={projects}
-          workspaces={workspaces}
-          onOpenSearch={() => setCommandPaletteOpen(true)}
-          onRequestCreateProject={() => {
-            createProjectForm.reset({ name: "" });
-            setCreateProjectOpen(true);
-          }}
-          onRequestRenameWorkspace={(ws) => {
-            renameForm.reset({ title: ws.title });
-            setRenamingWorkspace(ws);
-          }}
-          onMoveWorkspace={handleMoveWorkspace}
-          onArchiveWorkspace={handleArchiveWorkspace}
-          onRequestDeleteWorkspace={(ws) => setDeletingWorkspace(ws)}
         />
       </div>
+
+      {/* Collapsed (by the person or by the columns): the full sidebar over the page, from hover or keyboard */}
+      {collapsed && overlayOpen && (
+        <div
+          ref={overlayRef}
+          data-testid="sidebar-overlay"
+          className="animate-in fade-in slide-in-from-left-2 fixed inset-y-0 left-0 z-40 hidden shadow-xl duration-150 motion-reduce:animate-none md:flex"
+          onPointerEnter={(e) => {
+            if (e.pointerType === "mouse") clearTimers();
+          }}
+          onPointerLeave={handleOverlayPointerLeave}
+          onBlur={(e) => {
+            const next = e.relatedTarget as Node | null;
+            if (next && !overlayRef.current?.contains(next)) {
+              leftOverlayAt.current = Date.now();
+              closeOverlay();
+            }
+          }}
+        >
+          <Sidebar
+            {...desktopSidebarProps}
+            collapsed={false}
+            pinLabel
+            onToggleCollapsed={handleToggleCollapsed}
+            onNavigate={() => closeOverlay()}
+          />
+        </div>
+      )}
 
       {/* Mobile Drawer (< 768px) */}
       <Sheet
