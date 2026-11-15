@@ -1195,7 +1195,12 @@
     "noSpeech": "No se detectó voz en el audio",
     "retry": "Reintentar",
     "dailyLimit": "Se ha alcanzado el límite diario de entrada de voz para tu plan",
-    "error": "Error al transcribir el audio. Por favor intenta de nuevo."
+    "error": "Error al transcribir el audio. Por favor intenta de nuevo.",
+    "started": "Grabación iniciada",
+    "stopped": "Grabación detenida",
+    "cancelled": "Grabación cancelada",
+    "discard": "Descartar grabación",
+    "outOfCredits": "No tienes créditos suficientes para la entrada de voz"
   },
   "Members": {
     "errors": {

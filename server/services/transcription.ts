@@ -15,6 +15,17 @@ import {
 } from "@/server/services/credits";
 import { getEntitlements } from "@/server/billing/entitlements";
 import type { PlanKey } from "@/server/billing/plans";
+import type { Prisma } from "@/server/db/generated/client";
+
+const TRANSCRIPTION_PROMPT_VERSION = "transcribe-1";
+
+/** Keeps a client language hint to a short language tag or name. */
+function normalizeLanguageHint(hint: string | undefined): string | undefined {
+  if (!hint) return undefined;
+  const trimmed = hint.trim();
+  if (!trimmed || trimmed.length > MAX_LANGUAGE_HINT_LENGTH) return undefined;
+  return /^[\p{L}\p{M} -]+$/u.test(trimmed) ? trimmed : undefined;
+}
 
 export const MAX_AUDIO_BYTES = 5 * 1024 * 1024; // 5 MB
 export const MAX_AUDIO_DURATION_MS = 120_000; // 2 minutes
@@ -54,19 +65,36 @@ export const ALLOWED_DETECTED_MIMES = new Set([
   "audio/x-m4a",
 ]);
 
-/**
- * Counts the voice input seconds used today by `actorId` across all workspaces/sessions.
- * Read from `Generation.usage.seconds` where `kind = "TRANSCRIPTION"`.
- */
-export async function countVoiceSecondsToday(actorId: string): Promise<number> {
-  const startOfDay = new Date();
-  startOfDay.setUTCHours(0, 0, 0, 0);
+/** Rough audio token rate of the provider (tokens per second of audio). */
+const AUDIO_TOKENS_PER_SECOND = 32;
+/** Generous speech rate used to size the reservation (tokens per second). */
+const TRANSCRIPT_TOKENS_PER_SECOND = 6;
+/** Thinking the model may do before answering, also billed as output. */
+const RESERVE_THOUGHT_TOKENS = 1024;
+const MAX_LANGUAGE_HINT_LENGTH = 35;
 
-  const generations = await db.generation.findMany({
+function startOfUtcDay(): Date {
+  const d = new Date();
+  d.setUTCHours(0, 0, 0, 0);
+  return d;
+}
+
+/**
+ * Counts the voice input seconds used today (UTC) by `actorId`, wherever they
+ * recorded. Read from `Generation.usage.seconds` of TRANSCRIPTION rows that
+ * didn't fail. The seconds are written when the row is created, so a
+ * transcription still running counts too.
+ */
+export async function countVoiceSecondsToday(
+  actorId: string,
+  client: Pick<Prisma.TransactionClient, "generation"> = db
+): Promise<number> {
+  const generations = await client.generation.findMany({
     where: {
       actorId,
       kind: "TRANSCRIPTION",
-      createdAt: { gte: startOfDay },
+      status: { not: "FAILED" },
+      createdAt: { gte: startOfUtcDay() },
     },
     select: { usage: true },
   });
@@ -80,6 +108,19 @@ export async function countVoiceSecondsToday(actorId: string): Promise<number> {
     if (typeof s === "number" && Number.isFinite(s) && s > 0) total += s;
   }
   return total;
+}
+
+function dailyVoiceLimitError(): ApiError {
+  return new ApiError(
+    402,
+    "daily_voice_limit",
+    "Daily voice input limit reached for your plan"
+  );
+}
+
+function isUniqueViolation(err: unknown): boolean {
+  const e = err as { code?: string; message?: string } | null;
+  return e?.code === "P2002" || Boolean(e?.message?.includes("Unique constraint"));
 }
 
 export interface TranscribeAudioInput {
@@ -150,31 +191,29 @@ export async function transcribeAudio(
     audioBuffer.byteLength
   );
   const detected = await fileTypeFromBuffer(uint8);
-  // If file-type detects a known format, ensure it is an allowed audio/video container
-  if (detected && !ALLOWED_DETECTED_MIMES.has(detected.mime)) {
+  // The bytes must be a known audio container: a file whose type can't be
+  // detected is refused too, whatever the client said it was.
+  if (!detected || !ALLOWED_DETECTED_MIMES.has(detected.mime)) {
     throw Errors.badRequest(
-      `File contents do not match audio format (detected ${detected.mime})`,
+      "File contents are not a supported audio format",
       "invalid_audio_format"
     );
   }
 
-  const effectiveMime = detected?.mime || normalizedClientMime;
+  const effectiveMime = detected.mime;
 
-  // 4. Daily seconds check against entitlements
+  // 4. Daily seconds check against the actor's own plan (fast pre-check; the
+  // authoritative one runs below while the actor's credit account is locked).
   const entitlements = await getEntitlements(actorId);
   const voiceLimitSeconds = entitlements.limits.voiceSecondsPerDay;
   const audioSeconds = Math.ceil(durationMs / 1000);
 
-  const usedSecondsToday = await countVoiceSecondsToday(actorId);
-  if (usedSecondsToday + audioSeconds > voiceLimitSeconds) {
-    throw new ApiError(
-      402,
-      "daily_voice_limit",
-      "Daily voice input limit reached for your plan"
-    );
+  if ((await countVoiceSecondsToday(actorId)) + audioSeconds > voiceLimitSeconds) {
+    throw dailyVoiceLimitError();
   }
 
-  // 5. Billing setup: Billed to actor's personal CreditAccount
+  // 5. Billing: the person speaking pays, from their own CreditAccount (§2.6),
+  // never the workspace owner.
   let account = await getAccountByUserId(actorId);
   if (!account) {
     account = await createAccountWithFreeGrant(actorId);
@@ -183,45 +222,70 @@ export async function transcribeAudio(
   const modelKey = "audio-transcribe";
   const modelDef = getModel(modelKey);
   const generationId = crypto.randomUUID();
-  const reserveAmount = 2; // initial estimated credits for audio transcription
-  const reservationKey = `res_trans_${idempotencyKey}`;
-  const settleKey = `stl_trans_${idempotencyKey}`;
-  const releaseKey = `rel_trans_${idempotencyKey}`;
-
-  // Reserve credits on actor's account
-  await reserve(account.id, reserveAmount, reservationKey, {
-    generationId,
-    actorId,
-    estimated: true,
+  // Sized from the recording so a long one can't be under-reserved.
+  const reserveAmount = creditsFor(modelKey, {
+    inputTokens: audioSeconds * AUDIO_TOKENS_PER_SECOND + 100,
+    outputTokens: audioSeconds * TRANSCRIPT_TOKENS_PER_SECOND,
+    thoughtTokens: RESERVE_THOUGHT_TOKENS,
   });
+  // Keys follow the generation, which is new for every request: a repeated
+  // idempotency key is refused below instead of reusing another request's hold.
+  const reservationKey = `res_trans_${generationId}`;
+  const settleKey = `stl_trans_${generationId}`;
+  const releaseKey = `rel_trans_${generationId}`;
 
-  // Create Generation record with nullable workspaceId
-  await db.generation.create({
-    data: {
-      id: generationId,
-      workspaceId: null,
+  try {
+    await reserve(account.id, reserveAmount, reservationKey, {
+      generationId,
       actorId,
-      billedAccountId: account.id,
-      kind: "TRANSCRIPTION",
-      status: "RUNNING",
-      modelKey,
-      providerModelId: modelDef.providerModelId,
-      promptVersion: "1.0",
-      idempotencyKey,
-      reservedCredits: reserveAmount,
-      startedAt: new Date(),
-    },
-  });
+      estimated: true,
+      // Runs while the actor's account row is locked, so concurrent
+      // recordings can't each pass the daily check. The row is written here
+      // with its seconds, so the next request already counts it.
+      guard: async (tx) => {
+        const used = await countVoiceSecondsToday(actorId, tx);
+        if (used + audioSeconds > voiceLimitSeconds) {
+          throw dailyVoiceLimitError();
+        }
+        await tx.generation.create({
+          data: {
+            id: generationId,
+            workspaceId: null,
+            actorId,
+            billedAccountId: account.id,
+            kind: "TRANSCRIPTION",
+            status: "RUNNING",
+            modelKey,
+            providerModelId: modelDef.providerModelId,
+            promptVersion: TRANSCRIPTION_PROMPT_VERSION,
+            idempotencyKey,
+            reservedCredits: reserveAmount,
+            usage: { seconds: audioSeconds, durationMs },
+            startedAt: new Date(),
+          },
+        });
+      },
+    });
+  } catch (err) {
+    if (isUniqueViolation(err)) {
+      throw Errors.conflict(
+        "This recording was already sent",
+        "duplicate_request"
+      );
+    }
+    throw err;
+  }
 
   // 6. Build prompt & invoke model
-  const promptInstruction = languageHint
-    ? `Transcribe this audio verbatim in the language spoken (likely ${languageHint}). Return only the transcript text.`
+  const hint = normalizeLanguageHint(languageHint);
+  const promptInstruction = hint
+    ? `Transcribe this audio verbatim in the language spoken (likely ${hint}). Return only the transcript text.`
     : "Transcribe this audio verbatim in the language spoken. Return only the transcript text.";
 
   const dataUrl = `data:${effectiveMime};base64,${audioBuffer.toString("base64")}`;
 
   let transcribedText = "";
-  let usage = { inputTokens: 0, outputTokens: 0 };
+  let usage = { inputTokens: 0, outputTokens: 0, thoughtTokens: 0 };
 
   try {
     const stream = streamAi(
@@ -259,6 +323,7 @@ export async function transcribeAudio(
         usage = {
           inputTokens: ev.inputTokens,
           outputTokens: ev.outputTokens,
+          thoughtTokens: ev.thoughtTokens ?? 0,
         };
       }
     }
@@ -269,7 +334,9 @@ export async function transcribeAudio(
         where: { id: generationId },
         data: {
           status: "FAILED",
-          errorCode: (err as Error)?.message?.slice(0, 50) || "transcription_error",
+          // A code, never the provider's message (it can echo content).
+          errorCode:
+            err instanceof ApiError ? err.code.slice(0, 50) : "transcription_error",
           finishedAt: new Date(),
         },
       })
@@ -299,7 +366,9 @@ export async function transcribeAudio(
   // Fall back to estimated token counts if model didn't return usage
   const inputTokens = usage.inputTokens || Math.ceil(audioSeconds * 32);
   const outputTokens = usage.outputTokens || Math.ceil(cleanText.split(/\s+/).length * 1.3);
-  const chargedCredits = creditsFor(modelKey, { inputTokens, outputTokens });
+  // Thinking tokens are billed by the provider as output, so they count too.
+  const thoughtTokens = usage.thoughtTokens;
+  const chargedCredits = creditsFor(modelKey, { inputTokens, outputTokens, thoughtTokens });
 
   await settle(account.id, generationId, chargedCredits, settleKey);
 
@@ -311,6 +380,7 @@ export async function transcribeAudio(
       usage: {
         inputTokens,
         outputTokens,
+        thoughtTokens,
         seconds: audioSeconds,
         durationMs,
       },

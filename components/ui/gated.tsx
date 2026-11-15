@@ -115,9 +115,7 @@ export function Gated({
   );
 
   const isUpgradable =
-    reason.code === "requires_plan" ||
-    reason.code === "out_of_credits" ||
-    reason.code === "daily_voice_limit";
+    reason.code === "requires_plan" || reason.code === "out_of_credits";
   const ariaLabel = isUpgradable
     ? `${message} · ${upgradeLabel}`
     : `${message}\u200B`;

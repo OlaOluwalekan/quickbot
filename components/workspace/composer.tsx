@@ -521,9 +521,11 @@ export function Composer({
     ? { code: "no_permission", capability: t("capGenerate") }
     : creditsGate;
 
-  const voiceGateReason: GateReason | null = isOutOfCredits
-    ? { code: "out_of_credits" }
-    : null;
+  // Voice input is billed to the speaker, but a transcript is only useful if
+  // it can be sent, so the mic follows the same credits gate as Send (with its
+  // own reason: "you" vs "the workspace owner"). The server checks the
+  // speaker's own balance and daily seconds.
+  const voiceGateReason: GateReason | null = creditsGate;
 
   const handleSubmit = async (overridePrompt?: string) => {
     // F4.5: If user clicked Send while recording voice, delegate to voice handler
@@ -717,13 +719,13 @@ export function Composer({
     [prompt, draftKey, setDraft, adjustHeight]
   );
 
-  const handleSendTranscript = React.useCallback(
-    (transcript: string) => {
-      if (!transcript || typeof transcript !== "string") return;
-      void handleSubmit(transcript);
-    },
-    [handleSubmit]
-  );
+  // Send while recording: what was already typed is kept, the transcript is
+  // added after it, and the whole text is sent as the prompt.
+  const handleSendTranscript = (transcript: string) => {
+    if (!transcript || typeof transcript !== "string") return;
+    const typed = prompt.trim();
+    void handleSubmit(typed ? `${typed} ${transcript}` : transcript);
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     // IME safety: do not fire on composition end or during CJK IME input

@@ -336,4 +336,88 @@ describe("Step F4.5 — Voice Prompts Client & UI", () => {
       expect(screen.getByTestId("voice-record-btn")).toBeInTheDocument();
     });
   });
+
+  describe("8. Review fixes — server errors", () => {
+    class MockQuickRecorder {
+      start() { return Promise.resolve(); }
+      stop() {
+        return Promise.resolve({
+          blob: new Blob(["a"], { type: "audio/webm" }),
+          mimeType: "audio/webm",
+          durationMs: 1000,
+        });
+      }
+      cancel() {}
+    }
+
+    async function recordAndStop() {
+      await act(async () => {
+        fireEvent.click(screen.getByTestId("voice-record-btn"));
+      });
+      await act(async () => {
+        fireEvent.click(screen.getByTestId("voice-stop-btn"));
+      });
+    }
+
+    it("an out-of-credits 402 says so (not the daily limit) and leaves no Retry", async () => {
+      jest.spyOn(recorderModule, "isVoiceSupported").mockReturnValue(true);
+      jest.spyOn(recorderModule, "VoiceRecorder").mockImplementation(() => new MockQuickRecorder() as any);
+      jest
+        .spyOn(recorderModule, "uploadVoiceTranscription")
+        .mockRejectedValueOnce(Object.assign(new Error("x"), { status: 402, code: "insufficient_credits" }));
+
+      render(
+        <NextIntlClientProvider locale="en" messages={enMessages}>
+          <VoiceInput onInsertTranscript={jest.fn()} />
+        </NextIntlClientProvider>
+      );
+      await recordAndStop();
+
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith(enMessages.Voice.outOfCredits);
+      });
+      expect(toast.error).not.toHaveBeenCalledWith(enMessages.Voice.dailyLimit);
+      expect(screen.queryByTestId("voice-retry-btn")).not.toBeInTheDocument();
+      expect(screen.getByTestId("voice-record-btn")).not.toHaveAttribute("aria-disabled", "true");
+    });
+
+    it("after the daily limit is reached the mic is gated", async () => {
+      jest.spyOn(recorderModule, "isVoiceSupported").mockReturnValue(true);
+      jest.spyOn(recorderModule, "VoiceRecorder").mockImplementation(() => new MockQuickRecorder() as any);
+      jest
+        .spyOn(recorderModule, "uploadVoiceTranscription")
+        .mockRejectedValueOnce(Object.assign(new Error("x"), { status: 402, code: "daily_voice_limit" }));
+
+      render(
+        <NextIntlClientProvider locale="en" messages={enMessages}>
+          <VoiceInput onInsertTranscript={jest.fn()} />
+        </NextIntlClientProvider>
+      );
+      await recordAndStop();
+
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith(enMessages.Voice.dailyLimit);
+      });
+      expect(screen.getByTestId("voice-record-btn")).toHaveAttribute("aria-disabled", "true");
+    });
+
+    it("a failed upload can be discarded, bringing the mic back", async () => {
+      jest.spyOn(recorderModule, "isVoiceSupported").mockReturnValue(true);
+      jest.spyOn(recorderModule, "VoiceRecorder").mockImplementation(() => new MockQuickRecorder() as any);
+      jest
+        .spyOn(recorderModule, "uploadVoiceTranscription")
+        .mockRejectedValueOnce(new Error("Network failed"));
+
+      render(
+        <NextIntlClientProvider locale="en" messages={enMessages}>
+          <VoiceInput onInsertTranscript={jest.fn()} />
+        </NextIntlClientProvider>
+      );
+      await recordAndStop();
+
+      fireEvent.click(await screen.findByTestId("voice-discard-btn"));
+      expect(screen.queryByTestId("voice-retry-btn")).not.toBeInTheDocument();
+      expect(screen.getByTestId("voice-record-btn")).toBeInTheDocument();
+    });
+  });
 });

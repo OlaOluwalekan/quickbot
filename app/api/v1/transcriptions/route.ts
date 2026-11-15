@@ -2,6 +2,14 @@ import { route } from "@/server/http/route";
 import { Errors } from "@/server/http/errors";
 import { transcribeAudio } from "@/server/services/transcription";
 
+/** A short text field, or undefined when missing, a file or too long. */
+function textField(form: FormData, name: string, maxLength: number): string | undefined {
+  const value = form.get(name);
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return trimmed && trimmed.length <= maxLength ? trimmed : undefined;
+}
+
 export const POST = route({
   auth: "required",
   rateLimit: {
@@ -27,8 +35,8 @@ export const POST = route({
       throw Errors.badRequest("Invalid durationMs", "invalid_duration");
     }
 
-    const idempotencyKey = (formData.get("idempotencyKey") as string) || undefined;
-    const languageHint = (formData.get("languageHint") as string) || undefined;
+    const idempotencyKey = textField(formData, "idempotencyKey", 100);
+    const languageHint = textField(formData, "languageHint", 35);
 
     const arrayBuffer = await file.arrayBuffer();
     const audioBuffer = Buffer.from(arrayBuffer);

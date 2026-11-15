@@ -1195,7 +1195,12 @@
     "noSpeech": "Aucune voix détectée dans l'audio",
     "retry": "Réessayer",
     "dailyLimit": "Limite quotidienne de saisie vocale atteinte pour votre forfait",
-    "error": "Échec de la transcription audio. Veuillez réessayer."
+    "error": "Échec de la transcription audio. Veuillez réessayer.",
+    "started": "Enregistrement démarré",
+    "stopped": "Enregistrement arrêté",
+    "cancelled": "Enregistrement annulé",
+    "discard": "Supprimer l'enregistrement",
+    "outOfCredits": "Vous n'avez pas assez de crédits pour la saisie vocale"
   },
   "Members": {
     "errors": {

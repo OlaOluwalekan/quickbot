@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Mic, Square, Loader2, RefreshCw } from "lucide-react";
+import { Mic, Square, Loader2, RefreshCw, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -54,10 +54,20 @@ export function VoiceInput({
   const [level, setLevel] = React.useState<number>(0);
   const [lastAudio, setLastAudio] = React.useState<RecordedAudio | null>(null);
   const [announcement, setAnnouncement] = React.useState<string>("");
+  // Set when the server says today's voice seconds are used up.
+  const [dailyLimitReached, setDailyLimitReached] = React.useState(false);
 
   const recorderRef = React.useRef<VoiceRecorder | null>(null);
   const stateRef = React.useRef<VoiceState>(state);
-  stateRef.current = state;
+  React.useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
+  // Updates the state and the ref together, so handlers called before the
+  // next render (auto-stop, Send) see the new value.
+  const setVoiceState = React.useCallback((next: VoiceState) => {
+    stateRef.current = next;
+    setState(next);
+  }, []);
 
   const isSupported = React.useMemo(() => isVoiceSupported(), []);
 
@@ -65,29 +75,45 @@ export function VoiceInput({
     setAnnouncement(msg);
   }, []);
 
+  const showUploadError = React.useCallback(
+    (err: unknown) => {
+      const code = (err as { code?: string })?.code;
+      if (code === "no_speech") {
+        toast.error(t("noSpeech"));
+      } else if (code === "daily_voice_limit") {
+        setDailyLimitReached(true);
+        toast.error(t("dailyLimit"));
+      } else if (code === "insufficient_credits") {
+        toast.error(t("outOfCredits"));
+      } else {
+        toast.error(t("error"));
+      }
+    },
+    [t]
+  );
+
   const handleStopAndTranscribe = React.useCallback(
     async (mode: "insert" | "send") => {
       if (!recorderRef.current || stateRef.current !== "recording") return;
 
-      setState("transcribing");
+      setVoiceState("transcribing");
       onRecordingChange?.(false);
-      announce(t("stop"));
+      announce(t("stopped"));
 
       let audio: RecordedAudio;
       try {
         audio = await recorderRef.current.stop();
         setLastAudio(audio);
       } catch {
-        setState("idle");
+        setVoiceState("idle");
         toast.error(t("error"));
         return;
       }
 
       try {
         const result = await uploadVoiceTranscription(audio.blob, audio.durationMs);
-        setState("idle");
+        setVoiceState("idle");
         setLastAudio(null);
-        announce(t("inserted"));
 
         const text = result?.text ?? "";
         if (text) {
@@ -95,41 +121,40 @@ export function VoiceInput({
             onSendTranscript(text);
           } else {
             onInsertTranscript(text);
+            announce(t("inserted"));
           }
         }
       } catch (err: unknown) {
-        setState("error");
-        const status = (err as { status?: number })?.status;
+        // Retrying can't help when there is no speech or no allowance left.
         const code = (err as { code?: string })?.code;
-
-        if (status === 422 || code === "no_speech") {
-          toast.error(t("noSpeech"));
-        } else if (status === 402 || code === "daily_voice_limit") {
-          toast.error(t("dailyLimit"));
+        if (code === "no_speech" || code === "daily_voice_limit" || code === "insufficient_credits") {
+          setLastAudio(null);
+          setVoiceState("idle");
         } else {
-          toast.error(t("error"));
+          setVoiceState("error");
         }
+        showUploadError(err);
       }
     },
-    [t, announce, onInsertTranscript, onSendTranscript, onRecordingChange]
+    [t, announce, onInsertTranscript, onSendTranscript, onRecordingChange, setVoiceState, showUploadError]
   );
 
   const handleCancel = React.useCallback(() => {
     if (recorderRef.current) {
       recorderRef.current.cancel();
     }
-    setState("idle");
+    setVoiceState("idle");
     setDurationMs(0);
     setLevel(0);
     setLastAudio(null);
     onRecordingChange?.(false);
-    announce(t("cancel"));
-  }, [t, announce, onRecordingChange]);
+    announce(t("cancelled"));
+  }, [t, announce, onRecordingChange, setVoiceState]);
 
   const handleStartRecording = React.useCallback(async () => {
-    if (disabled || gateReason || !isSupported) return;
+    if (disabled || gateReason || dailyLimitReached || !isSupported) return;
 
-    setState("requesting-permission");
+    setVoiceState("requesting-permission");
     setLastAudio(null);
     const rec = new VoiceRecorder();
     recorderRef.current = rec;
@@ -144,11 +169,11 @@ export function VoiceInput({
         },
       });
 
-      setState("recording");
+      setVoiceState("recording");
       onRecordingChange?.(true);
-      announce(t("recording"));
+      announce(t("started"));
     } catch (err: unknown) {
-      setState("idle");
+      setVoiceState("idle");
       onRecordingChange?.(false);
       const isPermissionDenied =
         (err as Error)?.name === "NotAllowedError" ||
@@ -164,43 +189,47 @@ export function VoiceInput({
   }, [
     disabled,
     gateReason,
+    dailyLimitReached,
     isSupported,
     t,
     announce,
     onRecordingChange,
     handleStopAndTranscribe,
+    setVoiceState,
   ]);
 
   const handleRetry = React.useCallback(async () => {
     if (!lastAudio) return;
 
-    setState("transcribing");
+    setVoiceState("transcribing");
     try {
       const result = await uploadVoiceTranscription(
         lastAudio.blob,
         lastAudio.durationMs
       );
-      setState("idle");
+      setVoiceState("idle");
       setLastAudio(null);
-      announce(t("inserted"));
       const text = result?.text ?? "";
       if (text) {
         onInsertTranscript(text);
+        announce(t("inserted"));
       }
     } catch (err: unknown) {
-      setState("error");
-      const status = (err as { status?: number })?.status;
       const code = (err as { code?: string })?.code;
-
-      if (status === 422 || code === "no_speech") {
-        toast.error(t("noSpeech"));
-      } else if (status === 402 || code === "daily_voice_limit") {
-        toast.error(t("dailyLimit"));
+      if (code === "no_speech" || code === "daily_voice_limit" || code === "insufficient_credits") {
+        setLastAudio(null);
+        setVoiceState("idle");
       } else {
-        toast.error(t("error"));
+        setVoiceState("error");
       }
+      showUploadError(err);
     }
-  }, [lastAudio, t, announce, onInsertTranscript]);
+  }, [lastAudio, t, announce, onInsertTranscript, setVoiceState, showUploadError]);
+
+  const handleDiscard = React.useCallback(() => {
+    setLastAudio(null);
+    setVoiceState("idle");
+  }, [setVoiceState]);
 
   // Register send handler with composer so Send while recording submits transcript
   React.useEffect(() => {
@@ -247,7 +276,7 @@ export function VoiceInput({
   // Determine effective gate reason
   const effectiveGateReason: GateReason | null = !isSupported
     ? { code: "unsupported_browser" }
-    : gateReason ?? null;
+    : gateReason ?? (dailyLimitReached ? { code: "daily_voice_limit" } : null);
 
   return (
     <div
@@ -332,6 +361,16 @@ export function VoiceInput({
           >
             <RefreshCw className="h-3 w-3" />
             <span>{t("retry")}</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleDiscard}
+            aria-label={t("discard")}
+            title={t("discard")}
+            className="ml-0.5 inline-flex h-4 w-4 items-center justify-center rounded text-muted hover:text-fg cursor-pointer"
+            data-testid="voice-discard-btn"
+          >
+            <X className="h-3 w-3" />
           </button>
         </div>
       ) : (

@@ -1195,7 +1195,12 @@
     "noSpeech": "No speech detected in audio",
     "retry": "Retry",
     "dailyLimit": "Daily voice input limit reached for your plan",
-    "error": "Failed to transcribe audio. Please try again."
+    "error": "Failed to transcribe audio. Please try again.",
+    "started": "Recording started",
+    "stopped": "Recording stopped",
+    "cancelled": "Recording cancelled",
+    "discard": "Discard recording",
+    "outOfCredits": "You don't have enough credits for voice input"
   },
   "Members": {
     "errors": {
