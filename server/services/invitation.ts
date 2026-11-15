@@ -15,7 +15,7 @@ import { sendEmail, maskEmail } from "@/server/email/send";
 import { env } from "@/server/env";
 import { PLANS, type PlanKey } from "@/server/billing/plans";
 import { getEntitlements } from "@/server/billing/entitlements";
-import { isOwnerInGrace } from "./member-limits";
+import { getInviteCapacity } from "./member-limits";
 import type { WorkspaceRole, ProjectRole, Prisma } from "../db/generated/client";
 
 export type CreateInvitationOptions = {
@@ -121,7 +121,10 @@ async function assertMemberCapacity(
   ownerId: string,
   opts: { excludeInvitationId?: string } = {}
 ) {
-  const inGrace = await isOwnerInGrace(ownerId);
+  const { limit: maxMembers, used, inGrace } = await getInviteCapacity(target, ownerId, {
+    client: tx,
+    excludeInvitationId: opts.excludeInvitationId,
+  });
   if (inGrace) {
     throw Errors.forbidden(
       "Cannot invite new members while over your plan limit.",
@@ -129,26 +132,8 @@ async function assertMemberCapacity(
     );
   }
   const ownerPlanKey = await resolveOwnerPlan(ownerId);
-  const maxMembers = PLANS[ownerPlanKey]?.limits?.members ?? 0;
-  const now = new Date();
 
-  const currentMembersCount =
-    "workspaceId" in target
-      ? await tx.workspaceMember.count({
-          where: { workspaceId: target.workspaceId },
-        })
-      : await tx.projectMember.count({ where: { projectId: target.projectId } });
-
-  const pendingInvitesCount = await tx.invitation.count({
-    where: {
-      ...target,
-      status: "PENDING",
-      expiresAt: { gt: now },
-      ...(opts.excludeInvitationId ? { id: { not: opts.excludeInvitationId } } : {}),
-    },
-  });
-
-  if (currentMembersCount + pendingInvitesCount >= maxMembers) {
+  if (used >= maxMembers) {
     throw Errors.forbidden(
       `Plan member limit reached (${maxMembers} members max on ${PLANS[ownerPlanKey]?.name || "Free"} plan). Upgrade to invite more members.`,
       "member_limit_reached"

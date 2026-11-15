@@ -1,5 +1,6 @@
 "use client";
 
+import type { GateReason } from "@/lib/entitlements/shared";
 import * as React from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
@@ -37,6 +38,8 @@ export interface ResponseListProps {
    * When unknown the buttons stay enabled; the server checks either way.
    */
   capabilities?: string[];
+  /** Set when the workspace owner (who pays) has no credits: gates Ask and reviews (F4.4). */
+  creditsGate?: GateReason | null;
   /** Called after an Ask was added to the question queue. */
   onQuestionQueued?: () => void;
   /**
@@ -58,6 +61,7 @@ export function ResponseList({
   optimisticPrompt,
   memberCount = 1,
   capabilities,
+  creditsGate = null,
   onQuestionQueued,
   withSelectionToolbar = true,
   onRegenerateTurn,
@@ -221,6 +225,7 @@ export function ResponseList({
                     ? capabilities.includes("workspace.edit_response")
                     : undefined
                 }
+                creditsGate={creditsGate}
                 canAsk={
                   capabilities ? capabilities.includes("workspace.ask") : undefined
                 }
@@ -413,6 +418,7 @@ export function ResponseList({
           workspaceId={workspaceId}
           canComment={capabilities ? capabilities.includes("workspace.comment") : undefined}
           canAsk={capabilities ? capabilities.includes("workspace.ask") : undefined}
+          creditsGate={creditsGate}
           onQuestionCreated={onQuestionQueued}
         />
       )}

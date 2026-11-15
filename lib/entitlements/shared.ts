@@ -40,9 +40,27 @@ export type GateReason =
   | { code: "daily_cap" }
   | { code: "no_permission"; capability: string }
   | { code: "max_depth"; depth: number }
+  /** The workspace owner's plan doesn't include it (the viewer can't upgrade it). */
   | { code: "owner_plan"; plan: PlanKey }
+  /** The viewer pays (their own workspace, or the home composer) and has no credits. */
   | { code: "out_of_credits" }
+  /** The workspace owner pays and has no credits (the viewer can't top it up). */
+  | { code: "owner_out_of_credits" }
   | { code: "thinking_unavailable" };
+
+/**
+ * Gate for actions that spend credits in a workspace. The owner pays
+ * (billing owner rule), so a member sees "the owner is out of credits".
+ */
+export function creditsGateReason(workspace: {
+  ownerOutOfCredits?: boolean;
+  role?: string;
+} | null | undefined): GateReason | null {
+  if (!workspace?.ownerOutOfCredits) return null;
+  return workspace.role === "OWNER"
+    ? { code: "out_of_credits" }
+    : { code: "owner_out_of_credits" };
+}
 
 export type GateableFeature =
   | keyof EntitlementFeatures

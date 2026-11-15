@@ -184,11 +184,12 @@
     "attachFile": "Adjuntar archivos",
     "attachRemove": "Eliminar archivo adjunto",
     "attachRetry": "Reintentar",
-    "attachLimitReached": "Máximo 3 archivos adjuntos permitidos para tu plan",
-    "attachSizeExceeded": "El tamaño del archivo supera el límite de 5 MB",
+    "attachLimitReached": "Este espacio de trabajo permite hasta {limit} archivos adjuntos",
+    "attachSizeExceeded": "El tamaño del archivo supera el límite de {mb} MB",
     "dropFilesHere": "Suelta archivos para adjuntar",
     "webSearchOff": "La búsqueda web está desactivada",
-    "changeInSettings": "Cambiar en Configuración"
+    "changeInSettings": "Cambiar en Configuración",
+    "capGenerate": "generar respuestas"
   },
   "Settings": {
     "ai": {
@@ -1147,15 +1148,16 @@
   },
   "Gates": {
     "requires_plan": "Disponible en el plan {plan} y superiores",
-    "member_limit": "Tu plan permite hasta {limit} colaboradores",
-    "attachment_limit": "Límite de adjuntos del espacio de trabajo ({limit}) alcanzado",
+    "member_limit": "{limit, plural, =0 {Este plan no incluye colaboradores} one {Este plan permite hasta # colaborador} other {Este plan permite hasta # colaboradores}}",
+    "attachment_limit": "Este espacio de trabajo alcanzó su límite de {limit} adjuntos",
     "daily_cap": "Has alcanzado tu límite diario para esta función",
     "no_permission": "No tienes permiso para {capability}",
     "max_depth": "Se alcanzó la profundidad máxima de hilo ({depth}). Promueve esta respuesta a un nuevo espacio para continuar.",
     "upgrade": "Mejorar plan",
     "owner_plan": "El plan del propietario del espacio no incluye esto (disponible en {plan} y superiores)",
     "out_of_credits": "Te has quedado sin créditos",
-    "thinking_unavailable": "Los resúmenes de pensamiento no están disponibles para este modelo"
+    "thinking_unavailable": "«Pensar más a fondo» no está disponible para este modelo",
+    "owner_out_of_credits": "El propietario del espacio de trabajo se ha quedado sin créditos"
   },
   "Models": {
     "text-economy": {
@@ -1365,7 +1367,9 @@
       "klecxNoted": "Klecx tomó nota",
       "mentionLoading": "Cargando…",
       "mentionNotMember": "No es miembro de este espacio de trabajo",
-      "saveChangesFirst": "Guarda primero los cambios. Los comentarios y las preguntas solo se pueden añadir al texto guardado."
+      "saveChangesFirst": "Guarda primero los cambios. Los comentarios y las preguntas solo se pueden añadir al texto guardado.",
+      "capComment": "comentar",
+      "capAsk": "hacer preguntas"
     },
     "preview": {
       "ariaLabel": "Vista previa de la anotación",

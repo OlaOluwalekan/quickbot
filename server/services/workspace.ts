@@ -5,6 +5,7 @@ import { Errors } from "@/server/http/errors";
 import { logActivity } from "./activity";
 import { countWorkspaceMembers } from "./members";
 import { getEntitlements } from "@/server/billing/entitlements";
+import { getAccountByUserId } from "./credits";
 import { toPage } from "@/server/http/pagination";
 import {
   requireProject,
@@ -245,15 +246,19 @@ export async function getWorkspace(actor: Actor, workspaceId: string) {
 
   if (!workspace) throw Errors.notFound("Workspace");
 
-  const [memberCount, sourceProvenance, ownerEntitlements] = await Promise.all([
-    countWorkspaceMembers(workspaceId),
-    resolveWorkspaceSourceProvenance(
-      actor,
-      workspace.sourceWorkspaceId,
-      workspace.sourceAnnotationId
-    ),
-    getEntitlements(workspace.ownerId),
-  ]);
+  const [memberCount, sourceProvenance, ownerEntitlements, attachmentCount, ownerAccount] =
+    await Promise.all([
+      countWorkspaceMembers(workspaceId),
+      resolveWorkspaceSourceProvenance(
+        actor,
+        workspace.sourceWorkspaceId,
+        workspace.sourceAnnotationId
+      ),
+      getEntitlements(workspace.ownerId),
+      // Same count as the upload check in `attachment.ts`.
+      db.attachment.count({ where: { workspaceId, status: { not: "DELETED" } } }),
+      getAccountByUserId(workspace.ownerId),
+    ]);
 
   return {
     ...workspace,
@@ -265,6 +270,17 @@ export async function getWorkspace(actor: Actor, workspaceId: string) {
     sourceProvenance,
     // Download formats come from the owner's plan (decided 2026-11-14).
     exportFormats: [...ownerEntitlements.limits.exportFormats],
+    // F4.4: the owner's plan sets the attachment limits (the server re-checks on upload).
+    attachmentLimits: {
+      max: ownerEntitlements.limits.attachmentsPerWorkspace,
+      used: attachmentCount,
+      maxFileMB: ownerEntitlements.limits.maxFileMB,
+    },
+    // F4.4: the owner pays for generations; only a yes/no, never the balance.
+    // No account yet = the free grant is created on first use.
+    ownerOutOfCredits: ownerAccount
+      ? ownerAccount.planBalance + ownerAccount.topupBalance <= 0
+      : false,
   };
 }
 

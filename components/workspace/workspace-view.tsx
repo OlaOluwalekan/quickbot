@@ -1,5 +1,6 @@
 "use client";
 
+import { creditsGateReason } from "@/lib/entitlements/shared";
 import * as React from "react";
 import Link from "next/link";
 import { ArrowUpLeft } from "lucide-react";
@@ -480,6 +481,8 @@ export function WorkspaceView({
     ? workspace.capabilities.includes("workspace.generate")
     : undefined;
   const canGenerate = canPromoteToTimeline ?? true;
+  // F4.4: the owner pays; Ask and reviews are gated when they have no credits.
+  const creditsGate = creditsGateReason(workspace);
   const canEditResponse = workspace.capabilities
     ? workspace.capabilities.includes("workspace.edit_response")
     : true;
@@ -558,6 +561,7 @@ export function WorkspaceView({
           responses={displayedResponses}
           memberCount={workspace.memberCount ?? 1}
           capabilities={workspace.capabilities}
+          creditsGate={creditsGate}
           onQuestionQueued={handleQuestionQueued}
           withSelectionToolbar={false}
           optimisticPrompt={optimisticFirstPrompt}
@@ -600,6 +604,7 @@ export function WorkspaceView({
       workspaceId={workspace.id}
       canComment={canComment}
       canAsk={canAsk}
+      creditsGate={creditsGate}
       onQuestionCreated={handleQuestionQueued}
     />
     </>

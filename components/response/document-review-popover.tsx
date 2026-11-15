@@ -14,6 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Gated } from "@/components/ui/gated";
+import type { GateReason } from "@/lib/entitlements/shared";
 import { api } from "@/lib/api/client";
 import { streamDocumentReview } from "@/lib/api/document-review";
 import { useDocumentReviewStore } from "@/lib/stores/document-review";
@@ -32,8 +33,8 @@ export interface DocumentReviewProps {
   canAsk?: boolean;
   /** The text has unsaved changes: a review reads the saved text. */
   hasDraft?: boolean;
-  /** The member lacks credits for a review run. */
-  isOutOfCredits?: boolean;
+  /** A review spends the workspace owner's credits: set when they have none (F4.4). */
+  creditsGate?: GateReason | null;
   /** Other people can open the workspace: findings are shared by default. */
   hasMembers?: boolean;
   /**
@@ -63,7 +64,7 @@ export function DocumentReview({
   documentId,
   responseId,
   canAsk = true,
-  isOutOfCredits = false,
+  creditsGate = null,
   hasDraft = false,
   hasMembers = false,
   mode = "popover",
@@ -89,9 +90,7 @@ export function DocumentReview({
 
   const reviewGateReason: GateReason | null = !canAsk
     ? { code: "no_permission", capability: t("capAskReview") }
-    : isOutOfCredits
-    ? { code: "out_of_credits" }
-    : null;
+    : creditsGate;
 
   const [preset, setPreset] = React.useState<ReviewPreset>("errors");
   const [instruction, setInstruction] = React.useState("");
@@ -323,30 +322,40 @@ export function DocumentReview({
 
   return (
     <div className={className}>
-      <Popover
-        open={isOpen && !reviewGateReason}
-        onOpenChange={(next) => {
-          if (!reviewGateReason) setOpen(next);
-        }}
-      >
+      {reviewGateReason ? (
+        // F4.4: visible but disabled, with the reason. Kept outside the
+        // Popover: a <Gated> inside `PopoverTrigger asChild` would swallow
+        // the trigger's props and the popover would never open.
+        <Gated reason={reviewGateReason}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 gap-1.5 px-2 text-xs text-muted"
+            data-testid="ask-klecx-review-trigger"
+          >
+            <Sparkles className="h-3.5 w-3.5 text-accent" />
+            <span>{t("askKlecxReview")}</span>
+          </Button>
+        </Gated>
+      ) : (
+      <Popover open={isOpen} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Gated reason={reviewGateReason}>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              disabled={isRunning || Boolean(reviewGateReason)}
-              className="h-7 gap-1.5 px-2 text-xs text-muted hover:text-foreground"
-              data-testid="ask-klecx-review-trigger"
-            >
-              {isRunning ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin text-accent" />
-              ) : (
-                <Sparkles className="h-3.5 w-3.5 text-accent" />
-              )}
-              <span>{isRunning ? t("reviewing") : t("askKlecxReview")}</span>
-            </Button>
-          </Gated>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={isRunning}
+            className="h-7 gap-1.5 px-2 text-xs text-muted hover:text-foreground"
+            data-testid="ask-klecx-review-trigger"
+          >
+            {isRunning ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-accent" />
+            ) : (
+              <Sparkles className="h-3.5 w-3.5 text-accent" />
+            )}
+            <span>{isRunning ? t("reviewing") : t("askKlecxReview")}</span>
+          </Button>
         </PopoverTrigger>
         <PopoverContent
           align="start"
@@ -363,6 +372,7 @@ export function DocumentReview({
           {form}
         </PopoverContent>
       </Popover>
+      )}
     </div>
   );
 }

@@ -46,6 +46,8 @@ function gateMessage(reason: GateReason, t: GateTranslator): string {
       });
     case "out_of_credits":
       return t("out_of_credits");
+    case "owner_out_of_credits":
+      return t("owner_out_of_credits");
     case "thinking_unavailable":
       return t("thinking_unavailable");
   }

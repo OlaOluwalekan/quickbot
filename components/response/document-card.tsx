@@ -37,7 +37,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { useWorkspace } from "@/lib/api/hooks/workspaces";
-import { exportFormatGateReason } from "@/lib/entitlements/shared";
+import { exportFormatGateReason, type GateReason } from "@/lib/entitlements/shared";
 import {
   applySuggestion,
   toSuggestionTarget,
@@ -56,8 +56,8 @@ export interface DocumentCardProps {
   canAsk?: boolean;
   /** False when the member may not export (no `workspace.export`). The server re-checks. */
   canExport?: boolean;
-  /** The member lacks credits. */
-  isOutOfCredits?: boolean;
+  /** A review spends the workspace owner's credits: set when they have none (F4.4). */
+  creditsGate?: GateReason | null;
   /** People who can open the workspace: review comments are shared by default when > 1. */
   memberCount?: number;
   onDelete?: (responseId: string) => void;
@@ -104,7 +104,7 @@ export function DocumentCard({
   canEdit = true,
   canAsk = true,
   canExport = true,
-  isOutOfCredits = false,
+  creditsGate = null,
   memberCount = 1,
   onDelete,
   className,
@@ -545,7 +545,7 @@ export function DocumentCard({
             versionId={activeVersionId}
             responseId={response.id}
             canAsk={canAsk}
-            isOutOfCredits={isOutOfCredits}
+            creditsGate={creditsGate}
             hasDraft={Boolean(draft)}
             hasMembers={memberCount > 1}
           />

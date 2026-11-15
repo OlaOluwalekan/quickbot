@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { QueryClientContext } from "@tanstack/react-query";
+import { QueryClientContext, useQuery } from "@tanstack/react-query";
 import { useUiStore } from "@/lib/stores/ui";
 import { useGenerationStore } from "@/lib/stores/generation";
 import { api, ApiClientError } from "@/lib/api/client";
@@ -39,10 +39,17 @@ import { uploadAttachment } from "@/lib/api/attachments";
 import { navigateWithTransition } from "@/lib/navigation/view-transition";
 import { getClientModels, type ClientModelOption } from "@/lib/ai/model-catalog";
 import type { WorkspaceDto } from "@/lib/api/hooks/workspaces";
+import { queryKeys } from "@/lib/api/hooks/query-keys";
 import { useEntitlements } from "@/lib/api/hooks/entitlements";
-import { canUse, getGateReason, PLAN_ORDER, type GateReason } from "@/lib/entitlements/shared";
+import {
+  canUse,
+  creditsGateReason,
+  getGateReason,
+  PLAN_ORDER,
+  type GateReason,
+} from "@/lib/entitlements/shared";
 import { PLANS } from "@/server/billing/plans";
-import { useUserPreferences } from "@/lib/api/hooks/me";
+import { getIdleQueryClient, useUserPreferences } from "@/lib/api/hooks/me";
 import { QuestionQueuePopover } from "@/components/workspace/question-queue-popover";
 import { Gated } from "@/components/ui/gated";
 import {
@@ -140,9 +147,9 @@ export function Composer({
   const clearDraft = useUiStore((s) => s.clearDraft);
 
   const { entitlements, isSuccess: entitlementsLoaded } = useEntitlements();
-  const imageGateReason = getGateReason(entitlements, "images");
-  // Only treat images as locked once the real entitlements have loaded (the
-  // hook falls back to Free meanwhile). The server re-checks on submit.
+  // Only treat images and models as locked once the real entitlements have
+  // loaded (the hook falls back to Free meanwhile). The server re-checks.
+  const imageGateReason = entitlementsLoaded ? getGateReason(entitlements, "images") : null;
   const isImagePlanLocked =
     entitlementsLoaded && !canUse(entitlements, "images");
   const imagePlanName =
@@ -161,9 +168,11 @@ export function Composer({
     storeChatMode || "text",
   );
   const [selectedModel, setSelectedModel] = React.useState<string>("text-economy");
-  const clientModels = React.useMemo(() => getClientModels(tModels, "TEXT"), [tModels]);
-  const activeModel =
-    clientModels.find((m) => m.key === selectedModel) || clientModels[0];
+  const clientModels = React.useMemo(
+    () => getClientModels((key, values) => tModels(key, values), "TEXT"),
+    [tModels]
+  );
+  const activeModel = (clientModels.find((m) => m.key === selectedModel) ?? clientModels[0])!;
   const [thinkHarder, setThinkHarder] = React.useState(false);
   // F4.1: search is a Settings preference; only say so when it's off.
   const { data: preferences } = useUserPreferences(userId ?? "");
@@ -273,8 +282,28 @@ export function Composer({
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const docFileInputRef = React.useRef<HTMLInputElement>(null);
 
-  const MAX_ATTACHMENTS = entitlements.limits.attachmentsPerWorkspace;
-  const MAX_FILE_SIZE = entitlements.limits.maxFileMB * 1024 * 1024;
+  // F4.4: in a workspace the owner's plan sets the limits and existing
+  // attachments count too (as the upload check does); the home composer has
+  // no workspace yet, so the viewer's own plan applies.
+  // Same query as `useWorkspace` (shared cache), but it tolerates a render
+  // without a QueryClient, like the other composer hooks.
+  const { data: workspaceData } = useQuery(
+    {
+      queryKey:
+        userId && workspaceId
+          ? queryKeys.workspaces.detail(userId, workspaceId)
+          : (["workspaces", "detail", "none"] as const),
+      queryFn: ({ signal }) =>
+        api<WorkspaceDto>(`/api/v1/workspaces/${workspaceId}`, { signal }),
+      enabled: Boolean(userId && workspaceId && queryClient),
+    },
+    queryClient ?? getIdleQueryClient()
+  );
+  const attachmentLimits = workspaceData?.attachmentLimits;
+  const attachmentMax = attachmentLimits?.max ?? entitlements.limits.attachmentsPerWorkspace;
+  const MAX_ATTACHMENTS = Math.max(0, attachmentMax - (attachmentLimits?.used ?? 0));
+  const maxFileMB = attachmentLimits?.maxFileMB ?? entitlements.limits.maxFileMB;
+  const MAX_FILE_SIZE = maxFileMB * 1024 * 1024;
 
   const uploadItem = React.useCallback(async (item: ComposerAttachment) => {
     try {
@@ -317,13 +346,13 @@ export function Composer({
     setCreationError(null);
 
     if (attachments.length + files.length > MAX_ATTACHMENTS) {
-      setCreationError(t("attachLimitReached"));
+      setCreationError(t("attachLimitReached", { limit: attachmentMax }));
       return;
     }
 
     for (const f of files) {
       if (f.size > MAX_FILE_SIZE) {
-        setCreationError(t("attachSizeExceeded"));
+        setCreationError(t("attachSizeExceeded", { mb: maxFileMB }));
         return;
       }
     }
@@ -348,7 +377,7 @@ export function Composer({
     for (const item of newItems) {
       uploadItem(item);
     }
-  }, [attachments.length, MAX_ATTACHMENTS, MAX_FILE_SIZE, t, uploadItem]);
+  }, [attachments.length, MAX_ATTACHMENTS, MAX_FILE_SIZE, attachmentMax, maxFileMB, t, uploadItem]);
 
   const handleWorkspaceDocumentFiles = React.useCallback(
     async (files: File[]) => {
@@ -366,7 +395,7 @@ export function Composer({
           return;
         }
         if (f.size > MAX_FILE_SIZE) {
-          setCreationError(t("attachSizeExceeded"));
+          setCreationError(t("attachSizeExceeded", { mb: maxFileMB }));
           return;
         }
       }
@@ -444,7 +473,7 @@ export function Composer({
         setIsAddingDocument(false);
       }
     },
-    [MAX_FILE_SIZE, queryClient, router, t, tDocs, workspaceId]
+    [MAX_FILE_SIZE, maxFileMB, queryClient, router, t, tDocs, workspaceId]
   );
 
   const removeAttachment = React.useCallback((id: string) => {
@@ -468,10 +497,15 @@ export function Composer({
     uploadItem(item);
   }, [attachments, uploadItem]);
 
-  const isOutOfCredits = Boolean(credits && credits.balance <= 0);
+  // Home: the viewer's own balance (`credits`). Workspace: the owner pays.
+  const creditsGate: GateReason | null =
+    credits && credits.balance <= 0
+      ? { code: "out_of_credits" }
+      : creditsGateReason(workspaceData);
+  const isOutOfCredits = Boolean(creditsGate);
   const isAttachmentLimitReached = attachments.length >= MAX_ATTACHMENTS;
   const attachmentGateReason: GateReason | null = isAttachmentLimitReached
-    ? { code: "attachment_limit", limit: MAX_ATTACHMENTS }
+    ? { code: "attachment_limit", limit: attachmentMax }
     : null;
   const isThinkingSupported =
     mode !== "image" && Boolean(activeModel.caps?.thinkingSummaries);
@@ -479,15 +513,14 @@ export function Composer({
     ? { code: "thinking_unavailable" }
     : null;
   const submitGateReason: GateReason | null = !canGenerate
-    ? { code: "no_permission", capability: t("send") }
-    : isOutOfCredits
-    ? { code: "out_of_credits" }
-    : null;
+    ? { code: "no_permission", capability: t("capGenerate") }
+    : creditsGate;
 
   const handleSubmit = async () => {
     const cleanPrompt = prompt.trim();
     const isUploadingAny = attachments.some((a) => a.status === "uploading");
-    if (!cleanPrompt || isSubmitting || isStreaming || isOutOfCredits || isUploadingAny) return;
+    if (!cleanPrompt || isSubmitting || isStreaming || isOutOfCredits || !canGenerate || isUploadingAny) return;
+    if (mode === "image" && imageGateReason) return;
     const readyAttachmentIds = attachments
       .filter((a) => a.status === "ready" && a.attachmentId)
       .map((a) => a.attachmentId!);
@@ -508,6 +541,12 @@ export function Composer({
       clearDraft(draftKey);
       setPrompt("");
       setAttachments([]);
+      // The sent attachments now count toward the workspace limit.
+      if (userId && attachments.length > 0) {
+        queryClient?.invalidateQueries({
+          queryKey: queryKeys.workspaces.detail(userId, workspaceId),
+        });
+      }
       if (textareaRef.current) {
         textareaRef.current.value = "";
         textareaRef.current.style.height = size === "large" ? "64px" : "44px";
@@ -528,7 +567,7 @@ export function Composer({
             prompt: cleanPrompt,
             modelKey: effectiveModelKey,
             kind: effectiveKind,
-            think: thinkHarder,
+            think: thinkHarder && isThinkingSupported,
             attachmentIds: readyAttachmentIds.length > 0 ? readyAttachmentIds : undefined,
           },
           {
@@ -600,7 +639,7 @@ export function Composer({
         modelKey: effectiveModelKey,
         idempotencyKey,
         mode,
-        thinkHarder,
+        thinkHarder: thinkHarder && isThinkingSupported,
         attachmentIds: readyAttachmentIds.length > 0 ? readyAttachmentIds : undefined,
       });
 
@@ -775,18 +814,25 @@ export function Composer({
       </div>
 
       {/* Out of Credits Alert */}
-      {isOutOfCredits && (
+      {creditsGate && (
         <div
           id="credits-warning"
           className="mb-2 flex items-center justify-between gap-2 rounded-xl bg-warning/10 border border-warning/20 px-3 py-1.5 text-xs text-warning"
         >
-          <span>{t("outOfCreditsReason")}</span>
-          <Link
-            href="/settings"
-            className="font-semibold underline hover:text-fg transition-colors"
-          >
-            {t("upgradeCta")}
-          </Link>
+          {creditsGate.code === "owner_out_of_credits" ? (
+            // A member can't top up the owner's account: no upgrade link.
+            <span>{tGates("owner_out_of_credits")}</span>
+          ) : (
+            <>
+              <span>{t("outOfCreditsReason")}</span>
+              <Link
+                href="/settings"
+                className="font-semibold underline hover:text-fg transition-colors"
+              >
+                {t("upgradeCta")}
+              </Link>
+            </>
+          )}
         </div>
       )}
 
@@ -1060,14 +1106,22 @@ export function Composer({
           />
 
           {/* Attach Menu Button */}
-          <Gated reason={attachmentGateReason}>
+          {attachmentGateReason ? (
+            // F4.4: limit reached: the button stays visible, disabled, with the reason.
+            <Gated reason={attachmentGateReason}>
+              <button
+                type="button"
+                aria-label={t("attachFile")}
+                data-testid="composer-attach-btn"
+                className="flex h-7 w-7 items-center justify-center rounded-lg text-muted"
+              >
+                <Paperclip className="h-3.5 w-3.5" strokeWidth={1.5} />
+              </button>
+            </Gated>
+          ) : (
             <Popover
-              open={attachMenuOpen && !attachmentGateReason}
-              onOpenChange={(nextOpen) => {
-                if (!attachmentGateReason) {
-                  setAttachMenuOpen(nextOpen);
-                }
-              }}
+              open={attachMenuOpen}
+              onOpenChange={setAttachMenuOpen}
             >
               <PopoverTrigger asChild>
                 <button
@@ -1118,7 +1172,7 @@ export function Composer({
                 </button>
               </PopoverContent>
             </Popover>
-          </Gated>
+          )}
 
           {/* Model Picker */}
           <Popover>
@@ -1139,7 +1193,9 @@ export function Composer({
                 {t("model")}
               </div>
               {clientModels.map((m: ClientModelOption) => {
-                const modelGateReason = getGateReason(entitlements, m.key);
+                const modelGateReason = entitlementsLoaded
+                  ? getGateReason(entitlements, m.key)
+                  : null;
                 return (
                   <Gated key={m.key} reason={modelGateReason} side="right" className="w-full">
                     <button

@@ -32,7 +32,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useEntitlements } from "@/lib/api/hooks/entitlements";
 import { Gated } from "@/components/ui/gated";
 import type { GateReason } from "@/lib/entitlements/shared";
 import {
@@ -265,13 +264,20 @@ export function ShareAndPeopleDialog({
   const [pendingInvites, setPendingInvites] = React.useState<PendingInvite[]>([]);
   const [loadingInvites, setLoadingInvites] = React.useState(false);
 
-  const { entitlements } = useEntitlements();
-  const memberLimit = entitlements.limits.members;
-  const isMemberLimitReached =
-    memberLimit === 0 || members.length + pendingInvites.length >= memberLimit;
-  const inviteGateReason: GateReason | null = isMemberLimitReached
-    ? { code: "member_limit", limit: memberLimit }
-    : null;
+  // F4.4: from the members list, counted on the server with the owner's plan
+  // (the same count as the invite check). Unknown = allowed; the server re-checks.
+  const [inviteCapacity, setInviteCapacity] = React.useState<{
+    limit: number;
+    used: number;
+    inGrace: boolean;
+  } | null>(null);
+  const isMemberLimitReached = Boolean(
+    inviteCapacity && (inviteCapacity.inGrace || inviteCapacity.used >= inviteCapacity.limit)
+  );
+  const inviteGateReason: GateReason | null =
+    inviteCapacity && isMemberLimitReached
+      ? { code: "member_limit", limit: inviteCapacity.limit }
+      : null;
 
   // Public Share Links state (Step 7.6)
   const [shareLinks, setShareLinks] = React.useState<ShareLinkItem[]>([]);
@@ -356,6 +362,7 @@ export function ShareAndPeopleDialog({
         setIsOwner(Boolean(data?.isOwner));
         setGraceInfo(data?.grace ?? null);
         setOutgoingTransfer(data?.outgoingTransfer ?? null);
+        setInviteCapacity(data?.inviteCapacity ?? null);
       }
     } catch {
       setMembersError(true);
@@ -427,7 +434,7 @@ export function ShareAndPeopleDialog({
   const handleSendInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     const input = emailOrUsername.trim();
-    if (!input || sendingInvite) return;
+    if (!input || sendingInvite || isMemberLimitReached) return;
 
     setSendingInvite(true);
     try {
@@ -443,6 +450,7 @@ export function ShareAndPeopleDialog({
       toast.success("Invitation sent");
       setEmailOrUsername("");
       fetchInvites();
+      fetchMembers();
       fetchActivity();
     } catch (err: unknown) {
       const msg =
@@ -464,6 +472,7 @@ export function ShareAndPeopleDialog({
       }
       toast.success("Invitation revoked");
       setPendingInvites((prev) => prev.filter((i) => i.id !== inviteId));
+      fetchMembers();
       fetchActivity();
     } catch (err: unknown) {
       const msg =

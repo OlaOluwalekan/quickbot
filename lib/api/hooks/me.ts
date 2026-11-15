@@ -27,7 +27,7 @@ export interface UserCreditsDto {
 // Components rendered outside a QueryClientProvider (some tests) get an idle
 // query instead of a crash, like `useEntitlements`.
 let idleQueryClient: QueryClient | null = null;
-function getIdleQueryClient(): QueryClient {
+export function getIdleQueryClient(): QueryClient {
   idleQueryClient ??= new QueryClient();
   return idleQueryClient;
 }

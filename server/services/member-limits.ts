@@ -5,6 +5,7 @@ import { notify } from "@/server/services/notify";
 import { Errors } from "@/server/http/errors";
 import { requireWorkspace, requireProject } from "@/server/authz/access";
 import type { Actor } from "@/server/auth/session";
+import type { Prisma } from "../db/generated/client";
 
 // Over-limit suspension service (quick_implementation_fix_for_v2.md §2.5, Step F1.3).
 // Built now, triggered later:
@@ -14,6 +15,47 @@ import type { Actor } from "@/server/auth/session";
 // The member limit is per resource (as `assertMemberCapacity` in invitation.ts
 // and `checkTransferFits` count it): each of the owner's workspaces and projects
 // may have at most `limit` active members.
+
+export type MemberLimitTarget = { workspaceId: string } | { projectId: string };
+
+export interface InviteCapacity {
+  /** Members allowed by the owner's plan in this resource. */
+  limit: number;
+  /** Explicit members + live pending invitations of this resource. */
+  used: number;
+  /** The owner is over their limit: no new invitations until it ends. */
+  inGrace: boolean;
+}
+
+/**
+ * How many people can still be invited to one workspace or project. The one
+ * source for the invite check (`assertMemberCapacity`) and the dialog's gate
+ * (F4.4), so both count the same rows.
+ */
+export async function getInviteCapacity(
+  target: MemberLimitTarget,
+  ownerId: string,
+  opts: { client?: Prisma.TransactionClient; excludeInvitationId?: string } = {}
+): Promise<InviteCapacity> {
+  const client = opts.client ?? db;
+  const now = new Date();
+  const [inGrace, entitlements, members, pendingInvites] = await Promise.all([
+    isOwnerInGrace(ownerId),
+    getEntitlements(ownerId),
+    "workspaceId" in target
+      ? client.workspaceMember.count({ where: { workspaceId: target.workspaceId } })
+      : client.projectMember.count({ where: { projectId: target.projectId } }),
+    client.invitation.count({
+      where: {
+        ...target,
+        status: "PENDING",
+        expiresAt: { gt: now },
+        ...(opts.excludeInvitationId ? { id: { not: opts.excludeInvitationId } } : {}),
+      },
+    }),
+  ]);
+  return { limit: entitlements.limits.members, used: members + pendingInvites, inGrace };
+}
 
 const GRACE_MS = 14 * 24 * 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;

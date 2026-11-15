@@ -47,7 +47,8 @@ export interface SelectionToolbarProps {
   canComment?: boolean;
   canAsk?: boolean;
   canGenerate?: boolean;
-  isOutOfCredits?: boolean;
+  /** Asking spends the workspace owner's credits: set when they have none (F4.4). */
+  creditsGate?: GateReason | null;
   onCommentCreated?: (annotation: unknown) => void;
   onQuestionCreated?: (annotation: unknown) => void;
   onAskNow?: (annotation: unknown) => void;
@@ -67,7 +68,7 @@ export function SelectionToolbar({
   canComment: explicitCanComment,
   canAsk: explicitCanAsk,
   canGenerate = true,
-  isOutOfCredits = false,
+  creditsGate = null,
   onCommentCreated,
   onQuestionCreated,
   onAskNow,
@@ -344,7 +345,7 @@ export function SelectionToolbar({
         } else if (
           e.code === "KeyA" &&
           effectiveCanAsk &&
-          !isOutOfCredits &&
+          !creditsGate &&
           (!metadata || metadata.depth + 1 <= MAX_ANNOTATION_DEPTH)
         ) {
           e.preventDefault();
@@ -355,7 +356,7 @@ export function SelectionToolbar({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isVisible, mode, effectiveCanComment, effectiveCanAsk, isOutOfCredits, metadata, isMac]);
+  }, [isVisible, mode, effectiveCanComment, effectiveCanAsk, creditsGate, metadata, isMac]);
 
   // Action 1: Save comment
   const handleSaveComment = async () => {
@@ -527,15 +528,15 @@ export function SelectionToolbar({
 
   // Calculate gate reasons
   const commentGateReason: GateReason | null = !effectiveCanComment
-    ? { code: "no_permission", capability: "comment" }
+    ? { code: "no_permission", capability: t("capComment") }
     : null;
 
   const askGateReason: GateReason | null = !effectiveCanAsk
-    ? { code: "no_permission", capability: "ask" }
+    ? { code: "no_permission", capability: t("capAsk") }
     : metadata && metadata.depth + 1 > MAX_ANNOTATION_DEPTH
     ? { code: "max_depth", depth: MAX_ANNOTATION_DEPTH }
-    : isOutOfCredits
-    ? { code: "out_of_credits" }
+    : creditsGate
+    ? creditsGate
     : null;
   const askDisabled = Boolean(askGateReason);
 
@@ -611,7 +612,6 @@ export function SelectionToolbar({
                 data-testid="action-ask"
                 aria-label={t("ask")}
                 disabled={askDisabled}
-                title={!askGateReason && isOutOfCredits ? t("outOfCredits") : undefined}
                 onClick={() => setMode("ask")}
                 className={cn(
                   "h-8 px-2.5 text-xs text-fg hover:text-accent hover:bg-surface-2 gap-1.5 font-medium",

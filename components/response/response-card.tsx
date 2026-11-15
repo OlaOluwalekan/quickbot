@@ -68,7 +68,7 @@ import { useWorkspace } from "@/lib/api/hooks/workspaces";
 import type { CitationDto } from "@/lib/api/sse";
 import type { GeneratedDocumentDto } from "@/lib/api/hooks/responses";
 import { Gated } from "@/components/ui/gated";
-import { exportFormatGateReason } from "@/lib/entitlements/shared";
+import { exportFormatGateReason, type GateReason } from "@/lib/entitlements/shared";
 
 export interface ResponseItemData {
   id: string;
@@ -184,6 +184,7 @@ export function ResponseCard({
   className,
 }: ResponseCardProps) {
   const t = useTranslations("Response");
+  const tChat = useTranslations("Chat");
   const tExportFormats = useTranslations("Documents.downloadFormats");
   const tExportCaps = useTranslations("Documents.caps");
   const tReview = useTranslations("Review");
@@ -204,7 +205,7 @@ export function ResponseCard({
   const canExport =
     canExportProp ?? workspace?.capabilities?.includes("workspace.export") ?? false;
   const regenerateGateReason: GateReason | null = !canGenerate
-    ? { code: "no_permission", capability: t("regenerate") }
+    ? { code: "no_permission", capability: tChat("capGenerate") }
     : null;
   const currentPageTitle = useUiStore((s) => s.currentPageTitle);
   const [signedUrlsByAttachmentId, setSignedUrlsByAttachmentId] = React.useState<

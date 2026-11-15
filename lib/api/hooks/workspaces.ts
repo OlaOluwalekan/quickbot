@@ -40,6 +40,10 @@ export interface WorkspaceDto {
   sourceProvenance?: WorkspaceSourceProvenanceDto | null;
   /** Download formats allowed by the workspace owner's plan (GET /api/v1/workspaces/:id). */
   exportFormats?: Array<"md" | "pdf" | "docx">;
+  /** Attachment limits of the owner's plan and the workspace's current count (GET /api/v1/workspaces/:id). */
+  attachmentLimits?: { max: number; used: number; maxFileMB: number };
+  /** The owner (who pays) has no credits left (GET /api/v1/workspaces/:id). */
+  ownerOutOfCredits?: boolean;
   createdAt: string;
   updatedAt: string;
 }

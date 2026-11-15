@@ -78,8 +78,10 @@ export interface StarterLibraryProps {
 export function StarterLibrary({ onUseTemplate }: StarterLibraryProps) {
   const tHome = useTranslations("Home");
   const tTemplates = useTranslations("Templates");
-  const { entitlements } = useEntitlements();
-  const imageGateReason = getGateReason(entitlements, "images");
+  // Locked only once the real entitlements have loaded (the hook falls back
+  // to Free meanwhile), as in the composer. The server re-checks.
+  const { entitlements, isSuccess: entitlementsLoaded } = useEntitlements();
+  const imageGateReason = entitlementsLoaded ? getGateReason(entitlements, "images") : null;
   const [activeCategory, setActiveCategory] =
     React.useState<TemplateCategory>("write");
 

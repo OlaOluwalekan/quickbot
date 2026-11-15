@@ -43,13 +43,11 @@ jest.mock("next-intl", () => ({
       const ns = (
         enMessages as unknown as Record<string, Record<string, string>>
       )[namespace] || {};
-      let template = ns[key] || key;
-      if (values) {
-        for (const [k, v] of Object.entries(values)) {
-          template = template.replace(`{${k}}`, String(v));
-        }
-      }
-      return template;
+      const template = ns[key] || key;
+      // Real ICU formatting (plurals in Gates.member_limit since F4.4).
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { IntlMessageFormat } = require("intl-messageformat");
+      return String(new IntlMessageFormat(template, "en").format(values));
     };
   },
 }));
@@ -335,7 +333,7 @@ describe("Step F0.1 — Interim entitlements + plan-gating primitives", () => {
       fireEvent.mouseEnter(getWrapper());
       await waitFor(() => {
         expect(
-          screen.getByText("Your plan allows up to 2 collaborators")
+          screen.getByText("This plan allows up to 2 collaborators")
         ).toBeInTheDocument();
       });
 

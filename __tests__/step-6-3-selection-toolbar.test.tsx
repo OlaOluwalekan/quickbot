@@ -300,8 +300,8 @@ describe("Step 6.3 / F2.2 — Selection popover v2 (Comment · Ask: Ask now / Ad
       expect(screen.getByTestId("action-ask")).toBeDisabled();
     });
 
-    it("disables Ask button when isOutOfCredits is true", async () => {
-      render(<SelectionToolbar isOutOfCredits={true} />);
+    it("disables Ask button when the owner is out of credits", async () => {
+      render(<SelectionToolbar creditsGate={{ code: "out_of_credits" }} />);
 
       const p1Text = annotRoot.querySelector("#p1")!.firstChild!;
       mockSelection(p1Text, 0, 16);

@@ -30,7 +30,7 @@ export interface ModelCaps {
   grounding: boolean;
 }
 
-export interface ModelCatalogEntry {
+interface ModelCatalogBase {
   key: ModelKey;
   kind: "TEXT" | "IMAGE";
   tier: "ECONOMY" | "STANDARD";
@@ -39,10 +39,14 @@ export interface ModelCatalogEntry {
   caps: ModelCaps;
   priceUsdPerM?: { in: number; out: number };
   priceUsdPerImage?: number;
+}
+
+export interface ModelCatalogEntry extends ModelCatalogBase {
+  /** Credits for a typical message (TYPICAL_* tokens) or one image: computed, never typed by hand. */
   typicalCredits: number;
 }
 
-export const MODEL_CATALOG: Record<ModelKey, ModelCatalogEntry> = {
+const CATALOG_BASE: Record<ModelKey, ModelCatalogBase> = {
   "text-economy": {
     key: "text-economy",
     kind: "TEXT",
@@ -57,7 +61,6 @@ export const MODEL_CATALOG: Record<ModelKey, ModelCatalogEntry> = {
       tools: true,
       grounding: true,
     },
-    typicalCredits: 2,
   },
   "text-standard": {
     key: "text-standard",
@@ -73,7 +76,6 @@ export const MODEL_CATALOG: Record<ModelKey, ModelCatalogEntry> = {
       tools: true,
       grounding: true,
     },
-    typicalCredits: 7,
   },
   "image-standard": {
     key: "image-standard",
@@ -89,19 +91,18 @@ export const MODEL_CATALOG: Record<ModelKey, ModelCatalogEntry> = {
       tools: false,
       grounding: false,
     },
-    typicalCredits: 35,
   },
-} as const;
+};
 
 export function isModelKey(key: string): key is ModelKey {
-  return key in MODEL_CATALOG;
+  return key in CATALOG_BASE;
 }
 
-export function getModelCatalogEntry(key: string): ModelCatalogEntry {
+function getCatalogBase(key: string): ModelCatalogBase {
   if (!isModelKey(key)) {
     throw new Error(`Unknown model key: ${key}`);
   }
-  return MODEL_CATALOG[key];
+  return CATALOG_BASE[key];
 }
 
 export interface TokenUsageInput {
@@ -117,7 +118,7 @@ export interface TokenUsageInput {
  * Calculates credits for given token or image usage.
  */
 export function creditsFor(modelKey: string, u: TokenUsageInput = {}): number {
-  const model = getModelCatalogEntry(modelKey);
+  const model = getCatalogBase(modelKey);
 
   let costUsd = 0;
   if (model.kind === "TEXT" && model.priceUsdPerM) {
@@ -141,112 +142,70 @@ export function creditsFor(modelKey: string, u: TokenUsageInput = {}): number {
   return baseCredits + surcharge;
 }
 
-/**
- * Computes typical credit hint text dynamically using next-intl or fallback format.
- */
-export function formatModelCreditHint(
-  entry: ModelCatalogEntry,
-  t?: (key: string, values?: Record<string, unknown>) => string
-): string {
-  if (t) {
-    if (entry.kind === "IMAGE") {
-      return t("creditHintImage", { credits: entry.typicalCredits });
-    }
-    return t("creditHintMessage", { credits: entry.typicalCredits });
-  }
+/** Credits for one typical message (text) or one image, from the prices above. */
+function typicalCreditsFor(key: ModelKey): number {
+  return CATALOG_BASE[key].kind === "IMAGE"
+    ? creditsFor(key, { images: 1 })
+    : creditsFor(key, {
+        inputTokens: TYPICAL_INPUT_TOKENS,
+        outputTokens: TYPICAL_OUTPUT_TOKENS,
+      });
+}
 
-  // Fallback if no translation function is provided
-  if (entry.kind === "IMAGE") {
-    return `≈ ${entry.typicalCredits} per image`;
+export const MODEL_CATALOG: Record<ModelKey, ModelCatalogEntry> = Object.fromEntries(
+  (Object.keys(CATALOG_BASE) as ModelKey[]).map((key) => [
+    key,
+    { ...CATALOG_BASE[key], typicalCredits: typicalCreditsFor(key) },
+  ])
+) as Record<ModelKey, ModelCatalogEntry>;
+
+export function getModelCatalogEntry(key: string): ModelCatalogEntry {
+  if (!isModelKey(key)) {
+    throw new Error(`Unknown model key: ${key}`);
   }
-  return `≈ ${entry.typicalCredits} credits per message`;
+  return MODEL_CATALOG[key];
+}
+
+type ModelsTranslator = (key: string, values?: Record<string, string | number>) => string;
+
+/** Credit hint for the model picker ("≈ 2 credits per message"), from `Models.*` messages. */
+export function formatModelCreditHint(entry: ModelCatalogEntry, t: ModelsTranslator): string {
+  return t(entry.kind === "IMAGE" ? "creditHintImage" : "creditHintMessage", {
+    credits: entry.typicalCredits,
+  });
 }
 
 export interface ClientModelOption {
   key: ModelKey;
   name: string;
-  description?: string;
+  description: string;
   kind: "TEXT" | "IMAGE";
   tier: "ECONOMY" | "STANDARD";
   minPlan: PlanTier;
   typicalCredits: number;
   creditHint: string;
-  supportsThinking?: boolean;
   caps: ModelCaps;
 }
 
 /**
- * Returns translated client models for model pickers.
+ * Models of one kind for a picker. Names, descriptions and credit hints come
+ * from the `Models` messages (pass `useTranslations("Models")`).
  */
 export function getClientModels(
-  tModels?: (key: string, values?: Record<string, unknown>) => string,
-  kind?: "TEXT" | "IMAGE"
+  tModels: ModelsTranslator,
+  kind: "TEXT" | "IMAGE" = "TEXT"
 ): ClientModelOption[] {
-  const entries = Object.values(MODEL_CATALOG).filter(
-    (m) => (kind ? m.kind === kind : m.kind === "TEXT")
-  );
-
-  return entries.map((m) => ({
-    key: m.key,
-    name: tModels ? tModels(`${m.key}.name`) : defaultName(m.key),
-    description: tModels ? tModels(`${m.key}.description`) : undefined,
-    kind: m.kind,
-    tier: m.tier,
-    minPlan: m.minPlan,
-    typicalCredits: m.typicalCredits,
-    creditHint: formatModelCreditHint(m, tModels),
-    supportsThinking: m.caps.thinkingSummaries,
-    caps: m.caps,
-  }));
+  return Object.values(MODEL_CATALOG)
+    .filter((m) => m.kind === kind)
+    .map((m) => ({
+      key: m.key,
+      name: tModels(`${m.key}.name`),
+      description: tModels(`${m.key}.description`),
+      kind: m.kind,
+      tier: m.tier,
+      minPlan: m.minPlan,
+      typicalCredits: m.typicalCredits,
+      creditHint: formatModelCreditHint(m, tModels),
+      caps: m.caps,
+    }));
 }
-
-function defaultName(key: ModelKey): string {
-  switch (key) {
-    case "text-economy":
-      return "Fast & Efficient";
-    case "text-standard":
-      return "Standard Reasoning";
-    case "image-standard":
-      return "Image Studio";
-  }
-}
-
-/** Static compatibility list with computed credit hints */
-export const CLIENT_MODELS: ClientModelOption[] = [
-  {
-    key: "text-economy",
-    name: "Fast & Efficient",
-    kind: "TEXT",
-    tier: "ECONOMY",
-    minPlan: "FREE",
-    typicalCredits: 2,
-    creditHint: formatModelCreditHint(MODEL_CATALOG["text-economy"]),
-    supportsThinking: true,
-    caps: MODEL_CATALOG["text-economy"].caps,
-  },
-  {
-    key: "text-standard",
-    name: "Standard Reasoning",
-    kind: "TEXT",
-    tier: "STANDARD",
-    minPlan: "LITE",
-    typicalCredits: 7,
-    creditHint: formatModelCreditHint(MODEL_CATALOG["text-standard"]),
-    supportsThinking: true,
-    caps: MODEL_CATALOG["text-standard"].caps,
-  },
-];
-
-export const CLIENT_IMAGE_MODELS: ClientModelOption[] = [
-  {
-    key: "image-standard",
-    name: "Image Studio",
-    kind: "IMAGE",
-    tier: "STANDARD",
-    minPlan: "LITE",
-    typicalCredits: 35,
-    creditHint: formatModelCreditHint(MODEL_CATALOG["image-standard"]),
-    supportsThinking: false,
-    caps: MODEL_CATALOG["image-standard"].caps,
-  },
-];

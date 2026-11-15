@@ -2,7 +2,7 @@ import React from "react";
 import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import QueryProvider, { createAppQueryClient } from "@/components/providers/query-provider";
-import { entitlementsForPlan } from "@/lib/entitlements/shared";
+import { creditsGateReason, entitlementsForPlan } from "@/lib/entitlements/shared";
 import type { PlanKey } from "@/server/billing/plans";
 import {
   MODEL_CATALOG,
@@ -11,6 +11,7 @@ import {
   creditsFor,
 } from "@/lib/ai/model-catalog";
 import { Composer } from "@/components/workspace/composer";
+import { queryKeys } from "@/lib/api/hooks/query-keys";
 import { StarterLibrary } from "@/components/home/starter-library";
 import { ShareAndPeopleDialog } from "@/components/workspace/ShareAndPeopleDialog";
 import { SelectionToolbar } from "@/components/annotations/selection-toolbar";
@@ -51,7 +52,11 @@ describe("Step F4.4 — Plan-locked models and features are disabled with a reas
     }
   });
 
+  // What `GET .../members` returns as `inviteCapacity` (the owner's plan, counted on the server).
+  let inviteCapacity: { limit: number; used: number; inGrace: boolean } | undefined;
+
   beforeEach(() => {
+    inviteCapacity = undefined;
     global.fetch = jest.fn(() =>
       Promise.resolve({
         ok: true,
@@ -63,6 +68,7 @@ describe("Step F4.4 — Plan-locked models and features are disabled with a reas
             invitations: [],
             shares: [],
             activity: [],
+            inviteCapacity,
           }),
       } as Response)
     );
@@ -103,10 +109,12 @@ describe("Step F4.4 — Plan-locked models and features are disabled with a reas
   function renderWithProviders(
     ui: React.ReactElement,
     plan: PlanKey = "FREE",
-    locale: "en" | "es" | "fr" = "en"
+    locale: "en" | "es" | "fr" = "en",
+    seed?: (client: ReturnType<typeof createAppQueryClient>) => void
   ) {
     const queryClient = createAppQueryClient();
     queryClient.setQueryData(["me", "entitlements"], entitlementsForPlan(plan));
+    seed?.(queryClient);
 
     const messages =
       locale === "es" ? esMessages : locale === "fr" ? frMessages : enMessages;
@@ -118,11 +126,26 @@ describe("Step F4.4 — Plan-locked models and features are disabled with a reas
     );
   }
 
+  function modelsTranslator(msgs: typeof enMessages) {
+    return (key: string, values?: Record<string, string | number>) => {
+      let cur: unknown = msgs.Models;
+      for (const p of key.split(".")) {
+        cur = (cur as Record<string, unknown> | undefined)?.[p];
+      }
+      if (typeof cur !== "string") return key;
+      return values ? cur.replace(/\{(\w+)\}/g, (_, k) => String(values[k] ?? `{${k}}`)) : cur;
+    };
+  }
+
   describe("1. Isomorphic Model Catalog (lib/ai/model-catalog.ts)", () => {
     it("defines model entries with typical credits derived from registry numbers", () => {
       expect(MODEL_CATALOG["text-economy"].typicalCredits).toBe(2);
       expect(MODEL_CATALOG["text-standard"].typicalCredits).toBe(7);
-      expect(MODEL_CATALOG["image-standard"].typicalCredits).toBe(35);
+      // Computed from the price (0.067 USD / 0.002 per credit), the same as a real charge.
+      expect(MODEL_CATALOG["image-standard"].typicalCredits).toBe(
+        creditsFor("image-standard", { images: 1 })
+      );
+      expect(MODEL_CATALOG["image-standard"].typicalCredits).toBe(34);
 
       expect(MODEL_CATALOG["text-economy"].minPlan).toBe("FREE");
       expect(MODEL_CATALOG["text-standard"].minPlan).toBe("LITE");
@@ -130,43 +153,34 @@ describe("Step F4.4 — Plan-locked models and features are disabled with a reas
     });
 
     it("computes credit hints dynamically without hardcoding", () => {
-      expect(formatModelCreditHint(MODEL_CATALOG["text-economy"])).toBe(
+      const tEn = modelsTranslator(enMessages);
+      expect(formatModelCreditHint(MODEL_CATALOG["text-economy"], tEn)).toBe(
         "≈ 2 credits per message"
       );
-      expect(formatModelCreditHint(MODEL_CATALOG["text-standard"])).toBe(
+      expect(formatModelCreditHint(MODEL_CATALOG["text-standard"], tEn)).toBe(
         "≈ 7 credits per message"
       );
-      expect(formatModelCreditHint(MODEL_CATALOG["image-standard"])).toBe(
-        "≈ 35 per image"
+      expect(formatModelCreditHint(MODEL_CATALOG["image-standard"], tEn)).toBe(
+        "≈ 34 per image"
       );
     });
 
     it("provides translated client models for all 3 locales", () => {
       for (const loc of ["en", "es", "fr"] as const) {
         const msgs = loc === "es" ? esMessages : loc === "fr" ? frMessages : enMessages;
-        const tModels = (key: string, values?: Record<string, unknown>) => {
-          const parts = key.split(".");
-          let cur: any = msgs.Models;
-          for (const p of parts) {
-            cur = cur?.[p];
-          }
-          if (typeof cur === "string" && values) {
-            return cur.replace(/\{(\w+)\}/g, (_, k) => String(values[k] ?? `{${k}}`));
-          }
-          return cur ?? key;
-        };
+        const tModels = modelsTranslator(msgs);
 
         const textModels = getClientModels(tModels, "TEXT");
         expect(textModels).toHaveLength(2);
-        expect(textModels[0].name.length).toBeGreaterThan(0);
-        expect(textModels[0].creditHint).toContain("2");
-        expect(textModels[1].name.length).toBeGreaterThan(0);
-        expect(textModels[1].creditHint).toContain("7");
+        expect(textModels[0]!.name.length).toBeGreaterThan(0);
+        expect(textModels[0]!.creditHint).toContain("2");
+        expect(textModels[1]!.name.length).toBeGreaterThan(0);
+        expect(textModels[1]!.creditHint).toContain("7");
 
         const imageModels = getClientModels(tModels, "IMAGE");
         expect(imageModels).toHaveLength(1);
-        expect(imageModels[0].name.length).toBeGreaterThan(0);
-        expect(imageModels[0].creditHint).toContain("35");
+        expect(imageModels[0]!.name.length).toBeGreaterThan(0);
+        expect(imageModels[0]!.creditHint).toContain("34");
       }
     });
 
@@ -281,6 +295,70 @@ describe("Step F4.4 — Plan-locked models and features are disabled with a reas
     });
   });
 
+  describe("2b. Composer limits and credits come from the workspace owner", () => {
+    beforeEach(() => {
+      // The question queue (inside the composer) lists its questions.
+      global.fetch = jest.fn(() =>
+        Promise.resolve({ ok: true, json: () => Promise.resolve([]) } as Response)
+      );
+    });
+
+    function seedWorkspace(data: Record<string, unknown>) {
+      return (client: ReturnType<typeof createAppQueryClient>) =>
+        client.setQueryData(queryKeys.workspaces.detail("user-1", "ws-1"), {
+          id: "ws-1",
+          title: "W",
+          createdBy: "owner-1",
+          createdAt: "",
+          updatedAt: "",
+          ...data,
+        });
+    }
+
+    it("attach button is gated (still visible) when the workspace's attachment limit is reached", async () => {
+      renderWithProviders(
+        <Composer workspaceId="ws-1" userId="user-1" />,
+        "PRO",
+        "en",
+        seedWorkspace({ role: "EDITOR", attachmentLimits: { max: 3, used: 3, maxFileMB: 5 } })
+      );
+
+      const attachBtn = await screen.findByTestId("composer-attach-btn");
+      const gated = attachBtn.closest("[data-gated='attachment_limit']");
+      expect(gated).toBeInTheDocument();
+      expect(attachBtn).toHaveAttribute("aria-disabled", "true");
+      fireEvent.focus(gated!);
+      await waitFor(() => {
+        expect(screen.getByRole("tooltip")).toHaveTextContent(/limit of 3 attachments/i);
+      });
+      fireEvent.click(attachBtn);
+      expect(screen.queryByTestId("composer-attach-menu")).toBeNull();
+    });
+
+    it("a member sees the owner is out of credits: Send gated, no upgrade link", async () => {
+      renderWithProviders(
+        <Composer workspaceId="ws-1" userId="user-1" />,
+        "PRO",
+        "en",
+        seedWorkspace({ role: "EDITOR", ownerOutOfCredits: true })
+      );
+
+      expect(await screen.findByText(/The workspace owner is out of credits/i)).toBeInTheDocument();
+      const sendBtn = screen.getByRole("button", { name: /^Send$/i });
+      expect(sendBtn.closest("[data-gated='owner_out_of_credits']")).toBeInTheDocument();
+      expect(screen.queryByRole("link", { name: /Upgrade/i })).toBeNull();
+    });
+
+    it("Enter does not submit when the actor lacks generate", () => {
+      const onSubmitted = jest.fn();
+      renderWithProviders(<Composer canGenerate={false} onCompleted={onSubmitted} />, "PRO");
+      const textarea = screen.getByRole("textbox");
+      fireEvent.change(textarea, { target: { value: "hello" } });
+      fireEvent.keyDown(textarea, { key: "Enter" });
+      expect(global.fetch).not.toHaveBeenCalled();
+    });
+  });
+
   describe("3. Starter Templates Image Mode Gating", () => {
     it("on FREE plan: image templates have gated 'Use template' button", async () => {
       const onUseTemplate = jest.fn();
@@ -291,7 +369,7 @@ describe("Step F4.4 — Plan-locked models and features are disabled with a reas
       fireEvent.click(imageCategoryTab);
 
       const useTemplateButtons = screen.getAllByRole("button", { name: /Use template/i });
-      const firstBtn = useTemplateButtons[0];
+      const firstBtn = useTemplateButtons[0]!;
       const gatedWrapper = firstBtn.closest("[data-gated='requires_plan']");
       expect(gatedWrapper).toBeInTheDocument();
       expect(firstBtn).toHaveAttribute("aria-disabled", "true");
@@ -315,7 +393,7 @@ describe("Step F4.4 — Plan-locked models and features are disabled with a reas
       fireEvent.click(imageCategoryTab);
 
       const useTemplateButtons = screen.getAllByRole("button", { name: /Use template/i });
-      const firstBtn = useTemplateButtons[0];
+      const firstBtn = useTemplateButtons[0]!;
       expect(firstBtn.closest("[data-gated]")).toBeNull();
       expect(firstBtn).not.toHaveAttribute("aria-disabled", "true");
 
@@ -325,17 +403,26 @@ describe("Step F4.4 — Plan-locked models and features are disabled with a reas
   });
 
   describe("4. ShareAndPeopleDialog Member Limit Gating", () => {
-    it("on FREE plan (0 members allowed): Invite button is gated with member_limit", async () => {
+    it("owner's plan has no collaborators: Invite button is gated with member_limit", async () => {
+      inviteCapacity = { limit: 0, used: 0, inGrace: false };
+      // The viewer's own plan doesn't matter: the owner's limit comes from the server.
       renderWithProviders(
         <ShareAndPeopleDialog
           open={true}
           onOpenChange={jest.fn()}
           workspaceId="ws-1"
           workspaceTitle="Test Workspace"
+          currentUserId="user-1"
           initialTab="invite"
         />,
-        "FREE"
+        "PRO"
       );
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole("button", { name: /^Invite$/i }).closest("[data-gated]")
+        ).not.toBeNull();
+      });
 
       await waitFor(() => {
         expect(screen.getByRole("button", { name: /^Invite$/i })).toBeInTheDocument();
@@ -349,21 +436,52 @@ describe("Step F4.4 — Plan-locked models and features are disabled with a reas
       fireEvent.focus(gatedWrapper!);
       await waitFor(() => {
         expect(screen.getByRole("tooltip")).toHaveTextContent(
-          /Your plan allows up to 0 collaborators/i
+          /This plan doesn't include collaborators/i
         );
       });
     });
 
-    it("on PRO plan (10 members allowed): Invite button is enabled", async () => {
+    it("owner's limit reached by members + pending invites: Invite is gated with the limit", async () => {
+      inviteCapacity = { limit: 5, used: 5, inGrace: false };
       renderWithProviders(
         <ShareAndPeopleDialog
           open={true}
           onOpenChange={jest.fn()}
           workspaceId="ws-1"
           workspaceTitle="Test Workspace"
+          currentUserId="user-1"
           initialTab="invite"
         />,
-        "PRO"
+        "FREE"
+      );
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole("button", { name: /^Invite$/i }).closest("[data-gated='member_limit']")
+        ).not.toBeNull();
+      });
+      fireEvent.focus(
+        screen.getByRole("button", { name: /^Invite$/i }).closest("[data-gated]")!
+      );
+      await waitFor(() => {
+        expect(screen.getByRole("tooltip")).toHaveTextContent(
+          /This plan allows up to 5 collaborators/i
+        );
+      });
+    });
+
+    it("room left under the owner's limit: Invite button is enabled", async () => {
+      inviteCapacity = { limit: 15, used: 2, inGrace: false };
+      renderWithProviders(
+        <ShareAndPeopleDialog
+          open={true}
+          onOpenChange={jest.fn()}
+          workspaceId="ws-1"
+          workspaceTitle="Test Workspace"
+          currentUserId="user-1"
+          initialTab="invite"
+        />,
+        "FREE"
       );
 
       await waitFor(() => {
@@ -435,12 +553,12 @@ describe("Step F4.4 — Plan-locked models and features are disabled with a reas
       });
     });
 
-    it("gates Ask button when isOutOfCredits is true", async () => {
+    it("gates Ask button when the viewer (the owner) is out of credits", async () => {
       renderWithProviders(
         <SelectionToolbar
           canComment={true}
           canAsk={true}
-          isOutOfCredits={true}
+          creditsGate={creditsGateReason({ ownerOutOfCredits: true, role: "OWNER" })}
         />
       );
 
@@ -462,6 +580,37 @@ describe("Step F4.4 — Plan-locked models and features are disabled with a reas
           /You are out of credits/i
         );
       });
+    });
+  });
+
+  describe("5b. Credits gate follows who pays", () => {
+    it("is null while the owner has credits", () => {
+      expect(creditsGateReason({ ownerOutOfCredits: false, role: "OWNER" })).toBeNull();
+      expect(creditsGateReason(undefined)).toBeNull();
+    });
+
+    it("a member sees that the owner is out of credits, without an Upgrade link", async () => {
+      const reason = creditsGateReason({ ownerOutOfCredits: true, role: "EDITOR" });
+      expect(reason).toEqual({ code: "owner_out_of_credits" });
+
+      renderWithProviders(
+        <SelectionToolbar canComment={true} canAsk={true} creditsGate={reason} />
+      );
+      const textNode = responseRoot.querySelector("#resp_text")!.firstChild!;
+      mockSelection(textNode, 0, 21);
+      await waitFor(() => {
+        expect(screen.getByTestId("selection-toolbar")).toBeInTheDocument();
+      });
+
+      const gated = screen.getByTestId("action-ask").closest("[data-gated='owner_out_of_credits']");
+      expect(gated).toBeInTheDocument();
+      fireEvent.focus(gated!);
+      await waitFor(() => {
+        expect(screen.getByRole("tooltip")).toHaveTextContent(
+          /The workspace owner is out of credits/i
+        );
+      });
+      expect(screen.queryByRole("link", { name: /Upgrade/i })).toBeNull();
     });
   });
 
@@ -488,13 +637,13 @@ describe("Step F4.4 — Plan-locked models and features are disabled with a reas
       });
     });
 
-    it("gates review trigger button when isOutOfCredits is true", async () => {
+    it("gates review trigger button when the owner is out of credits", async () => {
       renderWithProviders(
         <DocumentReview
           versionId="v-1"
           responseId="r-1"
           canAsk={true}
-          isOutOfCredits={true}
+          creditsGate={{ code: "out_of_credits" }}
         />
       );
 
@@ -515,12 +664,13 @@ describe("Step F4.4 — Plan-locked models and features are disabled with a reas
   describe("7. ResponseCard Regenerate Button Gating", () => {
     const mockResponse = {
       id: "res-1",
+      workspaceId: "ws-1",
       prompt: "What is quantum computing?",
       content: "Quantum computing uses qubits...",
       activeVersionId: "ver-1",
       activeVersion: {
         id: "ver-1",
-        versionNumber: 1,
+        number: 1,
         content: "Quantum computing uses qubits...",
       },
     };
@@ -545,7 +695,7 @@ describe("Step F4.4 — Plan-locked models and features are disabled with a reas
       fireEvent.focus(gated!);
       await waitFor(() => {
         expect(screen.getByRole("tooltip")).toHaveTextContent(
-          /You do not have permission to regenerate/i
+          /You do not have permission to generate responses/i
         );
       });
 
