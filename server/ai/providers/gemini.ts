@@ -31,10 +31,11 @@ export const GEMINI_SAFETY_SETTINGS = [
 
 /**
  * Sent as the signature of a function call we replay without one. Thinking
- * models reject a replayed call that lacks its signature (HTTP 400).
- * TODO(F4.4b): not yet checked against the provider's documentation or a
- * live call (both blocked in the review session). Keep it only if the docs
- * allow it for this case; otherwise remove it and drop the unsigned call.
+ * models put a signature on the first function call of each step and reject
+ * the next request (HTTP 400) when that part comes back without it. The
+ * provider's thought-signature documentation (FAQ) allows this dummy value
+ * to skip that check for a call that has no signature of its own. A real
+ * signature is always sent back instead when the call carried one.
  */
 export const MISSING_THOUGHT_SIGNATURE = "skip_thought_signature_validator";
 
@@ -166,8 +167,6 @@ export class GeminiProvider implements AiProvider {
       throw normalizeGeminiError(err);
     }
 
-    let latestThoughtSignature: string | undefined;
-
     try {
       for await (const chunk of responseStream) {
         if (req.signal?.aborted) {
@@ -179,15 +178,6 @@ export class GeminiProvider implements AiProvider {
         // 1. Check parts for thoughts, text, and tool calls
         if (candidate?.content?.parts) {
           for (const part of candidate.content.parts as Part[]) {
-            // The SDK maps the wire field to `Part.thoughtSignature` (a
-            // sibling of `functionCall`); `FunctionCall` has no signature.
-            const partSig = part.thoughtSignature;
-
-            if (partSig) {
-              latestThoughtSignature = partSig;
-              yield { type: "thought_signature", signature: partSig };
-            }
-
             if (part.thought === true) {
               const text = part.text || "";
               outputCharCount += text.length;
@@ -198,13 +188,15 @@ export class GeminiProvider implements AiProvider {
             }
 
             if (part.functionCall) {
-              // A signature may arrive on an earlier part of the same turn.
-              const toolSig = partSig || latestThoughtSignature;
+              // A call's signature must go back on the exact part it came on
+              // (`Part.thoughtSignature`, beside `functionCall`), never one
+              // taken from another part. Of parallel calls, only the first
+              // carries one.
               yield {
                 type: "tool_call",
                 name: part.functionCall.name ?? "",
                 args: part.functionCall.args,
-                thoughtSignature: toolSig,
+                thoughtSignature: part.thoughtSignature,
               };
             }
           }

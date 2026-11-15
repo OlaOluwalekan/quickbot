@@ -2,7 +2,8 @@
  * @jest-environment node
  *
  * F4.4b — both tool loops (main response and Ask answer) send the right
- * thought signature back with the replayed web_search call.
+ * thought signature back with the replayed web_search call: the call's own,
+ * never one taken from another part, and of parallel calls only the first.
  */
 import crypto from "node:crypto";
 import { db } from "@/server/db/client";
@@ -21,20 +22,20 @@ import { setUserPlanOverride, clearUserPlanOverrides } from "@/server/billing/pl
 import type { AiProvider, GenerateRequest, Part, StreamEvent } from "@/server/ai/types";
 import type { Actor } from "@/server/auth/session";
 
-type Order = "before" | "after" | "own";
+type Scenario = "own" | "parallel" | "none";
 
 /**
- * Calls web_search once, with the signature sent per `order`:
- * - before: a thought_signature event, then the call without one;
- * - after: the call without one, then a thought_signature event;
- * - own: an earlier thought_signature, then the call carrying its own.
- * Records the tool_call part it gets back on the next request.
+ * Calls web_search once:
+ * - own: one call carrying its own signature;
+ * - parallel: two calls, only the first signed (as the provider does);
+ * - none: one call without a signature.
+ * Records the tool_call parts it gets back on the next request.
  */
 class SigningProvider implements AiProvider {
   id = "gemini" as const;
   replayed: Extract<Part, { type: "tool_call" }>[] = [];
 
-  constructor(private order: Order) {}
+  constructor(private scenario: Scenario) {}
 
   async *stream(req: GenerateRequest): AsyncIterable<StreamEvent> {
     if (req.grounding) {
@@ -54,24 +55,22 @@ class SigningProvider implements AiProvider {
       return;
     }
 
-    const call = { type: "tool_call" as const, name: "web_search", args: { query: "q" } };
-    if (this.order === "before") {
-      yield { type: "thought_signature", signature: "sig_before" };
-      yield call;
-    } else if (this.order === "after") {
-      yield call;
-      yield { type: "thought_signature", signature: "sig_after" };
+    if (this.scenario === "own") {
+      yield { type: "tool_call", name: "web_search", args: { query: "a" }, thoughtSignature: "sig_A" };
+    } else if (this.scenario === "parallel") {
+      yield { type: "tool_call", name: "web_search", args: { query: "a" }, thoughtSignature: "sig_A" };
+      yield { type: "tool_call", name: "web_search", args: { query: "b" } };
     } else {
-      yield { type: "thought_signature", signature: "sig_earlier" };
-      yield { ...call, thoughtSignature: "sig_own" };
+      yield { type: "tool_call", name: "web_search", args: { query: "a" } };
     }
   }
 }
 
-const expected: Record<Order, string> = {
-  before: "sig_before",
-  after: "sig_after",
-  own: "sig_own",
+/** One call goes back: the first, with its own signature (or none). */
+const expected: Record<Scenario, Record<string, unknown>> = {
+  own: { name: "web_search", args: { query: "a" }, thoughtSignature: "sig_A" },
+  parallel: { name: "web_search", args: { query: "a" }, thoughtSignature: "sig_A" },
+  none: { name: "web_search", args: { query: "a" }, thoughtSignature: undefined },
 };
 
 async function drain(stream: ReadableStream<Uint8Array>) {
@@ -101,10 +100,10 @@ describe("F4.4b — the tool loops send the call's signature back", () => {
     clearUserPlanOverrides();
   });
 
-  describe.each<Order>(["before", "after", "own"])("signature %s the call", (order) => {
+  describe.each<Scenario>(["own", "parallel", "none"])("%s", (scenario) => {
     it("main response (generation.ts)", async () => {
       clearActiveGenerationsForTesting();
-      const provider = new SigningProvider(order);
+      const provider = new SigningProvider(scenario);
       setCustomProvider(provider);
       const { actor, workspace } = await makeOwner();
 
@@ -116,13 +115,11 @@ describe("F4.4b — the tool loops send the call's signature back", () => {
       });
       await drain(stream);
 
-      expect(provider.replayed).toEqual([
-        expect.objectContaining({ name: "web_search", thoughtSignature: expected[order] }),
-      ]);
+      expect(provider.replayed).toEqual([expect.objectContaining(expected[scenario])]);
     });
 
     it("Ask answer (annotation.ts)", async () => {
-      const provider = new SigningProvider(order);
+      const provider = new SigningProvider(scenario);
       setAnnotationCustomProviderForTesting(provider);
       const { user, actor, workspace } = await makeOwner();
 
@@ -157,9 +154,7 @@ describe("F4.4b — the tool loops send the call's signature back", () => {
       });
       await drain(stream);
 
-      expect(provider.replayed).toEqual([
-        expect.objectContaining({ name: "web_search", thoughtSignature: expected[order] }),
-      ]);
+      expect(provider.replayed).toEqual([expect.objectContaining(expected[scenario])]);
     });
   });
 });

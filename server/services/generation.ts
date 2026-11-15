@@ -56,7 +56,6 @@ import {
 import { getStorageProvider } from "@/server/storage";
 import type { Msg, Part, ToolSpec } from "@/server/ai/types";
 import { normalizeGeminiError } from "@/server/ai/errors";
-import { createTurnSignatureTracker } from "@/server/ai/thought-signatures";
 
 // In-memory active generation tracking
 export type ActiveSubscriber = {
@@ -467,7 +466,6 @@ async function executeDetachedGeneration(params: {
         args: unknown;
         thoughtSignature?: string;
       } | null = null;
-      const signatures = createTurnSignatureTracker();
       let assistantTextInThisTurn = "";
       // A provider may report usage on several chunks, each a running total
       // for this call: keep the last one, then add the calls together.
@@ -488,8 +486,6 @@ async function executeDetachedGeneration(params: {
             active.tokensEmitted = true;
             broadcastEvent(active, "thought", { text: event.text });
           }
-        } else if (event.type === "thought_signature") {
-          signatures.onSignature(event.signature);
         } else if (event.type === "text_delta") {
           if (stage !== "writing") {
             stage = "writing";
@@ -501,12 +497,15 @@ async function executeDetachedGeneration(params: {
           broadcastEvent(active, "delta", { text: event.text });
         } else if (
           event.type === "tool_call" &&
+          // Parallel calls: keep the first, the one that carries the
+          // step's thought signature (F4.4b). The model can ask again.
+          !toolCallEmitted &&
           (event.name === "create_document" ||
             event.name.endsWith("create_document") ||
             event.name === "web_search" ||
             event.name.endsWith("web_search"))
         ) {
-          toolCallEmitted = signatures.attach({
+          toolCallEmitted = {
             name: event.name.endsWith("web_search")
               ? "web_search"
               : event.name.endsWith("create_document")
@@ -514,7 +513,7 @@ async function executeDetachedGeneration(params: {
               : event.name,
             args: event.args,
             thoughtSignature: event.thoughtSignature,
-          });
+          };
         } else if (event.type === "citation") {
           // The main request is never grounded by the provider (F4.1: search
           // is the web_search tool, whose sources are added when it runs), so
