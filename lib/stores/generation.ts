@@ -41,7 +41,6 @@ export interface PendingWorkspaceStart {
   modelKey?: string;
   idempotencyKey?: string;
   mode?: "text" | "image";
-  thinkHarder?: boolean;
 }
 
 export interface GenerationStoreState {

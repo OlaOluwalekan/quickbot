@@ -7,7 +7,7 @@ import {
   type PlanKey,
   type PlanLimits,
 } from "@/server/billing/plans";
-import { MODELS, PLAN_RANKS, type ModelKey } from "@/server/ai/registry";
+import { INTERNAL_MODEL_KEYS, MODELS, PLAN_RANKS, type ModelKey } from "@/server/ai/registry";
 import {
   entitlementsForPlan as sharedEntitlementsForPlan,
   type EntitlementFeatures,
@@ -30,7 +30,9 @@ export function entitlementsForPlan(plan: PlanKey): Entitlements {
   const planRank = PLAN_RANKS[normalizedPlan] ?? 0;
 
   const allowedModels = (Object.keys(MODELS) as ModelKey[]).filter(
-    (key) => planRank >= (PLAN_RANKS[MODELS[key].minPlan] ?? 0)
+    (key) =>
+      !INTERNAL_MODEL_KEYS.includes(key) &&
+      planRank >= (PLAN_RANKS[MODELS[key].minPlan] ?? 0)
   );
 
   return {

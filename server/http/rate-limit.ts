@@ -26,6 +26,7 @@ export const policies = {
   "notes:list":        { n: 60, window: "1 m"  as Duration }, // key: userId
   "notes:mutate":      { n: 30, window: "1 m"  as Duration }, // key: userId
   "username:check":    { n: 20, window: "1 m"  as Duration }, // key: userId or ip
+  "transcribe":        { n: 20, window: "1 m"  as Duration }, // key: userId
 } as const;
 
 export type RateLimitPolicy = keyof typeof policies;

@@ -15,6 +15,7 @@ export const envSchema = z
     GEMINI_TEXT_MODEL_ECONOMY: z.string().default("gemini-2.5-flash"),
     GEMINI_TEXT_MODEL_STANDARD: z.string().default("gemini-2.5-pro"),
     GEMINI_IMAGE_MODEL: z.string().default("imagen-3.0-generate-002"),
+    AI_TRANSCRIBE_MODEL: emptyToUndefined(z.string().optional()),
     RESEND_API_KEY: z.string().startsWith("re_"),
     EMAIL_FROM: z.string().min(3),
     SUPPORT_EMAIL: emptyToUndefined(z.string().min(3).optional()),

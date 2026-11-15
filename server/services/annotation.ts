@@ -28,6 +28,7 @@ import {
 } from "@/server/services/credits";
 import {
   assertModelAccess,
+  assertSelectableModel,
   getModel,
   creditsFor,
   ModelKey,
@@ -1195,6 +1196,7 @@ export async function streamAnnotationAnswer(
     : "text-economy";
   const model = getModel(modelKey);
   try {
+    assertSelectableModel(modelKey);
     assertModelAccess(modelKey, ownerEntitlements.plan);
   } catch (err: unknown) {
     throw Errors.forbidden(
@@ -1302,7 +1304,8 @@ export async function streamAnnotationAnswer(
       let fullAssistantText = "";
       let fullThoughtText = "";
       const citations: AnswerCitation[] = [];
-      let usage: { inputTokens: number; outputTokens: number } | null = null;
+      let usage: { inputTokens: number; outputTokens: number; thoughtTokens: number } | null =
+        null;
       let searchesExecuted = 0;
 
       try {
@@ -1329,6 +1332,8 @@ export async function streamAnnotationAnswer(
         let currentMessages = [...askContext.messages];
         let inputTokens = 0;
         let outputTokens = 0;
+        // Billed by the provider as output, so charged too.
+        let thoughtTokens = 0;
         let gotUsage = false;
 
         while (true) {
@@ -1354,7 +1359,11 @@ export async function streamAnnotationAnswer(
           let toolCall: { args: unknown; thoughtSignature?: string } | null = null;
           let turnText = "";
           // Usage chunks are running totals for one call: keep the last.
-          let callUsage: { inputTokens: number; outputTokens: number } | null = null;
+          let callUsage: {
+            inputTokens: number;
+            outputTokens: number;
+            thoughtTokens: number;
+          } | null = null;
 
           for await (const chunk of aiStream) {
             if (chunk.type === "text_delta" && chunk.text) {
@@ -1390,6 +1399,7 @@ export async function streamAnnotationAnswer(
               callUsage = {
                 inputTokens: chunk.inputTokens,
                 outputTokens: chunk.outputTokens,
+                thoughtTokens: chunk.thoughtTokens ?? 0,
               };
             }
           }
@@ -1398,6 +1408,7 @@ export async function streamAnnotationAnswer(
             gotUsage = true;
             inputTokens += callUsage.inputTokens;
             outputTokens += callUsage.outputTokens;
+            thoughtTokens += callUsage.thoughtTokens;
           }
 
           if (!toolCall) break;
@@ -1461,7 +1472,7 @@ export async function streamAnnotationAnswer(
         }
 
         if (gotUsage) {
-          usage = { inputTokens, outputTokens };
+          usage = { inputTokens, outputTokens, thoughtTokens };
         }
 
         if (!fullAssistantText.trim()) {
@@ -1482,6 +1493,7 @@ export async function streamAnnotationAnswer(
         const chargedCredits = creditsFor(modelKey, {
           inputTokens: usage?.inputTokens || estimatedInputTokens,
           outputTokens: usage?.outputTokens || estimateTokens(fullAssistantText),
+          thoughtTokens: usage?.thoughtTokens ?? 0,
           searches: searchesExecuted,
         });
         await settle(billedAccountId, generationId, chargedCredits, settleKey);
@@ -1495,6 +1507,7 @@ export async function streamAnnotationAnswer(
             usage: {
               inputTokens: usage?.inputTokens || estimatedInputTokens,
               outputTokens: usage?.outputTokens || estimateTokens(fullAssistantText),
+              thoughtTokens: usage?.thoughtTokens ?? 0,
               searches: searchesExecuted,
             },
           },

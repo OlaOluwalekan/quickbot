@@ -32,6 +32,11 @@ export const MODELS = {
     provider: "gemini" as const,
     providerModelId: env.GEMINI_IMAGE_MODEL,
   },
+  "audio-transcribe": {
+    ...MODEL_CATALOG["audio-transcribe"],
+    provider: "gemini" as const,
+    providerModelId: env.AI_TRANSCRIBE_MODEL || env.GEMINI_TEXT_MODEL_ECONOMY,
+  },
 } as const;
 
 export function isModelKey(key: string): key is ModelKey {
@@ -47,6 +52,16 @@ export function getModel(modelKey: string) {
     );
   }
   return MODELS[modelKey];
+}
+
+/** Models used only internally (voice transcription), never chosen for an answer. */
+export const INTERNAL_MODEL_KEYS: readonly ModelKey[] = ["audio-transcribe"];
+
+/** Rejects a model key a person may not pick for an answer (internal models). */
+export function assertSelectableModel(modelKey: string): void {
+  if ((INTERNAL_MODEL_KEYS as readonly string[]).includes(modelKey)) {
+    throw new AiError("invalid_request", false, `Model '${modelKey}' can't be used here.`);
+  }
 }
 
 export function assertModelAccess(

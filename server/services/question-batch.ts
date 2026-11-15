@@ -13,6 +13,7 @@ import {
 } from "@/server/services/credits";
 import {
   assertModelAccess,
+  assertSelectableModel,
   getModel,
   creditsFor,
   ModelKey,
@@ -181,6 +182,7 @@ export async function runQuestionBatch(
   const modelKey = (input.modelKey || "text-economy") as ModelKey;
   const model = getModel(modelKey);
   try {
+    assertSelectableModel(modelKey);
     assertModelAccess(modelKey, ownerEntitlements.plan);
   } catch (err: unknown) {
     throw Errors.forbidden(
@@ -259,6 +261,8 @@ export async function runQuestionBatch(
       let accumulatedText = "";
       let reportedInputTokens: number | null = null;
       let reportedOutputTokens: number | null = null;
+      // Billed by the provider as output, so charged too.
+      let reportedThoughtTokens = 0;
 
       try {
         controller.enqueue(
@@ -323,6 +327,7 @@ export async function runQuestionBatch(
           } else if (chunk.type === "usage") {
             reportedInputTokens = chunk.inputTokens;
             reportedOutputTokens = chunk.outputTokens;
+            reportedThoughtTokens = chunk.thoughtTokens ?? 0;
           }
         }
 
@@ -428,6 +433,7 @@ export async function runQuestionBatch(
         const chargedCredits = creditsFor(modelKey, {
           inputTokens: finalInputTokens,
           outputTokens: finalOutputTokens,
+          thoughtTokens: reportedThoughtTokens,
         });
 
         await settle(billedAccountId, generationId, chargedCredits, settleKey);

@@ -169,8 +169,6 @@
     "streamError": "Échec de la génération de la réponse. Veuillez réessayer.",
     "attachDisabled": "Les pièces jointes seront disponibles dans la Phase 5",
     "model": "Modèle",
-    "thinkHarder": "Approfondir la réflexion",
-    "thinkHarderDesc": "Activer le raisonnement approfondi et les résumés de réflexion",
     "queue": "File d'attente de requêtes",
     "queueDisabled": "La file d'attente est vide",
     "stop": "Arrêter la génération",
@@ -637,7 +635,7 @@
       "promptExample": "Comment structurer le regroupement de connexions par rapport aux répliques en lecture pour une API Node.js à 10 000 requêtes/sec avec PostgreSQL ?",
       "thoughtPreview": "Réflexion pendant 1,8s : évaluation du mode transaction PgBouncer, latence et synchronisation des répliques",
       "versionInfo": "Version 2 sur 2",
-      "regeneratedNote": "(Régénéré avec raisonnement approfondi)",
+      "regeneratedNote": "(Régénéré avec Raisonnement Standard)",
       "responseSnippet1": "À 10 000 req/sec, le pooling de connexions doit être isolé des processus applicatifs. Déployez",
       "responseSnippet2": "PgBouncer en mode transaction",
       "responseSnippet3": "en amont de vos nœuds primaires et répliques.",
@@ -685,7 +683,7 @@
         "bullet3": "Basculez entre v1, v2 et v3 instantanément pour comparer les approches",
         "previewTitle": "Versions de réponse",
         "v1Label": "v1 (Rapide)",
-        "v2Label": "v2 (Raisonnement approfondi)",
+        "v2Label": "v2 (Raisonnement Standard)",
         "activeInfo": "Actif : Version 2 sur 2 (Généré avec Gemini 2.5 Flash, 1 800 jetons)"
       },
       "share": {
@@ -1156,9 +1154,10 @@
     "upgrade": "Mettre à niveau",
     "owner_plan": "Le forfait du propriétaire de l'espace n'inclut pas cette option (disponible à partir de {plan})",
     "out_of_credits": "Vous n'avez plus de crédits",
-    "thinking_unavailable": "« Approfondir la réflexion » n'est pas disponible pour ce modèle",
     "owner_out_of_credits": "Le propriétaire de l'espace de travail n'a plus de crédits",
-    "member_credit_cap": "Vous avez utilisé la limite mensuelle de {cap} crédits que le propriétaire de l'espace de travail vous a fixée"
+    "member_credit_cap": "Vous avez utilisé la limite mensuelle de {cap} crédits que le propriétaire de l'espace de travail vous a fixée",
+    "daily_voice_limit": "Limite quotidienne de saisie vocale atteinte pour votre forfait",
+    "unsupported_browser": "La saisie vocale n'est pas prise en charge sur ce navigateur"
   },
   "Models": {
     "text-economy": {
@@ -1173,8 +1172,32 @@
       "name": "Studio d'Images",
       "description": "Génération d'images haute résolution à partir de descriptions en langage naturel."
     },
+    "audio-transcribe": {
+      "name": "Transcription Audio",
+      "description": "Transcription rapide de voix et audio."
+    },
     "creditHintMessage": "≈ {credits} crédits par message",
     "creditHintImage": "≈ {credits} par image"
+  },
+  "Voice": {
+    "start": "Enregistrer un message vocal",
+    "stop": "Arrêter l'enregistrement",
+    "cancel": "Annuler l'enregistrement",
+    "recording": "Enregistrement en cours…",
+    "transcribing": "Transcription en cours…",
+    "inserted": "Transcription insérée",
+    "permissionDenied": "L'accès au microphone a été refusé. Veuillez autoriser l'accès au micro dans les paramètres de votre navigateur pour enregistrer des messages vocaux.",
+    "unsupported": "La saisie vocale n'est pas prise en charge sur ce navigateur",
+    "tooLong": "La durée maximale d'enregistrement est de 2 minutes.",
+    "noSpeech": "Aucune voix détectée dans l'audio",
+    "retry": "Réessayer",
+    "dailyLimit": "Limite quotidienne de saisie vocale atteinte pour votre forfait",
+    "error": "Échec de la transcription audio. Veuillez réessayer.",
+    "started": "Enregistrement démarré",
+    "stopped": "Enregistrement arrêté",
+    "cancelled": "Enregistrement annulé",
+    "discard": "Supprimer l'enregistrement",
+    "outOfCredits": "Vous n'avez pas assez de crédits pour la saisie vocale"
   },
   "Members": {
     "errors": {

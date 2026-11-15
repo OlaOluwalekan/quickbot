@@ -407,6 +407,13 @@ export function useCreateVersionEdit(userId: string, workspaceId: string) {
  * shows the final card at once; the reload that follows brings the same data,
  * so nothing moves (no gap, no card popping in late). Only for a new turn at
  * the end of a fully loaded list; anything else is left to the reload.
+ *
+ * If the list was loaded while the answer was still streaming, the response
+ * is already cached with its unfinished version (no text, no sources): that
+ * entry gets the final text and sources too. The card also caches the
+ * response's versions, possibly from that moment: those are dropped and
+ * reloaded, or the card would keep showing the version without sources
+ * (citations as plain "[1]" text) until a page reload.
  */
 export function insertCompletedResponse(
   queryClient: QueryClient,
@@ -422,6 +429,9 @@ export function insertCompletedResponse(
   }
 ): void {
   if (!done.responseId || !done.versionId) return;
+  void queryClient.invalidateQueries({
+    queryKey: queryKeys.responses.versions(userId, done.responseId),
+  });
   const now = new Date().toISOString();
   queryClient.setQueriesData<InfiniteData<PaginatedResponses>>(
     { queryKey: queryKeys.responses.all(userId, workspaceId) },
@@ -430,7 +440,17 @@ export function insertCompletedResponse(
       const pages = data.pages;
       const last = pages[pages.length - 1]!;
       if (last.nextCursor) return data;
-      if (pages.some((p) => p.items.some((r) => r.id === done.responseId))) return data;
+      if (pages.some((p) => p.items.some((r) => r.id === done.responseId))) {
+        return {
+          ...data,
+          pages: pages.map((p) => ({
+            ...p,
+            items: p.items.map((r) =>
+              r.id === done.responseId ? withFinishedVersion(r, done) : r
+            ),
+          })),
+        };
+      }
       const item: ResponseItemDto = {
         id: done.responseId,
         chatId: workspaceId,
@@ -458,4 +478,35 @@ export function insertCompletedResponse(
       };
     }
   );
+}
+
+/** The cached response, with the version that just finished made active. */
+function withFinishedVersion(
+  item: ResponseItemDto,
+  done: {
+    versionId: string;
+    content: string;
+    citations?: CitationDto[];
+    documents?: GeneratedDocumentDto[];
+  }
+): ResponseItemDto {
+  const current = item.activeVersion;
+  // A different, already finished version is active (e.g. switched by hand).
+  if (current && current.id !== done.versionId) return item;
+  return {
+    ...item,
+    response: done.content,
+    activeVersionId: done.versionId,
+    activeVersion: {
+      ...(current ?? {}),
+      id: done.versionId,
+      responseId: item.id,
+      number: current?.number ?? item.versionCount ?? 1,
+      content: done.content,
+      originalContent: done.content,
+      citations: done.citations ?? [],
+      documents: done.documents ?? [],
+      createdAt: current?.createdAt ?? new Date().toISOString(),
+    },
+  } as ResponseItemDto;
 }

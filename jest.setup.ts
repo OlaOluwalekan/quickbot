@@ -19,6 +19,13 @@ process.env.CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET || 'test_c
 import '@testing-library/jest-dom'
 import { TextEncoder, TextDecoder } from 'util'
 import nodeCrypto from 'crypto'
+import { ReadableStream, TransformStream, WritableStream } from 'node:stream/web'
+
+if (typeof (globalThis as any).ReadableStream === 'undefined') {
+  ;(globalThis as any).ReadableStream = ReadableStream
+  ;(globalThis as any).TransformStream = TransformStream
+  ;(globalThis as any).WritableStream = WritableStream
+}
 
 if (typeof global.TextEncoder === 'undefined') {
   global.TextEncoder = TextEncoder

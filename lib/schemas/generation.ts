@@ -7,7 +7,6 @@ export const createGenerationSchema = z.object({
   kind: z.enum(["TEXT", "IMAGE"]).optional().default("TEXT"),
   attachmentIds: z.array(z.string()).optional(),
   regenerateResponseId: z.string().optional(),
-  think: z.boolean().optional(),
 });
 
 export type CreateGenerationInput = z.input<typeof createGenerationSchema>;

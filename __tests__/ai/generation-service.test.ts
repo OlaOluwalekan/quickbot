@@ -2,6 +2,7 @@
  * @jest-environment node
  */
 import { db } from "@/server/db/client";
+import { creditsFor } from "@/lib/ai/model-catalog";
 import {
   createAndStreamGeneration,
   cancelGeneration,
@@ -452,7 +453,6 @@ describe("Generation Service and Streaming Pipeline (Step 2.4)", () => {
         idempotencyKey,
         prompt: "Explain relativity with deep thoughts",
         modelKey: "text-economy",
-        think: true,
       }
     );
 
@@ -541,4 +541,32 @@ describe("Generation Service and Streaming Pipeline (Step 2.4)", () => {
       (MODELS["text-economy"].caps as { thinkingSummaries: boolean }).thinkingSummaries = originalSetting;
     }
   });
+
+  it("charges thinking tokens (billed by the provider as output)", async () => {
+    const fakeEvents: StreamEvent[] = [
+      { type: "text_delta", text: "Thought it through." },
+      { type: "usage", inputTokens: 1000, outputTokens: 100, thoughtTokens: 20_000, estimated: false },
+    ];
+    setCustomProvider(new FakeAiProvider(fakeEvents));
+
+    const { stream, generationId } = await createAndStreamGeneration(actorA, workspace.id, {
+      idempotencyKey: `thought_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      prompt: "Think about it",
+      modelKey: "text-economy",
+    });
+    await readAllSse(stream);
+
+    const gen = await db.generation.findUnique({ where: { id: generationId } });
+    const expected = creditsFor("text-economy", {
+      inputTokens: 1000,
+      outputTokens: 100,
+      thoughtTokens: 20_000,
+    });
+    expect(gen?.chargedCredits).toBe(expected);
+    expect(expected).toBeGreaterThan(
+      creditsFor("text-economy", { inputTokens: 1000, outputTokens: 100 })
+    );
+    expect((gen?.usage as { thoughtTokens?: number }).thoughtTokens).toBe(20_000);
+  });
 });
+

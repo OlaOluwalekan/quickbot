@@ -7,7 +7,6 @@ import { useTranslations } from "next-intl";
 import Link from "next/link";
 import {
   AlertCircle,
-  Brain,
   ChevronDown,
   Image as ImageIcon,
   Layers,
@@ -51,6 +50,7 @@ import {
 import { PLANS } from "@/server/billing/plans";
 import { getIdleQueryClient, useUserPreferences } from "@/lib/api/hooks/me";
 import { QuestionQueuePopover } from "@/components/workspace/question-queue-popover";
+import { VoiceInput } from "./voice-input";
 import { Gated } from "@/components/ui/gated";
 import {
   Popover,
@@ -173,11 +173,14 @@ export function Composer({
     [tModels]
   );
   const activeModel = (clientModels.find((m) => m.key === selectedModel) ?? clientModels[0])!;
-  const [thinkHarder, setThinkHarder] = React.useState(false);
   // F4.1: search is a Settings preference; only say so when it's off.
   const { data: preferences } = useUserPreferences(userId ?? "");
   const webSearchOff = preferences?.webSearchEnabled === false;
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+
+  // F4.5: Voice recording state
+  const [isRecordingVoice, setIsRecordingVoice] = React.useState(false);
+  const voiceSendHandlerRef = React.useRef<(() => Promise<void>) | null>(null);
   const [creationError, setCreationError] = React.useState<string | null>(null);
   const [liveAnnouncement, setLiveAnnouncement] = React.useState("");
 
@@ -507,17 +510,24 @@ export function Composer({
   const attachmentGateReason: GateReason | null = isAttachmentLimitReached
     ? { code: "attachment_limit", limit: attachmentMax }
     : null;
-  const isThinkingSupported =
-    mode !== "image" && Boolean(activeModel.caps?.thinkingSummaries);
-  const thinkingGateReason: GateReason | null = !isThinkingSupported
-    ? { code: "thinking_unavailable" }
-    : null;
   const submitGateReason: GateReason | null = !canGenerate
     ? { code: "no_permission", capability: t("capGenerate") }
     : creditsGate;
 
-  const handleSubmit = async () => {
-    const cleanPrompt = prompt.trim();
+  // Voice input is billed to the speaker, but a transcript is only useful if
+  // it can be sent, so the mic follows the same credits gate as Send (with its
+  // own reason: "you" vs "the workspace owner"). The server checks the
+  // speaker's own balance and daily seconds.
+  const voiceGateReason: GateReason | null = creditsGate;
+
+  const handleSubmit = async (overridePrompt?: string) => {
+    // F4.5: If user clicked Send while recording voice, delegate to voice handler
+    if (isRecordingVoice && voiceSendHandlerRef.current && !overridePrompt) {
+      await voiceSendHandlerRef.current();
+      return;
+    }
+
+    const cleanPrompt = (overridePrompt ?? prompt).trim();
     const isUploadingAny = attachments.some((a) => a.status === "uploading");
     if (!cleanPrompt || isSubmitting || isStreaming || isOutOfCredits || !canGenerate || isUploadingAny) return;
     if (mode === "image" && imageGateReason) return;
@@ -567,7 +577,6 @@ export function Composer({
             prompt: cleanPrompt,
             modelKey: effectiveModelKey,
             kind: effectiveKind,
-            think: thinkHarder && isThinkingSupported,
             attachmentIds: readyAttachmentIds.length > 0 ? readyAttachmentIds : undefined,
           },
           {
@@ -639,7 +648,6 @@ export function Composer({
         modelKey: effectiveModelKey,
         idempotencyKey,
         mode,
-        thinkHarder: thinkHarder && isThinkingSupported,
         attachmentIds: readyAttachmentIds.length > 0 ? readyAttachmentIds : undefined,
       });
 
@@ -666,6 +674,48 @@ export function Composer({
       useGenerationStore.getState().cancelStream(workspaceId);
       onStop?.();
     }
+  };
+
+  const handleInsertTranscript = React.useCallback(
+    (text: string) => {
+      if (!text || typeof text !== "string") return;
+
+      const textarea = textareaRef.current;
+      if (!textarea) {
+        setPrompt((prev) => {
+          const updated = prev ? `${prev} ${text}` : text;
+          setDraft(draftKey, updated);
+          return updated;
+        });
+        return;
+      }
+
+      const start = textarea.selectionStart ?? prompt.length;
+      const end = textarea.selectionEnd ?? prompt.length;
+      const before = prompt.slice(0, start);
+      const after = prompt.slice(end);
+      const insertText = before && !before.endsWith(" ") ? ` ${text}` : text;
+      const newPrompt = `${before}${insertText}${after.startsWith(" ") || !after ? after : ` ${after}`}`;
+
+      setPrompt(newPrompt);
+      setDraft(draftKey, newPrompt);
+
+      setTimeout(() => {
+        textarea.focus();
+        const newCursor = before.length + (insertText?.length ?? 0);
+        textarea.setSelectionRange(newCursor, newCursor);
+        adjustHeight();
+      }, 0);
+    },
+    [prompt, draftKey, setDraft, adjustHeight]
+  );
+
+  // Send while recording: what was already typed is kept, the transcript is
+  // added after it, and the whole text is sent as the prompt.
+  const handleSendTranscript = (transcript: string) => {
+    if (!transcript || typeof transcript !== "string") return;
+    const typed = prompt.trim();
+    void handleSubmit(typed ? `${typed} ${transcript}` : transcript);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -865,7 +915,7 @@ export function Composer({
           <span>{creationError}</span>
           <button
             type="button"
-            onClick={handleSubmit}
+            onClick={() => handleSubmit()}
             className="inline-flex items-center gap-1 font-semibold underline hover:opacity-80 transition-opacity cursor-pointer"
           >
             <RotateCcw className="h-3 w-3" />
@@ -1033,7 +1083,7 @@ export function Composer({
 
       {/* Controls Bar */}
       <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border/50 mt-1">
-        {/* Left Action Group: Mode + Attach + Model + Language + Think harder + Search the web */}
+        {/* Left Action Group: Mode + Attach + Voice + Model + Queue */}
         <div className="flex flex-wrap items-center gap-1.5">
           {/* Mode Switch (Text / Image) */}
           <div className="flex items-center gap-0.5 rounded-xl bg-surface-2 p-0.5">
@@ -1177,6 +1227,18 @@ export function Composer({
             </Popover>
           )}
 
+          {/* Voice Input Mic Button (Step F4.5) */}
+          <VoiceInput
+            onInsertTranscript={handleInsertTranscript}
+            onSendTranscript={handleSendTranscript}
+            disabled={isSubmitting || isStreaming || !canGenerate}
+            gateReason={voiceGateReason}
+            onRecordingChange={setIsRecordingVoice}
+            registerSendHandler={(handler) => {
+              voiceSendHandlerRef.current = handler;
+            }}
+          />
+
           {/* Model Picker */}
           <Popover>
             <PopoverTrigger asChild>
@@ -1227,30 +1289,6 @@ export function Composer({
             </PopoverContent>
           </Popover>
 
-          {/* Think Harder Toggle */}
-          <Gated reason={thinkingGateReason}>
-            <button
-              type="button"
-              data-testid="composer-think-harder-btn"
-              onClick={() => {
-                if (!thinkingGateReason) {
-                  setThinkHarder((prev) => !prev);
-                }
-              }}
-              title={t("thinkHarderDesc")}
-              aria-pressed={thinkHarder && isThinkingSupported}
-              className={cn(
-                "inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium transition-colors cursor-pointer border",
-                thinkHarder && isThinkingSupported
-                  ? "bg-accent text-accent-fg border-accent shadow-xs"
-                  : "bg-surface-2 text-muted hover:text-fg hover:bg-surface-3 border-border/50",
-              )}
-            >
-              <Brain className="h-3 w-3" />
-              <span className="hidden sm:inline">{t("thinkHarder")}</span>
-            </button>
-          </Gated>
-
           {/* Question Queue Popover (Step 6.5) */}
           <QuestionQueuePopover workspaceId={workspaceId} />
         </div>
@@ -1279,11 +1317,17 @@ export function Composer({
             <Gated reason={submitGateReason}>
               <button
                 type="submit"
-                disabled={isSubmitting || !prompt.trim() || isOutOfCredits || !canGenerate || attachments.some((a) => a.status === "uploading")}
+                disabled={
+                  isSubmitting ||
+                  (!prompt.trim() && !isRecordingVoice) ||
+                  isOutOfCredits ||
+                  !canGenerate ||
+                  attachments.some((a) => a.status === "uploading")
+                }
                 aria-label={t("send")}
                 className={cn(
                   "flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-xl sm:rounded-2xl shadow-sm transition-all cursor-pointer",
-                  prompt.trim() && !isSubmitting && !isOutOfCredits && canGenerate
+                  (prompt.trim() || isRecordingVoice) && !isSubmitting && !isOutOfCredits && canGenerate
                     ? "bg-accent text-accent-fg hover:bg-accent-hover active:scale-95"
                     : "cursor-not-allowed bg-surface-3 text-subtle opacity-60",
                 )}

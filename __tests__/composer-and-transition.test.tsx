@@ -234,14 +234,10 @@ describe("Step 3.6 — Composer and Smooth Blank -> Workspace Transition", () =>
       expect(screen.getByRole("status").textContent).toBe("Done");
     });
 
-    it("allows toggling Think harder and switching models", () => {
+    it("shows the model picker (no Think harder toggle)", () => {
       render(<Composer workspaceId="ws-123" />);
 
-      const thinkBtn = screen.getByRole("button", { name: /Think harder/i });
-      expect(thinkBtn).toHaveAttribute("aria-pressed", "false");
-
-      fireEvent.click(thinkBtn);
-      expect(thinkBtn).toHaveAttribute("aria-pressed", "true");
+      expect(screen.queryByRole("button", { name: /Think harder/i })).not.toBeInTheDocument();
 
       // Model picker button shows default Fast & Efficient and its computed hint (F4.4)
       expect(screen.getByText("Fast & Efficient")).toBeInTheDocument();

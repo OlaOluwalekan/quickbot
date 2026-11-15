@@ -25,6 +25,7 @@ import {
   getModel,
   isModelKey,
   assertModelAccess,
+  assertSelectableModel,
   creditsFor,
   ModelKey,
   PlanTier,
@@ -197,7 +198,6 @@ async function executeDetachedGeneration(params: {
   reservedCredits: number;
   inputMessages: GenerateRequest["messages"];
   systemPrompt: string;
-  think?: boolean;
   initialCitations?: CitationItem[];
   providerInstance?: AiProvider;
   isFirstTurn: boolean;
@@ -217,7 +217,6 @@ async function executeDetachedGeneration(params: {
     truncated,
     inputMessages,
     systemPrompt,
-    think,
     initialCitations = [],
     providerInstance,
     isFirstTurn,
@@ -278,7 +277,9 @@ async function executeDetachedGeneration(params: {
 
   // Declared outside `try`: a cancelled generation still bills the tokens
   // and the searches that ran.
-  const usage = { inputTokens: 0, outputTokens: 0 };
+  // Thinking tokens are billed by the provider as output, so they are kept
+  // and charged too.
+  const usage = { inputTokens: 0, outputTokens: 0, thoughtTokens: 0 };
   let searchesExecuted = 0;
 
   try {
@@ -405,10 +406,7 @@ async function executeDetachedGeneration(params: {
     const modelDef = getModel(modelKey);
     const supportsThinking = modelDef.caps.thinkingSummaries === true;
     const thinkingConfig = supportsThinking
-      ? {
-          summaries: true,
-          level: think ? ("high" as const) : ("low" as const),
-        }
+      ? { summaries: true }
       : { summaries: false };
 
     // F4.1: web search is a tool, offered per the actor's preference, the
@@ -469,7 +467,7 @@ async function executeDetachedGeneration(params: {
       let assistantTextInThisTurn = "";
       // A provider may report usage on several chunks, each a running total
       // for this call: keep the last one, then add the calls together.
-      let callUsage = { inputTokens: 0, outputTokens: 0 };
+      let callUsage = { inputTokens: 0, outputTokens: 0, thoughtTokens: 0 };
 
       for await (const event of stream) {
         if (abortController.signal.aborted) {
@@ -522,12 +520,14 @@ async function executeDetachedGeneration(params: {
           callUsage = {
             inputTokens: event.inputTokens,
             outputTokens: event.outputTokens,
+            thoughtTokens: event.thoughtTokens ?? 0,
           };
         }
       }
 
       usage.inputTokens += callUsage.inputTokens;
       usage.outputTokens += callUsage.outputTokens;
+      usage.thoughtTokens += callUsage.thoughtTokens;
 
       if (toolCallEmitted && toolIterations < MAX_TOOL_ITERATIONS) {
         toolIterations++;
@@ -658,6 +658,7 @@ async function executeDetachedGeneration(params: {
     const chargedCredits = creditsFor(modelKey, {
       inputTokens: usage.inputTokens,
       outputTokens: usage.outputTokens,
+      thoughtTokens: usage.thoughtTokens,
       searches: searchesExecuted,
     });
 
@@ -703,6 +704,7 @@ async function executeDetachedGeneration(params: {
           usage: {
             inputTokens: usage.inputTokens,
             outputTokens: usage.outputTokens,
+            thoughtTokens: usage.thoughtTokens,
             searches: searchesExecuted,
           },
           finishedAt: new Date(),
@@ -753,6 +755,7 @@ async function executeDetachedGeneration(params: {
             ? creditsFor(modelKey, {
                 inputTokens: usage.inputTokens,
                 outputTokens: estimatedOutput,
+                thoughtTokens: usage.thoughtTokens,
                 searches: searchesExecuted,
               })
             : 0;
@@ -832,6 +835,7 @@ async function executeDetachedGeneration(params: {
       const chargedCredits = creditsFor(modelKey, {
         inputTokens: usage.inputTokens,
         outputTokens: estimateTokens(active.currentContent),
+        thoughtTokens: usage.thoughtTokens,
         searches: searchesExecuted,
       });
 
@@ -1097,6 +1101,7 @@ export async function createAndStreamGeneration(
 
   const model = getModel(modelKey);
   try {
+    assertSelectableModel(modelKey);
     assertModelAccess(modelKey, ownerEntitlements.plan);
   } catch (err: unknown) {
     throw Errors.forbidden(
@@ -1466,7 +1471,6 @@ export async function createAndStreamGeneration(
     reservedCredits: reserveAmount,
     inputMessages: messages,
     systemPrompt,
-    think: input.think,
     initialCitations: initialAttachmentCitations,
     providerInstance: options.providerInstance || customProviderForTesting || undefined,
     isFirstTurn,
@@ -1581,8 +1585,12 @@ export async function getGenerationStatus(actor: Actor, generationId: string) {
     throw Errors.notFound("Generation");
   }
 
-  // Enforce workspace.read access
-  await requireWorkspace(actor, gen.workspaceId, "workspace.read");
+  // Enforce access
+  if (gen.workspaceId) {
+    await requireWorkspace(actor, gen.workspaceId, "workspace.read");
+  } else if (gen.actorId !== actor.userId) {
+    throw Errors.forbidden();
+  }
 
   const active = activeGenerations.get(generationId);
   if (active) {
@@ -1638,7 +1646,11 @@ export async function cancelGeneration(actor: Actor, generationId: string) {
     throw Errors.notFound("Generation");
   }
 
-  await requireWorkspace(actor, gen.workspaceId, "workspace.generate");
+  if (gen.workspaceId) {
+    await requireWorkspace(actor, gen.workspaceId, "workspace.generate");
+  } else if (gen.actorId !== actor.userId) {
+    throw Errors.forbidden();
+  }
 
   if (gen.status !== "RUNNING" && gen.status !== "QUEUED") {
     return { success: true, status: gen.status };

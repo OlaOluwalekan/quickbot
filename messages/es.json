@@ -169,8 +169,6 @@
     "streamError": "Error al generar la respuesta. Inténtalo de nuevo.",
     "attachDisabled": "Los archivos adjuntos estarán disponibles en la Fase 5",
     "model": "Modelo",
-    "thinkHarder": "Pensar más a fondo",
-    "thinkHarderDesc": "Habilitar razonamiento más profundo y resúmenes de pensamiento",
     "queue": "Cola de solicitudes",
     "queueDisabled": "La cola está vacía",
     "stop": "Detener generación",
@@ -637,7 +635,7 @@
       "promptExample": "¿Cómo deberíamos estructurar el pooling de conexiones frente a las réplicas de lectura para una API de Node.js de 10.000 req/s con PostgreSQL?",
       "thoughtPreview": "Pensó durante 1,8 s: evaluó el modo de transacción de PgBouncer, la latencia y la sincronización de réplicas de lectura",
       "versionInfo": "Versión 2 de 2",
-      "regeneratedNote": "(Regenerado con razonamiento profundo)",
+      "regeneratedNote": "(Regenerado con Razonamiento Estándar)",
       "responseSnippet1": "A 10.000 req/s, el pooling de conexiones debe separarse de los procesos de la aplicación. Implementa",
       "responseSnippet2": "PgBouncer en modo de transacción",
       "responseSnippet3": "por delante de tus nodos primarios y de lectura.",
@@ -685,7 +683,7 @@
         "bullet3": "Cambia entre v1, v2 y v3 al instante para revisar distintas perspectivas",
         "previewTitle": "Versiones de respuesta",
         "v1Label": "v1 (Rápida)",
-        "v2Label": "v2 (Razonamiento profundo)",
+        "v2Label": "v2 (Razonamiento Estándar)",
         "activeInfo": "Activa: Versión 2 de 2 (Generada con Gemini 2.5 Flash, 1.800 tokens)"
       },
       "share": {
@@ -1156,9 +1154,10 @@
     "upgrade": "Mejorar plan",
     "owner_plan": "El plan del propietario del espacio no incluye esto (disponible en {plan} y superiores)",
     "out_of_credits": "Te has quedado sin créditos",
-    "thinking_unavailable": "«Pensar más a fondo» no está disponible para este modelo",
     "owner_out_of_credits": "El propietario del espacio de trabajo se ha quedado sin créditos",
-    "member_credit_cap": "Has usado el límite mensual de {cap} créditos que el propietario del espacio de trabajo te asignó"
+    "member_credit_cap": "Has usado el límite mensual de {cap} créditos que el propietario del espacio de trabajo te asignó",
+    "daily_voice_limit": "Se ha alcanzado el límite diario de entrada de voz para tu plan",
+    "unsupported_browser": "La entrada de voz no es compatible con este navegador"
   },
   "Models": {
     "text-economy": {
@@ -1173,8 +1172,32 @@
       "name": "Estudio de Imágenes",
       "description": "Síntesis de imágenes de alta resolución a partir de descripciones en lenguaje natural."
     },
+    "audio-transcribe": {
+      "name": "Transcripción de Audio",
+      "description": "Transcripción rápida de voz y audio."
+    },
     "creditHintMessage": "≈ {credits} créditos por mensaje",
     "creditHintImage": "≈ {credits} por imagen"
+  },
+  "Voice": {
+    "start": "Grabar mensaje de voz",
+    "stop": "Detener grabación",
+    "cancel": "Cancelar grabación",
+    "recording": "Grabando…",
+    "transcribing": "Transcribiendo…",
+    "inserted": "Transcripción insertada",
+    "permissionDenied": "Se denegó el acceso al micrófono. Por favor permite el acceso en los ajustes de tu navegador para grabar mensajes de voz.",
+    "unsupported": "La entrada de voz no es compatible con este navegador",
+    "tooLong": "El tiempo máximo de grabación es de 2 minutos.",
+    "noSpeech": "No se detectó voz en el audio",
+    "retry": "Reintentar",
+    "dailyLimit": "Se ha alcanzado el límite diario de entrada de voz para tu plan",
+    "error": "Error al transcribir el audio. Por favor intenta de nuevo.",
+    "started": "Grabación iniciada",
+    "stopped": "Grabación detenida",
+    "cancelled": "Grabación cancelada",
+    "discard": "Descartar grabación",
+    "outOfCredits": "No tienes créditos suficientes para la entrada de voz"
   },
   "Members": {
     "errors": {
