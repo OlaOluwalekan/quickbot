@@ -349,6 +349,23 @@ describe("Step F4.4 — Plan-locked models and features are disabled with a reas
       expect(screen.queryByRole("link", { name: /Upgrade/i })).toBeNull();
     });
 
+    it("a member at the monthly limit the owner set: Send gated with the limit, no upgrade link", async () => {
+      renderWithProviders(
+        <Composer workspaceId="ws-1" userId="user-1" />,
+        "PRO",
+        "en",
+        // Checked before the owner's balance, as the server does.
+        seedWorkspace({ role: "EDITOR", memberCreditCapReached: { cap: 300 }, ownerOutOfCredits: true })
+      );
+
+      expect(
+        await screen.findByText(/used the monthly limit of 300 credits the workspace owner set/i)
+      ).toBeInTheDocument();
+      const sendBtn = screen.getByRole("button", { name: /^Send$/i });
+      expect(sendBtn.closest("[data-gated='member_credit_cap']")).toBeInTheDocument();
+      expect(screen.queryByRole("link", { name: /Upgrade/i })).toBeNull();
+    });
+
     it("Enter does not submit when the actor lacks generate", () => {
       const onSubmitted = jest.fn();
       renderWithProviders(<Composer canGenerate={false} onCompleted={onSubmitted} />, "PRO");
@@ -584,6 +601,12 @@ describe("Step F4.4 — Plan-locked models and features are disabled with a reas
   });
 
   describe("5b. Credits gate follows who pays", () => {
+    it("the member's monthly limit set by the owner comes first", () => {
+      expect(
+        creditsGateReason({ memberCreditCapReached: { cap: 50 }, ownerOutOfCredits: true, role: "EDITOR" })
+      ).toEqual({ code: "member_credit_cap", cap: 50 });
+    });
+
     it("is null while the owner has credits", () => {
       expect(creditsGateReason({ ownerOutOfCredits: false, role: "OWNER" })).toBeNull();
       expect(creditsGateReason(undefined)).toBeNull();

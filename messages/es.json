@@ -1157,7 +1157,8 @@
     "owner_plan": "El plan del propietario del espacio no incluye esto (disponible en {plan} y superiores)",
     "out_of_credits": "Te has quedado sin créditos",
     "thinking_unavailable": "«Pensar más a fondo» no está disponible para este modelo",
-    "owner_out_of_credits": "El propietario del espacio de trabajo se ha quedado sin créditos"
+    "owner_out_of_credits": "El propietario del espacio de trabajo se ha quedado sin créditos",
+    "member_credit_cap": "Has usado el límite mensual de {cap} créditos que el propietario del espacio de trabajo te asignó"
   },
   "Models": {
     "text-economy": {

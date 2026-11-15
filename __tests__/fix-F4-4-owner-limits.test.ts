@@ -86,6 +86,41 @@ describe("F4.4 — owner limits and credits for plan gates", () => {
     expect(JSON.stringify(await getWorkspace(member, workspaceId))).not.toMatch(/planBalance/);
   });
 
+  it("workspace: memberCreditCapReached when the member used the monthly limit the owner set", async () => {
+    const account = await db.creditAccount.findUniqueOrThrow({ where: { userId: ownerId } });
+    await db.workspaceMember.update({
+      where: { workspaceId_userId: { workspaceId, userId: memberId } },
+      data: { monthlyCreditCap: 10 },
+    });
+
+    // Room left (nothing spent yet).
+    expect((await getWorkspace(member, workspaceId)).memberCreditCapReached).toBeNull();
+
+    // The member spent 10 of the owner's credits this month (as settled ledger rows).
+    await db.creditLedger.create({
+      data: {
+        accountId: account.id,
+        type: "SETTLE",
+        planDelta: -10,
+        topupDelta: 0,
+        planAfter: 40,
+        topupAfter: 0,
+        actorId: memberId,
+        idempotencyKey: `${id}_spend`,
+      },
+    });
+    expect((await getWorkspace(member, workspaceId)).memberCreditCapReached).toEqual({ cap: 10 });
+
+    // The owner has no cap; an unlimited member (null cap) neither.
+    expect((await getWorkspace(owner, workspaceId)).memberCreditCapReached).toBeNull();
+    await db.workspaceMember.update({
+      where: { workspaceId_userId: { workspaceId, userId: memberId } },
+      data: { monthlyCreditCap: null },
+    });
+    expect((await getWorkspace(member, workspaceId)).memberCreditCapReached).toBeNull();
+    await db.creditLedger.deleteMany({ where: { idempotencyKey: `${id}_spend` } });
+  });
+
   it("invite capacity counts members + live invitations against the owner's plan", async () => {
     const before = await getInviteCapacity({ workspaceId }, ownerId);
     expect(before).toEqual({ limit: 5, used: 1, inGrace: false });

@@ -1157,7 +1157,8 @@
     "owner_plan": "The workspace owner's plan doesn't include this (available on {plan} and above)",
     "out_of_credits": "You are out of credits",
     "thinking_unavailable": "Think harder isn't available for this model",
-    "owner_out_of_credits": "The workspace owner is out of credits"
+    "owner_out_of_credits": "The workspace owner is out of credits",
+    "member_credit_cap": "You've used the monthly limit of {cap} credits the workspace owner set for you"
   },
   "Models": {
     "text-economy": {

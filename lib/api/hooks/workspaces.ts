@@ -44,6 +44,8 @@ export interface WorkspaceDto {
   attachmentLimits?: { max: number; used: number; maxFileMB: number };
   /** The owner (who pays) has no credits left (GET /api/v1/workspaces/:id). */
   ownerOutOfCredits?: boolean;
+  /** The caller used up the monthly credit limit the owner set for them (GET /api/v1/workspaces/:id). */
+  memberCreditCapReached?: { cap: number } | null;
   createdAt: string;
   updatedAt: string;
 }

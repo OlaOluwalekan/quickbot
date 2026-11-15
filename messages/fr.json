@@ -1157,7 +1157,8 @@
     "owner_plan": "Le forfait du propriétaire de l'espace n'inclut pas cette option (disponible à partir de {plan})",
     "out_of_credits": "Vous n'avez plus de crédits",
     "thinking_unavailable": "« Approfondir la réflexion » n'est pas disponible pour ce modèle",
-    "owner_out_of_credits": "Le propriétaire de l'espace de travail n'a plus de crédits"
+    "owner_out_of_credits": "Le propriétaire de l'espace de travail n'a plus de crédits",
+    "member_credit_cap": "Vous avez utilisé la limite mensuelle de {cap} crédits que le propriétaire de l'espace de travail vous a fixée"
   },
   "Models": {
     "text-economy": {

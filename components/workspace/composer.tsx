@@ -819,7 +819,10 @@ export function Composer({
           id="credits-warning"
           className="mb-2 flex items-center justify-between gap-2 rounded-xl bg-warning/10 border border-warning/20 px-3 py-1.5 text-xs text-warning"
         >
-          {creditsGate.code === "owner_out_of_credits" ? (
+          {creditsGate.code === "member_credit_cap" ? (
+            // Only the owner can raise it: no upgrade link.
+            <span>{tGates("member_credit_cap", { cap: creditsGate.cap })}</span>
+          ) : creditsGate.code === "owner_out_of_credits" ? (
             // A member can't top up the owner's account: no upgrade link.
             <span>{tGates("owner_out_of_credits")}</span>
           ) : (

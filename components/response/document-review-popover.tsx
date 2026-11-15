@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Gated } from "@/components/ui/gated";
 import type { GateReason } from "@/lib/entitlements/shared";
+import { notifyCreditsChanged } from "@/lib/billing/credits-changed";
 import { api } from "@/lib/api/client";
 import { streamDocumentReview } from "@/lib/api/document-review";
 import { useDocumentReviewStore } from "@/lib/stores/document-review";
@@ -140,6 +141,7 @@ export function DocumentReview({
       if (reloadTimer) clearTimeout(reloadTimer);
       useDocumentReviewStore.getState().finish(versionId);
       notifyAnnotationsChanged(responseId);
+      notifyCreditsChanged();
     };
 
     await streamDocumentReview(
