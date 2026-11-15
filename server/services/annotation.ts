@@ -38,6 +38,7 @@ import { AiError } from "@/server/ai/types";
 import { getUserPreferences } from "@/server/services/user-preferences";
 import { getCustomProvider } from "@/server/services/generation";
 import { WEB_SEARCH_TOOL } from "@/server/ai/tools/web-search";
+import { createTurnSignatureTracker } from "@/server/ai/thought-signatures";
 import {
   MAX_SEARCHES_PER_GENERATION,
   executeWebSearchTool,
@@ -1353,7 +1354,7 @@ export async function streamAnnotationAnswer(
 
           let toolCall: { args: unknown; thoughtSignature?: string } | null = null;
           let turnText = "";
-          let latestThoughtSignature: string | undefined;
+          const signatures = createTurnSignatureTracker();
           // Usage chunks are running totals for one call: keep the last.
           let callUsage: { inputTokens: number; outputTokens: number } | null = null;
 
@@ -1366,15 +1367,12 @@ export async function streamAnnotationAnswer(
               fullThoughtText += chunk.text;
               send("thought", { text: chunk.text });
             } else if (chunk.type === "thought_signature") {
-              latestThoughtSignature = chunk.signature;
-              if (toolCall && !toolCall.thoughtSignature) {
-                toolCall.thoughtSignature = chunk.signature;
-              }
+              signatures.onSignature(chunk.signature);
             } else if (chunk.type === "tool_call" && chunk.name.endsWith("web_search")) {
-              toolCall = {
+              toolCall = signatures.attach({
                 args: chunk.args,
-                thoughtSignature: chunk.thoughtSignature || latestThoughtSignature,
-              };
+                thoughtSignature: chunk.thoughtSignature,
+              });
             } else if (chunk.type === "citation") {
               if (!chunk.url) continue;
               const check = validateCitationUrl(chunk.url);
