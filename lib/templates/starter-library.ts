@@ -14,8 +14,8 @@ export interface StarterTemplate {
   mode: "text" | "image";
   titleKey: string;
   descriptionKey: string;
+  /** Message key under `Templates` (e.g. `prompts.blog-post`). */
   promptKey: string;
-  promptTemplate: string;
 }
 
 export const STARTER_CATEGORIES: Array<{
@@ -42,8 +42,6 @@ export const STARTER_TEMPLATES: StarterTemplate[] = [
     titleKey: "execSummaryTitle",
     descriptionKey: "execSummaryDesc",
     promptKey: "prompts.exec-summary",
-    promptTemplate:
-      "Please synthesize the following meeting or project notes into a structured executive summary with key decisions, risks, and next steps:\n\n{{notes}}",
   },
   {
     id: "blog-post",
@@ -53,8 +51,6 @@ export const STARTER_TEMPLATES: StarterTemplate[] = [
     titleKey: "blogPostTitle",
     descriptionKey: "blogPostDesc",
     promptKey: "prompts.blog-post",
-    promptTemplate:
-      "Draft an engaging, publication-ready article on {{topic}} tailored for {{audience}}. Include an attention-grabbing hook, 3 key insights with examples, and a forward-looking conclusion.",
   },
   {
     id: "product-announcement",
@@ -64,8 +60,6 @@ export const STARTER_TEMPLATES: StarterTemplate[] = [
     titleKey: "announcementTitle",
     descriptionKey: "announcementDesc",
     promptKey: "prompts.product-announcement",
-    promptTemplate:
-      "Write an inspiring customer-facing announcement introducing {{feature_or_product}} to {{audience}}, emphasizing the problem solved and immediate benefits.",
   },
 
   // Analyze
@@ -77,8 +71,6 @@ export const STARTER_TEMPLATES: StarterTemplate[] = [
     titleKey: "swotTitle",
     descriptionKey: "swotDesc",
     promptKey: "prompts.swot-analysis",
-    promptTemplate:
-      "Conduct a comprehensive SWOT analysis for {{company_or_project}} operating within the {{industry}} space. Highlight the most urgent strategic opportunities and vulnerabilities.",
   },
   {
     id: "tradeoff-matrix",
@@ -88,8 +80,6 @@ export const STARTER_TEMPLATES: StarterTemplate[] = [
     titleKey: "tradeoffTitle",
     descriptionKey: "tradeoffDesc",
     promptKey: "prompts.tradeoff-matrix",
-    promptTemplate:
-      "Provide an objective architectural and operational trade-off comparison between {{option_a}} and {{option_b}} for {{use_case}}. Include criteria, weighted scores, and a clear recommendation.",
   },
   {
     id: "data-interpretation",
@@ -99,8 +89,6 @@ export const STARTER_TEMPLATES: StarterTemplate[] = [
     titleKey: "dataInsightsTitle",
     descriptionKey: "dataInsightsDesc",
     promptKey: "prompts.data-interpretation",
-    promptTemplate:
-      "Analyze the following data points or metrics. Identify anomalies, meaningful trends, and 3 actionable tactical recommendations:\n\n{{data}}",
   },
 
   // Research
@@ -112,8 +100,6 @@ export const STARTER_TEMPLATES: StarterTemplate[] = [
     titleKey: "marketLandscapeTitle",
     descriptionKey: "marketLandscapeDesc",
     promptKey: "prompts.market-landscape",
-    promptTemplate:
-      "Provide an authoritative research breakdown of the {{industry_or_domain}} market landscape. Detail market size, key incumbent players, disruptive startups, and regulatory tailwinds.",
   },
   {
     id: "literature-synthesis",
@@ -123,8 +109,6 @@ export const STARTER_TEMPLATES: StarterTemplate[] = [
     titleKey: "litSynthesisTitle",
     descriptionKey: "litSynthesisDesc",
     promptKey: "prompts.literature-synthesis",
-    promptTemplate:
-      "Synthesize current academic and industry findings on {{subject_or_technology}}. Highlight areas of established consensus, ongoing debates, and open research questions.",
   },
   {
     id: "competitor-teardown",
@@ -134,8 +118,6 @@ export const STARTER_TEMPLATES: StarterTemplate[] = [
     titleKey: "competitorTeardownTitle",
     descriptionKey: "competitorTeardownDesc",
     promptKey: "prompts.competitor-teardown",
-    promptTemplate:
-      "Perform a deep-dive competitive teardown on {{competitor_name}}. Detail their value proposition, product architecture, pricing model, and competitive moat.",
   },
 
   // Code
@@ -147,8 +129,6 @@ export const STARTER_TEMPLATES: StarterTemplate[] = [
     titleKey: "refactorTitle",
     descriptionKey: "refactorDesc",
     promptKey: "prompts.code-refactor",
-    promptTemplate:
-      "Refactor the following code to improve computational efficiency, readability, and idiomatic maintainability:\n\n```{{language}}\n{{code}}\n```",
   },
   {
     id: "unit-tests",
@@ -158,8 +138,6 @@ export const STARTER_TEMPLATES: StarterTemplate[] = [
     titleKey: "unitTestsTitle",
     descriptionKey: "unitTestsDesc",
     promptKey: "prompts.unit-tests",
-    promptTemplate:
-      "Generate a comprehensive, production-grade test suite using {{test_framework}} for the following function, including edge cases and failure modes:\n\n```{{language}}\n{{code}}\n```",
   },
   {
     id: "api-design",
@@ -169,8 +147,6 @@ export const STARTER_TEMPLATES: StarterTemplate[] = [
     titleKey: "apiDesignTitle",
     descriptionKey: "apiDesignDesc",
     promptKey: "prompts.api-design",
-    promptTemplate:
-      "Design an elegant, secure REST API specification for {{feature_name}}. Include request/response payloads, error structures, idempotency considerations, and HTTP status codes.",
   },
 
   // Plan
@@ -182,8 +158,6 @@ export const STARTER_TEMPLATES: StarterTemplate[] = [
     titleKey: "sprintPlanTitle",
     descriptionKey: "sprintPlanDesc",
     promptKey: "prompts.sprint-plan",
-    promptTemplate:
-      "Create a detailed 2-week agile sprint plan to accomplish {{project_goal}}. Break down deliverables into epics, user stories, acceptance criteria, and time estimates.",
   },
   {
     id: "launch-checklist",
@@ -193,8 +167,6 @@ export const STARTER_TEMPLATES: StarterTemplate[] = [
     titleKey: "launchChecklistTitle",
     descriptionKey: "launchChecklistDesc",
     promptKey: "prompts.launch-checklist",
-    promptTemplate:
-      "Generate an end-to-end launch checklist for releasing {{product_or_feature}} to production. Include pre-launch verifications, rollback triggers, monitoring dashboards, and internal communications.",
   },
   {
     id: "quarterly-roadmap",
@@ -204,8 +176,6 @@ export const STARTER_TEMPLATES: StarterTemplate[] = [
     titleKey: "roadmapTitle",
     descriptionKey: "roadmapDesc",
     promptKey: "prompts.quarterly-roadmap",
-    promptTemplate:
-      "Draft a strategic quarterly product roadmap for {{product_area}} structured across Now (committed), Next (discovery), and Later (future bets) horizons.",
   },
 
   // Learn
@@ -217,8 +187,6 @@ export const STARTER_TEMPLATES: StarterTemplate[] = [
     titleKey: "eli5Title",
     descriptionKey: "eli5Desc",
     promptKey: "prompts.explain-eli5",
-    promptTemplate:
-      "Explain the complex concept of {{complex_concept}} in intuitive, jargon-free language as if to a curious newcomer, using a memorable real-world analogy.",
   },
   {
     id: "knowledge-quiz",
@@ -228,8 +196,6 @@ export const STARTER_TEMPLATES: StarterTemplate[] = [
     titleKey: "quizTitle",
     descriptionKey: "quizDesc",
     promptKey: "prompts.knowledge-quiz",
-    promptTemplate:
-      "Create an interactive 5-question active recall test to evaluate deep conceptual understanding of {{topic}}. Include questions, answers, and brief explanations.",
   },
   {
     id: "mastery-curriculum",
@@ -239,8 +205,6 @@ export const STARTER_TEMPLATES: StarterTemplate[] = [
     titleKey: "curriculumTitle",
     descriptionKey: "curriculumDesc",
     promptKey: "prompts.mastery-curriculum",
-    promptTemplate:
-      "Design a rigorous 4-week self-study curriculum to master {{skill_or_subject}}. Provide weekly themes, foundational readings, and hands-on capstone exercises.",
   },
 
   // Image
@@ -252,8 +216,6 @@ export const STARTER_TEMPLATES: StarterTemplate[] = [
     titleKey: "portraitTitle",
     descriptionKey: "portraitDesc",
     promptKey: "prompts.studio-portrait",
-    promptTemplate:
-      "Cinematic studio portrait of {{subject}}, 85mm lens, f/1.4 aperture, subtle rim lighting, high textural detail, award-winning photography, photorealistic.",
   },
   {
     id: "vector-logo",
@@ -263,8 +225,6 @@ export const STARTER_TEMPLATES: StarterTemplate[] = [
     titleKey: "vectorLogoTitle",
     descriptionKey: "vectorLogoDesc",
     promptKey: "prompts.vector-logo",
-    promptTemplate:
-      "Modern minimalist vector logo mark for {{brand_or_concept}}, clean geometric balance, solid monochrome lines, flat design, white background.",
   },
   {
     id: "concept-art",
@@ -274,7 +234,5 @@ export const STARTER_TEMPLATES: StarterTemplate[] = [
     titleKey: "conceptArtTitle",
     descriptionKey: "conceptArtDesc",
     promptKey: "prompts.concept-art",
-    promptTemplate:
-      "Atmospheric sci-fi concept art of {{setting_or_scene}}, expansive scale, volumetric fog, moody directional illumination, intricate environmental detail, 8k resolution.",
   },
 ];

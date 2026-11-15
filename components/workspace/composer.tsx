@@ -40,7 +40,7 @@ import { navigateWithTransition } from "@/lib/navigation/view-transition";
 import { CLIENT_MODELS, type ClientModelOption } from "@/lib/ai/client-models";
 import type { WorkspaceDto } from "@/lib/api/hooks/workspaces";
 import { useEntitlements } from "@/lib/api/hooks/entitlements";
-import { canUse, entitlementsForPlan, type PlanKey } from "@/lib/entitlements/shared";
+import { canUse, PLAN_ORDER } from "@/lib/entitlements/shared";
 import { PLANS } from "@/server/billing/plans";
 import { useUserPreferences } from "@/lib/api/hooks/me";
 import { QuestionQueuePopover } from "@/components/workspace/question-queue-popover";
@@ -60,6 +60,11 @@ function safeRandomUUID(): string {
   return "idem-" + Math.random().toString(36).substring(2, 15);
 }
 
+/**
+ * Text (and mode) to put in the composer from outside, e.g. a starter
+ * template. A new `nonce` re-applies it, so picking the same template twice
+ * works.
+ */
 export interface ComposerPrefill {
   prompt: string;
   mode: "text" | "image";
@@ -68,8 +73,6 @@ export interface ComposerPrefill {
 
 export interface ComposerProps {
   prefill?: ComposerPrefill | null;
-  initialPrompt?: string;
-  initialMode?: "text" | "image";
   placeholder?: string;
   size?: "large" | "compact";
   className?: string;
@@ -103,8 +106,6 @@ export interface ComposerAttachment {
 
 export function Composer({
   prefill,
-  initialPrompt = "",
-  initialMode,
   placeholder,
   size = "large",
   className,
@@ -133,16 +134,13 @@ export function Composer({
   const setDraft = useUiStore((s) => s.setDraft);
   const clearDraft = useUiStore((s) => s.clearDraft);
 
-  const { entitlements } = useEntitlements();
-  const effectiveEntitlements =
-    entitlements?.plan !== "FREE" || !credits?.plan
-      ? entitlements
-      : entitlementsForPlan(
-          (credits.plan.toUpperCase() as PlanKey) in PLANS
-            ? (credits.plan.toUpperCase() as PlanKey)
-            : "FREE"
-        );
-  const isImagePlanLocked = !canUse(effectiveEntitlements, "images");
+  const { entitlements, isSuccess: entitlementsLoaded } = useEntitlements();
+  // Only treat images as locked once the real entitlements have loaded (the
+  // hook falls back to Free meanwhile). The server re-checks on submit.
+  const isImagePlanLocked =
+    entitlementsLoaded && !canUse(entitlements, "images");
+  const imagePlanName =
+    PLANS[PLAN_ORDER.find((p) => PLANS[p].limits.images) ?? "LITE"].name;
   const [imageLockedNotice, setImageLockedNotice] = React.useState(false);
 
   // Generation stream status for current workspace
@@ -152,12 +150,9 @@ export function Composer({
   const isStreaming = currentStream?.status === "streaming";
 
   // Composer state
-  const [prompt, setPrompt] = React.useState<string>(() => {
-    if (initialPrompt) return initialPrompt;
-    return savedDraft || "";
-  });
+  const [prompt, setPrompt] = React.useState<string>(() => savedDraft || "");
   const [mode, setMode] = React.useState<"text" | "image">(
-    initialMode || storeChatMode || "text",
+    storeChatMode || "text",
   );
   const [selectedModel, setSelectedModel] = React.useState<string>("text-economy");
   const [thinkHarder, setThinkHarder] = React.useState(false);
@@ -195,65 +190,39 @@ export function Composer({
     (nextMode: "text" | "image") => {
       setMode(nextMode);
       setStoreChatMode(nextMode);
-      if (nextMode === "text") {
-        setImageLockedNotice(false);
-      }
+      setImageLockedNotice(false);
     },
     [setStoreChatMode]
   );
 
-  // Handle prefill updates (from starter templates or external callers) keyed on prefill.nonce
+  // F4.3: apply a prefill (starter template) whenever its nonce changes: set
+  // the prompt and the mode, focus, and select the first {{placeholder}}.
   const lastPrefillNonceRef = React.useRef<number | null>(null);
-
   React.useEffect(() => {
-    if (prefill && prefill.nonce !== lastPrefillNonceRef.current) {
-      lastPrefillNonceRef.current = prefill.nonce;
-      const nextPrompt = prefill.prompt;
-      setPrompt(nextPrompt);
-      if (textareaRef.current) {
-        textareaRef.current.value = nextPrompt;
-        adjustHeight();
-        const match = /\{\{([^}]+)\}\}/.exec(nextPrompt);
-        if (match && match.index !== undefined) {
-          textareaRef.current.focus();
-          textareaRef.current.setSelectionRange(
-            match.index,
-            match.index + match[0].length
-          );
-        } else {
-          textareaRef.current.focus();
-        }
-      }
+    if (!prefill || prefill.nonce === lastPrefillNonceRef.current) return;
+    lastPrefillNonceRef.current = prefill.nonce;
 
-      if (prefill.mode === "image") {
-        if (isImagePlanLocked) {
-          setMode("text");
-          setStoreChatMode("text");
-          setImageLockedNotice(true);
-        } else {
-          setImageLockedNotice(false);
-          handleModeChange("image");
-        }
-      } else {
-        setImageLockedNotice(false);
-        handleModeChange("text");
-      }
-    } else if (initialPrompt && !prefill) {
-      setPrompt(initialPrompt);
-      if (textareaRef.current) {
-        textareaRef.current.value = initialPrompt;
-        adjustHeight();
-        const match = /\{\{([^}]+)\}\}/.exec(initialPrompt);
-        if (match && match.index !== undefined) {
-          textareaRef.current.focus();
-          textareaRef.current.setSelectionRange(
-            match.index,
-            match.index + match[0].length
-          );
-        }
+    const nextPrompt = prefill.prompt;
+    setPrompt(nextPrompt);
+    const el = textareaRef.current;
+    if (el) {
+      el.value = nextPrompt;
+      adjustHeight();
+      el.focus();
+      const match = /\{\{([^}]+)\}\}/.exec(nextPrompt);
+      if (match) {
+        el.setSelectionRange(match.index, match.index + match[0].length);
       }
     }
-  }, [prefill, initialPrompt, isImagePlanLocked, adjustHeight, handleModeChange]);
+
+    if (prefill.mode === "image" && isImagePlanLocked) {
+      // Keep the prompt, stay in Chat, and say why.
+      handleModeChange("text");
+      setImageLockedNotice(true);
+    } else {
+      handleModeChange(prefill.mode);
+    }
+  }, [prefill, isImagePlanLocked, adjustHeight, handleModeChange]);
 
   // Auto-focus support
   React.useEffect(() => {
@@ -800,13 +769,13 @@ export function Composer({
       {/* Image Plan-Locked Alert */}
       {imageLockedNotice && (
         <div
-          role="alert"
+          role="status"
           id="image-plan-locked-warning"
           className="mb-2 flex items-center justify-between gap-2 rounded-xl bg-accent-soft border border-border px-3 py-1.5 text-xs text-accent"
         >
-          <span>{t("imagePlanLocked")}</span>
+          <span>{t("imagePlanLocked", { plan: imagePlanName })}</span>
           <Link
-            href="/settings"
+            href="/pricing"
             className="font-semibold underline hover:text-fg transition-colors"
           >
             {tGates("upgrade")}
@@ -998,6 +967,7 @@ export function Composer({
             <button
               type="button"
               onClick={() => handleModeChange("text")}
+              aria-pressed={mode === "text"}
               className={cn(
                 "flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium transition-colors cursor-pointer",
                 mode === "text"
@@ -1011,6 +981,7 @@ export function Composer({
             <button
               type="button"
               onClick={() => handleModeChange("image")}
+              aria-pressed={mode === "image"}
               className={cn(
                 "flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium transition-colors cursor-pointer",
                 mode === "image"

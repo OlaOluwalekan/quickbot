@@ -1,13 +1,12 @@
 import React from "react";
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { WorkspaceHome } from "@/components/home/workspace-home";
-import { Composer } from "@/components/workspace/composer";
+import { NextIntlClientProvider, createTranslator } from "next-intl";
 import QueryProvider, { createAppQueryClient } from "@/components/providers/query-provider";
 import { useUiStore } from "@/lib/stores/ui";
-import {
-  STARTER_TEMPLATES,
-  STARTER_CATEGORIES,
-} from "@/lib/templates/starter-library";
+import { STARTER_TEMPLATES } from "@/lib/templates/starter-library";
+import { entitlementsForPlan } from "@/lib/entitlements/shared";
+import type { PlanKey } from "@/server/billing/plans";
 import enMessages from "../messages/en.json";
 import esMessages from "../messages/es.json";
 import frMessages from "../messages/fr.json";
@@ -24,62 +23,17 @@ jest.mock("next/navigation", () => ({
   usePathname: () => "/workspaces",
 }));
 
-function resolveKey(obj: any, key: string): string {
-  const parts = key.split(".");
-  let cur = obj;
-  for (const part of parts) {
-    if (cur && typeof cur === "object" && part in cur) {
-      cur = cur[part];
-    } else {
-      return key;
-    }
-  }
-  return typeof cur === "string" ? cur : key;
-}
-
-jest.mock("next-intl", () => ({
-  useTranslations: (namespace: string) => {
-    return (key: string, values?: Record<string, unknown>) => {
-      const ns = (
-        enMessages as unknown as Record<string, any>
-      )[namespace] || {};
-      let template = resolveKey(ns, key);
-      if (values) {
-        Object.entries(values).forEach(([k, v]) => {
-          template = template.replace(`{${k}}`, String(v));
-        });
-      }
-      return template;
-    };
-  },
-  useLocale: () => "en",
-}));
-
 describe("Step F4.3 — Starter templates switch composer mode", () => {
   const mockHomeData: HomeData = {
-    user: {
-      id: "user-1",
-      name: "Test User",
-      email: "test@example.com",
-      image: null,
-      username: "testuser",
-    },
-    credits: {
-      plan: "LITE",
-      balance: 100,
-      monthlyAllowance: 500,
-      dailySpend: 10,
-      dailyCap: 200,
-    },
+    credits: { plan: "Lite", balance: 100, resetsAt: null },
     recent: [],
     projects: [],
     sharedWithMe: [],
     onboarding: {
-      isNewAccount: false,
-      hasEmailVerified: true,
-      hasCreatedWorkspace: true,
-      hasUsedTemplate: true,
-      hasShared: true,
+      emailVerified: true,
+      usernameChosen: true,
+      hasWorkspace: true,
+      hasProject: true,
     },
   };
 
@@ -93,35 +47,19 @@ describe("Step F4.3 — Starter templates switch composer mode", () => {
     useUiStore.getState().resetTransientUi();
   });
 
-  function renderHome(data: HomeData = mockHomeData) {
+  // Entitlements come from the server (GET /api/v1/me/entitlements), never
+  // from the home credits card.
+  function renderHome(plan: PlanKey = "LITE", data: HomeData = mockHomeData) {
     const queryClient = createAppQueryClient();
     queryClient.setQueryData(["home", "user-1"], data);
-    queryClient.setQueryData(["me", "entitlements"], {
-      plan: data.credits.plan,
-      models: ["text-economy", "text-standard", "image-standard"],
-      limits: {
-        attachmentsPerWorkspace: 5,
-        maxFileMB: 10,
-        members: 2,
-        exportFormats: ["md", "pdf", "docx"],
-        grounding: true,
-        images: data.credits.plan !== "FREE",
-        searchesPerDay: 50,
-        voiceSecondsPerDay: 300,
-      },
-      features: {
-        images: data.credits.plan !== "FREE",
-        webSearch: true,
-        documentReview: true,
-        voiceInput: true,
-        collaboration: true,
-      },
-    });
+    queryClient.setQueryData(["me", "entitlements"], entitlementsForPlan(plan));
 
     return render(
-      <QueryProvider client={queryClient}>
-        <WorkspaceHome userId="user-1" userName="Test User" initialData={data} />
-      </QueryProvider>
+      <NextIntlClientProvider locale="en" messages={enMessages}>
+        <QueryProvider client={queryClient}>
+          <WorkspaceHome userId="user-1" userName="Test User" initialData={data} />
+        </QueryProvider>
+      </NextIntlClientProvider>
     );
   }
 
@@ -134,29 +72,44 @@ describe("Step F4.3 — Starter templates switch composer mode", () => {
         const promptId = t.promptKey.replace("prompts.", "");
 
         // EN
-        const enPrompt = (enMessages.Templates as any).prompts?.[promptId];
+        const enPrompt = (enMessages.Templates.prompts as Record<string, string>)[promptId];
         expect(enPrompt).toBeDefined();
         expect(typeof enPrompt).toBe("string");
-        expect(enPrompt.length).toBeGreaterThan(10);
+        expect(enPrompt!.length).toBeGreaterThan(10);
 
         // ES
-        const esPrompt = (esMessages.Templates as any).prompts?.[promptId];
+        const esPrompt = (esMessages.Templates.prompts as Record<string, string>)[promptId];
         expect(esPrompt).toBeDefined();
         expect(typeof esPrompt).toBe("string");
-        expect(esPrompt.length).toBeGreaterThan(10);
+        expect(esPrompt!.length).toBeGreaterThan(10);
 
         // FR
-        const frPrompt = (frMessages.Templates as any).prompts?.[promptId];
+        const frPrompt = (frMessages.Templates.prompts as Record<string, string>)[promptId];
         expect(frPrompt).toBeDefined();
         expect(typeof frPrompt).toBe("string");
-        expect(frPrompt.length).toBeGreaterThan(10);
+        expect(frPrompt!.length).toBeGreaterThan(10);
       }
     });
   });
 
+  it("every prompt formats with its {{placeholders}} intact (ICU quoting) in en, es and fr", () => {
+    for (const [locale, messages] of [
+      ["en", enMessages],
+      ["es", esMessages],
+      ["fr", frMessages],
+    ] as const) {
+      const t = createTranslator({ locale, messages, namespace: "Templates" });
+      for (const tpl of STARTER_TEMPLATES) {
+        const text = t(tpl.promptKey as never) as string;
+        expect(text).toMatch(/\{\{[a-z_]+\}\}/);
+        expect(text).not.toMatch(/'\{\{|\}\}'/);
+      }
+    }
+  });
+
   describe("2. Template Selection & Mode Switching", () => {
     it("choosing an image template switches composer to 'Create image' mode and inserts prompt", async () => {
-      renderHome(mockHomeData);
+      renderHome();
 
       const composer = screen.getByRole("region", { name: "Composer" });
       const starter = document.getElementById("starter-library-section")!;
@@ -182,11 +135,12 @@ describe("Step F4.3 — Starter templates switch composer mode", () => {
 
       // The Create image tab button in composer has active styling
       const createImgTab = within(composer).getByRole("button", { name: /Create Image/i });
-      expect(createImgTab.className).toContain("text-accent");
+      expect(createImgTab).toHaveAttribute("aria-pressed", "true");
+      expect(textarea.value).not.toContain("'{{");
     });
 
     it("choosing a text template switches back to chat mode", async () => {
-      renderHome(mockHomeData);
+      renderHome();
 
       const composer = screen.getByRole("region", { name: "Composer" });
       const starter = document.getElementById("starter-library-section")!;
@@ -217,11 +171,11 @@ describe("Step F4.3 — Starter templates switch composer mode", () => {
 
       // Chat tab in composer is active
       const chatTab = within(composer).getByRole("button", { name: /^Chat$/i });
-      expect(chatTab.className).toContain("text-accent");
+      expect(chatTab).toHaveAttribute("aria-pressed", "true");
     });
 
     it("clicking the same template twice re-inserts the prompt", async () => {
-      renderHome(mockHomeData);
+      renderHome();
 
       const composer = screen.getByRole("region", { name: "Composer" });
       const starter = document.getElementById("starter-library-section")!;
@@ -255,15 +209,7 @@ describe("Step F4.3 — Starter templates switch composer mode", () => {
 
   describe("3. Plan-Gating when Image Mode is Locked (Free Plan)", () => {
     it("still inserts the prompt, keeps text mode, and displays an inline notice with Upgrade link", async () => {
-      const freeHomeData: HomeData = {
-        ...mockHomeData,
-        credits: {
-          ...mockHomeData.credits,
-          plan: "FREE",
-        },
-      };
-
-      renderHome(freeHomeData);
+      renderHome("FREE");
 
       const composer = screen.getByRole("region", { name: "Composer" });
       const starter = document.getElementById("starter-library-section")!;
@@ -285,15 +231,19 @@ describe("Step F4.3 — Starter templates switch composer mode", () => {
 
       // 2. Chat mode is kept (not switched to image mode)
       const chatTab = within(composer).getByRole("button", { name: /^Chat$/i });
-      expect(chatTab.className).toContain("text-accent");
+      expect(chatTab).toHaveAttribute("aria-pressed", "true");
 
       // 3. Inline notice is displayed with Upgrade link
-      const notice = await screen.findByRole("alert");
-      expect(notice).toHaveTextContent(/Image generation is available on Lite and above/i);
+      const message = await within(composer).findByText(/Image generation is available/);
+      const notice = message.closest<HTMLElement>('[role="status"]')!;
+      expect(notice).not.toBeNull();
+      expect(notice).toHaveTextContent(
+        "Image generation is available on the Lite plan and above."
+      );
 
       const upgradeLink = within(notice).getByRole("link", { name: /Upgrade/i });
       expect(upgradeLink).toBeInTheDocument();
-      expect(upgradeLink).toHaveAttribute("href", "/settings");
+      expect(upgradeLink).toHaveAttribute("href", "/pricing");
     });
   });
 });

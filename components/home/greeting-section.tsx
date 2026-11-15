@@ -4,14 +4,13 @@ import * as React from "react";
 import { useTranslations } from "next-intl";
 import { useSiteConfig } from "@/components/providers/site-config-provider";
 import { Sparkles } from "lucide-react";
-import { Composer } from "@/components/workspace/composer";
+import { Composer, type ComposerPrefill } from "@/components/workspace/composer";
 
 export interface GreetingSectionProps {
   userName: string;
   userId?: string;
-  prefill?: { prompt: string; mode: "text" | "image"; nonce: number } | null;
-  prefilledPrompt?: string;
-  prefilledMode?: "text" | "image";
+  /** A starter template to put in the composer (F4.3). */
+  prefill?: ComposerPrefill | null;
   credits?: { plan: string; balance: number };
 }
 
@@ -19,8 +18,6 @@ export function GreetingSection({
   userName,
   userId,
   prefill,
-  prefilledPrompt = "",
-  prefilledMode,
   credits,
 }: GreetingSectionProps) {
   const tHome = useTranslations("Home");
@@ -53,8 +50,6 @@ export function GreetingSection({
         <Composer
           size="large"
           prefill={prefill}
-          initialPrompt={prefilledPrompt}
-          initialMode={prefilledMode}
           autoFocus={false}
           credits={credits}
           userId={userId}

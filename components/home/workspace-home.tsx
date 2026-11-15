@@ -7,6 +7,7 @@ import { useHomeData, type HomeData } from "@/lib/api/hooks/home";
 import { useUiStore } from "@/lib/stores/ui";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { ComposerPrefill } from "@/components/workspace/composer";
 import { GreetingSection } from "./greeting-section";
 import { OnboardingChecklist } from "./onboarding-checklist";
 import { RecentWorkspaces } from "./recent-workspaces";
@@ -65,11 +66,7 @@ export function WorkspaceHome({
     initialData,
   });
 
-  const [prefill, setPrefill] = React.useState<{
-    prompt: string;
-    mode: "text" | "image";
-    nonce: number;
-  } | null>(null);
+  const [prefill, setPrefill] = React.useState<ComposerPrefill | null>(null);
 
   const [createProjectOpen, setCreateProjectOpen] = React.useState(false);
   const createProjectMutation = useCreateProject(userId);
@@ -80,26 +77,9 @@ export function WorkspaceHome({
   });
 
   const handleUseTemplate = (template: StarterTemplate) => {
-    let promptText = "";
-    try {
-      if (typeof (tTemplates as any).raw === "function") {
-        const raw = (tTemplates as any).raw(template.promptKey);
-        if (typeof raw === "string") {
-          promptText = raw.replace(/'(\{\{[^}]+\}\})'/g, "$1");
-        }
-      }
-      if (!promptText) {
-        promptText = tTemplates(template.promptKey);
-      }
-    } catch {
-      promptText = template.promptTemplate;
-    }
-    if (!promptText || promptText === template.promptKey) {
-      promptText = template.promptTemplate;
-    }
-
     setPrefill({
-      prompt: promptText,
+      // ICU quoting in the messages ('{{topic}}') keeps the placeholders literal.
+      prompt: tTemplates(template.promptKey),
       mode: template.mode,
       nonce: Date.now(),
     });

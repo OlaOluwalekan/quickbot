@@ -176,7 +176,7 @@
     "stop": "Detener generación",
     "generatingLive": "Generando...",
     "generatingDone": "Completado",
-    "imagePlanLocked": "La generación de imágenes está disponible a partir del plan Lite",
+    "imagePlanLocked": "La generación de imágenes está disponible desde el plan {plan}.",
     "outOfCreditsReason": "Te has quedado sin créditos. Mejora tu plan para continuar.",
     "upgradeCta": "Mejorar plan",
     "createWorkspaceFailed": "Error al crear el espacio de trabajo. Haz clic en Reintentar.",

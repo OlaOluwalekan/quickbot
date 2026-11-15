@@ -176,7 +176,7 @@
     "stop": "Stop generating",
     "generatingLive": "Generating...",
     "generatingDone": "Done",
-    "imagePlanLocked": "Image generation is available on Lite and above",
+    "imagePlanLocked": "Image generation is available on the {plan} plan and above.",
     "outOfCreditsReason": "You are out of credits. Upgrade your plan to continue.",
     "upgradeCta": "Upgrade Plan",
     "createWorkspaceFailed": "Failed to create workspace. Click Retry to try again.",
