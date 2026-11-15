@@ -1,5 +1,5 @@
 import "server-only";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, type Part } from "@google/genai";
 import { env } from "@/server/env";
 import {
   AiProvider,
@@ -28,6 +28,15 @@ export const GEMINI_SAFETY_SETTINGS = [
     threshold: "BLOCK_MEDIUM_AND_ABOVE",
   },
 ] as const;
+
+/**
+ * Sent as the signature of a function call we replay without one. Thinking
+ * models reject a replayed call that lacks its signature (HTTP 400).
+ * TODO(F4.4b): not yet checked against the provider's documentation or a
+ * live call (both blocked in the review session). Keep it only if the docs
+ * allow it for this case; otherwise remove it and drop the unsigned call.
+ */
+export const MISSING_THOUGHT_SIGNATURE = "skip_thought_signature_validator";
 
 let globalClient: GoogleGenAI | null = null;
 
@@ -71,16 +80,14 @@ export class GeminiProvider implements AiProvider {
           };
         }
         if (p.type === "tool_call") {
-          const callPart: Record<string, unknown> = {
+          // Thinking models need the signature of their own call back,
+          // unchanged, on the same part as the call.
+          const callPart: Part = {
             functionCall: {
               name: p.name,
               args: (p.args as Record<string, unknown>) || {},
             },
-            // Thinking models need the signature of their own call back.
-            // Gemini strictly validates thought_signature on functionCall parts in multi-turn tool loops.
-            // When none was captured or provided, pass the Google-supported bypass token to prevent 400.
-            thoughtSignature:
-              p.thoughtSignature || "skip_thought_signature_validator",
+            thoughtSignature: p.thoughtSignature || MISSING_THOUGHT_SIGNATURE,
           };
           return callPart;
         }
@@ -171,13 +178,10 @@ export class GeminiProvider implements AiProvider {
 
         // 1. Check parts for thoughts, text, and tool calls
         if (candidate?.content?.parts) {
-          for (const part of candidate.content.parts) {
-            const rawPart = part as Record<string, any>;
-            const partSig: string | undefined =
-              rawPart.thoughtSignature ||
-              rawPart.thought_signature ||
-              rawPart.functionCall?.thoughtSignature ||
-              rawPart.functionCall?.thought_signature;
+          for (const part of candidate.content.parts as Part[]) {
+            // The SDK maps the wire field to `Part.thoughtSignature` (a
+            // sibling of `functionCall`); `FunctionCall` has no signature.
+            const partSig = part.thoughtSignature;
 
             if (partSig) {
               latestThoughtSignature = partSig;
@@ -194,14 +198,11 @@ export class GeminiProvider implements AiProvider {
             }
 
             if (part.functionCall) {
-              const toolSig =
-                partSig ||
-                rawPart.functionCall?.thoughtSignature ||
-                rawPart.functionCall?.thought_signature ||
-                latestThoughtSignature;
+              // A signature may arrive on an earlier part of the same turn.
+              const toolSig = partSig || latestThoughtSignature;
               yield {
                 type: "tool_call",
-                name: part.functionCall.name,
+                name: part.functionCall.name ?? "",
                 args: part.functionCall.args,
                 thoughtSignature: toolSig,
               };
