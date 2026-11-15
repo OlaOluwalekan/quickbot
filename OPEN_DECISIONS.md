@@ -103,3 +103,34 @@ Known gap: the credit hold before an answer covers the base cost only (decided 2
 | C | A + search usage per member | Show searches (and their credits) per member in the owner's usage view, so the owner sees who spends and can set caps. Visibility, no new limit. |
 
 **If nothing is decided:** stays at A. If owners worry about cost later, add C before considering B.
+
+---
+
+## 5. Moving AI calls to the provider's Interactions API
+
+- **Found:** 2026-11-15, after the F4.4 review (PR #126) and the F4.4b thought-signature fix.
+- **Where:** `server/ai/providers/gemini.ts` (the only file that calls the provider); the event types in `server/ai/types.ts`.
+
+**The situation.** At the start of the rebranding the owner asked for the AI calls to use the provider's newer **Interactions API**. That switch was never made.
+
+**Today.** Every AI call uses the older API: `models.generateContentStream` (main responses, Ask answers, question batches, reviews, web search tool loops), `models.generateContent` (one-off text calls) and `models.generateImages` (images). Klecx keeps the conversation itself and sends the needed history with each call, so it handles thought signatures by hand (F4.4b). Everything else in the app (billing, credits, citations, thinking summaries, tools) reads the provider-neutral events in `server/ai/types.ts`, not the provider's own format.
+
+**Owner's direction (2026-11-15).** Switch later: after the interlude and main-guide steps are done, probably after launch. Not before.
+
+**What to check before switching.** The aim is the same features in the app; mainly the code inside `gemini.ts` changes. The provider documentation couldn't be read from the review session, so confirm each point there first:
+
+- **Storage and privacy.** The Interactions API can keep the conversation on the provider's servers (stateful mode). Klecx should use the **stateless** mode (send history itself, as today) unless the owner decides otherwise: stored conversations would hold users' prompts and documents with the provider, which affects the privacy policy (Nigeria Data Protection Act 2023, GDPR). Check the retention period and whether storage is on by default.
+- **Feature parity.** Streaming, thinking summaries, function calling (the `web_search` and `create_document` tools), structured JSON output, attachments (images, files), safety settings and image generation must all exist there, and the `output` / usage numbers must still feed `creditsFor()` correctly.
+- **New things it offers** (only if wanted): provider-side conversation state, long-running background tasks, the provider's own agents. None is needed for today's features.
+- **Status and price.** Whether it is still in beta, whether prices per token are the same, and whether the model names in `GEMINI_*` env settings stay the same.
+- **Thought signatures.** In stateless mode they come as separate thought steps; the F4.4b handling would be replaced, not kept.
+
+**Options.**
+
+| | Option | Effect |
+|---|---|---|
+| A | Keep the older API (today) | Works and is tested. No change. |
+| B | Switch, stateless mode (recommended when switching) | Same behaviour and privacy as today; mostly a rewrite of `gemini.ts` plus its tests. |
+| C | Switch, stateful mode | The provider keeps the conversation; smaller requests, but user content is stored with the provider (privacy policy update needed) and Klecx's own history becomes a second copy. |
+
+**If nothing is decided:** stays at A until after launch, then B.
