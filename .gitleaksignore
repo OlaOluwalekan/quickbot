@@ -1,0 +1,6 @@
+# gitleaks false positives, one fingerprint per line (commit:file:rule:line).
+# F4.3: a starter-template message key in lib/templates/starter-library.ts
+# matched the generic-api-key rule; it is a translation key, not a secret.
+6cfdaaea7a5328448f4c0fb5a62be6e9f46cc7eb:lib/templates/starter-library.ts:generic-api-key:219
+# The previous version of this file's comment quoted that key.
+f3810472137746689a4067d5bb3ad6ce94f83e61:.gitleaksignore:generic-api-key:2

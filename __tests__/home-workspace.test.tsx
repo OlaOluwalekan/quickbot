@@ -23,10 +23,18 @@ jest.mock("next/navigation", () => ({
 jest.mock("next-intl", () => ({
   useTranslations: (namespace: string) => {
     return (key: string, values?: Record<string, unknown>) => {
-      const ns = (
-        enMessages as unknown as Record<string, Record<string, string>>
-      )[namespace] || {};
-      let template = ns[key] || key;
+      const ns = (enMessages as unknown as Record<string, unknown>)[namespace];
+      // Resolve dotted keys (e.g. "prompts.exec-summary") like next-intl.
+      const found = key
+        .split(".")
+        .reduce<unknown>(
+          (cur, part) =>
+            cur && typeof cur === "object"
+              ? (cur as Record<string, unknown>)[part]
+              : undefined,
+          ns
+        );
+      let template = typeof found === "string" ? found : key;
       if (values) {
         Object.entries(values).forEach(([k, v]) => {
           template = template.replace(`{${k}}`, String(v));

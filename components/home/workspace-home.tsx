@@ -7,6 +7,7 @@ import { useHomeData, type HomeData } from "@/lib/api/hooks/home";
 import { useUiStore } from "@/lib/stores/ui";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { ComposerPrefill } from "@/components/workspace/composer";
 import { GreetingSection } from "./greeting-section";
 import { OnboardingChecklist } from "./onboarding-checklist";
 import { RecentWorkspaces } from "./recent-workspaces";
@@ -51,6 +52,7 @@ export function WorkspaceHome({
   const tHome = useTranslations("Home");
   const tAppShell = useTranslations("AppShell");
   const tCommon = useTranslations("Common");
+  const tTemplates = useTranslations("Templates");
 
   const setCurrentPageTitle = useUiStore((s) => s.setCurrentPageTitle);
   const setCurrentPageId = useUiStore((s) => s.setCurrentPageId);
@@ -64,8 +66,7 @@ export function WorkspaceHome({
     initialData,
   });
 
-  const [selectedPrompt, setSelectedPrompt] = React.useState("");
-  const [selectedMode, setSelectedMode] = React.useState<"text" | "image">("text");
+  const [prefill, setPrefill] = React.useState<ComposerPrefill | null>(null);
 
   const [createProjectOpen, setCreateProjectOpen] = React.useState(false);
   const createProjectMutation = useCreateProject(userId);
@@ -76,8 +77,12 @@ export function WorkspaceHome({
   });
 
   const handleUseTemplate = (template: StarterTemplate) => {
-    setSelectedPrompt(template.promptTemplate);
-    setSelectedMode(template.mode);
+    setPrefill({
+      // ICU quoting in the messages ('{{topic}}') keeps the placeholders literal.
+      prompt: tTemplates(template.promptKey),
+      mode: template.mode,
+      nonce: Date.now(),
+    });
     try {
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch {
@@ -146,8 +151,7 @@ export function WorkspaceHome({
         <GreetingSection
           userName={userName}
           userId={userId}
-          prefilledPrompt={selectedPrompt}
-          prefilledMode={selectedMode}
+          prefill={prefill}
           credits={homeData.credits}
         />
 

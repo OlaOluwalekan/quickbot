@@ -40,6 +40,8 @@ import { navigateWithTransition } from "@/lib/navigation/view-transition";
 import { CLIENT_MODELS, type ClientModelOption } from "@/lib/ai/client-models";
 import type { WorkspaceDto } from "@/lib/api/hooks/workspaces";
 import { useEntitlements } from "@/lib/api/hooks/entitlements";
+import { canUse, PLAN_ORDER } from "@/lib/entitlements/shared";
+import { PLANS } from "@/server/billing/plans";
 import { useUserPreferences } from "@/lib/api/hooks/me";
 import { QuestionQueuePopover } from "@/components/workspace/question-queue-popover";
 import {
@@ -58,9 +60,19 @@ function safeRandomUUID(): string {
   return "idem-" + Math.random().toString(36).substring(2, 15);
 }
 
+/**
+ * Text (and mode) to put in the composer from outside, e.g. a starter
+ * template. A new `nonce` re-applies it, so picking the same template twice
+ * works.
+ */
+export interface ComposerPrefill {
+  prompt: string;
+  mode: "text" | "image";
+  nonce: number;
+}
+
 export interface ComposerProps {
-  initialPrompt?: string;
-  initialMode?: "text" | "image";
+  prefill?: ComposerPrefill | null;
   placeholder?: string;
   size?: "large" | "compact";
   className?: string;
@@ -93,8 +105,7 @@ export interface ComposerAttachment {
 }
 
 export function Composer({
-  initialPrompt = "",
-  initialMode,
+  prefill,
   placeholder,
   size = "large",
   className,
@@ -109,6 +120,7 @@ export function Composer({
   const t = useTranslations("Chat");
   const tHome = useTranslations("Home");
   const tDocs = useTranslations("Documents");
+  const tGates = useTranslations("Gates");
   const router = useRouter();
   const queryClient = React.useContext(QueryClientContext);
   const targetWorkspaceIdRef = React.useRef<string | null>(null);
@@ -122,6 +134,15 @@ export function Composer({
   const setDraft = useUiStore((s) => s.setDraft);
   const clearDraft = useUiStore((s) => s.clearDraft);
 
+  const { entitlements, isSuccess: entitlementsLoaded } = useEntitlements();
+  // Only treat images as locked once the real entitlements have loaded (the
+  // hook falls back to Free meanwhile). The server re-checks on submit.
+  const isImagePlanLocked =
+    entitlementsLoaded && !canUse(entitlements, "images");
+  const imagePlanName =
+    PLANS[PLAN_ORDER.find((p) => PLANS[p].limits.images) ?? "LITE"].name;
+  const [imageLockedNotice, setImageLockedNotice] = React.useState(false);
+
   // Generation stream status for current workspace
   const currentStream = useGenerationStore((s) =>
     workspaceId ? s.streams[workspaceId] : null,
@@ -129,12 +150,9 @@ export function Composer({
   const isStreaming = currentStream?.status === "streaming";
 
   // Composer state
-  const [prompt, setPrompt] = React.useState<string>(() => {
-    if (initialPrompt) return initialPrompt;
-    return savedDraft || "";
-  });
+  const [prompt, setPrompt] = React.useState<string>(() => savedDraft || "");
   const [mode, setMode] = React.useState<"text" | "image">(
-    initialMode || storeChatMode || "text",
+    storeChatMode || "text",
   );
   const [selectedModel, setSelectedModel] = React.useState<string>("text-economy");
   const [thinkHarder, setThinkHarder] = React.useState(false);
@@ -168,25 +186,43 @@ export function Composer({
     el.style.height = `${nextH}px`;
   }, [size]);
 
-  // Sync initialPrompt prop if it changes
+  const handleModeChange = React.useCallback(
+    (nextMode: "text" | "image") => {
+      setMode(nextMode);
+      setStoreChatMode(nextMode);
+      setImageLockedNotice(false);
+    },
+    [setStoreChatMode]
+  );
+
+  // F4.3: apply a prefill (starter template) whenever its nonce changes: set
+  // the prompt and the mode, focus, and select the first {{placeholder}}.
+  const lastPrefillNonceRef = React.useRef<number | null>(null);
   React.useEffect(() => {
-    if (initialPrompt) {
-      setPrompt(initialPrompt);
-      if (textareaRef.current) {
-        textareaRef.current.value = initialPrompt;
-        adjustHeight();
-        // Highlight first {{placeholder}} if present
-        const match = /\{\{([^}]+)\}\}/.exec(initialPrompt);
-        if (match && match.index !== undefined) {
-          textareaRef.current.focus();
-          textareaRef.current.setSelectionRange(
-            match.index,
-            match.index + match[0].length,
-          );
-        }
+    if (!prefill || prefill.nonce === lastPrefillNonceRef.current) return;
+    lastPrefillNonceRef.current = prefill.nonce;
+
+    const nextPrompt = prefill.prompt;
+    setPrompt(nextPrompt);
+    const el = textareaRef.current;
+    if (el) {
+      el.value = nextPrompt;
+      adjustHeight();
+      el.focus();
+      const match = /\{\{([^}]+)\}\}/.exec(nextPrompt);
+      if (match) {
+        el.setSelectionRange(match.index, match.index + match[0].length);
       }
     }
-  }, [initialPrompt, adjustHeight]);
+
+    if (prefill.mode === "image" && isImagePlanLocked) {
+      // Keep the prompt, stay in Chat, and say why.
+      handleModeChange("text");
+      setImageLockedNotice(true);
+    } else {
+      handleModeChange(prefill.mode);
+    }
+  }, [prefill, isImagePlanLocked, adjustHeight, handleModeChange]);
 
   // Auto-focus support
   React.useEffect(() => {
@@ -217,11 +253,6 @@ export function Composer({
     };
   }, []);
 
-  const handleModeChange = (nextMode: "text" | "image") => {
-    setMode(nextMode);
-    setStoreChatMode(nextMode);
-  };
-
   const [attachments, setAttachments] = React.useState<ComposerAttachment[]>([]);
   const [isDragging, setIsDragging] = React.useState(false);
   const [attachMenuOpen, setAttachMenuOpen] = React.useState(false);
@@ -230,7 +261,6 @@ export function Composer({
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const docFileInputRef = React.useRef<HTMLInputElement>(null);
 
-  const { entitlements } = useEntitlements();
   const MAX_ATTACHMENTS = entitlements.limits.attachmentsPerWorkspace;
   const MAX_FILE_SIZE = entitlements.limits.maxFileMB * 1024 * 1024;
 
@@ -736,6 +766,23 @@ export function Composer({
         </div>
       )}
 
+      {/* Image Plan-Locked Alert */}
+      {imageLockedNotice && (
+        <div
+          role="status"
+          id="image-plan-locked-warning"
+          className="mb-2 flex items-center justify-between gap-2 rounded-xl bg-accent-soft border border-border px-3 py-1.5 text-xs text-accent"
+        >
+          <span>{t("imagePlanLocked", { plan: imagePlanName })}</span>
+          <Link
+            href="/pricing"
+            className="font-semibold underline hover:text-fg transition-colors"
+          >
+            {tGates("upgrade")}
+          </Link>
+        </div>
+      )}
+
       {/* Creation Error Retry Alert */}
       {creationError && (
         <div
@@ -920,6 +967,7 @@ export function Composer({
             <button
               type="button"
               onClick={() => handleModeChange("text")}
+              aria-pressed={mode === "text"}
               className={cn(
                 "flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium transition-colors cursor-pointer",
                 mode === "text"
@@ -933,6 +981,7 @@ export function Composer({
             <button
               type="button"
               onClick={() => handleModeChange("image")}
+              aria-pressed={mode === "image"}
               className={cn(
                 "flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium transition-colors cursor-pointer",
                 mode === "image"
