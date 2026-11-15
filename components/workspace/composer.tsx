@@ -40,6 +40,8 @@ import { navigateWithTransition } from "@/lib/navigation/view-transition";
 import { CLIENT_MODELS, type ClientModelOption } from "@/lib/ai/client-models";
 import type { WorkspaceDto } from "@/lib/api/hooks/workspaces";
 import { useEntitlements } from "@/lib/api/hooks/entitlements";
+import { canUse, entitlementsForPlan, type PlanKey } from "@/lib/entitlements/shared";
+import { PLANS } from "@/server/billing/plans";
 import { useUserPreferences } from "@/lib/api/hooks/me";
 import { QuestionQueuePopover } from "@/components/workspace/question-queue-popover";
 import {
@@ -58,7 +60,14 @@ function safeRandomUUID(): string {
   return "idem-" + Math.random().toString(36).substring(2, 15);
 }
 
+export interface ComposerPrefill {
+  prompt: string;
+  mode: "text" | "image";
+  nonce: number;
+}
+
 export interface ComposerProps {
+  prefill?: ComposerPrefill | null;
   initialPrompt?: string;
   initialMode?: "text" | "image";
   placeholder?: string;
@@ -93,6 +102,7 @@ export interface ComposerAttachment {
 }
 
 export function Composer({
+  prefill,
   initialPrompt = "",
   initialMode,
   placeholder,
@@ -109,6 +119,7 @@ export function Composer({
   const t = useTranslations("Chat");
   const tHome = useTranslations("Home");
   const tDocs = useTranslations("Documents");
+  const tGates = useTranslations("Gates");
   const router = useRouter();
   const queryClient = React.useContext(QueryClientContext);
   const targetWorkspaceIdRef = React.useRef<string | null>(null);
@@ -121,6 +132,18 @@ export function Composer({
   const savedDraft = useUiStore((s) => s.drafts[draftKey]);
   const setDraft = useUiStore((s) => s.setDraft);
   const clearDraft = useUiStore((s) => s.clearDraft);
+
+  const { entitlements } = useEntitlements();
+  const effectiveEntitlements =
+    entitlements?.plan !== "FREE" || !credits?.plan
+      ? entitlements
+      : entitlementsForPlan(
+          (credits.plan.toUpperCase() as PlanKey) in PLANS
+            ? (credits.plan.toUpperCase() as PlanKey)
+            : "FREE"
+        );
+  const isImagePlanLocked = !canUse(effectiveEntitlements, "images");
+  const [imageLockedNotice, setImageLockedNotice] = React.useState(false);
 
   // Generation stream status for current workspace
   const currentStream = useGenerationStore((s) =>
@@ -168,25 +191,69 @@ export function Composer({
     el.style.height = `${nextH}px`;
   }, [size]);
 
-  // Sync initialPrompt prop if it changes
+  const handleModeChange = React.useCallback(
+    (nextMode: "text" | "image") => {
+      setMode(nextMode);
+      setStoreChatMode(nextMode);
+      if (nextMode === "text") {
+        setImageLockedNotice(false);
+      }
+    },
+    [setStoreChatMode]
+  );
+
+  // Handle prefill updates (from starter templates or external callers) keyed on prefill.nonce
+  const lastPrefillNonceRef = React.useRef<number | null>(null);
+
   React.useEffect(() => {
-    if (initialPrompt) {
+    if (prefill && prefill.nonce !== lastPrefillNonceRef.current) {
+      lastPrefillNonceRef.current = prefill.nonce;
+      const nextPrompt = prefill.prompt;
+      setPrompt(nextPrompt);
+      if (textareaRef.current) {
+        textareaRef.current.value = nextPrompt;
+        adjustHeight();
+        const match = /\{\{([^}]+)\}\}/.exec(nextPrompt);
+        if (match && match.index !== undefined) {
+          textareaRef.current.focus();
+          textareaRef.current.setSelectionRange(
+            match.index,
+            match.index + match[0].length
+          );
+        } else {
+          textareaRef.current.focus();
+        }
+      }
+
+      if (prefill.mode === "image") {
+        if (isImagePlanLocked) {
+          setMode("text");
+          setStoreChatMode("text");
+          setImageLockedNotice(true);
+        } else {
+          setImageLockedNotice(false);
+          handleModeChange("image");
+        }
+      } else {
+        setImageLockedNotice(false);
+        handleModeChange("text");
+      }
+    } else if (initialPrompt && !prefill) {
       setPrompt(initialPrompt);
       if (textareaRef.current) {
         textareaRef.current.value = initialPrompt;
         adjustHeight();
-        // Highlight first {{placeholder}} if present
         const match = /\{\{([^}]+)\}\}/.exec(initialPrompt);
         if (match && match.index !== undefined) {
           textareaRef.current.focus();
           textareaRef.current.setSelectionRange(
             match.index,
-            match.index + match[0].length,
+            match.index + match[0].length
           );
         }
       }
     }
-  }, [initialPrompt, adjustHeight]);
+  }, [prefill, initialPrompt, isImagePlanLocked, adjustHeight, handleModeChange]);
 
   // Auto-focus support
   React.useEffect(() => {
@@ -217,11 +284,6 @@ export function Composer({
     };
   }, []);
 
-  const handleModeChange = (nextMode: "text" | "image") => {
-    setMode(nextMode);
-    setStoreChatMode(nextMode);
-  };
-
   const [attachments, setAttachments] = React.useState<ComposerAttachment[]>([]);
   const [isDragging, setIsDragging] = React.useState(false);
   const [attachMenuOpen, setAttachMenuOpen] = React.useState(false);
@@ -230,7 +292,6 @@ export function Composer({
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const docFileInputRef = React.useRef<HTMLInputElement>(null);
 
-  const { entitlements } = useEntitlements();
   const MAX_ATTACHMENTS = entitlements.limits.attachmentsPerWorkspace;
   const MAX_FILE_SIZE = entitlements.limits.maxFileMB * 1024 * 1024;
 
@@ -732,6 +793,23 @@ export function Composer({
             className="font-semibold underline hover:text-fg transition-colors"
           >
             {t("upgradeCta")}
+          </Link>
+        </div>
+      )}
+
+      {/* Image Plan-Locked Alert */}
+      {imageLockedNotice && (
+        <div
+          role="alert"
+          id="image-plan-locked-warning"
+          className="mb-2 flex items-center justify-between gap-2 rounded-xl bg-accent-soft border border-border px-3 py-1.5 text-xs text-accent"
+        >
+          <span>{t("imagePlanLocked")}</span>
+          <Link
+            href="/settings"
+            className="font-semibold underline hover:text-fg transition-colors"
+          >
+            {tGates("upgrade")}
           </Link>
         </div>
       )}

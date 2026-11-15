@@ -51,6 +51,7 @@ export function WorkspaceHome({
   const tHome = useTranslations("Home");
   const tAppShell = useTranslations("AppShell");
   const tCommon = useTranslations("Common");
+  const tTemplates = useTranslations("Templates");
 
   const setCurrentPageTitle = useUiStore((s) => s.setCurrentPageTitle);
   const setCurrentPageId = useUiStore((s) => s.setCurrentPageId);
@@ -64,8 +65,11 @@ export function WorkspaceHome({
     initialData,
   });
 
-  const [selectedPrompt, setSelectedPrompt] = React.useState("");
-  const [selectedMode, setSelectedMode] = React.useState<"text" | "image">("text");
+  const [prefill, setPrefill] = React.useState<{
+    prompt: string;
+    mode: "text" | "image";
+    nonce: number;
+  } | null>(null);
 
   const [createProjectOpen, setCreateProjectOpen] = React.useState(false);
   const createProjectMutation = useCreateProject(userId);
@@ -76,8 +80,29 @@ export function WorkspaceHome({
   });
 
   const handleUseTemplate = (template: StarterTemplate) => {
-    setSelectedPrompt(template.promptTemplate);
-    setSelectedMode(template.mode);
+    let promptText = "";
+    try {
+      if (typeof (tTemplates as any).raw === "function") {
+        const raw = (tTemplates as any).raw(template.promptKey);
+        if (typeof raw === "string") {
+          promptText = raw.replace(/'(\{\{[^}]+\}\})'/g, "$1");
+        }
+      }
+      if (!promptText) {
+        promptText = tTemplates(template.promptKey);
+      }
+    } catch {
+      promptText = template.promptTemplate;
+    }
+    if (!promptText || promptText === template.promptKey) {
+      promptText = template.promptTemplate;
+    }
+
+    setPrefill({
+      prompt: promptText,
+      mode: template.mode,
+      nonce: Date.now(),
+    });
     try {
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch {
@@ -146,8 +171,7 @@ export function WorkspaceHome({
         <GreetingSection
           userName={userName}
           userId={userId}
-          prefilledPrompt={selectedPrompt}
-          prefilledMode={selectedMode}
+          prefill={prefill}
           credits={homeData.credits}
         />
 

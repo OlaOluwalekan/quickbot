@@ -9,6 +9,7 @@ import { Composer } from "@/components/workspace/composer";
 export interface GreetingSectionProps {
   userName: string;
   userId?: string;
+  prefill?: { prompt: string; mode: "text" | "image"; nonce: number } | null;
   prefilledPrompt?: string;
   prefilledMode?: "text" | "image";
   credits?: { plan: string; balance: number };
@@ -17,6 +18,7 @@ export interface GreetingSectionProps {
 export function GreetingSection({
   userName,
   userId,
+  prefill,
   prefilledPrompt = "",
   prefilledMode,
   credits,
@@ -50,6 +52,7 @@ export function GreetingSection({
       <div className="w-full text-left">
         <Composer
           size="large"
+          prefill={prefill}
           initialPrompt={prefilledPrompt}
           initialMode={prefilledMode}
           autoFocus={false}
