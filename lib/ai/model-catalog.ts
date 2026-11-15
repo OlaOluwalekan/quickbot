@@ -20,7 +20,7 @@ export const GROUNDING_SURCHARGE_CREDITS = 3;
 export const TYPICAL_INPUT_TOKENS = 2500;
 export const TYPICAL_OUTPUT_TOKENS = 1300;
 
-export type ModelKey = "text-economy" | "text-standard" | "image-standard";
+export type ModelKey = "text-economy" | "text-standard" | "image-standard" | "audio-transcribe";
 
 export interface ModelCaps {
   vision: boolean;
@@ -84,6 +84,21 @@ const CATALOG_BASE: Record<ModelKey, ModelCatalogBase> = {
     minPlan: "LITE",
     priceUsdPerImage: 0.067,
     maxInput: 2_000,
+    caps: {
+      vision: false,
+      documents: false,
+      thinkingSummaries: false,
+      tools: false,
+      grounding: false,
+    },
+  },
+  "audio-transcribe": {
+    key: "audio-transcribe",
+    kind: "TEXT",
+    tier: "ECONOMY",
+    minPlan: "FREE",
+    priceUsdPerM: { in: 0.25, out: 1.5 },
+    maxInput: 200_000,
     caps: {
       vision: false,
       documents: false,
@@ -196,7 +211,7 @@ export function getClientModels(
   kind: "TEXT" | "IMAGE" = "TEXT"
 ): ClientModelOption[] {
   return Object.values(MODEL_CATALOG)
-    .filter((m) => m.kind === kind)
+    .filter((m) => m.kind === kind && m.key !== "audio-transcribe")
     .map((m) => ({
       key: m.key,
       name: tModels(`${m.key}.name`),

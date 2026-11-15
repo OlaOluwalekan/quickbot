@@ -51,6 +51,7 @@ import {
 import { PLANS } from "@/server/billing/plans";
 import { getIdleQueryClient, useUserPreferences } from "@/lib/api/hooks/me";
 import { QuestionQueuePopover } from "@/components/workspace/question-queue-popover";
+import { VoiceInput } from "./voice-input";
 import { Gated } from "@/components/ui/gated";
 import {
   Popover,
@@ -178,6 +179,10 @@ export function Composer({
   const { data: preferences } = useUserPreferences(userId ?? "");
   const webSearchOff = preferences?.webSearchEnabled === false;
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+
+  // F4.5: Voice recording state
+  const [isRecordingVoice, setIsRecordingVoice] = React.useState(false);
+  const voiceSendHandlerRef = React.useRef<(() => Promise<void>) | null>(null);
   const [creationError, setCreationError] = React.useState<string | null>(null);
   const [liveAnnouncement, setLiveAnnouncement] = React.useState("");
 
@@ -516,8 +521,18 @@ export function Composer({
     ? { code: "no_permission", capability: t("capGenerate") }
     : creditsGate;
 
-  const handleSubmit = async () => {
-    const cleanPrompt = prompt.trim();
+  const voiceGateReason: GateReason | null = isOutOfCredits
+    ? { code: "out_of_credits" }
+    : null;
+
+  const handleSubmit = async (overridePrompt?: string) => {
+    // F4.5: If user clicked Send while recording voice, delegate to voice handler
+    if (isRecordingVoice && voiceSendHandlerRef.current && !overridePrompt) {
+      await voiceSendHandlerRef.current();
+      return;
+    }
+
+    const cleanPrompt = (overridePrompt ?? prompt).trim();
     const isUploadingAny = attachments.some((a) => a.status === "uploading");
     if (!cleanPrompt || isSubmitting || isStreaming || isOutOfCredits || !canGenerate || isUploadingAny) return;
     if (mode === "image" && imageGateReason) return;
@@ -667,6 +682,48 @@ export function Composer({
       onStop?.();
     }
   };
+
+  const handleInsertTranscript = React.useCallback(
+    (text: string) => {
+      if (!text || typeof text !== "string") return;
+
+      const textarea = textareaRef.current;
+      if (!textarea) {
+        setPrompt((prev) => {
+          const updated = prev ? `${prev} ${text}` : text;
+          setDraft(draftKey, updated);
+          return updated;
+        });
+        return;
+      }
+
+      const start = textarea.selectionStart ?? prompt.length;
+      const end = textarea.selectionEnd ?? prompt.length;
+      const before = prompt.slice(0, start);
+      const after = prompt.slice(end);
+      const insertText = before && !before.endsWith(" ") ? ` ${text}` : text;
+      const newPrompt = `${before}${insertText}${after.startsWith(" ") || !after ? after : ` ${after}`}`;
+
+      setPrompt(newPrompt);
+      setDraft(draftKey, newPrompt);
+
+      setTimeout(() => {
+        textarea.focus();
+        const newCursor = before.length + (insertText?.length ?? 0);
+        textarea.setSelectionRange(newCursor, newCursor);
+        adjustHeight();
+      }, 0);
+    },
+    [prompt, draftKey, setDraft, adjustHeight]
+  );
+
+  const handleSendTranscript = React.useCallback(
+    (transcript: string) => {
+      if (!transcript || typeof transcript !== "string") return;
+      void handleSubmit(transcript);
+    },
+    [handleSubmit]
+  );
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     // IME safety: do not fire on composition end or during CJK IME input
@@ -865,7 +922,7 @@ export function Composer({
           <span>{creationError}</span>
           <button
             type="button"
-            onClick={handleSubmit}
+            onClick={() => handleSubmit()}
             className="inline-flex items-center gap-1 font-semibold underline hover:opacity-80 transition-opacity cursor-pointer"
           >
             <RotateCcw className="h-3 w-3" />
@@ -1177,6 +1234,18 @@ export function Composer({
             </Popover>
           )}
 
+          {/* Voice Input Mic Button (Step F4.5) */}
+          <VoiceInput
+            onInsertTranscript={handleInsertTranscript}
+            onSendTranscript={handleSendTranscript}
+            disabled={isSubmitting || isStreaming || !canGenerate}
+            gateReason={voiceGateReason}
+            onRecordingChange={setIsRecordingVoice}
+            registerSendHandler={(handler) => {
+              voiceSendHandlerRef.current = handler;
+            }}
+          />
+
           {/* Model Picker */}
           <Popover>
             <PopoverTrigger asChild>
@@ -1279,11 +1348,17 @@ export function Composer({
             <Gated reason={submitGateReason}>
               <button
                 type="submit"
-                disabled={isSubmitting || !prompt.trim() || isOutOfCredits || !canGenerate || attachments.some((a) => a.status === "uploading")}
+                disabled={
+                  isSubmitting ||
+                  (!prompt.trim() && !isRecordingVoice) ||
+                  isOutOfCredits ||
+                  !canGenerate ||
+                  attachments.some((a) => a.status === "uploading")
+                }
                 aria-label={t("send")}
                 className={cn(
                   "flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-xl sm:rounded-2xl shadow-sm transition-all cursor-pointer",
-                  prompt.trim() && !isSubmitting && !isOutOfCredits && canGenerate
+                  (prompt.trim() || isRecordingVoice) && !isSubmitting && !isOutOfCredits && canGenerate
                     ? "bg-accent text-accent-fg hover:bg-accent-hover active:scale-95"
                     : "cursor-not-allowed bg-surface-3 text-subtle opacity-60",
                 )}

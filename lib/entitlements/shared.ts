@@ -3,12 +3,14 @@ import { PLANS, type PlanKey, type PlanLimits } from "@/server/billing/plans";
 export type SharedModelKey =
   | "text-economy"
   | "text-standard"
-  | "image-standard";
+  | "image-standard"
+  | "audio-transcribe";
 
 export const ALL_MODEL_KEYS: readonly SharedModelKey[] = [
   "text-economy",
   "text-standard",
   "image-standard",
+  "audio-transcribe",
 ] as const;
 
 export const PLAN_ORDER: readonly PlanKey[] = [
@@ -48,7 +50,9 @@ export type GateReason =
   | { code: "owner_out_of_credits" }
   /** The member used up the monthly credit limit the workspace owner set for them. */
   | { code: "member_credit_cap"; cap: number }
-  | { code: "thinking_unavailable" };
+  | { code: "thinking_unavailable" }
+  | { code: "daily_voice_limit" }
+  | { code: "unsupported_browser" };
 
 /**
  * Gate for actions that spend credits in a workspace. The owner pays
@@ -116,6 +120,9 @@ export function canUse(
   const ent = entitlements ?? entitlementsForPlan("FREE");
 
   if (typeof feature === "string") {
+    if (feature === "audio-transcribe") {
+      return ent.features.voiceInput;
+    }
     if (feature in ent.features) {
       return Boolean(ent.features[feature as keyof EntitlementFeatures]);
     }

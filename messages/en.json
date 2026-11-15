@@ -1158,7 +1158,9 @@
     "out_of_credits": "You are out of credits",
     "thinking_unavailable": "Think harder isn't available for this model",
     "owner_out_of_credits": "The workspace owner is out of credits",
-    "member_credit_cap": "You've used the monthly limit of {cap} credits the workspace owner set for you"
+    "member_credit_cap": "You've used the monthly limit of {cap} credits the workspace owner set for you",
+    "daily_voice_limit": "Daily voice input limit reached for your plan",
+    "unsupported_browser": "Voice input isn't supported in this browser"
   },
   "Models": {
     "text-economy": {
@@ -1173,8 +1175,27 @@
       "name": "Image Studio",
       "description": "High-resolution AI image synthesis from natural language descriptions."
     },
+    "audio-transcribe": {
+      "name": "Audio Transcription",
+      "description": "Fast voice and audio transcription."
+    },
     "creditHintMessage": "≈ {credits} credits per message",
     "creditHintImage": "≈ {credits} per image"
+  },
+  "Voice": {
+    "start": "Record voice prompt",
+    "stop": "Stop recording",
+    "cancel": "Cancel recording",
+    "recording": "Recording…",
+    "transcribing": "Transcribing…",
+    "inserted": "Transcription inserted",
+    "permissionDenied": "Microphone access was denied. Please allow microphone access in your browser settings to record voice prompts.",
+    "unsupported": "Voice input isn't supported in this browser",
+    "tooLong": "Maximum recording time is 2 minutes.",
+    "noSpeech": "No speech detected in audio",
+    "retry": "Retry",
+    "dailyLimit": "Daily voice input limit reached for your plan",
+    "error": "Failed to transcribe audio. Please try again."
   },
   "Members": {
     "errors": {

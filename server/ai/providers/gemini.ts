@@ -63,7 +63,7 @@ export class GeminiProvider implements AiProvider {
         if (p.type === "text") {
           return { text: p.text };
         }
-        if (p.type === "image" || p.type === "file") {
+        if (p.type === "image" || p.type === "file" || p.type === "audio") {
           const match = p.url.match(/^data:([^;]+);base64,(.+)$/);
           if (match && match[1] && match[2]) {
             return {

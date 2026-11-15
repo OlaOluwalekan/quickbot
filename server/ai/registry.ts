@@ -32,6 +32,11 @@ export const MODELS = {
     provider: "gemini" as const,
     providerModelId: env.GEMINI_IMAGE_MODEL,
   },
+  "audio-transcribe": {
+    ...MODEL_CATALOG["audio-transcribe"],
+    provider: "gemini" as const,
+    providerModelId: env.AI_TRANSCRIBE_MODEL || env.GEMINI_TEXT_MODEL_ECONOMY,
+  },
 } as const;
 
 export function isModelKey(key: string): key is ModelKey {

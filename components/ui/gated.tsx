@@ -52,6 +52,10 @@ function gateMessage(reason: GateReason, t: GateTranslator): string {
       return t("member_credit_cap", { cap: reason.cap });
     case "thinking_unavailable":
       return t("thinking_unavailable");
+    case "daily_voice_limit":
+      return t("daily_voice_limit");
+    case "unsupported_browser":
+      return t("unsupported_browser");
   }
 }
 
@@ -111,7 +115,9 @@ export function Gated({
   );
 
   const isUpgradable =
-    reason.code === "requires_plan" || reason.code === "out_of_credits";
+    reason.code === "requires_plan" ||
+    reason.code === "out_of_credits" ||
+    reason.code === "daily_voice_limit";
   const ariaLabel = isUpgradable
     ? `${message} · ${upgradeLabel}`
     : `${message}\u200B`;

@@ -405,11 +405,12 @@ enum GenKind {
   TITLE
   SPEECH
   DOCUMENT_REVIEW
+  TRANSCRIPTION
 }
 
 model Generation {
   id              String      @id @default(uuid(7))
-  workspaceId     String      @map("workspace_id")
+  workspaceId     String?     @map("workspace_id")
   responseId      String?     @map("response_id")
   versionId       String?     @map("version_id")
   actorId         String      @map("actor_id")
@@ -428,7 +429,7 @@ model Generation {
   finishedAt      DateTime?   @map("finished_at")
   createdAt       DateTime    @default(now()) @map("created_at")
 
-  workspace       Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace       Workspace?  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@unique([actorId, idempotencyKey])
   @@index([workspaceId, createdAt])

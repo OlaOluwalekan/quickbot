@@ -2,6 +2,7 @@ export type Part =
   | { type: "text"; text: string }
   | { type: "image"; url: string; mime: string }
   | { type: "file"; url: string; mime: string; name?: string }
+  | { type: "audio"; url: string; mime: string }
   | { type: "tool_call"; name: string; args: unknown; id?: string; thoughtSignature?: string }
   | { type: "tool_response"; name: string; response: unknown; id?: string };
 

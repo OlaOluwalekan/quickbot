@@ -5,7 +5,7 @@ import { env } from "@/server/env";
 
 // Bump to the latest migration name so dev hot-reload drops a client generated
 // against an older schema.
-const CURRENT_SCHEMA_VER = "20261107120000_add_notifications";
+const CURRENT_SCHEMA_VER = "20261115_transcription_kind";
 
 const make = () =>
   new PrismaClient({

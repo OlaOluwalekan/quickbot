@@ -1581,8 +1581,12 @@ export async function getGenerationStatus(actor: Actor, generationId: string) {
     throw Errors.notFound("Generation");
   }
 
-  // Enforce workspace.read access
-  await requireWorkspace(actor, gen.workspaceId, "workspace.read");
+  // Enforce access
+  if (gen.workspaceId) {
+    await requireWorkspace(actor, gen.workspaceId, "workspace.read");
+  } else if (gen.actorId !== actor.userId) {
+    throw Errors.forbidden();
+  }
 
   const active = activeGenerations.get(generationId);
   if (active) {
@@ -1638,7 +1642,11 @@ export async function cancelGeneration(actor: Actor, generationId: string) {
     throw Errors.notFound("Generation");
   }
 
-  await requireWorkspace(actor, gen.workspaceId, "workspace.generate");
+  if (gen.workspaceId) {
+    await requireWorkspace(actor, gen.workspaceId, "workspace.generate");
+  } else if (gen.actorId !== actor.userId) {
+    throw Errors.forbidden();
+  }
 
   if (gen.status !== "RUNNING" && gen.status !== "QUEUED") {
     return { success: true, status: gen.status };

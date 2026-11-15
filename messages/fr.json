@@ -1158,7 +1158,9 @@
     "out_of_credits": "Vous n'avez plus de crédits",
     "thinking_unavailable": "« Approfondir la réflexion » n'est pas disponible pour ce modèle",
     "owner_out_of_credits": "Le propriétaire de l'espace de travail n'a plus de crédits",
-    "member_credit_cap": "Vous avez utilisé la limite mensuelle de {cap} crédits que le propriétaire de l'espace de travail vous a fixée"
+    "member_credit_cap": "Vous avez utilisé la limite mensuelle de {cap} crédits que le propriétaire de l'espace de travail vous a fixée",
+    "daily_voice_limit": "Limite quotidienne de saisie vocale atteinte pour votre forfait",
+    "unsupported_browser": "La saisie vocale n'est pas prise en charge sur ce navigateur"
   },
   "Models": {
     "text-economy": {
@@ -1173,8 +1175,27 @@
       "name": "Studio d'Images",
       "description": "Génération d'images haute résolution à partir de descriptions en langage naturel."
     },
+    "audio-transcribe": {
+      "name": "Transcription Audio",
+      "description": "Transcription rapide de voix et audio."
+    },
     "creditHintMessage": "≈ {credits} crédits par message",
     "creditHintImage": "≈ {credits} par image"
+  },
+  "Voice": {
+    "start": "Enregistrer un message vocal",
+    "stop": "Arrêter l'enregistrement",
+    "cancel": "Annuler l'enregistrement",
+    "recording": "Enregistrement en cours…",
+    "transcribing": "Transcription en cours…",
+    "inserted": "Transcription insérée",
+    "permissionDenied": "L'accès au microphone a été refusé. Veuillez autoriser l'accès au micro dans les paramètres de votre navigateur pour enregistrer des messages vocaux.",
+    "unsupported": "La saisie vocale n'est pas prise en charge sur ce navigateur",
+    "tooLong": "La durée maximale d'enregistrement est de 2 minutes.",
+    "noSpeech": "Aucune voix détectée dans l'audio",
+    "retry": "Réessayer",
+    "dailyLimit": "Limite quotidienne de saisie vocale atteinte pour votre forfait",
+    "error": "Échec de la transcription audio. Veuillez réessayer."
   },
   "Members": {
     "errors": {
