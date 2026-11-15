@@ -1148,11 +1148,30 @@
   "Gates": {
     "requires_plan": "Disponible en el plan {plan} y superiores",
     "member_limit": "Tu plan permite hasta {limit} colaboradores",
+    "attachment_limit": "Límite de adjuntos del espacio de trabajo ({limit}) alcanzado",
     "daily_cap": "Has alcanzado tu límite diario para esta función",
     "no_permission": "No tienes permiso para {capability}",
     "max_depth": "Se alcanzó la profundidad máxima de hilo ({depth}). Promueve esta respuesta a un nuevo espacio para continuar.",
     "upgrade": "Mejorar plan",
-    "owner_plan": "El plan del propietario del espacio no incluye esto (disponible en {plan} y superiores)"
+    "owner_plan": "El plan del propietario del espacio no incluye esto (disponible en {plan} y superiores)",
+    "out_of_credits": "Te has quedado sin créditos",
+    "thinking_unavailable": "Los resúmenes de pensamiento no están disponibles para este modelo"
+  },
+  "Models": {
+    "text-economy": {
+      "name": "Rápido y Eficiente",
+      "description": "Respuestas rápidas para preguntas cotidianas, lluvia de ideas y resúmenes."
+    },
+    "text-standard": {
+      "name": "Razonamiento Estándar",
+      "description": "Pensamiento profundo y razonamiento en varios pasos para investigación y código complejos."
+    },
+    "image-standard": {
+      "name": "Estudio de Imágenes",
+      "description": "Síntesis de imágenes de alta resolución a partir de descripciones en lenguaje natural."
+    },
+    "creditHintMessage": "≈ {credits} créditos por mensaje",
+    "creditHintImage": "≈ {credits} por imagen"
   },
   "Members": {
     "errors": {

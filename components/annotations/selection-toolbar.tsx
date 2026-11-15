@@ -534,8 +534,10 @@ export function SelectionToolbar({
     ? { code: "no_permission", capability: "ask" }
     : metadata && metadata.depth + 1 > MAX_ANNOTATION_DEPTH
     ? { code: "max_depth", depth: MAX_ANNOTATION_DEPTH }
+    : isOutOfCredits
+    ? { code: "out_of_credits" }
     : null;
-  const askDisabled = Boolean(askGateReason) || isOutOfCredits;
+  const askDisabled = Boolean(askGateReason);
 
   const quoteSnippet = activeAnchor?.exact
     ? activeAnchor.exact.length > 60

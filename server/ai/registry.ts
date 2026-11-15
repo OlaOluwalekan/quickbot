@@ -1,72 +1,38 @@
 import "server-only";
 import { env } from "@/server/env";
 import { AiError } from "./types";
+import {
+  CREDIT_USD,
+  GROUNDING_SURCHARGE_CREDITS,
+  MODEL_CATALOG,
+  PLAN_RANKS,
+  creditsFor as catalogCreditsFor,
+  type ModelKey,
+  type PlanTier,
+  type PlanKey,
+  type TokenUsageInput,
+} from "@/lib/ai/model-catalog";
 
-export type PlanTier = "FREE" | "LITE" | "STANDARD" | "PRO";
-export type PlanKey = PlanTier;
-
-export const PLAN_RANKS: Record<PlanTier, number> = {
-  FREE: 0,
-  LITE: 1,
-  STANDARD: 2,
-  PRO: 3,
-};
+export type { PlanTier, PlanKey, ModelKey, TokenUsageInput };
+export { PLAN_RANKS, CREDIT_USD, GROUNDING_SURCHARGE_CREDITS };
 
 export const MODELS = {
   "text-economy": {
-    provider: "gemini",
+    ...MODEL_CATALOG["text-economy"],
+    provider: "gemini" as const,
     providerModelId: env.GEMINI_TEXT_MODEL_ECONOMY,
-    kind: "TEXT",
-    tier: "ECONOMY",
-    priceUsdPerM: { in: 0.25, out: 1.5 },
-    maxInput: 200_000,
-    caps: {
-      vision: true,
-      documents: true,
-      thinkingSummaries: true,
-      tools: true,
-      grounding: true,
-    },
-    minPlan: "FREE" as PlanTier,
   },
   "text-standard": {
-    provider: "gemini",
+    ...MODEL_CATALOG["text-standard"],
+    provider: "gemini" as const,
     providerModelId: env.GEMINI_TEXT_MODEL_STANDARD,
-    kind: "TEXT",
-    tier: "STANDARD",
-    priceUsdPerM: { in: 1.5, out: 7.5 },
-    maxInput: 1_000_000,
-    caps: {
-      vision: true,
-      documents: true,
-      thinkingSummaries: true,
-      tools: true,
-      grounding: true,
-    },
-    minPlan: "LITE" as PlanTier,
   },
   "image-standard": {
-    provider: "gemini",
+    ...MODEL_CATALOG["image-standard"],
+    provider: "gemini" as const,
     providerModelId: env.GEMINI_IMAGE_MODEL,
-    kind: "IMAGE",
-    tier: "STANDARD",
-    priceUsdPerImage: 0.067,
-    maxInput: 2_000,
-    caps: {
-      vision: false,
-      documents: false,
-      thinkingSummaries: false,
-      tools: false,
-      grounding: false,
-    },
-    minPlan: "LITE" as PlanTier,
   },
 } as const;
-
-export type ModelKey = keyof typeof MODELS;
-
-export const CREDIT_USD = 0.002;
-export const GROUNDING_SURCHARGE_CREDITS = 3;
 
 export function isModelKey(key: string): key is ModelKey {
   return key in MODELS;
@@ -106,36 +72,6 @@ export function assertModelAccess(
   return model;
 }
 
-export interface TokenUsageInput {
-  inputTokens?: number;
-  outputTokens?: number;
-  thoughtTokens?: number;
-  images?: number;
-  grounding?: boolean;
-  searches?: number;
-}
-
 export function creditsFor(modelKey: string, u: TokenUsageInput = {}): number {
-  const model = getModel(modelKey);
-
-  let costUsd = 0;
-  if (model.kind === "TEXT" && "priceUsdPerM" in model) {
-    const inputCount = u.inputTokens ?? 0;
-    // Note: Thinking tokens bill as output tokens
-    const outputCount = (u.outputTokens ?? 0) + (u.thoughtTokens ?? 0);
-    costUsd =
-      (inputCount * model.priceUsdPerM.in + outputCount * model.priceUsdPerM.out) /
-      1_000_000;
-  } else if (model.kind === "IMAGE" && "priceUsdPerImage" in model) {
-    const imagesCount = u.images ?? 1;
-    costUsd = imagesCount * model.priceUsdPerImage;
-  }
-
-  const baseCredits = Math.max(1, Math.ceil(costUsd / CREDIT_USD));
-  const searchCount =
-    u.searches !== undefined ? u.searches : u.grounding ? 1 : 0;
-  const surcharge =
-    model.kind === "TEXT" ? searchCount * GROUNDING_SURCHARGE_CREDITS : 0;
-
-  return baseCredits + surcharge;
+  return catalogCreditsFor(modelKey, u);
 }

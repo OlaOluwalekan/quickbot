@@ -32,6 +32,8 @@ function gateMessage(reason: GateReason, t: GateTranslator): string {
       });
     case "member_limit":
       return t("member_limit", { limit: reason.limit });
+    case "attachment_limit":
+      return t("attachment_limit", { limit: reason.limit });
     case "daily_cap":
       return t("daily_cap");
     case "no_permission":
@@ -42,6 +44,10 @@ function gateMessage(reason: GateReason, t: GateTranslator): string {
       return t("owner_plan", {
         plan: PLANS[reason.plan]?.name ?? reason.plan,
       });
+    case "out_of_credits":
+      return t("out_of_credits");
+    case "thinking_unavailable":
+      return t("thinking_unavailable");
   }
 }
 
@@ -100,10 +106,11 @@ export function Gated({
     }
   );
 
-  const ariaLabel =
-    reason.code === "requires_plan"
-      ? `${message} · ${upgradeLabel}`
-      : `${message}\u200B`;
+  const isUpgradable =
+    reason.code === "requires_plan" || reason.code === "out_of_credits";
+  const ariaLabel = isUpgradable
+    ? `${message} · ${upgradeLabel}`
+    : `${message}\u200B`;
 
   return (
     <Tooltip open={open} onOpenChange={setOpen}>
@@ -142,7 +149,7 @@ export function Gated({
         onMouseLeave={scheduleClose}
       >
         <span>{message}</span>
-        {reason.code === "requires_plan" && (
+        {isUpgradable && (
           <Link
             href="/pricing"
             className="font-semibold text-accent underline underline-offset-2 hover:opacity-80"

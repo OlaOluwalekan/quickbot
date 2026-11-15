@@ -38,6 +38,9 @@ import {
   type TemplateCategory,
 } from "@/lib/templates/starter-library";
 import { Button } from "@/components/ui/button";
+import { useEntitlements } from "@/lib/api/hooks/entitlements";
+import { getGateReason } from "@/lib/entitlements/shared";
+import { Gated } from "@/components/ui/gated";
 
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string; strokeWidth?: number }>> = {
   PenLine,
@@ -75,6 +78,8 @@ export interface StarterLibraryProps {
 export function StarterLibrary({ onUseTemplate }: StarterLibraryProps) {
   const tHome = useTranslations("Home");
   const tTemplates = useTranslations("Templates");
+  const { entitlements } = useEntitlements();
+  const imageGateReason = getGateReason(entitlements, "images");
   const [activeCategory, setActiveCategory] =
     React.useState<TemplateCategory>("write");
 
@@ -142,15 +147,21 @@ export function StarterLibrary({ onUseTemplate }: StarterLibraryProps) {
               </div>
 
               <div className="pt-2 border-t border-border/50 flex justify-end">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => onUseTemplate(template)}
-                  className="text-xs h-8 gap-1.5 font-medium"
-                >
-                  <span>{tHome("useTemplate")}</span>
-                </Button>
+                <Gated reason={template.mode === "image" ? imageGateReason : null}>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      if (template.mode !== "image" || !imageGateReason) {
+                        onUseTemplate(template);
+                      }
+                    }}
+                    className="text-xs h-8 gap-1.5 font-medium"
+                  >
+                    <span>{tHome("useTemplate")}</span>
+                  </Button>
+                </Gated>
               </div>
             </div>
           );

@@ -1148,11 +1148,30 @@
   "Gates": {
     "requires_plan": "Disponible à partir du forfait {plan}",
     "member_limit": "Votre forfait autorise jusqu'à {limit} collaborateurs",
+    "attachment_limit": "Limite de pièces jointes de l'espace de travail ({limit}) atteinte",
     "daily_cap": "Vous avez atteint votre limite quotidienne pour cette fonctionnalité",
     "no_permission": "Vous n'avez pas la permission pour {capability}",
     "max_depth": "Profondeur maximale de fil atteinte ({depth}). Promouvez cette réponse dans un nouvel espace pour continuer.",
     "upgrade": "Mettre à niveau",
-    "owner_plan": "Le forfait du propriétaire de l'espace n'inclut pas cette option (disponible à partir de {plan})"
+    "owner_plan": "Le forfait du propriétaire de l'espace n'inclut pas cette option (disponible à partir de {plan})",
+    "out_of_credits": "Vous n'avez plus de crédits",
+    "thinking_unavailable": "Les résumés de réflexion ne sont pas disponibles pour ce modèle"
+  },
+  "Models": {
+    "text-economy": {
+      "name": "Rapide et Efficace",
+      "description": "Réponses rapides pour les questions courantes, le brainstorming et les résumés."
+    },
+    "text-standard": {
+      "name": "Raisonnement Standard",
+      "description": "Réflexion approfondie et raisonnement complexe pour la recherche et le code."
+    },
+    "image-standard": {
+      "name": "Studio d'Images",
+      "description": "Génération d'images haute résolution à partir de descriptions en langage naturel."
+    },
+    "creditHintMessage": "≈ {credits} crédits par message",
+    "creditHintImage": "≈ {credits} par image"
   },
   "Members": {
     "errors": {

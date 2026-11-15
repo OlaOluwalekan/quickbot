@@ -56,6 +56,8 @@ export interface DocumentCardProps {
   canAsk?: boolean;
   /** False when the member may not export (no `workspace.export`). The server re-checks. */
   canExport?: boolean;
+  /** The member lacks credits. */
+  isOutOfCredits?: boolean;
   /** People who can open the workspace: review comments are shared by default when > 1. */
   memberCount?: number;
   onDelete?: (responseId: string) => void;
@@ -102,6 +104,7 @@ export function DocumentCard({
   canEdit = true,
   canAsk = true,
   canExport = true,
+  isOutOfCredits = false,
   memberCount = 1,
   onDelete,
   className,
@@ -542,6 +545,7 @@ export function DocumentCard({
             versionId={activeVersionId}
             responseId={response.id}
             canAsk={canAsk}
+            isOutOfCredits={isOutOfCredits}
             hasDraft={Boolean(draft)}
             hasMembers={memberCount > 1}
           />

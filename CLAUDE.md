@@ -12,7 +12,7 @@ Context for Claude Code sessions in this repository. Read this first, then the g
 2. `quick_implementation_fix_for_v2.md` — the **interlude** (steps `F0.1` → `F5.10`). Do these **before** main-guide Step 8.1.
 3. Then main-guide Steps **8.1 → 10.6**. Read each step's **"↳ After the interlude"** block, which changes the step. Step 10.7 (per-language marketing URLs) comes after launch.
 
-Each step = one PR. Implement **only** the step you were asked for. Follow its *Update / Create / Schema / Env / i18n / Done when* fields. If the code disagrees with a guide (paths, names), check the live code, follow its intent, and say so in the PR.
+Each step = one PR. Implement **only** the step you were asked for. Follow its _Update / Create / Schema / Env / i18n / Done when_ fields. If the code disagrees with a guide (paths, names), check the live code, follow its intent, and say so in the PR.
 
 ## Workflow
 
@@ -26,28 +26,33 @@ Each step = one PR. Implement **only** the step you were asked for. Follow its *
 ```bash
 npm run lint
 ```
+
 ```bash
 npm run typecheck
 ```
+
 ```bash
 npm test -- --ci
 ```
+
 ```bash
 npm run build
 ```
+
 ```bash
 npm run verify
 ```
+
 `verify` runs everything (it needs Docker for Postgres). Use `npm run db:migrate` to create migrations (`--create-only` when hand-editing SQL). Never edit a migration that's already merged. `check:i18n` exists once interlude F5.1 is merged.
 
 CI and `verify` fail when `schema.prisma` and the migrations disagree (`prisma migrate diff --exit-code`). If that check fails, the schema was changed without a migration (or with `prisma db push`): create the missing migration.
 
 **Open review items carried forward from F2.2 (PR #111, 2026-11-10), F2.4 (PR #113, 2026-11-10), F2.5 (PR #114, 2026-11-11), F2.6 (PR #115, 2026-11-11), F2.7 (PR #116, 2026-11-11), F3.3 (PR #120, 2026-11-13), F4.2 (PR #124, 2026-11-14) and F4.3 (PR #125, 2026-11-15).** When reviewing the step named in each item, check whether it's fixed; if not, fix it in that step's PR. Once that step's review is done and the item is fixed, **delete the item from this file** (and delete this whole block when it's empty).
 
-- **Check in Step 8.1 — collaboration limits per plan** (owner decided 2026-11-14, no real users yet). To stop one paid plan being shared by a group: **Free and Lite: no collaboration** (0 collaborators; Lite is 2 today), **Standard: 3** (5 today), **Pro: 5** (15 today). Count **distinct people across all the owner's workspaces and projects**, not per workspace (today the limit is per workspace or project, so an owner could invite 3 different people into each workspace). Update `server/billing/plans.ts` (`limits.members` and the `features` lines), the pricing page, FAQ, help articles, the over-limit notice (`messages/*.json`, "per workspace or project") and the tests together; members above the new limit follow the existing 14-day grace → suspension rule. A seat-based team plan is in `OPEN_DECISIONS.md` §3.
+- **Check in Step 8.1 — collaboration limits per plan** (owner decided 2026-11-14, no real users yet). To stop one paid plan being shared by a group: **Free and Lite: no collaboration** (0 collaborators; Lite is 2 today), **Standard: 1** (5 today), **Pro: 3** (15 today). Count **distinct people across all the owner's workspaces and projects**, not per workspace (today the limit is per workspace or project, so an owner could invite 3 different people into each workspace). Update `server/billing/plans.ts` (`limits.members` and the `features` lines), the pricing page, FAQ, help articles, the over-limit notice (`messages/*.json`, "per workspace or project") and the tests together; members above the new limit follow the existing 14-day grace → suspension rule. A seat-based team plan is in `OPEN_DECISIONS.md` §3.
 - **Check in Step 8.1 — the credits card's plan and buttons** (found in F4.2). `components/home/credits-card.tsx` (home page and Settings) always shows the plan as **"Free"**: `toHomeCredits()` in `server/services/home.ts` hard-codes it. Read the real plan from the entitlements source instead. Its **"Upgrade plan" / "Manage plan"** button shows even when `BILLING_ENABLED` is off (rule 9) and only links to `/settings` (on Settings it is hidden with `showPlanAction={false}`). Show the button only when billing is on, and point it at the real plan / billing page.
 - **Check in Step 8.1 — Upgrade links while billing is off** (found in F4.3). Every plan gate shows an **"Upgrade"** link to `/pricing` even when `BILLING_ENABLED` is off (rule 9): the `<Gated>` tooltip (`components/ui/gated.tsx`) and the composer's image notice (`imageLockedNotice` in `components/workspace/composer.tsx`). Settle it for all gates at once: with billing off, keep the reason text ("Available on the Lite plan and above") but drop the Upgrade link (`useSiteConfig().billingEnabled`); with billing on, point it at the real plan / billing page.
-- **Check in F4.4 — the Create image tab and image templates on Free** (found in F4.3). The composer's **Create image** tab is still clickable on Free; F4.4 gates it with `<Gated>` (`requires_plan`). F4.3 already handles image *templates*: on a plan without images, the prompt is inserted, Chat stays selected and an inline notice explains why (`imageLockedNotice`). When gating the tab and the template cards (`starter-library.tsx`), keep both consistent: one lock reason / plan name and the same Upgrade behaviour as the Step 8.1 item above.
+- **Check in F4.4 — the Create image tab and image templates on Free** (found in F4.3). The composer's **Create image** tab is still clickable on Free; F4.4 gates it with `<Gated>` (`requires_plan`). F4.3 already handles image _templates_: on a plan without images, the prompt is inserted, Chat stays selected and an inline notice explains why (`imageLockedNotice`). When gating the tab and the template cards (`starter-library.tsx`), keep both consistent: one lock reason / plan name and the same Upgrade behaviour as the Step 8.1 item above.
 - **Check in Step 9.5 — account deletion uses `softDeleteUser()`.** `server/services/account-deletion.ts` only does the data part (sets `User.deletedAt`, soft-deletes the person's Klecx notes). Nothing calls it yet and nothing reads `User.deletedAt`: a deleted account can still sign in and is still listed as a member / mentionable. Step 9.5 must build the flow around it (fresh login, revoke sessions, block sign-in, ownership transfer, grace period) and decide what cancelling the deletion restores (the notes carry the same `deletedAt` as the user).
 - **Check in F3.x — view-only projects when promoting** (owner decided 2026-11-11). "New workspace" in an Ask column lists every project the person belongs to (`GET /api/v1/projects`), including projects where they can only view. Picking one of those ends in a 403 and a toast. Keep listing all of them, but grey out the view-only ones with a tooltip ("You have view-only access to this project"), using `<Gated>`. The list has no role per project yet: add the caller's role or capabilities to each row on the server, then gate on it.
 - **Check in F5.7 — help articles for F3.1 – F3.3.** No help article describes workspace documents, "Ask Klecx to review", accepting a fix from the highlight, or the Download menu (original file / edited version). Write them with the other help fixes, in `en`, `es` and `fr`.

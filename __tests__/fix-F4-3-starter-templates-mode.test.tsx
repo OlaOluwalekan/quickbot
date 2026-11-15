@@ -1,6 +1,7 @@
 import React from "react";
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { WorkspaceHome } from "@/components/home/workspace-home";
+import { Composer } from "@/components/workspace/composer";
 import { NextIntlClientProvider, createTranslator } from "next-intl";
 import QueryProvider, { createAppQueryClient } from "@/components/providers/query-provider";
 import { useUiStore } from "@/lib/stores/ui";
@@ -208,33 +209,55 @@ describe("Step F4.3 — Starter templates switch composer mode", () => {
   });
 
   describe("3. Plan-Gating when Image Mode is Locked (Free Plan)", () => {
-    it("still inserts the prompt, keeps text mode, and displays an inline notice with Upgrade link", async () => {
+    it("gates image template in starter library and Composer preserves prompt, keeps text mode on image prefill", async () => {
       renderHome("FREE");
 
       const composer = screen.getByRole("region", { name: "Composer" });
       const starter = document.getElementById("starter-library-section")!;
-      const textarea = within(composer).getByPlaceholderText(
-        /What would you like to explore, draft, or build today/i
-      ) as HTMLTextAreaElement;
 
-      // Select image category and template
+      // 1. In StarterLibrary, image template is directly gated (F4.4)
       const imageCatBtn = within(starter).getByRole("button", { name: /^Create image$/i });
       fireEvent.click(imageCatBtn);
 
       const useBtns = within(starter).getAllByRole("button", { name: /Use Template/i });
-      fireEvent.click(useBtns[0]!); // Studio Portrait
+      const firstUseBtn = useBtns[0]!;
+      expect(firstUseBtn.closest("[data-gated='requires_plan']")).toBeInTheDocument();
+      expect(firstUseBtn).toHaveAttribute("aria-disabled", "true");
 
-      // 1. Prompt is still inserted
+      // 2. When an image prefill is applied to Composer on Free plan,
+      // it still inserts the prompt, keeps Chat mode, and displays the inline notice with Upgrade link
+      const queryClient = createAppQueryClient();
+      queryClient.setQueryData(["me", "entitlements"], entitlementsForPlan("FREE"));
+
+      const composerResult = render(
+        <NextIntlClientProvider locale="en" messages={enMessages}>
+          <QueryProvider client={queryClient}>
+            <Composer
+              prefill={{
+                prompt: "Studio portrait of {{subject}}",
+                mode: "image",
+                nonce: 42,
+              }}
+            />
+          </QueryProvider>
+        </NextIntlClientProvider>
+      );
+
+      const textarea = composerResult.container.querySelector(
+        "#composer-textarea"
+      ) as HTMLTextAreaElement;
+
+      // Prompt is inserted
       await waitFor(() => {
         expect(textarea.value).toContain("{{subject}}");
       });
 
-      // 2. Chat mode is kept (not switched to image mode)
-      const chatTab = within(composer).getByRole("button", { name: /^Chat$/i });
+      // Chat mode is kept (not switched to image mode)
+      const chatTab = within(composerResult.container).getByRole("button", { name: /^Chat$/i });
       expect(chatTab).toHaveAttribute("aria-pressed", "true");
 
-      // 3. Inline notice is displayed with Upgrade link
-      const message = await within(composer).findByText(/Image generation is available/);
+      // Inline notice is displayed with Upgrade link
+      const message = await within(composerResult.container).findByText(/Image generation is available/);
       const notice = message.closest<HTMLElement>('[role="status"]')!;
       expect(notice).not.toBeNull();
       expect(notice).toHaveTextContent(

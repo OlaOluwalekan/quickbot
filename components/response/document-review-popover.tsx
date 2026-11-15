@@ -32,6 +32,8 @@ export interface DocumentReviewProps {
   canAsk?: boolean;
   /** The text has unsaved changes: a review reads the saved text. */
   hasDraft?: boolean;
+  /** The member lacks credits for a review run. */
+  isOutOfCredits?: boolean;
   /** Other people can open the workspace: findings are shared by default. */
   hasMembers?: boolean;
   /**
@@ -61,6 +63,7 @@ export function DocumentReview({
   documentId,
   responseId,
   canAsk = true,
+  isOutOfCredits = false,
   hasDraft = false,
   hasMembers = false,
   mode = "popover",
@@ -83,6 +86,12 @@ export function DocumentReview({
     },
     [onOpenChange]
   );
+
+  const reviewGateReason: GateReason | null = !canAsk
+    ? { code: "no_permission", capability: t("capAskReview") }
+    : isOutOfCredits
+    ? { code: "out_of_credits" }
+    : null;
 
   const [preset, setPreset] = React.useState<ReviewPreset>("errors");
   const [instruction, setInstruction] = React.useState("");
@@ -280,16 +289,12 @@ export function DocumentReview({
           >
             {t("cancel")}
           </Button>
-          <Gated
-            reason={
-              canAsk ? null : { code: "no_permission", capability: t("capAskReview") }
-            }
-          >
+          <Gated reason={reviewGateReason}>
             <Button
               type="button"
               size="sm"
               onClick={handleStart}
-              disabled={isRunning || needsInstruction}
+              disabled={isRunning || needsInstruction || Boolean(reviewGateReason)}
               className="h-7 px-3 text-xs gap-1.5 bg-accent text-accent-foreground hover:bg-accent/90"
               data-testid="start-review-btn"
             >
@@ -318,23 +323,30 @@ export function DocumentReview({
 
   return (
     <div className={className}>
-      <Popover open={isOpen} onOpenChange={setOpen}>
+      <Popover
+        open={isOpen && !reviewGateReason}
+        onOpenChange={(next) => {
+          if (!reviewGateReason) setOpen(next);
+        }}
+      >
         <PopoverTrigger asChild>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            disabled={isRunning}
-            className="h-7 gap-1.5 px-2 text-xs text-muted hover:text-foreground"
-            data-testid="ask-klecx-review-trigger"
-          >
-            {isRunning ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin text-accent" />
-            ) : (
-              <Sparkles className="h-3.5 w-3.5 text-accent" />
-            )}
-            <span>{isRunning ? t("reviewing") : t("askKlecxReview")}</span>
-          </Button>
+          <Gated reason={reviewGateReason}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={isRunning || Boolean(reviewGateReason)}
+              className="h-7 gap-1.5 px-2 text-xs text-muted hover:text-foreground"
+              data-testid="ask-klecx-review-trigger"
+            >
+              {isRunning ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-accent" />
+              ) : (
+                <Sparkles className="h-3.5 w-3.5 text-accent" />
+              )}
+              <span>{isRunning ? t("reviewing") : t("askKlecxReview")}</span>
+            </Button>
+          </Gated>
         </PopoverTrigger>
         <PopoverContent
           align="start"

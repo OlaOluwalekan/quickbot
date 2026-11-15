@@ -479,6 +479,7 @@ export function WorkspaceView({
   const canPromoteToTimeline = workspace.capabilities
     ? workspace.capabilities.includes("workspace.generate")
     : undefined;
+  const canGenerate = canPromoteToTimeline ?? true;
   const canEditResponse = workspace.capabilities
     ? workspace.capabilities.includes("workspace.edit_response")
     : true;
@@ -570,6 +571,7 @@ export function WorkspaceView({
             <Composer
               workspaceId={workspace.id}
               userId={actor.userId}
+              canGenerate={canGenerate}
               size="compact"
               className="vt-composer shadow-lg"
               onCompleted={(data, prompt) =>

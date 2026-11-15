@@ -36,11 +36,13 @@ export type Entitlements = {
 export type GateReason =
   | { code: "requires_plan"; plan: PlanKey }
   | { code: "member_limit"; limit: number }
+  | { code: "attachment_limit"; limit: number }
   | { code: "daily_cap" }
   | { code: "no_permission"; capability: string }
   | { code: "max_depth"; depth: number }
-  /** The workspace owner's plan doesn't include it (the viewer can't upgrade it). */
-  | { code: "owner_plan"; plan: PlanKey };
+  | { code: "owner_plan"; plan: PlanKey }
+  | { code: "out_of_credits" }
+  | { code: "thinking_unavailable" };
 
 export type GateableFeature =
   | keyof EntitlementFeatures

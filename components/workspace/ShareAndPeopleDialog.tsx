@@ -32,6 +32,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useEntitlements } from "@/lib/api/hooks/entitlements";
+import { Gated } from "@/components/ui/gated";
+import type { GateReason } from "@/lib/entitlements/shared";
 import {
   Select,
   SelectContent,
@@ -261,6 +264,14 @@ export function ShareAndPeopleDialog({
   const [sendingInvite, setSendingInvite] = React.useState(false);
   const [pendingInvites, setPendingInvites] = React.useState<PendingInvite[]>([]);
   const [loadingInvites, setLoadingInvites] = React.useState(false);
+
+  const { entitlements } = useEntitlements();
+  const memberLimit = entitlements.limits.members;
+  const isMemberLimitReached =
+    memberLimit === 0 || members.length + pendingInvites.length >= memberLimit;
+  const inviteGateReason: GateReason | null = isMemberLimitReached
+    ? { code: "member_limit", limit: memberLimit }
+    : null;
 
   // Public Share Links state (Step 7.6)
   const [shareLinks, setShareLinks] = React.useState<ShareLinkItem[]>([]);
@@ -899,21 +910,23 @@ export function ShareAndPeopleDialog({
               {isOwner && <SelectItem value="ADMIN">Admin</SelectItem>}
             </SelectContent>
           </Select>
-          <Button
-            type="submit"
-            size="sm"
-            disabled={sendingInvite}
-            className="h-9 px-4 gap-1.5"
-          >
-            {sendingInvite ? (
-              <Spinner className="h-3.5 w-3.5" />
-            ) : (
-              <>
-                <UserPlus className="h-3.5 w-3.5" />
-                <span>Invite</span>
-              </>
-            )}
-          </Button>
+          <Gated reason={inviteGateReason}>
+            <Button
+              type="submit"
+              size="sm"
+              disabled={sendingInvite || isMemberLimitReached}
+              className="h-9 px-4 gap-1.5"
+            >
+              {sendingInvite ? (
+                <Spinner className="h-3.5 w-3.5" />
+              ) : (
+                <>
+                  <UserPlus className="h-3.5 w-3.5" />
+                  <span>Invite</span>
+                </>
+              )}
+            </Button>
+          </Gated>
         </div>
       </div>
       <p className="text-[11px] text-subtle">

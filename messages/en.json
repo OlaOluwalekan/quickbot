@@ -1148,11 +1148,30 @@
   "Gates": {
     "requires_plan": "Available on the {plan} plan and above",
     "member_limit": "Your plan allows up to {limit} collaborators",
+    "attachment_limit": "Workspace attachment limit ({limit}) reached",
     "daily_cap": "You have reached your daily limit for this feature",
     "no_permission": "You do not have permission to {capability}",
     "max_depth": "Maximum thread depth ({depth}) reached. Promote this answer to a new workspace to continue.",
     "upgrade": "Upgrade",
-    "owner_plan": "The workspace owner's plan doesn't include this (available on {plan} and above)"
+    "owner_plan": "The workspace owner's plan doesn't include this (available on {plan} and above)",
+    "out_of_credits": "You are out of credits",
+    "thinking_unavailable": "Thinking summaries are not available for this model"
+  },
+  "Models": {
+    "text-economy": {
+      "name": "Fast & Efficient",
+      "description": "Quick responses for everyday questions, brainstorming, and summaries."
+    },
+    "text-standard": {
+      "name": "Standard Reasoning",
+      "description": "Deep thinking and multi-step reasoning for complex research and code."
+    },
+    "image-standard": {
+      "name": "Image Studio",
+      "description": "High-resolution AI image synthesis from natural language descriptions."
+    },
+    "creditHintMessage": "≈ {credits} credits per message",
+    "creditHintImage": "≈ {credits} per image"
   },
   "Members": {
     "errors": {
