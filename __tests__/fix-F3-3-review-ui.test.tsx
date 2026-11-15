@@ -223,10 +223,12 @@ describe("Step F3.3 UI — review and quick fixes", () => {
       renderWithProviders(
         <DocumentReview versionId="ver-1" responseId="resp-1" canAsk={false} />
       );
-      fireEvent.click(screen.getByTestId("ask-klecx-review-trigger"));
-      const start = screen.getByTestId("start-review-btn");
-      expect(start).toHaveAttribute("aria-disabled", "true");
-      fireEvent.click(start);
+      // F4.4: the trigger itself is disabled with the reason; nothing opens.
+      const trigger = screen.getByTestId("ask-klecx-review-trigger");
+      expect(trigger).toHaveAttribute("aria-disabled", "true");
+      expect(trigger.closest("[data-gated='no_permission']")).not.toBeNull();
+      fireEvent.click(trigger);
+      expect(screen.queryByTestId("start-review-btn")).toBeNull();
       expect(mockStreamDocumentReview).not.toHaveBeenCalled();
     });
 

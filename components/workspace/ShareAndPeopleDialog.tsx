@@ -32,6 +32,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Gated } from "@/components/ui/gated";
+import type { GateReason } from "@/lib/entitlements/shared";
 import {
   Select,
   SelectContent,
@@ -262,6 +264,21 @@ export function ShareAndPeopleDialog({
   const [pendingInvites, setPendingInvites] = React.useState<PendingInvite[]>([]);
   const [loadingInvites, setLoadingInvites] = React.useState(false);
 
+  // F4.4: from the members list, counted on the server with the owner's plan
+  // (the same count as the invite check). Unknown = allowed; the server re-checks.
+  const [inviteCapacity, setInviteCapacity] = React.useState<{
+    limit: number;
+    used: number;
+    inGrace: boolean;
+  } | null>(null);
+  const isMemberLimitReached = Boolean(
+    inviteCapacity && (inviteCapacity.inGrace || inviteCapacity.used >= inviteCapacity.limit)
+  );
+  const inviteGateReason: GateReason | null =
+    inviteCapacity && isMemberLimitReached
+      ? { code: "member_limit", limit: inviteCapacity.limit }
+      : null;
+
   // Public Share Links state (Step 7.6)
   const [shareLinks, setShareLinks] = React.useState<ShareLinkItem[]>([]);
   const [loadingShares, setLoadingShares] = React.useState(false);
@@ -345,6 +362,7 @@ export function ShareAndPeopleDialog({
         setIsOwner(Boolean(data?.isOwner));
         setGraceInfo(data?.grace ?? null);
         setOutgoingTransfer(data?.outgoingTransfer ?? null);
+        setInviteCapacity(data?.inviteCapacity ?? null);
       }
     } catch {
       setMembersError(true);
@@ -416,7 +434,7 @@ export function ShareAndPeopleDialog({
   const handleSendInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     const input = emailOrUsername.trim();
-    if (!input || sendingInvite) return;
+    if (!input || sendingInvite || isMemberLimitReached) return;
 
     setSendingInvite(true);
     try {
@@ -432,6 +450,7 @@ export function ShareAndPeopleDialog({
       toast.success("Invitation sent");
       setEmailOrUsername("");
       fetchInvites();
+      fetchMembers();
       fetchActivity();
     } catch (err: unknown) {
       const msg =
@@ -453,6 +472,7 @@ export function ShareAndPeopleDialog({
       }
       toast.success("Invitation revoked");
       setPendingInvites((prev) => prev.filter((i) => i.id !== inviteId));
+      fetchMembers();
       fetchActivity();
     } catch (err: unknown) {
       const msg =
@@ -899,21 +919,23 @@ export function ShareAndPeopleDialog({
               {isOwner && <SelectItem value="ADMIN">Admin</SelectItem>}
             </SelectContent>
           </Select>
-          <Button
-            type="submit"
-            size="sm"
-            disabled={sendingInvite}
-            className="h-9 px-4 gap-1.5"
-          >
-            {sendingInvite ? (
-              <Spinner className="h-3.5 w-3.5" />
-            ) : (
-              <>
-                <UserPlus className="h-3.5 w-3.5" />
-                <span>Invite</span>
-              </>
-            )}
-          </Button>
+          <Gated reason={inviteGateReason}>
+            <Button
+              type="submit"
+              size="sm"
+              disabled={sendingInvite || isMemberLimitReached}
+              className="h-9 px-4 gap-1.5"
+            >
+              {sendingInvite ? (
+                <Spinner className="h-3.5 w-3.5" />
+              ) : (
+                <>
+                  <UserPlus className="h-3.5 w-3.5" />
+                  <span>Invite</span>
+                </>
+              )}
+            </Button>
+          </Gated>
         </div>
       </div>
       <p className="text-[11px] text-subtle">

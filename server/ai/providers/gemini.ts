@@ -76,11 +76,12 @@ export class GeminiProvider implements AiProvider {
               name: p.name,
               args: (p.args as Record<string, unknown>) || {},
             },
+            // Thinking models need the signature of their own call back.
+            // Gemini strictly validates thought_signature on functionCall parts in multi-turn tool loops.
+            // When none was captured or provided, pass the Google-supported bypass token to prevent 400.
+            thoughtSignature:
+              p.thoughtSignature || "skip_thought_signature_validator",
           };
-          // Thinking models need the signature of their own call back.
-          if (p.thoughtSignature) {
-            callPart.thoughtSignature = p.thoughtSignature;
-          }
           return callPart;
         }
         if (p.type === "tool_response") {
@@ -171,7 +172,12 @@ export class GeminiProvider implements AiProvider {
         // 1. Check parts for thoughts, text, and tool calls
         if (candidate?.content?.parts) {
           for (const part of candidate.content.parts) {
-            const partSig = part.thoughtSignature;
+            const rawPart = part as Record<string, any>;
+            const partSig: string | undefined =
+              rawPart.thoughtSignature ||
+              rawPart.thought_signature ||
+              rawPart.functionCall?.thoughtSignature ||
+              rawPart.functionCall?.thought_signature;
 
             if (partSig) {
               latestThoughtSignature = partSig;
@@ -188,7 +194,11 @@ export class GeminiProvider implements AiProvider {
             }
 
             if (part.functionCall) {
-              const toolSig = partSig || latestThoughtSignature;
+              const toolSig =
+                partSig ||
+                rawPart.functionCall?.thoughtSignature ||
+                rawPart.functionCall?.thought_signature ||
+                latestThoughtSignature;
               yield {
                 type: "tool_call",
                 name: part.functionCall.name,

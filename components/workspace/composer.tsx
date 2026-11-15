@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { QueryClientContext } from "@tanstack/react-query";
+import { QueryClientContext, useQuery } from "@tanstack/react-query";
 import { useUiStore } from "@/lib/stores/ui";
 import { useGenerationStore } from "@/lib/stores/generation";
 import { api, ApiClientError } from "@/lib/api/client";
@@ -37,13 +37,21 @@ import {
 } from "@/lib/documents/workspace-document-types";
 import { uploadAttachment } from "@/lib/api/attachments";
 import { navigateWithTransition } from "@/lib/navigation/view-transition";
-import { CLIENT_MODELS, type ClientModelOption } from "@/lib/ai/client-models";
+import { getClientModels, type ClientModelOption } from "@/lib/ai/model-catalog";
 import type { WorkspaceDto } from "@/lib/api/hooks/workspaces";
+import { queryKeys } from "@/lib/api/hooks/query-keys";
 import { useEntitlements } from "@/lib/api/hooks/entitlements";
-import { canUse, PLAN_ORDER } from "@/lib/entitlements/shared";
+import {
+  canUse,
+  creditsGateReason,
+  getGateReason,
+  PLAN_ORDER,
+  type GateReason,
+} from "@/lib/entitlements/shared";
 import { PLANS } from "@/server/billing/plans";
-import { useUserPreferences } from "@/lib/api/hooks/me";
+import { getIdleQueryClient, useUserPreferences } from "@/lib/api/hooks/me";
 import { QuestionQueuePopover } from "@/components/workspace/question-queue-popover";
+import { Gated } from "@/components/ui/gated";
 import {
   Popover,
   PopoverContent,
@@ -88,6 +96,8 @@ export interface ComposerProps {
   credits?: { plan: string; balance: number };
   /** Signed-in user: reads their preferences (the "web search is off" line). */
   userId?: string;
+  /** Whether the actor holds `workspace.generate` permission (defaults to true). */
+  canGenerate?: boolean;
 }
 
 export interface ComposerAttachment {
@@ -116,11 +126,13 @@ export function Composer({
   onStop,
   credits,
   userId,
+  canGenerate = true,
 }: ComposerProps) {
   const t = useTranslations("Chat");
   const tHome = useTranslations("Home");
   const tDocs = useTranslations("Documents");
   const tGates = useTranslations("Gates");
+  const tModels = useTranslations("Models");
   const router = useRouter();
   const queryClient = React.useContext(QueryClientContext);
   const targetWorkspaceIdRef = React.useRef<string | null>(null);
@@ -135,8 +147,9 @@ export function Composer({
   const clearDraft = useUiStore((s) => s.clearDraft);
 
   const { entitlements, isSuccess: entitlementsLoaded } = useEntitlements();
-  // Only treat images as locked once the real entitlements have loaded (the
-  // hook falls back to Free meanwhile). The server re-checks on submit.
+  // Only treat images and models as locked once the real entitlements have
+  // loaded (the hook falls back to Free meanwhile). The server re-checks.
+  const imageGateReason = entitlementsLoaded ? getGateReason(entitlements, "images") : null;
   const isImagePlanLocked =
     entitlementsLoaded && !canUse(entitlements, "images");
   const imagePlanName =
@@ -155,6 +168,11 @@ export function Composer({
     storeChatMode || "text",
   );
   const [selectedModel, setSelectedModel] = React.useState<string>("text-economy");
+  const clientModels = React.useMemo(
+    () => getClientModels((key, values) => tModels(key, values), "TEXT"),
+    [tModels]
+  );
+  const activeModel = (clientModels.find((m) => m.key === selectedModel) ?? clientModels[0])!;
   const [thinkHarder, setThinkHarder] = React.useState(false);
   // F4.1: search is a Settings preference; only say so when it's off.
   const { data: preferences } = useUserPreferences(userId ?? "");
@@ -188,11 +206,14 @@ export function Composer({
 
   const handleModeChange = React.useCallback(
     (nextMode: "text" | "image") => {
+      if (nextMode === "image" && imageGateReason) {
+        return;
+      }
       setMode(nextMode);
       setStoreChatMode(nextMode);
       setImageLockedNotice(false);
     },
-    [setStoreChatMode]
+    [setStoreChatMode, imageGateReason]
   );
 
   // F4.3: apply a prefill (starter template) whenever its nonce changes: set
@@ -261,8 +282,28 @@ export function Composer({
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const docFileInputRef = React.useRef<HTMLInputElement>(null);
 
-  const MAX_ATTACHMENTS = entitlements.limits.attachmentsPerWorkspace;
-  const MAX_FILE_SIZE = entitlements.limits.maxFileMB * 1024 * 1024;
+  // F4.4: in a workspace the owner's plan sets the limits and existing
+  // attachments count too (as the upload check does); the home composer has
+  // no workspace yet, so the viewer's own plan applies.
+  // Same query as `useWorkspace` (shared cache), but it tolerates a render
+  // without a QueryClient, like the other composer hooks.
+  const { data: workspaceData } = useQuery(
+    {
+      queryKey:
+        userId && workspaceId
+          ? queryKeys.workspaces.detail(userId, workspaceId)
+          : (["workspaces", "detail", "none"] as const),
+      queryFn: ({ signal }) =>
+        api<WorkspaceDto>(`/api/v1/workspaces/${workspaceId}`, { signal }),
+      enabled: Boolean(userId && workspaceId && queryClient),
+    },
+    queryClient ?? getIdleQueryClient()
+  );
+  const attachmentLimits = workspaceData?.attachmentLimits;
+  const attachmentMax = attachmentLimits?.max ?? entitlements.limits.attachmentsPerWorkspace;
+  const MAX_ATTACHMENTS = Math.max(0, attachmentMax - (attachmentLimits?.used ?? 0));
+  const maxFileMB = attachmentLimits?.maxFileMB ?? entitlements.limits.maxFileMB;
+  const MAX_FILE_SIZE = maxFileMB * 1024 * 1024;
 
   const uploadItem = React.useCallback(async (item: ComposerAttachment) => {
     try {
@@ -305,13 +346,13 @@ export function Composer({
     setCreationError(null);
 
     if (attachments.length + files.length > MAX_ATTACHMENTS) {
-      setCreationError(t("attachLimitReached"));
+      setCreationError(t("attachLimitReached", { limit: attachmentMax }));
       return;
     }
 
     for (const f of files) {
       if (f.size > MAX_FILE_SIZE) {
-        setCreationError(t("attachSizeExceeded"));
+        setCreationError(t("attachSizeExceeded", { mb: maxFileMB }));
         return;
       }
     }
@@ -336,7 +377,7 @@ export function Composer({
     for (const item of newItems) {
       uploadItem(item);
     }
-  }, [attachments.length, MAX_ATTACHMENTS, MAX_FILE_SIZE, t, uploadItem]);
+  }, [attachments.length, MAX_ATTACHMENTS, MAX_FILE_SIZE, attachmentMax, maxFileMB, t, uploadItem]);
 
   const handleWorkspaceDocumentFiles = React.useCallback(
     async (files: File[]) => {
@@ -354,7 +395,7 @@ export function Composer({
           return;
         }
         if (f.size > MAX_FILE_SIZE) {
-          setCreationError(t("attachSizeExceeded"));
+          setCreationError(t("attachSizeExceeded", { mb: maxFileMB }));
           return;
         }
       }
@@ -432,7 +473,7 @@ export function Composer({
         setIsAddingDocument(false);
       }
     },
-    [MAX_FILE_SIZE, queryClient, router, t, tDocs, workspaceId]
+    [MAX_FILE_SIZE, maxFileMB, queryClient, router, t, tDocs, workspaceId]
   );
 
   const removeAttachment = React.useCallback((id: string) => {
@@ -456,12 +497,30 @@ export function Composer({
     uploadItem(item);
   }, [attachments, uploadItem]);
 
-  const isOutOfCredits = Boolean(credits && credits.balance <= 0);
+  // Home: the viewer's own balance (`credits`). Workspace: the owner pays.
+  const creditsGate: GateReason | null =
+    credits && credits.balance <= 0
+      ? { code: "out_of_credits" }
+      : creditsGateReason(workspaceData);
+  const isOutOfCredits = Boolean(creditsGate);
+  const isAttachmentLimitReached = attachments.length >= MAX_ATTACHMENTS;
+  const attachmentGateReason: GateReason | null = isAttachmentLimitReached
+    ? { code: "attachment_limit", limit: attachmentMax }
+    : null;
+  const isThinkingSupported =
+    mode !== "image" && Boolean(activeModel.caps?.thinkingSummaries);
+  const thinkingGateReason: GateReason | null = !isThinkingSupported
+    ? { code: "thinking_unavailable" }
+    : null;
+  const submitGateReason: GateReason | null = !canGenerate
+    ? { code: "no_permission", capability: t("capGenerate") }
+    : creditsGate;
 
   const handleSubmit = async () => {
     const cleanPrompt = prompt.trim();
     const isUploadingAny = attachments.some((a) => a.status === "uploading");
-    if (!cleanPrompt || isSubmitting || isStreaming || isOutOfCredits || isUploadingAny) return;
+    if (!cleanPrompt || isSubmitting || isStreaming || isOutOfCredits || !canGenerate || isUploadingAny) return;
+    if (mode === "image" && imageGateReason) return;
     const readyAttachmentIds = attachments
       .filter((a) => a.status === "ready" && a.attachmentId)
       .map((a) => a.attachmentId!);
@@ -482,6 +541,12 @@ export function Composer({
       clearDraft(draftKey);
       setPrompt("");
       setAttachments([]);
+      // The sent attachments now count toward the workspace limit.
+      if (userId && attachments.length > 0) {
+        queryClient?.invalidateQueries({
+          queryKey: queryKeys.workspaces.detail(userId, workspaceId),
+        });
+      }
       if (textareaRef.current) {
         textareaRef.current.value = "";
         textareaRef.current.style.height = size === "large" ? "64px" : "44px";
@@ -502,7 +567,7 @@ export function Composer({
             prompt: cleanPrompt,
             modelKey: effectiveModelKey,
             kind: effectiveKind,
-            think: thinkHarder,
+            think: thinkHarder && isThinkingSupported,
             attachmentIds: readyAttachmentIds.length > 0 ? readyAttachmentIds : undefined,
           },
           {
@@ -574,7 +639,7 @@ export function Composer({
         modelKey: effectiveModelKey,
         idempotencyKey,
         mode,
-        thinkHarder,
+        thinkHarder: thinkHarder && isThinkingSupported,
         attachmentIds: readyAttachmentIds.length > 0 ? readyAttachmentIds : undefined,
       });
 
@@ -625,8 +690,6 @@ export function Composer({
       : tHome("composerPlaceholder");
 
   const showCharCounter = prompt.length >= COUNTER_THRESHOLD;
-  const activeModel =
-    CLIENT_MODELS.find((m) => m.key === selectedModel) || CLIENT_MODELS[0]!;
 
   return (
     <form
@@ -751,18 +814,28 @@ export function Composer({
       </div>
 
       {/* Out of Credits Alert */}
-      {isOutOfCredits && (
+      {creditsGate && (
         <div
           id="credits-warning"
           className="mb-2 flex items-center justify-between gap-2 rounded-xl bg-warning/10 border border-warning/20 px-3 py-1.5 text-xs text-warning"
         >
-          <span>{t("outOfCreditsReason")}</span>
-          <Link
-            href="/settings"
-            className="font-semibold underline hover:text-fg transition-colors"
-          >
-            {t("upgradeCta")}
-          </Link>
+          {creditsGate.code === "member_credit_cap" ? (
+            // Only the owner can raise it: no upgrade link.
+            <span>{tGates("member_credit_cap", { cap: creditsGate.cap })}</span>
+          ) : creditsGate.code === "owner_out_of_credits" ? (
+            // A member can't top up the owner's account: no upgrade link.
+            <span>{tGates("owner_out_of_credits")}</span>
+          ) : (
+            <>
+              <span>{t("outOfCreditsReason")}</span>
+              <Link
+                href="/settings"
+                className="font-semibold underline hover:text-fg transition-colors"
+              >
+                {t("upgradeCta")}
+              </Link>
+            </>
+          )}
         </div>
       )}
 
@@ -978,20 +1051,27 @@ export function Composer({
               <MessageSquare className="h-3.5 w-3.5" strokeWidth={1.5} />
               <span>{t("modeText")}</span>
             </button>
-            <button
-              type="button"
-              onClick={() => handleModeChange("image")}
-              aria-pressed={mode === "image"}
-              className={cn(
-                "flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium transition-colors cursor-pointer",
-                mode === "image"
-                  ? "bg-surface text-accent shadow-xs"
-                  : "text-muted hover:text-fg",
-              )}
-            >
-              <ImageIcon className="h-3.5 w-3.5" strokeWidth={1.5} />
-              <span>{t("modeImage")}</span>
-            </button>
+            <Gated reason={imageGateReason}>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!imageGateReason) {
+                    handleModeChange("image");
+                  }
+                }}
+                aria-pressed={mode === "image"}
+                data-testid="mode-tab-image"
+                className={cn(
+                  "flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium transition-colors cursor-pointer",
+                  mode === "image"
+                    ? "bg-surface text-accent shadow-xs"
+                    : "text-muted hover:text-fg",
+                )}
+              >
+                <ImageIcon className="h-3.5 w-3.5" strokeWidth={1.5} />
+                <span>{t("modeImage")}</span>
+              </button>
+            </Gated>
           </div>
 
           {/* Hidden File Input (Attach to message) */}
@@ -1029,62 +1109,80 @@ export function Composer({
           />
 
           {/* Attach Menu Button */}
-          <Popover open={attachMenuOpen} onOpenChange={setAttachMenuOpen}>
-            <PopoverTrigger asChild>
+          {attachmentGateReason ? (
+            // F4.4: limit reached: the button stays visible, disabled, with the reason.
+            <Gated reason={attachmentGateReason}>
               <button
                 type="button"
-                title={t("attachFile")}
                 aria-label={t("attachFile")}
-                disabled={isAddingDocument}
                 data-testid="composer-attach-btn"
-                className="flex h-7 w-7 items-center justify-center rounded-lg text-muted hover:text-fg hover:bg-surface-2 transition-colors cursor-pointer disabled:opacity-50"
+                className="flex h-7 w-7 items-center justify-center rounded-lg text-muted"
               >
-                {isAddingDocument ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Paperclip className="h-3.5 w-3.5" strokeWidth={1.5} />
-                )}
+                <Paperclip className="h-3.5 w-3.5" strokeWidth={1.5} />
               </button>
-            </PopoverTrigger>
-            <PopoverContent
-              align="start"
-              sideOffset={6}
-              className="w-64 p-1.5"
-              data-testid="composer-attach-menu"
+            </Gated>
+          ) : (
+            <Popover
+              open={attachMenuOpen}
+              onOpenChange={setAttachMenuOpen}
             >
-              <button
-                type="button"
-                data-testid="menu-attach-to-message"
-                onClick={() => {
-                  setAttachMenuOpen(false);
-                  fileInputRef.current?.click();
-                }}
-                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-medium text-fg hover:bg-surface-2 transition-colors cursor-pointer"
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  title={t("attachFile")}
+                  aria-label={t("attachFile")}
+                  disabled={isAddingDocument}
+                  data-testid="composer-attach-btn"
+                  className="flex h-7 w-7 items-center justify-center rounded-lg text-muted hover:text-fg hover:bg-surface-2 transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  {isAddingDocument ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Paperclip className="h-3.5 w-3.5" strokeWidth={1.5} />
+                  )}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent
+                align="start"
+                sideOffset={6}
+                className="w-64 p-1.5"
+                data-testid="composer-attach-menu"
               >
-                <Paperclip className="h-3.5 w-3.5 text-muted shrink-0" />
-                <span>{tDocs("attachToMessage")}</span>
-              </button>
-              <button
-                type="button"
-                data-testid="menu-add-to-workspace"
-                disabled={mode === "image"}
-                onClick={() => {
-                  setAttachMenuOpen(false);
-                  docFileInputRef.current?.click();
-                }}
-                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-medium text-fg hover:bg-surface-2 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <FileText className="h-3.5 w-3.5 text-info shrink-0" />
-                <span>{tDocs("addToWorkspace")}</span>
-              </button>
-            </PopoverContent>
-          </Popover>
+                <button
+                  type="button"
+                  data-testid="menu-attach-to-message"
+                  onClick={() => {
+                    setAttachMenuOpen(false);
+                    fileInputRef.current?.click();
+                  }}
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-medium text-fg hover:bg-surface-2 transition-colors cursor-pointer"
+                >
+                  <Paperclip className="h-3.5 w-3.5 text-muted shrink-0" />
+                  <span>{tDocs("attachToMessage")}</span>
+                </button>
+                <button
+                  type="button"
+                  data-testid="menu-add-to-workspace"
+                  disabled={mode === "image"}
+                  onClick={() => {
+                    setAttachMenuOpen(false);
+                    docFileInputRef.current?.click();
+                  }}
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-medium text-fg hover:bg-surface-2 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <FileText className="h-3.5 w-3.5 text-info shrink-0" />
+                  <span>{tDocs("addToWorkspace")}</span>
+                </button>
+              </PopoverContent>
+            </Popover>
+          )}
 
           {/* Model Picker */}
           <Popover>
             <PopoverTrigger asChild>
               <button
                 type="button"
+                data-testid="composer-model-trigger"
                 className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium bg-surface-2 text-fg hover:bg-surface-3 transition-colors cursor-pointer border border-border/50"
               >
                 <Sparkles className="h-3 w-3 text-accent" />
@@ -1097,48 +1195,61 @@ export function Composer({
               <div className="px-2 py-1 text-[11px] font-semibold text-muted uppercase tracking-wider">
                 {t("model")}
               </div>
-              {CLIENT_MODELS.map((m: ClientModelOption) => (
-                <button
-                  key={m.key}
-                  type="button"
-                  onClick={() => setSelectedModel(m.key)}
-                  className={cn(
-                    "w-full flex items-center justify-between rounded-md px-2 py-1.5 text-xs text-left cursor-pointer transition-colors",
-                    selectedModel === m.key
-                      ? "bg-accent-soft text-accent font-medium"
-                      : "hover:bg-surface-2 text-fg",
-                  )}
-                >
-                  <div>
-                    <div>{m.name}</div>
-                    <div className="text-[10px] text-muted">{m.creditHint}</div>
-                  </div>
-                  {m.minPlan !== "FREE" && (
-                    <span className="text-[9px] font-bold uppercase rounded bg-surface-3 px-1 py-0.5 text-muted">
-                      {m.minPlan}
-                    </span>
-                  )}
-                </button>
-              ))}
+              {clientModels.map((m: ClientModelOption) => {
+                const modelGateReason = entitlementsLoaded
+                  ? getGateReason(entitlements, m.key)
+                  : null;
+                return (
+                  <Gated key={m.key} reason={modelGateReason} side="right" className="w-full">
+                    <button
+                      type="button"
+                      data-testid={`model-option-${m.key}`}
+                      onClick={() => {
+                        if (!modelGateReason) {
+                          setSelectedModel(m.key);
+                        }
+                      }}
+                      className={cn(
+                        "w-full flex items-center justify-between rounded-md px-2 py-1.5 text-xs text-left cursor-pointer transition-colors",
+                        selectedModel === m.key
+                          ? "bg-accent-soft text-accent font-medium"
+                          : "hover:bg-surface-2 text-fg",
+                      )}
+                    >
+                      <div>
+                        <div>{m.name}</div>
+                        <div className="text-[10px] text-muted">{m.creditHint}</div>
+                      </div>
+                    </button>
+                  </Gated>
+                );
+              })}
             </PopoverContent>
           </Popover>
 
           {/* Think Harder Toggle */}
-          <button
-            type="button"
-            onClick={() => setThinkHarder((prev) => !prev)}
-            title={t("thinkHarderDesc")}
-            aria-pressed={thinkHarder}
-            className={cn(
-              "inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium transition-colors cursor-pointer border",
-              thinkHarder
-                ? "bg-accent text-accent-fg border-accent shadow-xs"
-                : "bg-surface-2 text-muted hover:text-fg hover:bg-surface-3 border-border/50",
-            )}
-          >
-            <Brain className="h-3 w-3" />
-            <span className="hidden sm:inline">{t("thinkHarder")}</span>
-          </button>
+          <Gated reason={thinkingGateReason}>
+            <button
+              type="button"
+              data-testid="composer-think-harder-btn"
+              onClick={() => {
+                if (!thinkingGateReason) {
+                  setThinkHarder((prev) => !prev);
+                }
+              }}
+              title={t("thinkHarderDesc")}
+              aria-pressed={thinkHarder && isThinkingSupported}
+              className={cn(
+                "inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium transition-colors cursor-pointer border",
+                thinkHarder && isThinkingSupported
+                  ? "bg-accent text-accent-fg border-accent shadow-xs"
+                  : "bg-surface-2 text-muted hover:text-fg hover:bg-surface-3 border-border/50",
+              )}
+            >
+              <Brain className="h-3 w-3" />
+              <span className="hidden sm:inline">{t("thinkHarder")}</span>
+            </button>
+          </Gated>
 
           {/* Question Queue Popover (Step 6.5) */}
           <QuestionQueuePopover workspaceId={workspaceId} />
@@ -1165,23 +1276,25 @@ export function Composer({
               <Square className="h-4 w-4 fill-current" />
             </button>
           ) : (
-            <button
-              type="submit"
-              disabled={isSubmitting || !prompt.trim() || isOutOfCredits || attachments.some((a) => a.status === "uploading")}
-              aria-label={t("send")}
-              className={cn(
-                "flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-xl sm:rounded-2xl shadow-sm transition-all cursor-pointer",
-                prompt.trim() && !isSubmitting && !isOutOfCredits
-                  ? "bg-accent text-accent-fg hover:bg-accent-hover active:scale-95"
-                  : "cursor-not-allowed bg-surface-3 text-subtle opacity-60",
-              )}
-            >
-              {isSubmitting ? (
-                <Sparkles className="h-4 w-4 animate-spin" strokeWidth={1.5} />
-              ) : (
-                <Send className="h-4 w-4" strokeWidth={1.5} />
-              )}
-            </button>
+            <Gated reason={submitGateReason}>
+              <button
+                type="submit"
+                disabled={isSubmitting || !prompt.trim() || isOutOfCredits || !canGenerate || attachments.some((a) => a.status === "uploading")}
+                aria-label={t("send")}
+                className={cn(
+                  "flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-xl sm:rounded-2xl shadow-sm transition-all cursor-pointer",
+                  prompt.trim() && !isSubmitting && !isOutOfCredits && canGenerate
+                    ? "bg-accent text-accent-fg hover:bg-accent-hover active:scale-95"
+                    : "cursor-not-allowed bg-surface-3 text-subtle opacity-60",
+                )}
+              >
+                {isSubmitting ? (
+                  <Sparkles className="h-4 w-4 animate-spin" strokeWidth={1.5} />
+                ) : (
+                  <Send className="h-4 w-4" strokeWidth={1.5} />
+                )}
+              </button>
+            </Gated>
           )}
         </div>
       </div>

@@ -52,6 +52,13 @@ jest.mock("../../server/db/client", () => ({
     response: {
       findMany: (...args: unknown[]) => mockResponseFindMany(...args),
     },
+    // F4.4: workspace detail reads the attachment count and the owner's balance.
+    attachment: {
+      count: () => Promise.resolve(0),
+    },
+    creditAccount: {
+      findUnique: () => Promise.resolve(null),
+    },
   },
 }));
 

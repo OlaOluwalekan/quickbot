@@ -14,6 +14,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Gated } from "@/components/ui/gated";
+import type { GateReason } from "@/lib/entitlements/shared";
+import { notifyCreditsChanged } from "@/lib/billing/credits-changed";
 import { api } from "@/lib/api/client";
 import { streamDocumentReview } from "@/lib/api/document-review";
 import { useDocumentReviewStore } from "@/lib/stores/document-review";
@@ -32,6 +34,8 @@ export interface DocumentReviewProps {
   canAsk?: boolean;
   /** The text has unsaved changes: a review reads the saved text. */
   hasDraft?: boolean;
+  /** A review spends the workspace owner's credits: set when they have none (F4.4). */
+  creditsGate?: GateReason | null;
   /** Other people can open the workspace: findings are shared by default. */
   hasMembers?: boolean;
   /**
@@ -61,6 +65,7 @@ export function DocumentReview({
   documentId,
   responseId,
   canAsk = true,
+  creditsGate = null,
   hasDraft = false,
   hasMembers = false,
   mode = "popover",
@@ -83,6 +88,10 @@ export function DocumentReview({
     },
     [onOpenChange]
   );
+
+  const reviewGateReason: GateReason | null = !canAsk
+    ? { code: "no_permission", capability: t("capAskReview") }
+    : creditsGate;
 
   const [preset, setPreset] = React.useState<ReviewPreset>("errors");
   const [instruction, setInstruction] = React.useState("");
@@ -132,6 +141,7 @@ export function DocumentReview({
       if (reloadTimer) clearTimeout(reloadTimer);
       useDocumentReviewStore.getState().finish(versionId);
       notifyAnnotationsChanged(responseId);
+      notifyCreditsChanged();
     };
 
     await streamDocumentReview(
@@ -280,16 +290,12 @@ export function DocumentReview({
           >
             {t("cancel")}
           </Button>
-          <Gated
-            reason={
-              canAsk ? null : { code: "no_permission", capability: t("capAskReview") }
-            }
-          >
+          <Gated reason={reviewGateReason}>
             <Button
               type="button"
               size="sm"
               onClick={handleStart}
-              disabled={isRunning || needsInstruction}
+              disabled={isRunning || needsInstruction || Boolean(reviewGateReason)}
               className="h-7 px-3 text-xs gap-1.5 bg-accent text-accent-foreground hover:bg-accent/90"
               data-testid="start-review-btn"
             >
@@ -318,6 +324,23 @@ export function DocumentReview({
 
   return (
     <div className={className}>
+      {reviewGateReason ? (
+        // F4.4: visible but disabled, with the reason. Kept outside the
+        // Popover: a <Gated> inside `PopoverTrigger asChild` would swallow
+        // the trigger's props and the popover would never open.
+        <Gated reason={reviewGateReason}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 gap-1.5 px-2 text-xs text-muted"
+            data-testid="ask-klecx-review-trigger"
+          >
+            <Sparkles className="h-3.5 w-3.5 text-accent" />
+            <span>{t("askKlecxReview")}</span>
+          </Button>
+        </Gated>
+      ) : (
       <Popover open={isOpen} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -351,6 +374,7 @@ export function DocumentReview({
           {form}
         </PopoverContent>
       </Popover>
+      )}
     </div>
   );
 }

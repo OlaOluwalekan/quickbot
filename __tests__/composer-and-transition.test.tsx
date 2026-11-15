@@ -28,10 +28,12 @@ jest.mock("next-intl", () => ({
   useNow: () => new Date(),
   useTranslations: (namespace: string) => {
     return (key: string, values?: Record<string, unknown>) => {
-      const ns = (
-        enMessages as unknown as Record<string, Record<string, string>>
-      )[namespace] || {};
-      let template = ns[key] || key;
+      // Nested keys too (e.g. `Models` → "text-economy.name").
+      let node: unknown = (enMessages as unknown as Record<string, unknown>)[namespace];
+      for (const part of key.split(".")) {
+        node = (node as Record<string, unknown> | undefined)?.[part];
+      }
+      let template = typeof node === "string" ? node : key;
       if (values) {
         Object.entries(values).forEach(([k, v]) => {
           template = template.replace(`{${k}}`, String(v));
@@ -241,9 +243,9 @@ describe("Step 3.6 — Composer and Smooth Blank -> Workspace Transition", () =>
       fireEvent.click(thinkBtn);
       expect(thinkBtn).toHaveAttribute("aria-pressed", "true");
 
-      // Model picker button shows default Fast & Efficient (1 credit)
+      // Model picker button shows default Fast & Efficient and its computed hint (F4.4)
       expect(screen.getByText("Fast & Efficient")).toBeInTheDocument();
-      expect(screen.getByText("(1 credit)")).toBeInTheDocument();
+      expect(screen.getByText("(≈ 2 credits per message)")).toBeInTheDocument();
     });
 
     it("renders Stop button while streaming and calls onStop", () => {

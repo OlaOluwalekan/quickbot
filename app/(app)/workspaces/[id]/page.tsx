@@ -37,6 +37,10 @@ const SingleWorkspacePage = async ({
         role: workspace.role,
         capabilities: workspace.capabilities,
         sourceProvenance: workspace.sourceProvenance,
+        exportFormats: workspace.exportFormats,
+        attachmentLimits: workspace.attachmentLimits,
+        ownerOutOfCredits: workspace.ownerOutOfCredits,
+        memberCreditCapReached: workspace.memberCreditCapReached,
         createdAt: workspace.createdAt.toISOString(),
         updatedAt: workspace.updatedAt.toISOString(),
       }}

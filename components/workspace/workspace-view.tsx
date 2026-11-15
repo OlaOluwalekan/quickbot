@@ -1,5 +1,9 @@
 "use client";
 
+import { useWorkspace } from "@/lib/api/hooks/workspaces";
+import { useAskStreamStore } from "@/lib/stores/ask-stream";
+import { CREDITS_CHANGED_EVENT, notifyCreditsChanged } from "@/lib/billing/credits-changed";
+import { creditsGateReason } from "@/lib/entitlements/shared";
 import * as React from "react";
 import Link from "next/link";
 import { ArrowUpLeft } from "lucide-react";
@@ -479,6 +483,40 @@ export function WorkspaceView({
   const canPromoteToTimeline = workspace.capabilities
     ? workspace.capabilities.includes("workspace.generate")
     : undefined;
+  const canGenerate = canPromoteToTimeline ?? true;
+  // F4.4: the owner pays; Ask, reviews and Send are gated when they have no
+  // credits or this member used up the monthly limit the owner set. The live
+  // query (shared with the composer) is refetched after anything spends.
+  const { data: liveWorkspace } = useWorkspace(actor.userId, workspace.id);
+  const creditsGate = creditsGateReason(liveWorkspace ?? workspace);
+  const mainStreamStatus = useGenerationStore((s) => s.streams[workspace.id]?.status);
+  const finishedAskCount = useAskStreamStore(
+    (s) => Object.values(s.streams).filter((x) => x.status !== "streaming").length
+  );
+  React.useEffect(() => {
+    const refresh = () =>
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.workspaces.detail(actor.userId, workspace.id),
+      });
+    window.addEventListener(CREDITS_CHANGED_EVENT, refresh);
+    window.addEventListener("annotation-changed", refresh);
+    return () => {
+      window.removeEventListener(CREDITS_CHANGED_EVENT, refresh);
+      window.removeEventListener("annotation-changed", refresh);
+    };
+  }, [queryClient, actor.userId, workspace.id]);
+  React.useEffect(() => {
+    if (
+      mainStreamStatus === "completed" ||
+      mainStreamStatus === "failed" ||
+      mainStreamStatus === "cancelled"
+    ) {
+      notifyCreditsChanged();
+    }
+  }, [mainStreamStatus]);
+  React.useEffect(() => {
+    if (finishedAskCount > 0) notifyCreditsChanged();
+  }, [finishedAskCount]);
   const canEditResponse = workspace.capabilities
     ? workspace.capabilities.includes("workspace.edit_response")
     : true;
@@ -557,6 +595,7 @@ export function WorkspaceView({
           responses={displayedResponses}
           memberCount={workspace.memberCount ?? 1}
           capabilities={workspace.capabilities}
+          creditsGate={creditsGate}
           onQuestionQueued={handleQuestionQueued}
           withSelectionToolbar={false}
           optimisticPrompt={optimisticFirstPrompt}
@@ -570,6 +609,7 @@ export function WorkspaceView({
             <Composer
               workspaceId={workspace.id}
               userId={actor.userId}
+              canGenerate={canGenerate}
               size="compact"
               className="vt-composer shadow-lg"
               onCompleted={(data, prompt) =>
@@ -598,6 +638,7 @@ export function WorkspaceView({
       workspaceId={workspace.id}
       canComment={canComment}
       canAsk={canAsk}
+      creditsGate={creditsGate}
       onQuestionCreated={handleQuestionQueued}
     />
     </>

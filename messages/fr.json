@@ -184,11 +184,12 @@
     "attachFile": "Joindre des fichiers",
     "attachRemove": "Supprimer la pièce jointe",
     "attachRetry": "Réessayer",
-    "attachLimitReached": "Maximum 3 pièces jointes autorisées pour votre forfait",
-    "attachSizeExceeded": "La taille du fichier dépasse la limite de 5 Mo",
+    "attachLimitReached": "Cet espace de travail autorise jusqu'à {limit} pièces jointes",
+    "attachSizeExceeded": "La taille du fichier dépasse la limite de {mb} Mo",
     "dropFilesHere": "Déposez les fichiers à joindre",
     "webSearchOff": "La recherche web est désactivée",
-    "changeInSettings": "Modifier dans les paramètres"
+    "changeInSettings": "Modifier dans les paramètres",
+    "capGenerate": "générer des réponses"
   },
   "Settings": {
     "ai": {
@@ -1147,12 +1148,33 @@
   },
   "Gates": {
     "requires_plan": "Disponible à partir du forfait {plan}",
-    "member_limit": "Votre forfait autorise jusqu'à {limit} collaborateurs",
+    "member_limit": "{limit, plural, =0 {Ce forfait n'inclut pas de collaborateurs} one {Ce forfait permet jusqu'à # collaborateur} other {Ce forfait permet jusqu'à # collaborateurs}}",
+    "attachment_limit": "Cet espace de travail a atteint sa limite de {limit} pièces jointes",
     "daily_cap": "Vous avez atteint votre limite quotidienne pour cette fonctionnalité",
     "no_permission": "Vous n'avez pas la permission pour {capability}",
     "max_depth": "Profondeur maximale de fil atteinte ({depth}). Promouvez cette réponse dans un nouvel espace pour continuer.",
     "upgrade": "Mettre à niveau",
-    "owner_plan": "Le forfait du propriétaire de l'espace n'inclut pas cette option (disponible à partir de {plan})"
+    "owner_plan": "Le forfait du propriétaire de l'espace n'inclut pas cette option (disponible à partir de {plan})",
+    "out_of_credits": "Vous n'avez plus de crédits",
+    "thinking_unavailable": "« Approfondir la réflexion » n'est pas disponible pour ce modèle",
+    "owner_out_of_credits": "Le propriétaire de l'espace de travail n'a plus de crédits",
+    "member_credit_cap": "Vous avez utilisé la limite mensuelle de {cap} crédits que le propriétaire de l'espace de travail vous a fixée"
+  },
+  "Models": {
+    "text-economy": {
+      "name": "Rapide et Efficace",
+      "description": "Réponses rapides pour les questions courantes, le brainstorming et les résumés."
+    },
+    "text-standard": {
+      "name": "Raisonnement Standard",
+      "description": "Réflexion approfondie et raisonnement complexe pour la recherche et le code."
+    },
+    "image-standard": {
+      "name": "Studio d'Images",
+      "description": "Génération d'images haute résolution à partir de descriptions en langage naturel."
+    },
+    "creditHintMessage": "≈ {credits} crédits par message",
+    "creditHintImage": "≈ {credits} par image"
   },
   "Members": {
     "errors": {
@@ -1346,7 +1368,9 @@
       "klecxNoted": "Klecx en a pris note",
       "mentionLoading": "Chargement…",
       "mentionNotMember": "N’est pas membre de cet espace de travail",
-      "saveChangesFirst": "Enregistrez d'abord vos modifications. Les commentaires et les questions ne peuvent porter que sur le texte enregistré."
+      "saveChangesFirst": "Enregistrez d'abord vos modifications. Les commentaires et les questions ne peuvent porter que sur le texte enregistré.",
+      "capComment": "commenter",
+      "capAsk": "poser des questions"
     },
     "preview": {
       "ariaLabel": "Aperçu de l’annotation",

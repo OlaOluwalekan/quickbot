@@ -5,7 +5,7 @@ import { Errors } from "@/server/http/errors";
 import { requireWorkspace, requireProject } from "@/server/authz/access";
 import { can, ROLE_RANK, maxRole, computeCapabilities, type EffectiveRole } from "@/server/authz/permissions";
 import { logActivity } from "./activity";
-import { getOwnerGraceInfo } from "./member-limits";
+import { getInviteCapacity, getOwnerGraceInfo } from "./member-limits";
 import { getPendingOutgoingTransfer } from "./ownership-transfer";
 import { notify } from "./notify";
 import { getUserAvatar } from "./avatar";
@@ -312,6 +312,10 @@ export async function listWorkspaceMembers(actor: Actor, workspaceId: string) {
     canManage: can(actorRole, "workspace.manage_members"),
     isOwner: actor.userId === workspace.ownerId,
     ...(await ownerOnlyExtras(actor, workspace.ownerId, { workspaceId })),
+    // F4.4: the Invite button's gate (the owner's plan; the server re-checks).
+    ...(can(actorRole, "workspace.manage_members")
+      ? { inviteCapacity: await getInviteCapacity({ workspaceId }, workspace.ownerId) }
+      : {}),
   };
 }
 
@@ -415,6 +419,10 @@ export async function listProjectMembers(actor: Actor, projectId: string) {
     canManage: can(actorRole, "workspace.manage_members"),
     isOwner: actor.userId === proj.ownerId,
     ...(await ownerOnlyExtras(actor, proj.ownerId, { projectId })),
+    // F4.4: the Invite button's gate (the owner's plan; the server re-checks).
+    ...(can(actorRole, "workspace.manage_members")
+      ? { inviteCapacity: await getInviteCapacity({ projectId }, proj.ownerId) }
+      : {}),
   };
 }
 

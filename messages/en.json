@@ -184,11 +184,12 @@
     "attachFile": "Attach files",
     "attachRemove": "Remove attachment",
     "attachRetry": "Retry",
-    "attachLimitReached": "Maximum 3 attachments allowed for your plan",
-    "attachSizeExceeded": "File size exceeds 5 MB limit",
+    "attachLimitReached": "This workspace allows up to {limit} attachments",
+    "attachSizeExceeded": "File size exceeds the {mb} MB limit",
     "dropFilesHere": "Drop files to attach",
     "webSearchOff": "Web search is off",
-    "changeInSettings": "Change in Settings"
+    "changeInSettings": "Change in Settings",
+    "capGenerate": "generate responses"
   },
   "Settings": {
     "ai": {
@@ -1147,12 +1148,33 @@
   },
   "Gates": {
     "requires_plan": "Available on the {plan} plan and above",
-    "member_limit": "Your plan allows up to {limit} collaborators",
+    "member_limit": "{limit, plural, =0 {This plan doesn't include collaborators} one {This plan allows up to # collaborator} other {This plan allows up to # collaborators}}",
+    "attachment_limit": "This workspace has reached its limit of {limit} attachments",
     "daily_cap": "You have reached your daily limit for this feature",
     "no_permission": "You do not have permission to {capability}",
     "max_depth": "Maximum thread depth ({depth}) reached. Promote this answer to a new workspace to continue.",
     "upgrade": "Upgrade",
-    "owner_plan": "The workspace owner's plan doesn't include this (available on {plan} and above)"
+    "owner_plan": "The workspace owner's plan doesn't include this (available on {plan} and above)",
+    "out_of_credits": "You are out of credits",
+    "thinking_unavailable": "Think harder isn't available for this model",
+    "owner_out_of_credits": "The workspace owner is out of credits",
+    "member_credit_cap": "You've used the monthly limit of {cap} credits the workspace owner set for you"
+  },
+  "Models": {
+    "text-economy": {
+      "name": "Fast & Efficient",
+      "description": "Quick responses for everyday questions, brainstorming, and summaries."
+    },
+    "text-standard": {
+      "name": "Standard Reasoning",
+      "description": "Deep thinking and multi-step reasoning for complex research and code."
+    },
+    "image-standard": {
+      "name": "Image Studio",
+      "description": "High-resolution AI image synthesis from natural language descriptions."
+    },
+    "creditHintMessage": "≈ {credits} credits per message",
+    "creditHintImage": "≈ {credits} per image"
   },
   "Members": {
     "errors": {
@@ -1346,7 +1368,9 @@
       "klecxNoted": "Klecx noted this",
       "mentionLoading": "Loading…",
       "mentionNotMember": "Not a member of this workspace",
-      "saveChangesFirst": "Save your changes first. Comments and questions can be added to saved text only."
+      "saveChangesFirst": "Save your changes first. Comments and questions can be added to saved text only.",
+      "capComment": "comment",
+      "capAsk": "ask questions"
     },
     "preview": {
       "ariaLabel": "Annotation preview",

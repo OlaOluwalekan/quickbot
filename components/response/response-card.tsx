@@ -68,7 +68,7 @@ import { useWorkspace } from "@/lib/api/hooks/workspaces";
 import type { CitationDto } from "@/lib/api/sse";
 import type { GeneratedDocumentDto } from "@/lib/api/hooks/responses";
 import { Gated } from "@/components/ui/gated";
-import { exportFormatGateReason } from "@/lib/entitlements/shared";
+import { exportFormatGateReason, type GateReason } from "@/lib/entitlements/shared";
 
 export interface ResponseItemData {
   id: string;
@@ -151,6 +151,8 @@ export interface ResponseCardProps {
   canEditResponse?: boolean;
   /** Member holds `workspace.export` (Word / PDF downloads). The server re-checks. */
   canExport?: boolean;
+  /** Member holds `workspace.generate` (send / regenerate). The server re-checks. */
+  canGenerate?: boolean;
   onRegenerate?: (responseId: string) => void;
   onDelete?: (responseId: string) => void;
   isRegenerating?: boolean;
@@ -174,6 +176,7 @@ export function ResponseCard({
   canAsk = true,
   canEditResponse,
   canExport: canExportProp,
+  canGenerate = true,
   onRegenerate,
   onDelete,
   isRegenerating = false,
@@ -181,6 +184,7 @@ export function ResponseCard({
   className,
 }: ResponseCardProps) {
   const t = useTranslations("Response");
+  const tChat = useTranslations("Chat");
   const tExportFormats = useTranslations("Documents.downloadFormats");
   const tExportCaps = useTranslations("Documents.caps");
   const tReview = useTranslations("Review");
@@ -200,6 +204,9 @@ export function ResponseCard({
   const canEdit = canEditResponse ?? workspace?.role !== "VIEWER";
   const canExport =
     canExportProp ?? workspace?.capabilities?.includes("workspace.export") ?? false;
+  const regenerateGateReason: GateReason | null = !canGenerate
+    ? { code: "no_permission", capability: tChat("capGenerate") }
+    : null;
   const currentPageTitle = useUiStore((s) => s.currentPageTitle);
   const [signedUrlsByAttachmentId, setSignedUrlsByAttachmentId] = React.useState<
     Record<string, string>
@@ -884,22 +891,28 @@ export function ResponseCard({
                     Image generation failed.
                   </span>
                   {onRegenerate && (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={() => onRegenerate(response.id)}
-                      disabled={isRegenerating}
-                      className="border-danger/40 text-danger hover:bg-danger/10 h-8 text-xs"
-                    >
-                      <RotateCcw
-                        className={cn(
-                          "mr-1.5 h-3.5 w-3.5",
-                          isRegenerating && "animate-spin"
-                        )}
-                      />
-                      <span>{t("tryAgain")}</span>
-                    </Button>
+                    <Gated reason={regenerateGateReason}>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          if (!regenerateGateReason) {
+                            onRegenerate(response.id);
+                          }
+                        }}
+                        disabled={isRegenerating}
+                        className="border-danger/40 text-danger hover:bg-danger/10 h-8 text-xs"
+                      >
+                        <RotateCcw
+                          className={cn(
+                            "mr-1.5 h-3.5 w-3.5",
+                            isRegenerating && "animate-spin"
+                          )}
+                        />
+                        <span>{t("tryAgain")}</span>
+                      </Button>
+                    </Gated>
                   )}
                 </div>
               )}
@@ -997,22 +1010,28 @@ export function ResponseCard({
 
                   {/* Regenerate */}
                   {onRegenerate && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onRegenerate(response.id)}
-                      disabled={isRegenerating}
-                      className="text-fg-muted hover:text-fg h-8 px-2.5 text-xs"
-                    >
-                      <RotateCcw
-                        className={cn(
-                          "mr-1 h-3.5 w-3.5",
-                          isRegenerating && "animate-spin"
-                        )}
-                      />
-                      <span>{t("regenerate")}</span>
-                    </Button>
+                    <Gated reason={regenerateGateReason}>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          if (!regenerateGateReason) {
+                            onRegenerate(response.id);
+                          }
+                        }}
+                        disabled={isRegenerating}
+                        className="text-fg-muted hover:text-fg h-8 px-2.5 text-xs"
+                      >
+                        <RotateCcw
+                          className={cn(
+                            "mr-1 h-3.5 w-3.5",
+                            isRegenerating && "animate-spin"
+                          )}
+                        />
+                        <span>{t("regenerate")}</span>
+                      </Button>
+                    </Gated>
                   )}
 
                   {/* Edit (Text responses only) */}
