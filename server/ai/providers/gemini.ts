@@ -1,5 +1,5 @@
 import "server-only";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, type Part } from "@google/genai";
 import { env } from "@/server/env";
 import {
   AiProvider,
@@ -28,6 +28,16 @@ export const GEMINI_SAFETY_SETTINGS = [
     threshold: "BLOCK_MEDIUM_AND_ABOVE",
   },
 ] as const;
+
+/**
+ * Sent as the signature of a function call we replay without one. Thinking
+ * models put a signature on the first function call of each step and reject
+ * the next request (HTTP 400) when that part comes back without it. The
+ * provider's thought-signature documentation (FAQ) allows this dummy value
+ * to skip that check for a call that has no signature of its own. A real
+ * signature is always sent back instead when the call carried one.
+ */
+export const MISSING_THOUGHT_SIGNATURE = "skip_thought_signature_validator";
 
 let globalClient: GoogleGenAI | null = null;
 
@@ -71,16 +81,14 @@ export class GeminiProvider implements AiProvider {
           };
         }
         if (p.type === "tool_call") {
-          const callPart: Record<string, unknown> = {
+          // Thinking models need the signature of their own call back,
+          // unchanged, on the same part as the call.
+          const callPart: Part = {
             functionCall: {
               name: p.name,
               args: (p.args as Record<string, unknown>) || {},
             },
-            // Thinking models need the signature of their own call back.
-            // Gemini strictly validates thought_signature on functionCall parts in multi-turn tool loops.
-            // When none was captured or provided, pass the Google-supported bypass token to prevent 400.
-            thoughtSignature:
-              p.thoughtSignature || "skip_thought_signature_validator",
+            thoughtSignature: p.thoughtSignature || MISSING_THOUGHT_SIGNATURE,
           };
           return callPart;
         }
@@ -159,8 +167,6 @@ export class GeminiProvider implements AiProvider {
       throw normalizeGeminiError(err);
     }
 
-    let latestThoughtSignature: string | undefined;
-
     try {
       for await (const chunk of responseStream) {
         if (req.signal?.aborted) {
@@ -171,19 +177,7 @@ export class GeminiProvider implements AiProvider {
 
         // 1. Check parts for thoughts, text, and tool calls
         if (candidate?.content?.parts) {
-          for (const part of candidate.content.parts) {
-            const rawPart = part as Record<string, any>;
-            const partSig: string | undefined =
-              rawPart.thoughtSignature ||
-              rawPart.thought_signature ||
-              rawPart.functionCall?.thoughtSignature ||
-              rawPart.functionCall?.thought_signature;
-
-            if (partSig) {
-              latestThoughtSignature = partSig;
-              yield { type: "thought_signature", signature: partSig };
-            }
-
+          for (const part of candidate.content.parts as Part[]) {
             if (part.thought === true) {
               const text = part.text || "";
               outputCharCount += text.length;
@@ -194,16 +188,15 @@ export class GeminiProvider implements AiProvider {
             }
 
             if (part.functionCall) {
-              const toolSig =
-                partSig ||
-                rawPart.functionCall?.thoughtSignature ||
-                rawPart.functionCall?.thought_signature ||
-                latestThoughtSignature;
+              // A call's signature must go back on the exact part it came on
+              // (`Part.thoughtSignature`, beside `functionCall`), never one
+              // taken from another part. Of parallel calls, only the first
+              // carries one.
               yield {
                 type: "tool_call",
-                name: part.functionCall.name,
+                name: part.functionCall.name ?? "",
                 args: part.functionCall.args,
-                thoughtSignature: toolSig,
+                thoughtSignature: part.thoughtSignature,
               };
             }
           }

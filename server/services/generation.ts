@@ -466,7 +466,6 @@ async function executeDetachedGeneration(params: {
         args: unknown;
         thoughtSignature?: string;
       } | null = null;
-      let latestThoughtSignature: string | undefined;
       let assistantTextInThisTurn = "";
       // A provider may report usage on several chunks, each a running total
       // for this call: keep the last one, then add the calls together.
@@ -487,11 +486,6 @@ async function executeDetachedGeneration(params: {
             active.tokensEmitted = true;
             broadcastEvent(active, "thought", { text: event.text });
           }
-        } else if (event.type === "thought_signature") {
-          latestThoughtSignature = event.signature;
-          if (toolCallEmitted && !toolCallEmitted.thoughtSignature) {
-            toolCallEmitted.thoughtSignature = event.signature;
-          }
         } else if (event.type === "text_delta") {
           if (stage !== "writing") {
             stage = "writing";
@@ -503,6 +497,9 @@ async function executeDetachedGeneration(params: {
           broadcastEvent(active, "delta", { text: event.text });
         } else if (
           event.type === "tool_call" &&
+          // Parallel calls: keep the first, the one that carries the
+          // step's thought signature (F4.4b). The model can ask again.
+          !toolCallEmitted &&
           (event.name === "create_document" ||
             event.name.endsWith("create_document") ||
             event.name === "web_search" ||
@@ -515,7 +512,7 @@ async function executeDetachedGeneration(params: {
               ? "create_document"
               : event.name,
             args: event.args,
-            thoughtSignature: event.thoughtSignature || latestThoughtSignature,
+            thoughtSignature: event.thoughtSignature,
           };
         } else if (event.type === "citation") {
           // The main request is never grounded by the provider (F4.1: search

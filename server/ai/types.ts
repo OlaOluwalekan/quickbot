@@ -28,7 +28,6 @@ export type GenerateRequest = {
 
 export type StreamEvent =
   | { type: "thought_delta"; text: string }
-  | { type: "thought_signature"; signature: string }
   | { type: "text_delta"; text: string }
   | { type: "tool_call"; name: string; args: unknown; thoughtSignature?: string }
   | {

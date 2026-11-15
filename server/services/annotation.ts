@@ -1353,7 +1353,6 @@ export async function streamAnnotationAnswer(
 
           let toolCall: { args: unknown; thoughtSignature?: string } | null = null;
           let turnText = "";
-          let latestThoughtSignature: string | undefined;
           // Usage chunks are running totals for one call: keep the last.
           let callUsage: { inputTokens: number; outputTokens: number } | null = null;
 
@@ -1365,16 +1364,14 @@ export async function streamAnnotationAnswer(
             } else if (chunk.type === "thought_delta" && chunk.text) {
               fullThoughtText += chunk.text;
               send("thought", { text: chunk.text });
-            } else if (chunk.type === "thought_signature") {
-              latestThoughtSignature = chunk.signature;
-              if (toolCall && !toolCall.thoughtSignature) {
-                toolCall.thoughtSignature = chunk.signature;
-              }
-            } else if (chunk.type === "tool_call" && chunk.name.endsWith("web_search")) {
-              toolCall = {
-                args: chunk.args,
-                thoughtSignature: chunk.thoughtSignature || latestThoughtSignature,
-              };
+            } else if (
+              chunk.type === "tool_call" &&
+              chunk.name.endsWith("web_search") &&
+              // Parallel calls: keep the first, the one that carries the
+              // step's thought signature (F4.4b). The model can ask again.
+              !toolCall
+            ) {
+              toolCall = { args: chunk.args, thoughtSignature: chunk.thoughtSignature };
             } else if (chunk.type === "citation") {
               if (!chunk.url) continue;
               const check = validateCitationUrl(chunk.url);
