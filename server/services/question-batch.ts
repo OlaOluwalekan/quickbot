@@ -13,6 +13,7 @@ import {
 } from "@/server/services/credits";
 import {
   assertModelAccess,
+  assertSelectableModel,
   getModel,
   creditsFor,
   ModelKey,
@@ -181,6 +182,7 @@ export async function runQuestionBatch(
   const modelKey = (input.modelKey || "text-economy") as ModelKey;
   const model = getModel(modelKey);
   try {
+    assertSelectableModel(modelKey);
     assertModelAccess(modelKey, ownerEntitlements.plan);
   } catch (err: unknown) {
     throw Errors.forbidden(

@@ -284,7 +284,8 @@ export function VoiceInput({
       data-testid="voice-input-container"
     >
       {/* Screen reader announcements */}
-      <div aria-live="polite" className="sr-only" role="status">
+      {/* aria-live only: the composer already has the page's status region. */}
+      <div aria-live="polite" className="sr-only" data-testid="voice-live-region">
         {announcement}
       </div>
 

@@ -11,6 +11,7 @@ import {
 import { streamAi, type AiProvider } from "@/server/ai";
 import {
   assertModelAccess,
+  assertSelectableModel,
   getModel,
   creditsFor,
   type ModelKey,
@@ -462,6 +463,7 @@ export async function startDocumentReview(
   const modelKey = REVIEW_MODEL;
   const model = getModel(modelKey);
   try {
+    assertSelectableModel(modelKey);
     assertModelAccess(modelKey, ownerEntitlements.plan);
   } catch {
     throw Errors.forbidden(

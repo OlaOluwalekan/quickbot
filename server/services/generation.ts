@@ -25,6 +25,7 @@ import {
   getModel,
   isModelKey,
   assertModelAccess,
+  assertSelectableModel,
   creditsFor,
   ModelKey,
   PlanTier,
@@ -1097,6 +1098,7 @@ export async function createAndStreamGeneration(
 
   const model = getModel(modelKey);
   try {
+    assertSelectableModel(modelKey);
     assertModelAccess(modelKey, ownerEntitlements.plan);
   } catch (err: unknown) {
     throw Errors.forbidden(
