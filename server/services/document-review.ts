@@ -531,6 +531,8 @@ export async function startDocumentReview(
       const byCategory: Record<string, number> = {};
       let inputTokens = 0;
       let outputTokens = 0;
+      // Billed by the provider as output, so charged too.
+      let thoughtTokens = 0;
       let chunksDone = 0;
       let chunksFailed = 0;
 
@@ -579,6 +581,7 @@ export async function startDocumentReview(
           let raw = "";
           let usedInput: number | null = null;
           let usedOutput: number | null = null;
+          let usedThought = 0;
           try {
             const aiStream = streamAi(
               {
@@ -607,6 +610,7 @@ export async function startDocumentReview(
               else if (event.type === "usage") {
                 usedInput = event.inputTokens;
                 usedOutput = event.outputTokens;
+                usedThought = event.thoughtTokens ?? 0;
               }
             }
           } catch {
@@ -618,6 +622,7 @@ export async function startDocumentReview(
               usedInput ??
               estimateTokens(system) + estimateTokens(chunk.markdown),
             outputTokens: usedOutput ?? estimateTokens(raw),
+            thoughtTokens: usedThought,
           };
         };
 
@@ -647,6 +652,7 @@ export async function startDocumentReview(
             }
             inputTokens += result.inputTokens;
             outputTokens += result.outputTokens;
+            thoughtTokens += result.thoughtTokens;
             const raw = result.raw;
 
             const findings = parseFindings(raw);
@@ -747,6 +753,7 @@ export async function startDocumentReview(
         const chargedCredits = creditsFor(modelKey, {
           inputTokens,
           outputTokens,
+          thoughtTokens,
         });
         await settle(billedAccountId, generationId, chargedCredits, settleKey);
         await db.generation.update({

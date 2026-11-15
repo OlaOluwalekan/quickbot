@@ -596,7 +596,6 @@ export async function regenerateResponse(
       modelKey: input.modelKey ?? defaultModelKey,
       kind: isImageTurn ? "IMAGE" : "TEXT",
       regenerateResponseId: responseId,
-      think: input.think,
       attachmentIds: isImageTurn
         ? undefined
         : targetResponse.attachments.map((a) => a.id),

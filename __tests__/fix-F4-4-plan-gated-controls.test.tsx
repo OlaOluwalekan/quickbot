@@ -265,17 +265,9 @@ describe("Step F4.4 — Plan-locked models and features are disabled with a reas
       expect(imageTab).toHaveAttribute("aria-pressed", "true");
     });
 
-    it("Think harder toggle is gated when thinking summaries are not supported", () => {
+    it("has no Think harder toggle (removed: it had no effect)", () => {
       renderWithProviders(<Composer />, "PRO");
-
-      // When switched to image mode, thinking is not supported
-      const imageTab = screen.getByTestId("mode-tab-image");
-      fireEvent.click(imageTab);
-
-      const thinkBtn = screen.getByTestId("composer-think-harder-btn");
-      const thinkGated = thinkBtn.closest("[data-gated='thinking_unavailable']");
-      expect(thinkGated).toBeInTheDocument();
-      expect(thinkBtn).toHaveAttribute("aria-disabled", "true");
+      expect(screen.queryByTestId("composer-think-harder-btn")).not.toBeInTheDocument();
     });
 
     it("Send button is gated when actor lacks canGenerate permission", async () => {

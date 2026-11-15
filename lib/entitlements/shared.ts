@@ -50,7 +50,6 @@ export type GateReason =
   | { code: "owner_out_of_credits" }
   /** The member used up the monthly credit limit the workspace owner set for them. */
   | { code: "member_credit_cap"; cap: number }
-  | { code: "thinking_unavailable" }
   | { code: "daily_voice_limit" }
   | { code: "unsupported_browser" };
 

@@ -186,7 +186,6 @@ export async function streamRegeneration(
   body: {
     idempotencyKey: string;
     modelKey?: string;
-    think?: boolean;
   },
   handlers: GenerationSSEHandlers = {},
   signal?: AbortSignal

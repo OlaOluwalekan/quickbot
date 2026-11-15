@@ -7,7 +7,6 @@ import { useTranslations } from "next-intl";
 import Link from "next/link";
 import {
   AlertCircle,
-  Brain,
   ChevronDown,
   Image as ImageIcon,
   Layers,
@@ -174,7 +173,6 @@ export function Composer({
     [tModels]
   );
   const activeModel = (clientModels.find((m) => m.key === selectedModel) ?? clientModels[0])!;
-  const [thinkHarder, setThinkHarder] = React.useState(false);
   // F4.1: search is a Settings preference; only say so when it's off.
   const { data: preferences } = useUserPreferences(userId ?? "");
   const webSearchOff = preferences?.webSearchEnabled === false;
@@ -512,11 +510,6 @@ export function Composer({
   const attachmentGateReason: GateReason | null = isAttachmentLimitReached
     ? { code: "attachment_limit", limit: attachmentMax }
     : null;
-  const isThinkingSupported =
-    mode !== "image" && Boolean(activeModel.caps?.thinkingSummaries);
-  const thinkingGateReason: GateReason | null = !isThinkingSupported
-    ? { code: "thinking_unavailable" }
-    : null;
   const submitGateReason: GateReason | null = !canGenerate
     ? { code: "no_permission", capability: t("capGenerate") }
     : creditsGate;
@@ -584,7 +577,6 @@ export function Composer({
             prompt: cleanPrompt,
             modelKey: effectiveModelKey,
             kind: effectiveKind,
-            think: thinkHarder && isThinkingSupported,
             attachmentIds: readyAttachmentIds.length > 0 ? readyAttachmentIds : undefined,
           },
           {
@@ -656,7 +648,6 @@ export function Composer({
         modelKey: effectiveModelKey,
         idempotencyKey,
         mode,
-        thinkHarder: thinkHarder && isThinkingSupported,
         attachmentIds: readyAttachmentIds.length > 0 ? readyAttachmentIds : undefined,
       });
 
@@ -1092,7 +1083,7 @@ export function Composer({
 
       {/* Controls Bar */}
       <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border/50 mt-1">
-        {/* Left Action Group: Mode + Attach + Model + Language + Think harder + Search the web */}
+        {/* Left Action Group: Mode + Attach + Voice + Model + Queue */}
         <div className="flex flex-wrap items-center gap-1.5">
           {/* Mode Switch (Text / Image) */}
           <div className="flex items-center gap-0.5 rounded-xl bg-surface-2 p-0.5">
@@ -1297,30 +1288,6 @@ export function Composer({
               })}
             </PopoverContent>
           </Popover>
-
-          {/* Think Harder Toggle */}
-          <Gated reason={thinkingGateReason}>
-            <button
-              type="button"
-              data-testid="composer-think-harder-btn"
-              onClick={() => {
-                if (!thinkingGateReason) {
-                  setThinkHarder((prev) => !prev);
-                }
-              }}
-              title={t("thinkHarderDesc")}
-              aria-pressed={thinkHarder && isThinkingSupported}
-              className={cn(
-                "inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium transition-colors cursor-pointer border",
-                thinkHarder && isThinkingSupported
-                  ? "bg-accent text-accent-fg border-accent shadow-xs"
-                  : "bg-surface-2 text-muted hover:text-fg hover:bg-surface-3 border-border/50",
-              )}
-            >
-              <Brain className="h-3 w-3" />
-              <span className="hidden sm:inline">{t("thinkHarder")}</span>
-            </button>
-          </Gated>
 
           {/* Question Queue Popover (Step 6.5) */}
           <QuestionQueuePopover workspaceId={workspaceId} />

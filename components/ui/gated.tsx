@@ -50,8 +50,6 @@ function gateMessage(reason: GateReason, t: GateTranslator): string {
       return t("owner_out_of_credits");
     case "member_credit_cap":
       return t("member_credit_cap", { cap: reason.cap });
-    case "thinking_unavailable":
-      return t("thinking_unavailable");
     case "daily_voice_limit":
       return t("daily_voice_limit");
     case "unsupported_browser":
