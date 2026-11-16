@@ -14,7 +14,12 @@ export function renderSupportNotification(
   const subject = `[Support #${shortId}] ${data.topic} (${data.senderEmail})`;
   const heading = `Support Request #${shortId}`;
   const greeting = "Hello Support Team,";
-  const bodyText = `A new support request has been submitted by ${data.senderEmail}.\n\nTopic: ${data.topic}\nTicket ID: ${data.ticketId}\nUser ID: ${data.userId ?? "Anonymous"}\n\nMessage:\n${data.message}`;
+  const links = data.screenshotLinks ?? [];
+  // Internal email to the support inbox (English). Links are signed and expire after 7 days.
+  const screenshotsText = links.length
+    ? `\n\nScreenshots (links expire in 7 days):\n${links.map((l, i) => `${i + 1}. ${l}`).join("\n")}`
+    : "";
+  const bodyText = `A new support request has been submitted by ${data.senderEmail}.\n\nTopic: ${data.topic}\nTicket ID: ${data.ticketId}\nUser ID: ${data.userId ?? "Anonymous"}\n\nMessage:\n${data.message}${screenshotsText}`;
 
   const bodyHtml = `
     <p style="margin: 0 0 12px 0;">A new support request has been submitted.</p>
@@ -28,6 +33,20 @@ export function renderSupportNotification(
       <p style="margin: 0 0 4px 0; font-weight: 600;">Message Content:</p>
       <p style="margin: 0; white-space: pre-wrap;">${escapeHtml(data.message)}</p>
     </div>
+    ${
+      links.length
+        ? `
+      <div style="margin-top: 16px; font-size: 13px;">
+        <p style="margin: 0 0 6px 0; font-weight: 600;">Screenshots (${links.length}, links expire in 7 days):</p>
+        <ol style="margin: 0; padding-left: 20px;">${links
+          .map(
+            (l, i) =>
+              `<li><a href="${escapeHtml(l)}" style="color: #4f46e5;">Screenshot ${i + 1}</a></li>`
+          )
+          .join("")}</ol>
+      </div>`
+        : ""
+    }
     ${
       data.diagnostics
         ? `

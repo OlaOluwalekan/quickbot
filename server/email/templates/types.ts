@@ -66,6 +66,8 @@ export interface SupportAckData {
   topic: string;
   message: string;
   name?: string;
+  /** Screenshots stored with the request (F5.8). */
+  screenshotCount?: number;
 }
 
 export interface SupportNotificationData {
@@ -75,6 +77,8 @@ export interface SupportNotificationData {
   message: string;
   diagnostics?: string;
   userId?: string;
+  /** Signed links to the request's screenshots, valid for 7 days (F5.8). */
+  screenshotLinks?: string[];
 }
 
 export interface OwnershipTransferRequestedData {

@@ -470,10 +470,31 @@ model SupportTicket {
   createdAt   DateTime     @default(now()) @map("created_at")
 
   user        User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  attachments SupportAttachment[]
 
   @@index([email, createdAt])
   @@index([status, createdAt])
   @@map("support_tickets")
+}
+
+/// A screenshot attached to a support request (F5.8). Stored re-encoded,
+/// without metadata, in a private folder `support/<ticketId>/`.
+/// Deleted after 90 days (job in main-guide Step 10.3).
+model SupportAttachment {
+  id         String        @id @default(uuid(7))
+  ticketId   String        @map("ticket_id")
+  providerId String        @map("provider_id")
+  mime       String
+  bytes      Int
+  width      Int?
+  height     Int?
+  createdAt  DateTime      @default(now()) @map("created_at")
+
+  ticket     SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+  @@index([createdAt])
+  @@map("support_attachments")
 }
 
 enum AttachmentKind {

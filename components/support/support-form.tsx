@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { authClient } from "@/lib/auth-client";
+import { ScreenshotPicker, type PickedScreenshot } from "@/components/support/screenshot-picker";
 
 
 export function SupportForm() {
@@ -22,6 +23,8 @@ export function SupportForm() {
   const [message, setMessage] = React.useState("");
   const [attachDiagnostics, setAttachDiagnostics] = React.useState(false);
   const [honeypot, setHoneypot] = React.useState(""); // invisible bot trap
+  const [screenshots, setScreenshots] = React.useState<PickedScreenshot[]>([]);
+  const [sentScreenshots, setSentScreenshots] = React.useState(0);
 
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -41,23 +44,23 @@ export function SupportForm() {
       const digest = new URLSearchParams(window.location.search).get("digest");
       if (digest) {
         setTopic("bug");
-        setMessage((prev) => prev || `Error Reference ID: ${digest}\n\n`);
+        setMessage((prev) => prev || `${t("errorReferencePrefill", { digest })}\n\n`);
         setAttachDiagnostics(true);
       }
     }
-  }, []);
+  }, [t]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
     if (!email.trim() || !message.trim()) {
-      setError("Please provide your email address and message.");
+      setError(t("emailAndMessageRequired"));
       return;
     }
 
     if (message.trim().length < 10) {
-      setError("Message must be at least 10 characters.");
+      setError(t("messageTooShort"));
       return;
     }
 
@@ -78,26 +81,41 @@ export function SupportForm() {
           }
         : undefined;
 
-      const res = await fetch("/api/v1/support", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: name.trim() || undefined,
-          email: email.trim(),
-          topic,
-          message: message.trim(),
-          website: honeypot || undefined,
-          diagnostics: diagnosticsData,
-        }),
-      });
+      const fields = {
+        name: name.trim() || undefined,
+        email: email.trim(),
+        topic,
+        message: message.trim(),
+        website: honeypot || undefined,
+      };
+      let res: Response;
+      if (screenshots.length > 0) {
+        // Screenshots go as multipart; the browser sets the boundary header.
+        const form = new FormData();
+        for (const [key, value] of Object.entries(fields)) {
+          if (value) form.append(key, value);
+        }
+        if (diagnosticsData) form.append("diagnostics", JSON.stringify(diagnosticsData));
+        for (const shot of screenshots) form.append("screenshots", shot.file, shot.file.name);
+        res = await fetch("/api/v1/support", { method: "POST", body: form });
+      } else {
+        res = await fetch("/api/v1/support", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...fields, diagnostics: diagnosticsData }),
+        });
+      }
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({ error: { status: res.status } }));
 
       if (!res.ok) {
         throw data?.error ?? {};
       }
 
       setTicketId(data.data?.ticketId || "submitted");
+      setSentScreenshots(data.data?.screenshotCount ?? 0);
+      screenshots.forEach((s) => URL.revokeObjectURL(s.url));
+      setScreenshots([]);
     } catch (err: unknown) {
       setError(getApiErrorMessage(err, tRoot, t("submitFailed")));
     } finally {
@@ -107,6 +125,7 @@ export function SupportForm() {
 
   const handleReset = () => {
     setTicketId(null);
+    setSentScreenshots(0);
     setMessage("");
     setError(null);
   };
@@ -126,6 +145,11 @@ export function SupportForm() {
             <span className="inline-block rounded-xl bg-surface-2 border border-border px-4 py-2 font-mono text-xs font-semibold text-accent">
               {t("ticketIdNotice", { ticketId: ticketId.slice(0, 8) })}
             </span>
+            {sentScreenshots > 0 && (
+              <p className="pt-2 text-xs text-fg-muted">
+                {t("screenshots.attached", { count: sentScreenshots })}
+              </p>
+            )}
           </div>
         </div>
 
@@ -236,6 +260,8 @@ export function SupportForm() {
             className="flex w-full rounded-xl border border-border bg-surface-2/40 p-3.5 text-xs text-fg leading-relaxed placeholder:text-fg-subtle focus-visible:outline-2 focus-visible:outline-ring resize-y"
           />
         </div>
+
+        <ScreenshotPicker value={screenshots} onChange={setScreenshots} disabled={loading} />
 
         {/* Diagnostics Checkbox */}
         <div className="rounded-xl border border-border/80 bg-surface-2/30 p-4 space-y-2">
