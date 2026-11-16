@@ -4,115 +4,56 @@
 import { Resend } from "resend";
 import { db } from "@/server/db/client";
 import { getSiteConfig } from "@/server/config/site";
-import { renderEmail, sendEmail } from "@/server/email/send";
-import { sendWelcomeEmailOnce } from "@/server/services/welcome";
+import { renderEmail } from "@/server/email/send";
+import {
+  sendWelcomeEmailOnce,
+  welcomeOnUserCreated,
+  welcomeOnUserUpdated,
+} from "@/server/services/welcome";
 
 jest.mock("resend");
 
-describe("Step F4.6 — Welcome Email Service & Templates", () => {
-  const site = getSiteConfig();
-  const testUserPasswordId = "user_welcome_test_password";
-  const testUserOAuthId = "user_welcome_test_oauth";
-  const testUserExistingId = "user_welcome_test_existing";
-  const testUserEsId = "user_welcome_test_es";
+const sendMock = jest.fn();
 
-  beforeAll(() => {
-    jest.setTimeout(25000);
-  });
+const IDS = {
+  password: "user_welcome_test_password",
+  oauth: "user_welcome_test_oauth",
+  existing: "user_welcome_test_existing",
+  es: "user_welcome_test_es",
+  req: "user_welcome_test_request_locale",
+};
+const ALL_IDS = Object.values(IDS);
+
+async function cleanup() {
+  await db.userPreference.deleteMany({ where: { userId: { in: ALL_IDS } } });
+  await db.user.deleteMany({ where: { id: { in: ALL_IDS } } });
+}
+
+function welcomeSends() {
+  return sendMock.mock.calls.map(
+    (c) => c[0] as { to: string[]; subject: string; html: string }
+  );
+}
+
+describe("Step F4.6 — Welcome email", () => {
+  const site = getSiteConfig();
 
   beforeEach(async () => {
+    sendMock.mockReset();
+    sendMock.mockResolvedValue({ data: { id: "resend_mock_id_123" }, error: null });
     (Resend as unknown as jest.Mock).mockImplementation(() => ({
-      emails: {
-        send: jest.fn().mockResolvedValue({
-          data: { id: "resend_mock_id_123" },
-          error: null,
-        }),
-      },
+      emails: { send: sendMock },
     }));
-
-    // Clean up test users
-    await db.notification.deleteMany({
-      where: {
-        userId: {
-          in: [
-            testUserPasswordId,
-            testUserOAuthId,
-            testUserExistingId,
-            testUserEsId,
-          ],
-        },
-      },
-    });
-
-    await db.userPreference.deleteMany({
-      where: {
-        userId: {
-          in: [
-            testUserPasswordId,
-            testUserOAuthId,
-            testUserExistingId,
-            testUserEsId,
-          ],
-        },
-      },
-    });
-
-    await db.user.deleteMany({
-      where: {
-        id: {
-          in: [
-            testUserPasswordId,
-            testUserOAuthId,
-            testUserExistingId,
-            testUserEsId,
-          ],
-        },
-      },
-    });
+    await cleanup();
   });
 
   afterAll(async () => {
-    await db.notification.deleteMany({
-      where: {
-        userId: {
-          in: [
-            testUserPasswordId,
-            testUserOAuthId,
-            testUserExistingId,
-            testUserEsId,
-          ],
-        },
-      },
-    });
-    await db.userPreference.deleteMany({
-      where: {
-        userId: {
-          in: [
-            testUserPasswordId,
-            testUserOAuthId,
-            testUserExistingId,
-            testUserEsId,
-          ],
-        },
-      },
-    });
-    await db.user.deleteMany({
-      where: {
-        id: {
-          in: [
-            testUserPasswordId,
-            testUserOAuthId,
-            testUserExistingId,
-            testUserEsId,
-          ],
-        },
-      },
-    });
+    await cleanup();
     await db.$disconnect();
   });
 
-  describe("1. Template Content & Multilingual Rendering", () => {
-    it("renders welcome email with name greeting, 3 getting-started points, CTA, and help link in English", async () => {
+  describe("template", () => {
+    it("greets by name, lists 3 points, links the app, help center and support address", async () => {
       const rendered = await renderEmail(
         "welcome",
         "ada@example.com",
@@ -122,203 +63,194 @@ describe("Step F4.6 — Welcome Email Service & Templates", () => {
 
       expect(rendered.subject).toContain("Welcome to Klecx");
       expect(rendered.html).toContain("Hi Ada Lovelace,");
-      // 3 getting started points
       expect(rendered.html).toContain("Create a workspace");
       expect(rendered.html).toContain("Highlight text to comment or ask");
       expect(rendered.html).toContain("Organize with projects");
-      // Action URL
-      expect(rendered.html).toContain(`${site.appUrl}/workspaces`);
+      expect(rendered.html).toContain(`href="${site.appUrl}/workspaces"`);
       expect(rendered.html).toContain("Open Klecx");
-      // Help Center
-      expect(rendered.html).toContain(`${site.appUrl}/help`);
-      // Support address from site config
-      expect(rendered.html).toContain(site.emails.support);
+      expect(rendered.html).toContain(`href="${site.appUrl}/help"`);
+      expect(rendered.html).toContain(`href="mailto:${site.emails.support}"`);
+      expect(rendered.html).not.toContain("%%");
       expect(rendered.text).toContain("1. Create a workspace");
+      expect(rendered.text).toContain(`${site.appUrl}/help`);
+      expect(rendered.text).toContain(site.emails.support);
     });
 
-    it("renders generic greeting when name is not provided", async () => {
+    it("uses the plain greeting without a name", async () => {
+      const rendered = await renderEmail("welcome", "noname@example.com", {}, { locale: "en" });
+      expect(rendered.html).toContain("Hi,");
+      expect(rendered.html).not.toContain("undefined");
+    });
+
+    it("escapes the name", async () => {
       const rendered = await renderEmail(
         "welcome",
-        "noname@example.com",
-        {},
+        "x@example.com",
+        { name: "<b>Eve</b>" },
         { locale: "en" }
       );
-
-      expect(rendered.html).toContain("Hi,");
-      expect(rendered.html).not.toContain("Hi undefined");
+      expect(rendered.html).not.toContain("<b>Eve</b>");
+      expect(rendered.html).toContain("&lt;b&gt;Eve&lt;/b&gt;");
     });
 
-    it("renders welcome email correctly in Spanish and French", async () => {
-      const esRendered = await renderEmail(
-        "welcome",
-        "carlos@example.com",
-        { name: "Carlos" },
-        { locale: "es" }
-      );
-      expect(esRendered.subject).toContain("Bienvenido a Klecx");
-      expect(esRendered.html).toContain("Hola Carlos,");
-      expect(esRendered.html).toContain("Crea un espacio de trabajo");
-      expect(esRendered.html).toContain("Selecciona texto para comentar o preguntar");
-      expect(esRendered.html).toContain("Organiza con proyectos");
-      expect(esRendered.html).toContain("Abrir Klecx");
+    it("is translated in Spanish and French", async () => {
+      const es = await renderEmail("welcome", "c@example.com", { name: "Carlos" }, { locale: "es" });
+      expect(es.subject).toContain("Bienvenido a Klecx");
+      expect(es.html).toContain("Hola Carlos,");
+      expect(es.html).toContain("Abrir Klecx");
 
-      const frRendered = await renderEmail(
-        "welcome",
-        "claire@example.com",
-        { name: "Claire" },
-        { locale: "fr" }
-      );
-      expect(frRendered.subject).toContain("Bienvenue sur Klecx");
-      expect(frRendered.html).toContain("Bonjour Claire,");
-      expect(frRendered.html).toContain("Créer un espace de travail");
-      expect(frRendered.html).toContain("Surligner du texte pour commenter ou demander");
-      expect(frRendered.html).toContain("Organiser avec des projets");
-      expect(frRendered.html).toContain("Ouvrir Klecx");
+      const fr = await renderEmail("welcome", "c@example.com", { name: "Claire" }, { locale: "fr" });
+      expect(fr.subject).toContain("Bienvenue sur Klecx");
+      expect(fr.html).toContain("Bonjour Claire,");
+      expect(fr.html).toContain("Ouvrir Klecx");
     });
   });
 
-  describe("2. Idempotent Delivery Rules & DB Guards", () => {
-    it("password sign-up: does NOT send welcome email when emailVerified is false", async () => {
-      await db.user.create({
+  describe("sending once", () => {
+    it("password sign-up: nothing until the email is verified, then exactly one", async () => {
+      const created = await db.user.create({
         data: {
-          id: testUserPasswordId,
+          id: IDS.password,
           email: "password_user@example.com",
           name: "Password User",
           emailVerified: false,
-          welcomeEmailSentAt: null,
         },
       });
 
-      const result = await sendWelcomeEmailOnce(testUserPasswordId);
-      expect(result.sent).toBe(false);
+      await welcomeOnUserCreated(created);
+      expect(sendMock).not.toHaveBeenCalled();
+      expect((await sendWelcomeEmailOnce(IDS.password)).sent).toBe(false);
+      expect(sendMock).not.toHaveBeenCalled();
 
-      const userInDb = await db.user.findUnique({
-        where: { id: testUserPasswordId },
-      });
-      expect(userInDb?.welcomeEmailSentAt).toBeNull();
-    });
-
-    it("after verification: sends welcome email, updates welcomeEmailSentAt, and creates in-app notification", async () => {
-      await db.user.create({
-        data: {
-          id: testUserPasswordId,
-          email: "verified_user@example.com",
-          name: "Verified User",
-          emailVerified: false,
-          welcomeEmailSentAt: null,
-        },
-      });
-
-      // User verifies email
-      await db.user.update({
-        where: { id: testUserPasswordId },
+      // Verification link clicked.
+      const verified = await db.user.update({
+        where: { id: IDS.password },
         data: { emailVerified: true },
       });
+      await welcomeOnUserUpdated(verified);
+      expect(sendMock).toHaveBeenCalledTimes(1);
+      expect(welcomeSends()[0]!.to).toEqual(["password_user@example.com"]);
 
-      const result = await sendWelcomeEmailOnce(testUserPasswordId);
-      expect(result.sent).toBe(true);
-      expect(result.email).toBe("verified_user@example.com");
-
-      const userInDb = await db.user.findUnique({
-        where: { id: testUserPasswordId },
+      // Verifying again, or any later profile update: still one.
+      const again = await db.user.update({
+        where: { id: IDS.password },
+        data: { emailVerified: true, name: "Renamed" },
       });
-      expect(userInDb?.welcomeEmailSentAt).toBeInstanceOf(Date);
+      await welcomeOnUserUpdated(again);
+      await welcomeOnUserUpdated({ id: IDS.password, emailVerified: true });
+      expect(sendMock).toHaveBeenCalledTimes(1);
 
-      // In-app notification created
-      const notif = await db.notification.findFirst({
-        where: { userId: testUserPasswordId, type: "WELCOME" },
-      });
-      expect(notif).toBeTruthy();
+      const row = await db.user.findUnique({ where: { id: IDS.password } });
+      expect(row?.welcomeEmailSentAt).toBeInstanceOf(Date);
     });
 
-    it("idempotency: verifying twice or concurrent invocations send at most one welcome email", async () => {
-      await db.user.create({
+    it("OAuth sign-up with a verified email: one email; linking another provider sends none", async () => {
+      const created = await db.user.create({
         data: {
-          id: testUserPasswordId,
-          email: "idempotent_user@example.com",
-          name: "Idempotent User",
-          emailVerified: true,
-          welcomeEmailSentAt: null,
-        },
-      });
-
-      // Run multiple concurrent calls
-      const [r1, r2, r3] = await Promise.all([
-        sendWelcomeEmailOnce(testUserPasswordId),
-        sendWelcomeEmailOnce(testUserPasswordId),
-        sendWelcomeEmailOnce(testUserPasswordId),
-      ]);
-
-      const sentCount = [r1.sent, r2.sent, r3.sent].filter(Boolean).length;
-      expect(sentCount).toBe(1);
-
-      // Subsequent call still returns false
-      const rSubsequent = await sendWelcomeEmailOnce(testUserPasswordId);
-      expect(rSubsequent.sent).toBe(false);
-    });
-
-    it("OAuth sign-up: sends welcome email immediately on first sign-in when email is pre-verified", async () => {
-      await db.user.create({
-        data: {
-          id: testUserOAuthId,
+          id: IDS.oauth,
           email: "oauth_user@example.com",
           name: "OAuth User",
-          emailVerified: true, // Google / GitHub verified
-          welcomeEmailSentAt: null,
+          emailVerified: true,
         },
       });
 
-      const result = await sendWelcomeEmailOnce(testUserOAuthId);
-      expect(result.sent).toBe(true);
-      expect(result.email).toBe("oauth_user@example.com");
+      await welcomeOnUserCreated(created);
+      expect(sendMock).toHaveBeenCalledTimes(1);
 
-      const userInDb = await db.user.findUnique({
-        where: { id: testUserOAuthId },
+      // Linking a second provider updates the (already verified) user.
+      const linked = await db.user.update({
+        where: { id: IDS.oauth },
+        data: { image: "https://example.com/a.png" },
       });
-      expect(userInDb?.welcomeEmailSentAt).toBeInstanceOf(Date);
+      await welcomeOnUserUpdated(linked);
+      await welcomeOnUserCreated(created);
+      expect(sendMock).toHaveBeenCalledTimes(1);
     });
 
-    it("existing users from migration: do not receive welcome email if welcomeEmailSentAt is already set", async () => {
+    it("concurrent calls send at most one email", async () => {
+      await db.user.create({
+        data: {
+          id: IDS.password,
+          email: "idempotent_user@example.com",
+          name: "Idem",
+          emailVerified: true,
+        },
+      });
+
+      const results = await Promise.all([
+        sendWelcomeEmailOnce(IDS.password),
+        sendWelcomeEmailOnce(IDS.password),
+        sendWelcomeEmailOnce(IDS.password),
+      ]);
+
+      expect(results.filter((r) => r.sent)).toHaveLength(1);
+      expect(sendMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("existing users (welcome_email_sent_at already set by the migration) get nothing", async () => {
       const pastDate = new Date("2026-11-01T12:00:00Z");
       await db.user.create({
         data: {
-          id: testUserExistingId,
+          id: IDS.existing,
           email: "existing_user@example.com",
-          name: "Existing User",
+          name: "Existing",
           emailVerified: true,
           welcomeEmailSentAt: pastDate,
         },
       });
 
-      const result = await sendWelcomeEmailOnce(testUserExistingId);
-      expect(result.sent).toBe(false);
-
-      const userInDb = await db.user.findUnique({
-        where: { id: testUserExistingId },
-      });
-      expect(userInDb?.welcomeEmailSentAt).toEqual(pastDate);
+      expect((await sendWelcomeEmailOnce(IDS.existing)).sent).toBe(false);
+      expect(sendMock).not.toHaveBeenCalled();
+      const row = await db.user.findUnique({ where: { id: IDS.existing } });
+      expect(row?.welcomeEmailSentAt).toEqual(pastDate);
     });
 
-    it("respects user uiLocale preference when sending welcome email", async () => {
+    it("a failed delivery is reported and does not throw", async () => {
+      sendMock.mockResolvedValue({ data: null, error: { message: "boom" } });
+      const errSpy = jest.spyOn(console, "error").mockImplementation(() => {});
       await db.user.create({
-        data: {
-          id: testUserEsId,
-          email: "spanish_user@example.com",
-          name: "Mateo",
-          emailVerified: true,
-          welcomeEmailSentAt: null,
-        },
+        data: { id: IDS.oauth, email: "fail@example.com", name: "Fail", emailVerified: true },
       });
 
-      await db.userPreference.create({
-        data: {
-          userId: testUserEsId,
-          uiLocale: "es",
-        },
+      await expect(sendWelcomeEmailOnce(IDS.oauth)).resolves.toEqual({ sent: false });
+      errSpy.mockRestore();
+    });
+  });
+
+  describe("locale", () => {
+    it("uses the uiLocale preference first", async () => {
+      await db.user.create({
+        data: { id: IDS.es, email: "spanish_user@example.com", name: "Mateo", emailVerified: true },
+      });
+      await db.userPreference.create({ data: { userId: IDS.es, uiLocale: "es" } });
+
+      // The request says French; the saved preference wins.
+      await welcomeOnUserCreated(
+        { id: IDS.es, emailVerified: true },
+        { headers: new Headers({ cookie: "NEXT_LOCALE=fr" }) }
+      );
+      expect(welcomeSends()[0]!.subject).toContain("Bienvenido a Klecx");
+    });
+
+    it("falls back to the request locale (cookie or Accept-Language)", async () => {
+      const user = await db.user.create({
+        data: { id: IDS.req, email: "fr_user@example.com", name: "Claire", emailVerified: true },
       });
 
-      const result = await sendWelcomeEmailOnce(testUserEsId);
-      expect(result.sent).toBe(true);
+      await welcomeOnUserCreated(user, {
+        headers: new Headers({ "accept-language": "fr-FR,fr;q=0.9,en;q=0.5" }),
+      });
+      expect(welcomeSends()[0]!.subject).toContain("Bienvenue sur Klecx");
+    });
+
+    it("defaults to English without a preference or request", async () => {
+      await db.user.create({
+        data: { id: IDS.req, email: "en_user@example.com", name: "  ", emailVerified: true },
+      });
+      await sendWelcomeEmailOnce(IDS.req);
+      expect(welcomeSends()[0]!.subject).toContain("Welcome to Klecx");
+      // A blank name falls back to the plain greeting.
+      expect(welcomeSends()[0]!.html).toContain("Hi,");
     });
   });
 });

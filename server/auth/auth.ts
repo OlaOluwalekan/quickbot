@@ -11,7 +11,7 @@ import { authSecondaryStorage } from "@/server/http/rate-limit";
 import { createAccountWithFreeGrant } from "@/server/services/credits";
 import { generateUniqueDefaultUsername } from "@/server/services/username";
 import { parseDeviceMetadata, checkAndAlertNewSignIn } from "@/server/services/device";
-import { sendWelcomeEmailOnce } from "@/server/services/welcome";
+import { welcomeOnUserCreated, welcomeOnUserUpdated } from "@/server/services/welcome";
 
 export const auth = betterAuth({
   baseURL: env.APP_URL,
@@ -34,18 +34,16 @@ export const auth = betterAuth({
             },
           };
         },
-        after: async (user) => {
+        after: async (user, ctx) => {
           await createAccountWithFreeGrant(user.id);
-          if (user.emailVerified) {
-            void sendWelcomeEmailOnce(user.id);
-          }
+          // Awaited (it never throws): a promise left running after the
+          // response can be cut off on serverless, after the row was claimed.
+          await welcomeOnUserCreated(user, ctx);
         },
       },
       update: {
-        after: async (user) => {
-          if (user.emailVerified) {
-            void sendWelcomeEmailOnce(user.id);
-          }
+        after: async (user, ctx) => {
+          await welcomeOnUserUpdated(user, ctx);
         },
       },
     },

@@ -35,31 +35,47 @@ export function renderWelcome(
   });
   const disclaimerText = t("welcome.disclaimer");
 
+  // The same sentence with the URL and the address as links: translate with
+  // markers, escape, then swap the markers for anchors.
+  const HELP_MARK = "%%HELP_URL%%";
+  const SUPPORT_MARK = "%%SUPPORT_EMAIL%%";
+  const helpNoticeHtml = escapeHtml(
+    t("welcome.helpNotice", { helpUrl: HELP_MARK, supportEmail: SUPPORT_MARK })
+  )
+    .replace(
+      HELP_MARK,
+      `<a href="${escapeHtml(helpUrl)}" style="color: #818cf8; text-decoration: underline;">${escapeHtml(helpUrl)}</a>`
+    )
+    .replace(
+      SUPPORT_MARK,
+      `<a href="mailto:${escapeHtml(supportEmail)}" style="color: #818cf8; text-decoration: underline;">${escapeHtml(supportEmail)}</a>`
+    );
+
   const bodyHtml = `
     <p style="margin: 0 0 16px 0;">${escapeHtml(bodyText)}</p>
     <p style="margin: 0 0 12px 0; font-weight: 600;">${escapeHtml(getStartedTitle)}</p>
     <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin: 0 0 20px 0; width: 100%;">
       <tr>
-        <td style="padding: 6px 0; vertical-align: top; width: 24px; font-weight: 700; color: #6366f1;">1.</td>
+        <td style="padding: 6px 0; vertical-align: top; width: 24px; font-weight: 700; color: #818cf8;">1.</td>
         <td style="padding: 6px 0; vertical-align: top;">
           <strong>${escapeHtml(step1Title)}</strong> — ${escapeHtml(step1Desc)}
         </td>
       </tr>
       <tr>
-        <td style="padding: 6px 0; vertical-align: top; width: 24px; font-weight: 700; color: #6366f1;">2.</td>
+        <td style="padding: 6px 0; vertical-align: top; width: 24px; font-weight: 700; color: #818cf8;">2.</td>
         <td style="padding: 6px 0; vertical-align: top;">
           <strong>${escapeHtml(step2Title)}</strong> — ${escapeHtml(step2Desc)}
         </td>
       </tr>
       <tr>
-        <td style="padding: 6px 0; vertical-align: top; width: 24px; font-weight: 700; color: #6366f1;">3.</td>
+        <td style="padding: 6px 0; vertical-align: top; width: 24px; font-weight: 700; color: #818cf8;">3.</td>
         <td style="padding: 6px 0; vertical-align: top;">
           <strong>${escapeHtml(step3Title)}</strong> — ${escapeHtml(step3Desc)}
         </td>
       </tr>
     </table>
-    <p style="margin: 0 0 8px 0; font-size: 14px; color: #6b7280;">
-      ${escapeHtml(helpNotice)}
+    <p style="margin: 0 0 8px 0; font-size: 14px; line-height: 1.5; color: #94a3b8;">
+      ${helpNoticeHtml}
     </p>
   `;
 
