@@ -61,7 +61,7 @@
     "featuresHeading": "Diseñado para velocidad, claridad y profundidad creativa",
     "featuresSubheading": "Todo lo que necesitas para pasar de una idea inicial a un resultado pulido en segundos.",
     "feature1Title": "Transmisión SSE en Tiempo Real",
-    "feature1Desc": "Observa cómo las respuestas aparecen token por token mediante Server-Sent Events de baja latencia impulsados por la API Interactions de Google.",
+    "feature1Desc": "Observa cómo las respuestas aparecen token por token mediante streaming con Server-Sent Events de baja latencia.",
     "feature2Title": "Generación Nativa de Imágenes",
     "feature2Desc": "Alterna sin esfuerzo entre razonamiento conversacional y generación de imágenes IA de alta resolución dentro de cualquier chat.",
     "feature3Title": "Memoria Contextual Multiturno",
@@ -754,7 +754,7 @@
       "acceptableUse": "Política de uso aceptable",
       "cookies": "Política de cookies",
       "trustTitle": "Confianza y transparencia",
-      "trustDisclosure": "Klecx es una interfaz independiente construida sobre modelos de IA de terceros (actualmente Google Gemini). Cobramos con transparencia según costos computacionales reales, sin patrones oscuros.",
+      "trustDisclosure": "Klecx es un espacio de trabajo independiente construido sobre modelos de IA de terceros. Cobramos con transparencia según costos computacionales reales, sin patrones oscuros.",
       "allRightsReserved": "Todos los derechos reservados.",
       "help": "Centro de ayuda",
       "support": "Contactar soporte",
@@ -768,7 +768,6 @@
       "subtitle": "Organiza el trabajo con IA en proyectos, guarda las versiones de cada respuesta y haz preguntas sobre cualquier pasaje sin perder el hilo de pensamiento.",
       "startFree": "Comenzar gratis",
       "seePricing": "Ver precios",
-      "geminiFlash": "Rápido y eficiente",
       "projectsLabel": "Proyectos",
       "workspacesInProject": "Espacios en el proyecto",
       "active": "Activo",
@@ -787,7 +786,8 @@
       "mockWorkspace1": "Pooling de Postgres vs Réplicas",
       "mockWorkspace2": "Invalidación de eventos de Redis",
       "mockWorkspace3": "Auditoría de indexación de Prisma",
-      "mockConfig": "pool_mode = transaction | max_client_conn = 10000 | default_pool_size = 50"
+      "mockConfig": "pool_mode = transaction | max_client_conn = 10000 | default_pool_size = 50",
+      "modelBadge": "Razonamiento Estándar"
     },
     "features": {
       "badge": "Diseñado para creadores",
@@ -831,7 +831,7 @@
         "previewTitle": "Versiones de respuesta",
         "v1Label": "v1 (Rápida)",
         "v2Label": "v2 (Razonamiento Estándar)",
-        "activeInfo": "Activa: Versión 2 de 2 (Generada con Gemini 2.5 Flash, 1.800 tokens)"
+        "activeInfo": "Activa: versión 2 de 2 · Razonamiento Estándar · 7 créditos"
       },
       "share": {
         "badge": "Colaboración",
@@ -946,8 +946,8 @@
           "a": "Si no estás satisfecho con tu suscripción durante los primeros 14 días y has usado menos del 20% de tu asignación mensual de créditos, contacta a soporte para un reembolso puntual."
         },
         "models": {
-          "q": "¿Qué modelos de IA utiliza Klecx?",
-          "a": "Klecx es una interfaz independiente construida sobre modelos de alto rendimiento de terceros (actualmente la familia Google Gemini Flash para razonamiento rápido y generación de imágenes). Identificamos con claridad cada modelo utilizado."
+          "q": "¿Qué modelos de IA impulsan Klecx?",
+          "a": "Klecx es un espacio de trabajo independiente basado en modelos de IA de terceros. Eliges un nivel para cada mensaje: Rápido y Eficiente para preguntas cotidianas, Razonamiento Estándar para trabajos complejos y Estudio de Imágenes para imágenes. El compositor muestra el costo en créditos de cada nivel antes de enviar."
         },
         "privacy": {
           "q": "¿Se mantienen privados mis datos de conversación?",
@@ -990,7 +990,7 @@
       "threadBullet3": "Las conversaciones relacionadas quedan dispersas en una barra lateral cronológica sin carpetas ni proyectos.",
       "threadProblemOutro": "Klecx reemplaza los hilos desechables por Espacios y Proyectos persistentes, dota a cada respuesta de un historial de versiones y permite formular preguntas directamente sobre pasajes concretos.",
       "disclosureBadge": "Divulgación obligatoria de arquitectura",
-      "disclosureText": "Klecx es una interfaz independiente construida sobre modelos de IA de terceros (actualmente Google Gemini). No somos Google ni somos propietarios de los modelos base. Ofrecemos un cliente de nivel profesional que desbloquea razonamiento en múltiples turnos, anotaciones, control de versiones y exportación de documentos.",
+      "disclosureText": "Klecx es un espacio de trabajo independiente basado en modelos de IA de terceros. No somos propietarios de dichos modelos. Proporcionamos un cliente de espacio de trabajo especializado de nivel para desarrolladores que permite razonamiento estructurado de varios turnos, anotaciones de pasajes, seguimiento de versiones y exportaciones de documentos.",
       "privateTitle": "Privado por defecto",
       "privateText": "Tus espacios, mensajes, notas y adjuntos son privados. Todo viaja y se almacena cifrado. Jamás vendemos tu información ni usamos tus datos para entrenar modelos públicos.",
       "noFakeTitle": "Sin publicidad engañosa",
@@ -1016,7 +1016,7 @@
       "storageHeading": "1. What We Store",
       "storageBody": "Recopilamos y almacenamos información de tu cuenta (dirección de correo electrónico, nombre para mostrar, imagen de perfil si la proporcionas), tokens de autenticación, metadatos de espacios de trabajo, mensajes, respuestas generadas, historial de revisiones y archivos que subas.",
       "processorsHeading": "2. Proveedores y encargados del tratamiento",
-      "processorsBody": "Tratamos tus datos mediante proveedores empresariales dedicados: modelos de IA generativa e inferencia, alojamiento seguro de imágenes y archivos, entrega de correos transaccionales y pasarela de pago o suscripciones. No vendemos tus datos personales ni los utilizamos para entrenar modelos públicos.",
+      "processorsBody": "Tratamos tus datos mediante proveedores empresariales dedicados: Google Gemini (modelos de IA generativa e inferencia), Cloudinary (alojamiento seguro de imágenes y archivos), Resend (entrega de correos transaccionales) y Creem (procesamiento de pagos, suscripciones y comerciante registrado). No vendemos tus datos personales ni los utilizamos para entrenar modelos públicos.",
       "retentionHeading": "3. Conservación y eliminación de datos",
       "retentionBody": "Los espacios de trabajo y conversaciones eliminados permanecen en tu papelera durante 30 días, tras lo cual se eliminan de forma permanente de las bases de datos y del almacenamiento. Las copias de seguridad automatizadas expiran en un ciclo rotativo de 30 días.",
       "rightsHeading": "4. Tus derechos de protección de datos (RGPD y CCPA)",
@@ -1197,24 +1197,24 @@
     "lastChecked": "Última comprobación: En vivo",
     "services": {
       "ai": {
-        "name": "Motor de generación e inferencia de IA",
+        "name": "Generación de IA",
         "desc": "Puntos de conexión de transmisión para modelos de IA generativa."
       },
       "auth": {
-        "name": "Autenticación y sesiones",
+        "name": "Inicio de sesión y cuentas",
         "desc": "Cuentas de usuario, verificación y almacenamiento de sesiones."
       },
       "db": {
-        "name": "Base de datos PostgreSQL y caché",
-        "desc": "Persistencia de datos, espacios de trabajo y límites de tasa en caché."
+        "name": "Base de datos y caché",
+        "desc": "Persistencia de datos, espacios de trabajo y límites de tasa distribuidos."
       },
       "storage": {
-        "name": "Asset & File Storage",
-        "desc": "Almacenamiento seguro de medios y procesamiento de archivos adjuntos."
+        "name": "Almacenamiento de archivos",
+        "desc": "Almacenamiento seguro de archivos y procesamiento de documentos."
       },
       "email": {
-        "name": "Servicio de correo transaccional",
-        "desc": "Entrega de correos electrónicos para verificaciones, restablecimiento de contraseñas y avisos."
+        "name": "Correo electrónico",
+        "desc": "Entrega de correos para verificaciones, restablecimiento de contraseñas y avisos."
       }
     },
     "incidentHeading": "Incidentes Recientes",

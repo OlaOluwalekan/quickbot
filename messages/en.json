@@ -61,7 +61,7 @@
     "featuresHeading": "Engineered for speed, clarity, and creative depth",
     "featuresSubheading": "Everything you need to move from rough idea to polished output in seconds.",
     "feature1Title": "Real-Time SSE Streaming",
-    "feature1Desc": "Watch responses materialize token-by-token over low-latency Server-Sent Events powered by Google's Interactions API.",
+    "feature1Desc": "Watch responses appear token by token, streamed live over low-latency Server-Sent Events.",
     "feature2Title": "Native Image Generation",
     "feature2Desc": "Switch seamlessly between conversational reasoning and high-resolution AI image generation inside any chat thread.",
     "feature3Title": "Stateful Multi-Turn Memory",
@@ -754,7 +754,7 @@
       "acceptableUse": "Acceptable Use Policy",
       "cookies": "Cookie Policy",
       "trustTitle": "Trust & Transparency",
-      "trustDisclosure": "Klecx is an independent interface built on third-party AI models (currently Google Gemini). We charge transparently based on real computational costs with zero dark patterns.",
+      "trustDisclosure": "Klecx is an independent workspace built on third-party AI models. We charge transparently based on real computational costs with zero dark patterns.",
       "allRightsReserved": "All rights reserved.",
       "help": "Help Center",
       "support": "Contact Support",
@@ -768,7 +768,6 @@
       "subtitle": "Organize AI work into projects, keep every answer's versions, and ask questions about any passage without losing your train of thought.",
       "startFree": "Start free",
       "seePricing": "See pricing",
-      "geminiFlash": "Fast & Efficient",
       "projectsLabel": "Projects",
       "workspacesInProject": "Workspaces in Project",
       "active": "Active",
@@ -787,7 +786,8 @@
       "mockWorkspace1": "Postgres Pooling vs Replicas",
       "mockWorkspace2": "Redis Event Invalidation",
       "mockWorkspace3": "Prisma Indexing Audit",
-      "mockConfig": "pool_mode = transaction | max_client_conn = 10000 | default_pool_size = 50"
+      "mockConfig": "pool_mode = transaction | max_client_conn = 10000 | default_pool_size = 50",
+      "modelBadge": "Standard Reasoning"
     },
     "features": {
       "badge": "Architected for Builders",
@@ -831,7 +831,7 @@
         "previewTitle": "Response Versions",
         "v1Label": "v1 (Quick)",
         "v2Label": "v2 (Standard Reasoning)",
-        "activeInfo": "Active: Version 2 of 2 (Generated with Gemini 2.5 Flash, 1800 tokens)"
+        "activeInfo": "Active: version 2 of 2 · Standard Reasoning · 7 credits"
       },
       "share": {
         "badge": "Teamwork",
@@ -947,7 +947,7 @@
         },
         "models": {
           "q": "Which AI models power Klecx?",
-          "a": "Klecx is an independent interface built on top of high-performance third-party AI models (currently Google Gemini Flash-class models for low-latency reasoning and specialized image synthesis). We clearly label each model key and never hide what runs your requests."
+          "a": "Klecx is an independent workspace built on third-party AI models. You pick a tier for each message: Fast & Efficient for everyday questions, Standard Reasoning for complex work, and Image Studio for images. The composer shows each tier's credit cost before you send."
         },
         "privacy": {
           "q": "Is my conversation data kept private?",
@@ -990,7 +990,7 @@
       "threadBullet3": "Related conversations are buried in a messy chronological sidebar with no way to organize work into folders or projects.",
       "threadProblemOutro": "Klecx replaces disposable threads with persistent Workspaces and Projects, gives every response immutable version history, and lets you ask questions directly about specific passages.",
       "disclosureBadge": "Mandatory Architecture Disclosure",
-      "disclosureText": "Klecx is an independent interface built on top of third-party AI models (currently Google Gemini). We are not Google and we do not claim to own the underlying model weights. We provide a specialized, developer-grade workspace client that unlocks stateful multi-turn reasoning, passage annotations, version tracking, and document exports.",
+      "disclosureText": "Klecx is an independent workspace built on third-party AI models. We don't own those models. We provide a specialized, developer-grade workspace client that unlocks stateful multi-turn reasoning, passage annotations, version tracking, and document exports.",
       "privateTitle": "Private by Default",
       "privateText": "Your workspaces, prompts, notes, and uploaded attachments are strictly private. All data is encrypted in transit and at rest. We never sell your personal information or use your conversations to train public foundation models.",
       "noFakeTitle": "No Fake Marketing",
@@ -1197,24 +1197,24 @@
     "lastChecked": "Last checked: Live",
     "services": {
       "ai": {
-        "name": "AI Inference & Generation Engine",
-        "desc": "Google Gemini 2.5 Flash & Pro model streaming endpoints."
+        "name": "AI generation",
+        "desc": "Streaming and inference endpoints for generative AI models."
       },
       "auth": {
-        "name": "Authentication & Sessions",
-        "desc": "Better Auth user accounts, verification, and session storage."
+        "name": "Sign-in & Accounts",
+        "desc": "User accounts, verification, and session storage."
       },
       "db": {
-        "name": "PostgreSQL Database & Cache",
-        "desc": "Prisma data persistence, workspaces, and Upstash Redis rate limits."
+        "name": "Database & Cache",
+        "desc": "Data persistence, workspaces, and distributed rate limits."
       },
       "storage": {
-        "name": "Asset & File Storage",
-        "desc": "Cloudinary CDN media storage and document attachment processing."
+        "name": "File storage",
+        "desc": "Secure file storage and document attachment processing."
       },
       "email": {
-        "name": "Transactional Email Service",
-        "desc": "Resend email delivery for verifications, password resets, and support."
+        "name": "Email",
+        "desc": "Delivery for verifications, password resets, and notifications."
       }
     },
     "incidentHeading": "Recent Incidents",
