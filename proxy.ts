@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionCookie } from "better-auth/cookies";
-import { authRoutes, DEFAULT_LOGIN_REDIRECT, publicRoutes } from "./utils/routes";
+import {
+  authRoutes,
+  DEFAULT_LOGIN_REDIRECT,
+  isMetadataImageRoute,
+  publicRoutes,
+} from "./utils/routes";
 
 function attachSecurityHeaders(res: NextResponse, pathname: string) {
   if (pathname.startsWith("/s/") || pathname.startsWith("/api/v1/s/")) {
@@ -81,6 +86,7 @@ export async function proxy(req: NextRequest) {
 
   const isPublicRoute =
     publicRoutes.includes(pathname) ||
+    isMetadataImageRoute(pathname) ||
     pathname.startsWith("/help/") ||
     pathname === "/maintenance";
 
