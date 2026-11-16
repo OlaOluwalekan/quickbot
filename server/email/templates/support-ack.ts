@@ -21,6 +21,9 @@ export function renderSupportAck(
     topic: data.topic,
   });
   const quoteNotice = t("supportAck.quoteNotice");
+  const screenshotsNotice = data.screenshotCount
+    ? t("supportAck.screenshotsAttached", { count: data.screenshotCount })
+    : "";
   const responseTimeNotice = t("supportAck.responseTimeNotice");
 
   const bodyHtml = `
@@ -29,6 +32,7 @@ export function renderSupportAck(
       <p style="margin: 0 0 6px 0; font-weight: 600;">${escapeHtml(quoteNotice)}</p>
       <p style="margin: 0; white-space: pre-wrap;">${escapeHtml(data.message)}</p>
     </div>
+    ${screenshotsNotice ? `<p style="margin: 0; font-size: 13px; color: #3f3f46;">${escapeHtml(screenshotsNotice)}</p>` : ""}
     <p style="margin: 16px 0 0 0; font-size: 13px; color: #71717a;">${escapeHtml(responseTimeNotice)}</p>
   `;
 
@@ -37,7 +41,7 @@ export function renderSupportAck(
     heading,
     greeting,
     bodyHtml,
-    bodyText: `${bodyText}\n\n${quoteNotice}:\n${data.message}\n\n${responseTimeNotice}`,
+    bodyText: `${bodyText}\n\n${quoteNotice}:\n${data.message}${screenshotsNotice ? `\n\n${screenshotsNotice}` : ""}\n\n${responseTimeNotice}`,
     toEmail,
     supportEmail: site.emails.support,
     copyUrlNotice: t("layout.copyUrlNotice"),

@@ -1,6 +1,9 @@
 import * as React from "react";
 import { render, screen } from "@testing-library/react";
 import Logo from "@/components/logo/Logo";
+import { MARK_PATH, MARK_STROKE, MARK_VIEWBOX } from "@/lib/brand/mark";
+
+jest.mock("next-intl", () => jest.requireActual("../test-utils/next-intl").nextIntlMock);
 
 describe("Brand Logo Component", () => {
   it("renders full wordmark by default (Kl, styled 'e', cx)", () => {
@@ -56,5 +59,14 @@ describe("Brand Logo Component", () => {
 
     rerender(<Logo size="large" />);
     expect(container.querySelector("svg")).toHaveClass("h-14");
+  });
+
+  it("draws the mark from lib/brand/mark.ts (same source as the favicon and icons)", () => {
+    const { container } = render(<Logo />);
+    const svg = container.querySelector("svg");
+    expect(svg).toHaveAttribute("viewBox", MARK_VIEWBOX);
+    const pathEl = container.querySelector("svg path");
+    expect(pathEl).toHaveAttribute("d", MARK_PATH);
+    expect(pathEl).toHaveAttribute("stroke-width", String(MARK_STROKE));
   });
 });

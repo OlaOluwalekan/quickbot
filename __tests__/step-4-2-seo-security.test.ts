@@ -19,24 +19,23 @@ import { metadata as appLayoutMetadata } from "@/app/(app)/layout";
 import { metadata as settingsMetadata } from "@/app/settings/page";
 import { PLANS } from "@/server/billing/plans";
 import enMessages from "@/messages/en.json";
+import { MARK_PATH } from "@/lib/brand/mark";
 
 describe("Step 4.2 — SEO and Security Headers", () => {
   describe("Favicon and Brand Icon Assets", () => {
-    test("SVG favicon exists in app and public with the styled 'e' mark", () => {
-      const appIconPath = path.join(process.cwd(), "app", "icon.svg");
+    // F5.10: app icons are generated from lib/brand/mark.ts (app/icon.tsx,
+    // app/apple-icon.tsx); public/icon.svg is written by scripts/generate-brand-icons.mjs.
+    test("public SVG icon exists with the styled 'e' mark from lib/brand/mark.ts", () => {
       const publicIconPath = path.join(process.cwd(), "public", "icon.svg");
-
-      expect(fs.existsSync(appIconPath)).toBe(true);
       expect(fs.existsSync(publicIconPath)).toBe(true);
-
-      const svgContent = fs.readFileSync(appIconPath, "utf8");
-      // Contains the square-spiral 'e' coordinates
-      expect(svgContent).toContain("M 75 36 H 37 V 63.5 H 91.75 V 8.25 H 8.25 V 91.75 H 91.75");
+      const svgContent = fs.readFileSync(publicIconPath, "utf8");
+      expect(svgContent).toContain(MARK_PATH);
     });
 
-    test("favicon.ico and apple-icon exist", () => {
+    test("favicon.ico, generated app icon and apple icon exist", () => {
       expect(fs.existsSync(path.join(process.cwd(), "app", "favicon.ico"))).toBe(true);
-      expect(fs.existsSync(path.join(process.cwd(), "app", "apple-icon.png"))).toBe(true);
+      expect(fs.existsSync(path.join(process.cwd(), "app", "icon.tsx"))).toBe(true);
+      expect(fs.existsSync(path.join(process.cwd(), "app", "apple-icon.tsx"))).toBe(true);
       expect(fs.existsSync(path.join(process.cwd(), "public", "apple-touch-icon.png"))).toBe(true);
     });
 

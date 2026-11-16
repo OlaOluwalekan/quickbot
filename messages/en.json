@@ -418,7 +418,8 @@
       "greetingWithName": "Hello {name},",
       "body": "Thank you for contacting Klecx support. We have received your request regarding \"{topic}\" (Ticket #{ticketId}).",
       "quoteNotice": "Your message:",
-      "responseTimeNotice": "Our engineering and customer support team reviews tickets within ≤ 3 business days."
+      "responseTimeNotice": "Our engineering and customer support team reviews tickets within ≤ 3 business days.",
+      "screenshotsAttached": "{count, plural, one {# screenshot attached} other {# screenshots attached}}"
     },
     "layout": {
       "copyUrlNotice": "If the button above does not work, copy and paste this link into your web browser:",
@@ -1160,7 +1161,28 @@
     "visitHelpCenter": "Visit Help Center",
     "website": "Website",
     "charCount": "{current} / {max}",
-    "submitFailed": "Couldn't send your support request. Please try again."
+    "submitFailed": "Couldn't send your support request. Please try again.",
+    "emailAndMessageRequired": "Please enter your email address and a message.",
+    "messageTooShort": "Your message must be at least 10 characters.",
+    "errorReferencePrefill": "Error reference: {digest}",
+    "screenshots": {
+      "label": "Screenshots (optional)",
+      "add": "Add screenshots",
+      "dropHint": "Drop images here or paste them with Ctrl+V / ⌘+V.",
+      "formats": "PNG, JPEG or WebP, up to {maxMb} MB each.",
+      "counter": "{count} / {max}",
+      "privacy": "Screenshots may contain personal information. Crop anything you don't want to share.",
+      "remove": "Remove {name}",
+      "previewAlt": "Screenshot {index}: {name}",
+      "preparing": "Preparing screenshots…",
+      "attached": "{count, plural, one {# screenshot attached} other {# screenshots attached}}",
+      "errors": {
+        "tooLarge": "“{name}” is larger than {maxMb} MB.",
+        "type": "“{name}”: only PNG, JPEG or WebP images can be attached.",
+        "tooMany": "You can attach at most {max} screenshots.",
+        "totalTooLarge": "These screenshots are too large together. Remove one or use smaller images."
+      }
+    }
   },
   "Status": {
     "title": "System Status",
@@ -1325,7 +1347,13 @@
       "internal": "Something went wrong on our side. Please try again.",
       "network_error": "Connection lost. Check your internet connection and try again.",
       "network": "Connection lost. Check your internet connection and try again.",
-      "connection": "The connection closed before the answer finished. Please try again."
+      "connection": "The connection closed before the answer finished. Please try again.",
+      "too_many_screenshots": "You can attach at most 5 screenshots.",
+      "screenshot_too_large": "A screenshot is larger than 2 MB or empty.",
+      "screenshots_too_large": "The screenshots are too large together. Remove one or use smaller images.",
+      "screenshot_type_unsupported": "Screenshots must be PNG, JPEG or WebP images.",
+      "screenshot_unreadable": "A screenshot couldn't be read. Try saving it again as PNG.",
+      "screenshot_dimensions_too_large": "A screenshot is too large: at most 4096 × 4096 pixels."
     }
   },
   "Gates": {

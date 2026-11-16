@@ -50,13 +50,8 @@ export async function generateMetadata(): Promise<Metadata> {
       "AI research",
     ],
     manifest: "/manifest.webmanifest",
-    icons: {
-      icon: [
-        { url: "/icon.svg", type: "image/svg+xml" },
-        { url: "/favicon.ico", sizes: "any" },
-      ],
-      apple: [{ url: "/apple-icon.png", sizes: "180x180" }],
-    },
+    // Icons come from the file conventions: app/favicon.ico, app/icon.tsx and
+    // app/apple-icon.tsx, all drawn from lib/brand/mark.ts (F5.10).
     openGraph: {
       type: "website",
       locale: "en_US",

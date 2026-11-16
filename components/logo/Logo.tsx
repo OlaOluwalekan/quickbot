@@ -2,6 +2,8 @@
 
 import * as React from "react";
 import clsx from "clsx";
+import { useTranslations } from "next-intl";
+import { MARK_PATH, MARK_STROKE, MARK_VIEWBOX } from "@/lib/brand/mark";
 import type { LogoProps } from "@/types/logo-types";
 import { sizeClass, iconSizeClass, maxTextWidthClass } from "./logo.config";
 
@@ -18,6 +20,7 @@ const Logo = ({
   className,
   markClassName,
 }: LogoProps): React.JSX.Element => {
+  const t = useTranslations("Common");
   return (
     <div
       className={clsx(
@@ -26,7 +29,7 @@ const Logo = ({
         className
       )}
       role="img"
-      aria-label="Klecx"
+      aria-label={t("appName")}
     >
       {/* Prefix "Kl" */}
       <span
@@ -49,16 +52,16 @@ const Logo = ({
         )}
       >
         <svg
-          viewBox="0 0 100 100"
+          viewBox={MARK_VIEWBOX}
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
           className={clsx(iconSizeClass(size), "transition-all duration-300")}
           aria-hidden="true"
         >
           <path
-            d="M 60 36 H 37 V 63.5 H 91.75 V 8.25 H 8.25 V 91.75 H 91.75"
+            d={MARK_PATH}
             stroke="currentColor"
-            strokeWidth="12"
+            strokeWidth={MARK_STROKE}
             strokeLinecap="square"
             strokeLinejoin="miter"
           />
