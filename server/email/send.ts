@@ -1,5 +1,8 @@
 import "server-only";
 import { Resend } from "resend";
+// next-intl re-exports this from use-intl/core; imported directly so it works
+// outside React and is unaffected by tests that mock "next-intl".
+import { createTranslator } from "use-intl/core";
 import { env } from "@/server/env";
 import enMessages from "@/messages/en.json";
 import esMessages from "@/messages/es.json";
@@ -46,36 +49,7 @@ const messagesMap = {
 
 export type SupportedLocale = keyof typeof messagesMap;
 
-function getNestedValue(obj: Record<string, unknown>, path: string): string {
-  const parts = path.split(".");
-  let current: unknown = obj;
-  for (const part of parts) {
-    if (
-      current &&
-      typeof current === "object" &&
-      part in (current as Record<string, unknown>)
-    ) {
-      current = (current as Record<string, unknown>)[part];
-    } else {
-      return path;
-    }
-  }
-  return typeof current === "string" ? current : path;
-}
 
-function interpolateMessage(
-  pattern: string,
-  values?: Record<string, unknown>
-): string {
-  if (!values) return pattern;
-  let result = pattern;
-  for (const [key, val] of Object.entries(values)) {
-    if (val !== undefined && val !== null) {
-      result = result.split(`{${key}}`).join(String(val));
-    }
-  }
-  return result;
-}
 
 /**
  * Resolves a translator function for the given locale.
@@ -102,16 +76,21 @@ export async function getEmailTranslator(
       locale: normLocale,
     };
   } catch {
-    const emailNamespace =
-      ((messagesMap[normLocale] as Record<string, unknown>)
-        ?.Email as Record<string, unknown>) || {};
-
+    // Outside a request (jobs, tests): the same messages through next-intl's
+    // standalone translator, so ICU plurals and formatting still work.
+    const translator = createTranslator({
+      locale: normLocale,
+      messages: messagesMap[normLocale] as Record<string, unknown>,
+      namespace: "Email",
+      onError: () => {},
+      getMessageFallback: ({ key }) => key,
+    });
     return {
-      t: (key: string, values?: Record<string, unknown>) => {
-        const pattern = getNestedValue(emailNamespace, key);
-        if (pattern === key) return key;
-        return interpolateMessage(pattern, values);
-      },
+      t: (key: string, values?: Record<string, unknown>) =>
+        (translator as unknown as (k: string, v?: Record<string, unknown>) => string)(
+          key,
+          values
+        ),
       locale: normLocale,
     };
   }
