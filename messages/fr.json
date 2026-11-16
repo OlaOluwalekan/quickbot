@@ -1015,7 +1015,7 @@
       "storageHeading": "1. What We Store",
       "storageBody": "Nous collectons et conservons les informations relatives à votre compte (adresse e-mail, nom d'affichage, photo de profil le cas échéant), les jetons d'authentification, les métadonnées des espaces de travail, les requêtes, les réponses générées, l'historique des versions et les fichiers téléversés.",
       "processorsHeading": "2. Sous-traitants tiers",
-      "processorsBody": "Nous traitons vos données par le biais de prestataires professionnels dédiés : modèles d'IA générative et inférence, hébergement sécurisé des médias et fichiers, remise des courriels transactionnels et gestion des abonnements ou paiements. Nous ne vendons pas vos données personnelles et ne les utilisons pas pour entraîner des modèles publics.",
+      "processorsBody": "Nous traitons vos données par le biais de prestataires professionnels dédiés : Google Gemini (modèles d'IA générative et inférence), Cloudinary (hébergement sécurisé des médias et fichiers), Resend (remise des courriels transactionnels) et Creem (traitement des paiements, abonnements et marchand officiel). Nous ne vendons pas vos données personnelles et ne les utilisons pas pour entraîner des modèles publics.",
       "retentionHeading": "3. Conservation et suppression des données",
       "retentionBody": "Les espaces de travail et échanges supprimés restent récupérables dans votre corbeille pendant 30 jours, après quoi ils sont définitivement purgés des bases de données et du stockage. Les sauvegardes automatiques expirent selon un cycle glissant de 30 jours.",
       "rightsHeading": "4. Vos droits (RGPD et CCPA)",
