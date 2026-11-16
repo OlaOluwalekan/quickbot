@@ -13,6 +13,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { getApiErrorMessage, LocalizedError } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -42,6 +43,7 @@ export interface SessionItem {
 
 export function SessionsList() {
   const t = useTranslations("Settings.sessions");
+  const tRoot = useTranslations();
   const [sessions, setSessions] = React.useState<SessionItem[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [revokingId, setRevokingId] = React.useState<string | null>(null);
@@ -88,12 +90,12 @@ export function SessionsList() {
       });
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData?.error?.message || t("revokeFailed"));
+        throw errorData?.error ?? { status: res.status };
       }
       toast.success(t("revokedSuccess"));
       setSessions((prev) => prev.filter((s) => s.id !== sessionId));
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : t("revokeFailed");
+      const msg = getApiErrorMessage(err, tRoot, t("revokeFailed"));
       toast.error(msg);
     } finally {
       setRevokingId(null);
@@ -119,12 +121,12 @@ export function SessionsList() {
           return;
         }
         if (code === "INVALID_PASSWORD") {
-          throw new Error(t("invalidPassword"));
+          throw new LocalizedError(t("invalidPassword"));
         }
         if (res.status === 429) {
-          throw new Error(t("rateLimited"));
+          throw new LocalizedError(t("rateLimited"));
         }
-        throw new Error(errJson?.error?.message || t("revokedOthersFailed"));
+        throw errJson?.error ?? { status: res.status };
       }
 
       toast.success(t("revokedOthersSuccess"));
@@ -132,7 +134,7 @@ export function SessionsList() {
       setPassword("");
       await fetchSessions();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : t("revokedOthersFailed");
+      const msg = getApiErrorMessage(err, tRoot, t("revokedOthersFailed"));
       toast.error(msg);
     } finally {
       setIsRevokingOthers(false);

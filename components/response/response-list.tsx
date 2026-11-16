@@ -3,6 +3,7 @@
 import type { GateReason } from "@/lib/entitlements/shared";
 import * as React from "react";
 import { useTranslations } from "next-intl";
+import { getApiErrorCode, translateApiErrorCode } from "@/lib/api/error-message";
 import Link from "next/link";
 import {
   ArrowDown,
@@ -71,6 +72,7 @@ export function ResponseList({
 }: ResponseListProps) {
   const t = useTranslations("Response");
   const tChat = useTranslations("Chat");
+  const tRoot = useTranslations();
 
   const containerRef = React.useRef<HTMLDivElement>(null);
   const bottomSentinelRef = React.useRef<HTMLDivElement>(null);
@@ -177,6 +179,12 @@ export function ResponseList({
           Math.random().toString(36).substring(2, 8);
     onRetryFailed(currentPrompt, freshIdemKey);
   };
+
+  // The stream stores an error code; show its translation when one exists.
+  const streamErrorText = translateApiErrorCode(
+    getApiErrorCode(stream.error ?? undefined),
+    tRoot
+  );
 
   // Detect 402 / insufficient credits error
   const isCreditsError = Boolean(
@@ -384,9 +392,9 @@ export function ResponseList({
                     <AlertCircle className="h-4 w-4" />
                     <span>{tChat("streamError")}</span>
                   </div>
-                  {stream.error && (
-                    <p className="text-danger/80 bg-danger/10 rounded-lg px-2.5 py-1.5 font-mono text-xs">
-                      {stream.error}
+                  {streamErrorText && (
+                    <p className="text-danger/80 bg-danger/10 rounded-lg px-2.5 py-1.5 text-xs">
+                      {streamErrorText}
                     </p>
                   )}
                   {onRetryFailed && currentPrompt && (

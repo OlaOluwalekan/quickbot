@@ -41,13 +41,44 @@ export async function readApiError(res: Response): Promise<ApiErrorLike> {
   return { status: res.status };
 }
 
-function extractCode(err: unknown): string | undefined {
+/** Codes for HTTP statuses that arrive without a code of their own. */
+function codeForStatus(status: number): string | undefined {
+  if (status === 401) return "unauthorized";
+  if (status === 402) return "insufficient_credits";
+  if (status === 403) return "forbidden";
+  if (status === 404) return "not_found";
+  if (status === 409) return "conflict";
+  if (status === 413) return "file_too_large";
+  if (status === 429) return "rate_limited";
+  if (status >= 500) return "internal_error";
+  return undefined;
+}
+
+/** The stable error code carried by an API error, a `{ error }` body or a stream error. */
+export function getApiErrorCode(err: unknown): string | undefined {
+  if (typeof err === "string") return /^[A-Za-z_][A-Za-z0-9_]*$/.test(err) ? err : undefined;
   if (typeof err !== "object" || err === null) return undefined;
   const obj = err as Record<string, unknown>;
-  if (typeof obj.code === "string") return obj.code;
   const nested = obj.error as Record<string, unknown> | undefined;
-  if (nested && typeof nested.code === "string") return nested.code;
+  const code =
+    typeof obj.code === "string"
+      ? obj.code
+      : nested && typeof nested.code === "string"
+        ? nested.code
+        : undefined;
+  const http = code?.match(/^http_(\d{3})$/);
+  if (http) return codeForStatus(Number(http[1]));
+  if (code) return code;
+  if (typeof obj.status === "number") return codeForStatus(obj.status);
   return undefined;
+}
+
+/** `Errors.api.<code>` when that code has a translation, else undefined. */
+export function translateApiErrorCode(
+  code: string | undefined,
+  t: Translator
+): string | undefined {
+  return code ? translate(t, `Errors.api.${code}`) : undefined;
 }
 
 function translate(t: Translator, key: string): string | undefined {
@@ -74,11 +105,8 @@ export function getApiErrorMessage(
 ): string {
   if (err instanceof LocalizedError) return err.message;
 
-  const code = extractCode(err);
-  if (code) {
-    const translated = translate(t, `Errors.api.${code}`);
-    if (translated) return translated;
-  }
+  const translated = translateApiErrorCode(getApiErrorCode(err), t);
+  if (translated) return translated;
 
   if (fallback) return fallback;
 
@@ -86,4 +114,32 @@ export function getApiErrorMessage(
     translate(t, "Errors.api.generic") ??
     "An unexpected error occurred. Please try again."
   );
+}
+
+/** The error shape returned by the Better Auth client (`{ error }`). */
+export interface AuthErrorLike {
+  code?: string;
+  status?: number;
+  message?: string;
+}
+
+/**
+ * Translates a Better Auth error: `Auth.errors.<CODE>` when that code has a
+ * translation, a rate-limit message for 429, else the caller's `fallback`.
+ * Better Auth's own English `message` is never shown.
+ */
+export function getAuthErrorMessage(
+  err: AuthErrorLike | null | undefined,
+  t: Translator,
+  fallback: string
+): string {
+  const code = err?.code;
+  if (code && /^[A-Z_]+$/.test(code)) {
+    const translated = translate(t, `Auth.errors.${code}`);
+    if (translated) return translated;
+  }
+  if (err?.status === 429) {
+    return translate(t, "Errors.api.rate_limited") ?? fallback;
+  }
+  return fallback;
 }

@@ -62,16 +62,13 @@ const Registered = ({
           callbackURL: DEFAULT_LOGIN_REDIRECT,
         });
         setResponse({
-          message: "If the account exists, a verification email was sent.",
+          message: t("verificationSentIfExists"),
           success: true,
         });
         setCount(RESEND_SECONDS);
-      } catch (err: unknown) {
+      } catch {
         setResponse({
-          message:
-            err instanceof Error
-              ? err.message
-              : "Failed to send verification email",
+          message: t("verificationSendFailed"),
           success: false,
         });
       }

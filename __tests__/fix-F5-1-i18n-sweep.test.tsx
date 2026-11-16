@@ -5,6 +5,7 @@ import React from "react";
 import { render, screen } from "@testing-library/react";
 import {
   getApiErrorMessage,
+  getAuthErrorMessage,
   LocalizedError,
   readApiError,
 } from "@/lib/api/error-message";
@@ -12,6 +13,7 @@ import { GLOBAL_ERROR_COPY, resolveGlobalErrorLocale } from "@/lib/i18n/global-e
 import GlobalError from "@/app/global-error";
 import { PLANS, PLAN_LOG_NAMES } from "@/server/billing/plans";
 import enMessages from "@/messages/en.json";
+import { LoginSchema, RegisterSchema } from "@/lib/schemas/auth";
 import { createTranslator } from "../test-utils/next-intl";
 
 describe("F5.1 — getApiErrorMessage", () => {
@@ -100,5 +102,29 @@ describe("F5.1 — global error page follows the chosen locale", () => {
     render(<GlobalError error={new Error("x")} reset={() => {}} />);
     expect(screen.getByText(GLOBAL_ERROR_COPY.fr.title)).toBeInTheDocument();
     spy.mockRestore();
+  });
+});
+
+describe("F5.1 — sign-in errors and form validation are translated", () => {
+  const t = createTranslator();
+
+  it("maps a Better Auth code to Auth.errors.<CODE>, never its English message", () => {
+    expect(
+      getAuthErrorMessage({ code: "USER_ALREADY_EXISTS", message: "User already exists." }, t, "fb")
+    ).toBe(enMessages.Auth.errors.USER_ALREADY_EXISTS);
+    expect(getAuthErrorMessage({ code: "SOMETHING_NEW", message: "English" }, t, "fb")).toBe("fb");
+    expect(getAuthErrorMessage({ status: 429 }, t, "fb")).toBe(enMessages.Errors.api.rate_limited);
+  });
+
+  it("every auth schema message is a message key that exists in en.json", () => {
+    const bad = [
+      RegisterSchema.safeParse({ email: "x", name: "a", password: "short", confirmPassword: "no" }),
+      LoginSchema.safeParse({ email: "x", password: "" }),
+    ].flatMap((r) => (r.success ? [] : r.error.issues.map((i: { message: string }) => i.message)));
+    expect(bad.length).toBeGreaterThan(3);
+    for (const key of bad) {
+      expect(key).toMatch(/^Auth\.validation\./);
+      expect(t.has(key)).toBe(true);
+    }
   });
 });

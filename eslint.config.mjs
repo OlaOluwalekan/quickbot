@@ -25,6 +25,7 @@ const eslintConfig = [
     files: ["app/**/*.{ts,tsx}", "components/**/*.{ts,tsx}"],
     ignores: [
       "app/dev/**",
+      "app/api/**",
       "app/opengraph-image.tsx",
       "app/twitter-image.tsx",
       "**/*.test.{ts,tsx}",
@@ -51,6 +52,17 @@ const eslintConfig = [
           selector:
             "CallExpression[callee.object.name='toast'] > TemplateLiteral.arguments:first-child",
           message: "Toast text must come from next-intl (messages/*.json).",
+        },
+        {
+          // setError("…"), setSubmitError("…"), setMessage("…")
+          selector:
+            "CallExpression[callee.name=/^set[A-Z]\\w*(Error|Message)$/] > Literal.arguments:first-child[value=/[A-Za-z]{2}/]",
+          message: "User-visible text must come from next-intl (messages/*.json).",
+        },
+        {
+          // setResponse({ message: "…" }) and similar status objects
+          selector: "Property[key.name='message'] > Literal.value[value=/[A-Za-z]{2} /]",
+          message: "User-visible text must come from next-intl (messages/*.json).",
         },
       ],
       "i18next/no-literal-string": [

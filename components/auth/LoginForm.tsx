@@ -7,8 +7,13 @@ import { AlertTriangle, CheckCircle2, Lock, Mail } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { getAuthErrorMessage } from "@/lib/api/error-message";
 import { authClient } from "@/lib/auth-client";
-import { LoginSchema, type LoginInput } from "@/lib/schemas/auth";
+import {
+  AUTH_VALIDATION_VALUES,
+  LoginSchema,
+  type LoginInput,
+} from "@/lib/schemas/auth";
 import { DEFAULT_LOGIN_REDIRECT } from "@/utils/routes";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +28,7 @@ import { cn } from "@/lib/utils";
 
 const LoginForm = (): React.JSX.Element => {
   const t = useTranslations("Auth");
+  const tRoot = useTranslations();
   const router = useRouter();
   const searchParams = useSearchParams();
   const reason = searchParams?.get("reason");
@@ -40,12 +46,11 @@ const LoginForm = (): React.JSX.Element => {
   useEffect(() => {
     if (reason === "expired" || reason === "revoked") {
       setResponse({
-        message:
-          "Your session has ended or was signed out from another device. Please sign in again.",
+        message: t("sessionEnded"),
         success: false,
       });
     }
-  }, [reason]);
+  }, [reason, t]);
 
   const form = useForm<LoginInput>({
     resolver: zodResolver(LoginSchema),
@@ -76,29 +81,28 @@ const LoginForm = (): React.JSX.Element => {
           if (isUnverified) {
             setNeedsVerification(true);
             setResponse({
-              message:
-                "Please check your inbox and verify your email address before signing in.",
+              message: t("verifyBeforeSignIn"),
               success: false,
             });
             return;
           }
 
           setResponse({
-            message: "Invalid email or password",
+            message: getAuthErrorMessage(error, tRoot, t("errors.INVALID_EMAIL_OR_PASSWORD")),
             success: false,
           });
           return;
         }
 
         setResponse({
-          message: "Signed in successfully",
+          message: t("signedIn"),
           success: true,
         });
         router.push(DEFAULT_LOGIN_REDIRECT);
         router.refresh();
       } catch {
         setResponse({
-          message: "Invalid email or password",
+          message: t("unexpectedError"),
           success: false,
         });
       }
@@ -115,12 +119,12 @@ const LoginForm = (): React.JSX.Element => {
           callbackURL: DEFAULT_LOGIN_REDIRECT,
         });
         setResponse({
-          message: "Verification email sent. Please check your inbox.",
+          message: t("resendSent"),
           success: true,
         });
       } catch {
         setResponse({
-          message: "If the account exists, a verification email was sent.",
+          message: t("verificationSentIfExists"),
           success: true,
         });
       }
@@ -153,7 +157,7 @@ const LoginForm = (): React.JSX.Element => {
                   />
                 </div>
               </FormControl>
-              <FormMessage />
+              <FormMessage values={AUTH_VALIDATION_VALUES} />
             </FormItem>
           )}
         />
@@ -177,7 +181,7 @@ const LoginForm = (): React.JSX.Element => {
                   />
                 </div>
               </FormControl>
-              <FormMessage />
+              <FormMessage values={AUTH_VALIDATION_VALUES} />
             </FormItem>
           )}
         />

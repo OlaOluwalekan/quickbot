@@ -10,6 +10,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useTranslations } from "next-intl";
+import { getApiErrorMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Check, AlertCircle, Loader2, ArrowRight } from "lucide-react";
@@ -29,6 +30,7 @@ export function ClaimUsernameDialog({
   onSuccess,
 }: ClaimUsernameDialogProps) {
   const t = useTranslations("User.claim");
+  const tRoot = useTranslations();
   const [value, setValue] = React.useState("");
   const [debouncedValue, setDebouncedValue] = React.useState("");
   const [isChecking, setIsChecking] = React.useState(false);
@@ -118,10 +120,10 @@ export function ClaimUsernameDialog({
           if (err.code === "username_already_changed") {
             setSubmitError(t("alreadyChanged"));
           } else {
-            setSubmitError(err.message || t("claimedByOther"));
+            setSubmitError(getApiErrorMessage(err, tRoot, t("claimedByOther")));
           }
         } else {
-          setSubmitError(err.message || t("failed"));
+          setSubmitError(getApiErrorMessage(err, tRoot, t("failed")));
         }
         setIsSubmitting(false);
         return;

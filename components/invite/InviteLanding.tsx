@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Users, AlertCircle, CheckCircle2, ArrowRight, Clock, Shield } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { getApiErrorMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { authClient } from "@/lib/auth-client";
@@ -37,6 +38,7 @@ export type InviteLandingProps =
 export function InviteLanding({ token, invitationId }: InviteLandingProps) {
   const router = useRouter();
   const tInvite = useTranslations("Invite");
+  const tRoot = useTranslations();
   const lookup = token
     ? { key: "token", value: token }
     : { key: "id", value: invitationId ?? "" };
@@ -94,17 +96,17 @@ export function InviteLanding({ token, invitationId }: InviteLandingProps) {
       });
       const json = await res.json();
       if (!res.ok) {
-        throw new Error(json?.error?.message || tInvite("acceptError"));
+        throw json?.error ?? { status: res.status };
       }
       const data = json?.data ?? json;
-      toast.success(data?.message || tInvite("acceptedSuccess"));
+      toast.success(tInvite("acceptedSuccess"));
       if (data?.workspaceId) {
         router.push(`/workspaces/${data.workspaceId}`);
       } else {
         router.push("/workspaces");
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : tInvite("acceptError");
+      const msg = getApiErrorMessage(err, tRoot, tInvite("acceptError"));
       toast.error(msg);
       setErrorMsg(msg);
     } finally {

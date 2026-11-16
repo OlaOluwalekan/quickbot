@@ -21,7 +21,7 @@ export function ForgotPasswordForm() {
 
     const cleanEmail = email.trim().toLowerCase();
     if (!cleanEmail) {
-      setError("Please enter your email address.");
+      setError(t("emailRequired"));
       return;
     }
 
@@ -36,7 +36,7 @@ export function ForgotPasswordForm() {
       if (authError) {
         // Even on error, if it's rate limit show rate limit, otherwise generic confirmation to prevent user enumeration
         if (authError.status === 429) {
-          setError("Too many password reset requests. Please wait an hour before trying again.");
+          setError(t("resetRateLimited"));
           return;
         }
       }

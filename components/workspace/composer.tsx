@@ -35,7 +35,7 @@ import {
   isWorkspaceDocumentFile,
 } from "@/lib/documents/workspace-document-types";
 import { uploadAttachment } from "@/lib/api/attachments";
-import { getApiErrorMessage } from "@/lib/api/error-message";
+import { getApiErrorCode, getApiErrorMessage } from "@/lib/api/error-message";
 import { navigateWithTransition } from "@/lib/navigation/view-transition";
 import { getClientModels, type ClientModelOption } from "@/lib/ai/model-catalog";
 import type { WorkspaceDto } from "@/lib/api/hooks/workspaces";
@@ -479,8 +479,7 @@ export function Composer({
         };
         setCreationError(
           (code && known[code]) ||
-            (err instanceof ApiClientError && err.message) ||
-            tDocs("errors.uploadFailed")
+            getApiErrorMessage(err, tErrors, tDocs("errors.uploadFailed"))
         );
       } finally {
         setIsAddingDocument(false);
@@ -612,14 +611,13 @@ export function Composer({
               useGenerationStore.getState().completeStream(workspaceId, data.content, data.citations);
             },
             onError: (err) => {
-              useGenerationStore.getState().failStream(workspaceId, err.message || err.code);
+              useGenerationStore.getState().failStream(workspaceId, err.code || "unknown");
             },
           },
         );
         onSubmitted?.();
       } catch (err: unknown) {
-        const msg = getApiErrorMessage(err, tErrors);
-        useGenerationStore.getState().failStream(workspaceId, msg);
+        useGenerationStore.getState().failStream(workspaceId, getApiErrorCode(err) ?? "unknown");
       } finally {
         setIsSubmitting(false);
       }

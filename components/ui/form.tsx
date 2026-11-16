@@ -11,6 +11,7 @@ import {
   type FieldPath,
   type FieldValues,
 } from "react-hook-form";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 
@@ -147,12 +148,24 @@ const FormDescription = React.forwardRef<
 });
 FormDescription.displayName = "FormDescription";
 
+/**
+ * Shows a field's validation error. Schemas write their messages as next-intl
+ * keys (e.g. "Auth.validation.invalidEmail"); a key is translated with
+ * `values` for its placeholders, anything else is shown as given.
+ */
 const FormMessage = React.forwardRef<
   HTMLParagraphElement,
-  React.HTMLAttributes<HTMLParagraphElement>
->(({ className, children, ...props }, ref) => {
+  React.HTMLAttributes<HTMLParagraphElement> & {
+    values?: Record<string, string | number>;
+  }
+>(({ className, children, values, ...props }, ref) => {
   const { error, formMessageId } = useFormField();
-  const body = error ? String(error?.message ?? "") : children;
+  const t = useTranslations();
+  const raw = error ? String(error?.message ?? "") : children;
+  const body =
+    typeof raw === "string" && /^[A-Z]\w*(\.\w+)+$/.test(raw) && t.has(raw)
+      ? t(raw, values)
+      : raw;
 
   if (!body) {
     return null;
