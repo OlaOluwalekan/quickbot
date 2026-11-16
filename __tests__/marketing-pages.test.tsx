@@ -65,7 +65,7 @@ describe("Marketing Pages & Components", () => {
 
       // Required disclosure
       expect(
-        screen.getByText(/Klecx is an independent interface built on third-party AI models \(currently Google Gemini\)/i)
+        screen.getByText(/Klecx is an independent workspace built on third-party AI models\./i)
       ).toBeInTheDocument();
     });
   });
@@ -177,7 +177,7 @@ describe("Marketing Pages & Components", () => {
 
       // Mandatory Architecture Disclosure
       expect(
-        screen.getByText(/Klecx is an independent interface built on top of third-party AI models/i)
+        screen.getByText(/Klecx is an independent workspace built on third-party AI models\. We don.t own those models\./i)
       ).toBeInTheDocument();
 
       // Support contact from site config

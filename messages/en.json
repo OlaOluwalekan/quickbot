@@ -61,7 +61,7 @@
     "featuresHeading": "Engineered for speed, clarity, and creative depth",
     "featuresSubheading": "Everything you need to move from rough idea to polished output in seconds.",
     "feature1Title": "Real-Time SSE Streaming",
-    "feature1Desc": "Watch responses materialize token-by-token over low-latency Server-Sent Events streaming.",
+    "feature1Desc": "Watch responses appear token by token, streamed live over low-latency Server-Sent Events.",
     "feature2Title": "Native Image Generation",
     "feature2Desc": "Switch seamlessly between conversational reasoning and high-resolution AI image generation inside any chat thread.",
     "feature3Title": "Stateful Multi-Turn Memory",
@@ -786,7 +786,7 @@
       "mockWorkspace2": "Redis Event Invalidation",
       "mockWorkspace3": "Prisma Indexing Audit",
       "mockConfig": "pool_mode = transaction | max_client_conn = 10000 | default_pool_size = 50",
-      "modelBadge": "Standard model"
+      "modelBadge": "Standard Reasoning"
     },
     "features": {
       "badge": "Architected for Builders",
@@ -830,7 +830,7 @@
         "previewTitle": "Response Versions",
         "v1Label": "v1 (Quick)",
         "v2Label": "v2 (Standard Reasoning)",
-        "activeInfo": "Active: version 2 of 2 · Standard model · 7 credits"
+        "activeInfo": "Active: version 2 of 2 · Standard Reasoning · 7 credits"
       },
       "share": {
         "badge": "Teamwork",
@@ -946,7 +946,7 @@
         },
         "models": {
           "q": "Which AI models power Klecx?",
-          "a": "Klecx is an independent workspace built on top of high-performance third-party AI models (including Fast and Standard model tiers for low-latency reasoning and specialized image synthesis). We clearly label each model tier and never hide what runs your requests."
+          "a": "Klecx is an independent workspace built on third-party AI models. You pick a tier for each message: Fast & Efficient for everyday questions, Standard Reasoning for complex work, and Image Studio for images. The composer shows each tier's credit cost before you send."
         },
         "privacy": {
           "q": "Is my conversation data kept private?",
@@ -1188,7 +1188,7 @@
       },
       "storage": {
         "name": "File storage",
-        "desc": "Encrypted asset storage and document attachment processing."
+        "desc": "Secure file storage and document attachment processing."
       },
       "email": {
         "name": "Email",

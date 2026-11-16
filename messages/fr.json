@@ -786,7 +786,7 @@
       "mockWorkspace2": "Invalidation des événements Redis",
       "mockWorkspace3": "Audit d'indexation Prisma",
       "mockConfig": "pool_mode = transaction | max_client_conn = 10000 | default_pool_size = 50",
-      "modelBadge": "Modèle standard"
+      "modelBadge": "Raisonnement Standard"
     },
     "features": {
       "badge": "Conçu pour les bâtisseurs",
@@ -830,7 +830,7 @@
         "previewTitle": "Versions de réponse",
         "v1Label": "v1 (Rapide)",
         "v2Label": "v2 (Raisonnement Standard)",
-        "activeInfo": "Actif : version 2 sur 2 · Modèle standard · 7 crédits"
+        "activeInfo": "Actif : version 2 sur 2 · Raisonnement Standard · 7 crédits"
       },
       "share": {
         "badge": "Collaboration",
@@ -946,7 +946,7 @@
         },
         "models": {
           "q": "Quels modèles d'IA alimentent Klecx ?",
-          "a": "Klecx est un espace de travail indépendant reposant sur des modèles d'IA tiers très performants (notamment les niveaux de modèles Rapide et Standard pour le raisonnement à faible latence et la synthèse d'images spécialisée). Nous identifions clairement chaque niveau de modèle et ne cachons jamais ce qui traite vos requêtes."
+          "a": "Klecx est un espace de travail indépendant reposant sur des modèles d'IA tiers. Vous choisissez un niveau pour chaque message : Rapide et Efficace pour les questions courantes, Raisonnement Standard pour les tâches complexes et Studio d'Images pour les images. Le compositeur affiche le coût en crédits de chaque niveau avant l'envoi."
         },
         "privacy": {
           "q": "Mes conversations restent-elles confidentielles ?",

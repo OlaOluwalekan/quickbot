@@ -15,9 +15,10 @@ import path from "node:path";
 describe("Step F5.2 — Third-party brand neutrality", () => {
   const brandRegex = /gemini|google(?!\s+sign|\s+account)|openai|anthropic|claude|gpt/i;
 
+  // Auth.google: the "Continue with Google" OAuth button label.
+  // Legal.privacy.processorsBody: the privacy policy's sub-processor list.
   const ALLOWED_MESSAGE_KEYS = new Set([
     "Auth.google",
-    "Auth.continueWithGoogle",
     "Legal.privacy.processorsBody",
   ]);
 
@@ -81,6 +82,20 @@ describe("Step F5.2 — Third-party brand neutrality", () => {
     expect(violations).toEqual([]);
   });
 
+  it("has no third-party brand names in email templates", () => {
+    const dir = path.resolve(process.cwd(), "server", "email", "templates");
+    const violations: string[] = [];
+    for (const name of fs.readdirSync(dir).filter((f) => f.endsWith(".ts"))) {
+      const lines = fs.readFileSync(path.join(dir, name), "utf8").split("\n");
+      lines.forEach((line, index) => {
+        if (brandRegex.test(line)) {
+          violations.push(`server/email/templates/${name}:${index + 1}: ${line.trim()}`);
+        }
+      });
+    }
+    expect(violations).toEqual([]);
+  });
+
   it("describes Klecx as an independent workspace built on third-party AI models", () => {
     const en = JSON.parse(
       fs.readFileSync(path.resolve(process.cwd(), "messages", "en.json"), "utf8")
@@ -114,7 +129,7 @@ describe("Step F5.2 — Third-party brand neutrality", () => {
     expect(services.storage.name).toBe("File storage");
     expect(services.email.name).toBe("Email");
 
-    for (const [key, svc] of Object.entries(services)) {
+    for (const svc of Object.values(services)) {
       expect(brandRegex.test((svc as { desc: string }).desc)).toBe(false);
     }
   });
