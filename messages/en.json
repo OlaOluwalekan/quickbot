@@ -367,6 +367,23 @@
       "body": "{authorName} mentioned you: {excerpt}",
       "button": "View Comment",
       "disclaimer": "You received this email because someone mentioned you in a workspace comment."
+    },
+    "welcome": {
+      "subject": "Welcome to Klecx — Your AI Workspace",
+      "heading": "Welcome to Klecx",
+      "greeting": "Hi,",
+      "greetingWithName": "Hi {name},",
+      "body": "Welcome to Klecx! We're excited to help you explore, draft, research, and build with AI.",
+      "getStartedTitle": "Here are 3 ways to get started:",
+      "step1Title": "Create a workspace",
+      "step1Desc": "Start with a question, prompt, or upload documents to explore ideas and generate answers.",
+      "step2Title": "Highlight text to comment or ask",
+      "step2Desc": "Highlight any part of an answer to ask follow-up questions or add collaborative notes.",
+      "step3Title": "Organize with projects",
+      "step3Desc": "Group related workspaces into projects to keep your research and drafts organized.",
+      "button": "Open Klecx",
+      "helpNotice": "Need help getting started? Visit our Help Center at {helpUrl} or reach out to support at {supportEmail}.",
+      "disclaimer": "You received this email because you signed up for Klecx."
     }
   },
   "AppShell": {

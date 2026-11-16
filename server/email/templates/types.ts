@@ -108,9 +108,14 @@ export interface MentionedData {
   actionUrl?: string;
 }
 
+export interface WelcomeEmailData {
+  name?: string;
+}
+
 export interface EmailTemplateMap {
   "verify-email": VerifyEmailData;
   "reset-password": ResetPasswordData;
+  welcome: WelcomeEmailData;
   invitation: InvitationData;
   "new-sign-in": NewSignInData;
   "password-changed": PasswordChangedData;

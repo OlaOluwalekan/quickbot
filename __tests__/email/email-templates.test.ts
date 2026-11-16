@@ -97,11 +97,15 @@ describe("Step 1.7 & F0.2 — Transactional Email Module", () => {
       excerpt: "use PostgreSQL instead",
       actionUrl: "https://klecx.vyraxity.com/workspaces/wksp-1#annotation-1",
     },
+    welcome: {
+      name: "Alice",
+    },
   };
 
   const allTemplates: EmailTemplateName[] = [
     "verify-email",
     "reset-password",
+    "welcome",
     "invitation",
     "new-sign-in",
     "password-changed",
