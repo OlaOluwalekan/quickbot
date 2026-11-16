@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useState, useTransition } from "react";
 import { CheckCircle2, Mail, XCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { getAuthErrorMessage } from "@/lib/api/error-message";
 import { authClient } from "@/lib/auth-client";
 import { DEFAULT_LOGIN_REDIRECT } from "@/utils/routes";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ const RESEND_SECONDS = 15;
 
 const VerificationForm = (): React.JSX.Element => {
   const t = useTranslations("Auth");
+  const tRoot = useTranslations();
   const tCommon = useTranslations("Common");
   const params = useSearchParams();
   const router = useRouter();
@@ -58,13 +60,13 @@ const VerificationForm = (): React.JSX.Element => {
         });
         if (error) {
           setResponse({
-            message: error.message || t("verifiedError"),
+            message: getAuthErrorMessage(error, tRoot, t("verifiedError")),
             success: false,
           });
           return;
         }
         setResponse({
-          message: "Email verified successfully",
+          message: t("emailVerified"),
           success: true,
         });
         router.push(DEFAULT_LOGIN_REDIRECT);
@@ -90,7 +92,7 @@ const VerificationForm = (): React.JSX.Element => {
           callbackURL: DEFAULT_LOGIN_REDIRECT,
         });
         setResponse({
-          message: "If the account exists, a verification email was sent.",
+          message: t("verificationSentIfExists"),
           success: true,
         });
         setCount(RESEND_SECONDS);

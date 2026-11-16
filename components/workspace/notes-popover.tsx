@@ -59,6 +59,10 @@ export interface NotesPopoverProps {
 const FILTERS = ["ACTIVE", "ARCHIVED", "ALL"] as const;
 type NotesFilter = (typeof FILTERS)[number];
 
+function formatCountParens(count: number) {
+  return `(${count})`;
+}
+
 function NotesPopoverInner({ workspaceId, className }: NotesPopoverProps) {
   const t = useTranslations("Notes");
   const format = useFormatter();
@@ -175,7 +179,7 @@ function NotesPopoverInner({ workspaceId, className }: NotesPopoverProps) {
           <div className="flex items-center gap-2">
             <StickyNote className="h-4 w-4 text-accent" />
             <span className="font-semibold text-sm">{t("title")}</span>
-            <span className="text-xs text-muted font-mono">({activeCount})</span>
+            <span className="text-xs text-muted font-mono">{formatCountParens(activeCount)}</span>
           </div>
 
           {/* Filter Pills */}

@@ -23,7 +23,7 @@ jest.mock("next/navigation", () => ({
 }));
 
 jest.mock("next-intl", () => ({
-  useFormatter: () => ({ relativeTime: () => "" }),
+  useFormatter: () => jest.requireActual("../test-utils/next-intl").createFormatter(),
   useNow: () => new Date(),
   useTranslations: () => {
     const t = (key: string, values?: Record<string, unknown>) =>

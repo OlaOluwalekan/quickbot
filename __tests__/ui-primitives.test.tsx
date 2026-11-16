@@ -8,6 +8,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { Spinner } from "@/components/ui/spinner";
 
+jest.mock("next-intl", () => jest.requireActual("../test-utils/next-intl").nextIntlMock);
+
 const ROOT = process.cwd();
 
 describe("Step 3.2 — UI primitives (shadcn/ui on Radix)", () => {

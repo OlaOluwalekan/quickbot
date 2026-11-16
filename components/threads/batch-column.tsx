@@ -13,6 +13,10 @@ import {
 } from "@/lib/stores/question-batch";
 import { cn } from "@/lib/utils";
 
+function formatIndexDot(index: number) {
+  return `${index}.`;
+}
+
 export interface BatchColumnProps {
   /** Generation id of the "Ask all" run. */
   id: string;
@@ -183,7 +187,7 @@ export function BatchColumn({
                       «{q.quote}»
                     </blockquote>
                     <p className="font-medium text-foreground">
-                      <span className="text-muted mr-1">{i + 1}.</span>
+                      <span className="text-muted mr-1">{formatIndexDot(i + 1)}</span>
                       {q.question}
                     </p>
                   </div>

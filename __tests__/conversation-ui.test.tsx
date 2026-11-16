@@ -18,24 +18,10 @@ jest.mock("next/navigation", () => ({
 }));
 
 jest.mock("next-intl", () => ({
+  ...jest.requireActual("../test-utils/next-intl").nextIntlMock,
   // Used by the annotation preview card inside AnswerBody (F2.6).
   useFormatter: () => ({ relativeTime: () => "" }),
   useNow: () => new Date(),
-  useTranslations: (namespace: string) => {
-    return (key: string, values?: Record<string, unknown>) => {
-      const ns = (
-        enMessages as unknown as Record<string, Record<string, string>>
-      )[namespace] || {};
-      let template = ns[key] || key;
-      if (values) {
-        Object.entries(values).forEach(([k, v]) => {
-          template = template.replace(`{${k}}`, String(v));
-        });
-      }
-      return template;
-    };
-  },
-  useLocale: () => "en",
 }));
 
 describe("Step 3.7 — Conversation UI (Response cards, versions, thinking, edit)", () => {
@@ -384,7 +370,7 @@ describe("Step 3.7 — Conversation UI (Response cards, versions, thinking, edit
         useGenerationStore.getState().startStream("ws-123", {
           prompt: "Failing query",
         });
-        useGenerationStore.getState().failStream("ws-123", "Internal Gemini rate limit");
+        useGenerationStore.getState().failStream("ws-123", "rate_limit");
       });
 
       render(
@@ -397,7 +383,8 @@ describe("Step 3.7 — Conversation UI (Response cards, versions, thinking, edit
       );
 
       expect(screen.getByRole("alert")).toBeInTheDocument();
-      expect(screen.getByText("Internal Gemini rate limit")).toBeInTheDocument();
+      // The stream stores an error code; the card shows its translation.
+      expect(screen.getByText(enMessages.Errors.api.rate_limit)).toBeInTheDocument();
 
       const retryBtn = screen.getByRole("button", { name: /Try again/i });
       fireEvent.click(retryBtn);

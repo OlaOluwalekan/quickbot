@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useTransition } from "react";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { Locale, LOCALE_COOKIE, localeNames, locales } from "@/i18n/config";
 import { Globe } from "lucide-react";
@@ -15,6 +15,7 @@ export const LocaleSwitcher: React.FC<LocaleSwitcherProps> = ({
   compact = false,
   className = "",
 }) => {
+  const t = useTranslations("Common");
   const currentLocale = useLocale() as Locale;
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -35,7 +36,7 @@ export const LocaleSwitcher: React.FC<LocaleSwitcherProps> = ({
     >
       <Globe className="h-4 w-4 text-accent shrink-0" strokeWidth={1.5} />
       <select
-        aria-label="Select language"
+        aria-label={t("selectLanguage")}
         value={currentLocale}
         onChange={(e) => handleLocaleChange(e.target.value as Locale)}
         disabled={isPending}

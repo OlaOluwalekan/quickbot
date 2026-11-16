@@ -34,7 +34,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { formatNumber } from "@/utils/format";
+
 import { authClient } from "@/lib/auth-client";
 import { clearAllClientCaches } from "@/components/providers/query-provider";
 import { Button } from "@/components/ui/button";
@@ -67,6 +67,8 @@ import type {
 } from "./types";
 
 export type DateBucket = "today" | "yesterday" | "previous7Days" | "older";
+
+const DATE_BUCKETS: DateBucket[] = ["today", "yesterday", "previous7Days", "older"];
 
 export function getDateBucket(isoDate: string, now = new Date()): DateBucket {
   const date = new Date(isoDate);
@@ -329,7 +331,7 @@ export function Sidebar({
   return (
     <TooltipProvider delayDuration={150}>
       <aside
-        aria-label="Sidebar navigation"
+        aria-label={t("sidebarNavigation")}
         data-collapsed={isCollapsedRail ? "true" : "false"}
         className={cn(
           "border-border bg-surface text-fg flex h-full flex-col border-r transition-[width] duration-200 ease-in-out select-none",
@@ -636,9 +638,7 @@ export function Sidebar({
               </div>
             )}
 
-            {(
-              ["today", "yesterday", "previous7Days", "older"] as DateBucket[]
-            ).map((bucket) => {
+            {DATE_BUCKETS.map((bucket) => {
               const items = standaloneByBucket[bucket];
               if (items.length === 0) return null;
 
@@ -715,7 +715,7 @@ export function Sidebar({
                 <Link
                   href="/settings"
                   aria-label={t("creditsBalance", {
-                    count: formatNumber(user.creditBalance),
+                    count: user.creditBalance,
                   })}
                   onClick={onNavigate}
                   className="bg-surface-2 text-accent hover:bg-surface-3 focus-visible:ring-ring mx-auto flex h-9 w-9 items-center justify-center rounded-lg focus-visible:ring-2 focus-visible:outline-none"
@@ -730,7 +730,7 @@ export function Sidebar({
                   </p>
                   <p className="text-muted">
                     {t("creditsBalance", {
-                      count: formatNumber(user.creditBalance),
+                      count: user.creditBalance,
                     })}
                   </p>
                 </div>
@@ -750,7 +750,7 @@ export function Sidebar({
                   <span className="text-subtle mx-1.5">·</span>
                   <span className="text-muted">
                     {t("creditsBalance", {
-                      count: formatNumber(user.creditBalance),
+                      count: user.creditBalance,
                     })}
                   </span>
                 </div>

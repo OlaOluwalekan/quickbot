@@ -5,7 +5,7 @@ import { env } from "@/server/env";
 import type { Actor } from "@/server/auth/session";
 import { requireWorkspace } from "@/server/authz/access";
 import { ApiError, Errors } from "@/server/http/errors";
-import { PLANS, type PlanKey } from "@/server/billing/plans";
+import { PLANS, PLAN_LOG_NAMES, type PlanKey } from "@/server/billing/plans";
 import { getEntitlements } from "@/server/billing/entitlements";
 import type { ToolSpec } from "@/server/ai/types";
 import { getStorageProvider } from "@/server/storage";
@@ -92,7 +92,7 @@ function checkAndIncrementDailyExportCap(userId: string, plan: PlanKey): void {
     throw new ApiError(
       429,
       "rate_limited",
-      `Daily export cap (${maxAllowed}) reached for your ${PLANS[plan].name} plan.`
+      `Daily export cap (${maxAllowed}) reached for your ${PLAN_LOG_NAMES[plan]} plan.`
     );
   }
 
@@ -328,7 +328,7 @@ export async function assertExportAllowed(args: {
       403,
       "plan_upgrade_required",
       args.ownerId === args.downloaderId
-        ? `Your ${PLANS[ownerPlan].name} plan only supports ${formats} exports. Upgrade to export as ${args.format.toUpperCase()}.`
+        ? `Your ${PLAN_LOG_NAMES[ownerPlan]} plan only supports ${formats} exports. Upgrade to export as ${args.format.toUpperCase()}.`
         : `This workspace's plan only supports ${formats} exports.`
     );
   }

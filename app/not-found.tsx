@@ -24,8 +24,13 @@ export const metadata: Metadata = {
   },
 };
 
+function formatCopyright(year: number, suffix: string) {
+  return `© ${year} Klecx. ${suffix}`;
+}
+
 export default async function NotFoundPage() {
   const t = await getTranslations("Errors");
+  const tCommon = await getTranslations("Common");
 
   const helpfulLinks = [
     { href: "/", label: t("notFound.homeLink"), icon: Home },
@@ -106,7 +111,7 @@ export default async function NotFoundPage() {
 
       {/* Footer */}
       <footer className="w-full max-w-4xl text-center text-xs text-fg-subtle pt-6">
-        <span>© {new Date().getFullYear()} Klecx. All rights reserved.</span>
+        <span>{formatCopyright(new Date().getFullYear(), tCommon("allRightsReserved"))}</span>
       </footer>
     </div>
   );

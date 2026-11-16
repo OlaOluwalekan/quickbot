@@ -21,6 +21,7 @@ npx prisma migrate deploy
 npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code
 npm run lint
 npm run check:tokens
+npm run check:i18n
 npm run typecheck
 npm test -- --ci
 npm run build

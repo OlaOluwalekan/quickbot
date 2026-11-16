@@ -1,15 +1,19 @@
 "use client";
 
 import * as React from "react";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
+import { getApiErrorMessage } from "@/lib/api/error-message";
 import { Mail, Clock, ShieldCheck, CheckCircle2, AlertCircle, Send, Info } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { authClient } from "@/lib/auth-client";
 
+
 export function SupportForm() {
   const t = useTranslations("Support");
+  const tRoot = useTranslations();
+  const format = useFormatter();
   const { data: session } = authClient.useSession();
 
   const [name, setName] = React.useState("");
@@ -90,12 +94,12 @@ export function SupportForm() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error?.message || "Failed to submit support request.");
+        throw data?.error ?? {};
       }
 
       setTicketId(data.data?.ticketId || "submitted");
-    } catch (err: any) {
-      setError(err.message || "An unexpected error occurred. Please try again.");
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, tRoot, t("submitFailed")));
     } finally {
       setLoading(false);
     }
@@ -153,7 +157,7 @@ export function SupportForm() {
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Honeypot field (hidden from genuine users) */}
         <div className="hidden" aria-hidden="true">
-          <label htmlFor="website-hp">Website</label>
+          <label htmlFor="website-hp">{t("website")}</label>
           <input
             id="website-hp"
             type="text"
@@ -219,7 +223,7 @@ export function SupportForm() {
               {t("messageLabel")} <span className="text-danger">*</span>
             </label>
             <span className="text-[11px] font-mono text-fg-subtle">
-              {message.length} / 5,000
+              {t("charCount", { current: format.number(message.length), max: format.number(5000) })}
             </span>
           </div>
           <textarea

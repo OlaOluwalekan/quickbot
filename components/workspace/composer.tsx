@@ -3,7 +3,7 @@
 import type { GenerationSSEHandlers } from "@/lib/api/sse";
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import Link from "next/link";
 import {
   AlertCircle,
@@ -35,6 +35,7 @@ import {
   isWorkspaceDocumentFile,
 } from "@/lib/documents/workspace-document-types";
 import { uploadAttachment } from "@/lib/api/attachments";
+import { getApiErrorCode, getApiErrorMessage } from "@/lib/api/error-message";
 import { navigateWithTransition } from "@/lib/navigation/view-transition";
 import { getClientModels, type ClientModelOption } from "@/lib/ai/model-catalog";
 import type { WorkspaceDto } from "@/lib/api/hooks/workspaces";
@@ -60,6 +61,11 @@ import {
 
 const MAX_PROMPT_LENGTH = 20_000;
 const COUNTER_THRESHOLD = 18_000; // 90% of max
+
+const formatFileSizeKb = (bytes: number) => `(${Math.max(1, Math.round(bytes / 1024))} KB)`;
+const formatProgressPercent = (p: number) => `${p}%`;
+const formatAttachmentColon = (name: string) => `${name}:`;
+const formatCreditHint = (hint: string) => `(${hint})`;
 
 function safeRandomUUID(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -133,6 +139,11 @@ export function Composer({
   const tDocs = useTranslations("Documents");
   const tGates = useTranslations("Gates");
   const tModels = useTranslations("Models");
+  const tWorkspace = useTranslations("Workspace");
+  const tResponse = useTranslations("Response");
+  const tErrors = useTranslations();
+  const tPlans = useTranslations();
+  const format = useFormatter();
   const router = useRouter();
   const queryClient = React.useContext(QueryClientContext);
   const targetWorkspaceIdRef = React.useRef<string | null>(null);
@@ -153,7 +164,7 @@ export function Composer({
   const isImagePlanLocked =
     entitlementsLoaded && !canUse(entitlements, "images");
   const imagePlanName =
-    PLANS[PLAN_ORDER.find((p) => PLANS[p].limits.images) ?? "LITE"].name;
+    tPlans(PLANS[PLAN_ORDER.find((p) => PLANS[p].limits.images) ?? "LITE"].name);
   const [imageLockedNotice, setImageLockedNotice] = React.useState(false);
 
   // Generation stream status for current workspace
@@ -335,14 +346,14 @@ export function Composer({
         )
       );
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Upload failed";
+      const msg = getApiErrorMessage(err, tErrors);
       setAttachments((prev) =>
         prev.map((a) =>
           a.id === item.id ? { ...a, status: "error", error: msg } : a
         )
       );
     }
-  }, [workspaceId, queryClient]);
+  }, [workspaceId, queryClient, tErrors]);
 
   const handleFiles = React.useCallback((files: File[]) => {
     if (files.length === 0) return;
@@ -410,7 +421,7 @@ export function Composer({
 
         if (!targetWsId) {
           const defaultTitle =
-            files[0]?.name.replace(/\.[^.]+$/, "") || "New workspace";
+            files[0]?.name.replace(/\.[^.]+$/, "") || tWorkspace("defaultTitle");
           const newWs = await api<WorkspaceDto>("/api/v1/workspaces", {
             method: "POST",
             body: { title: defaultTitle },
@@ -469,8 +480,7 @@ export function Composer({
         };
         setCreationError(
           (code && known[code]) ||
-            (err instanceof ApiClientError && err.message) ||
-            tDocs("errors.uploadFailed")
+            getApiErrorMessage(err, tErrors, tDocs("errors.uploadFailed"))
         );
       } finally {
         setIsAddingDocument(false);
@@ -536,7 +546,7 @@ export function Composer({
       .map((a) => a.attachmentId!);
 
     if (mode === "image" && (attachments.length > 0 || readyAttachmentIds.length > 0)) {
-      setCreationError("Image generation cannot be combined with file or image attachments.");
+      setCreationError(t("imageWithAttachments"));
       return;
     }
 
@@ -602,14 +612,13 @@ export function Composer({
               useGenerationStore.getState().completeStream(workspaceId, data.content, data.citations);
             },
             onError: (err) => {
-              useGenerationStore.getState().failStream(workspaceId, err.message || err.code);
+              useGenerationStore.getState().failStream(workspaceId, err.code || "unknown");
             },
           },
         );
         onSubmitted?.();
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : "Generation failed";
-        useGenerationStore.getState().failStream(workspaceId, msg);
+        useGenerationStore.getState().failStream(workspaceId, getApiErrorCode(err) ?? "unknown");
       } finally {
         setIsSubmitting(false);
       }
@@ -620,7 +629,7 @@ export function Composer({
     try {
       const idempotencyKey = safeRandomUUID();
       const titleCandidate =
-        cleanPrompt.slice(0, 60).replace(/["'\n\r]/g, "").trim() || "New workspace";
+        cleanPrompt.slice(0, 60).replace(/["'\n\r]/g, "").trim() || tWorkspace("defaultTitle");
 
       // 1. Check if workspace was already created by an earlier attachment upload
       const existingBlankWsId = targetWorkspaceIdRef.current;
@@ -744,7 +753,7 @@ export function Composer({
   return (
     <form
       role="region"
-      aria-label="Composer"
+      aria-label={tWorkspace("composerAria")}
       onSubmit={(e) => {
         e.preventDefault();
         handleSubmit();
@@ -956,13 +965,13 @@ export function Composer({
               )}
               <span className="max-w-[120px] truncate font-medium">{att.name}</span>
               <span className="text-[10px] text-muted">
-                ({Math.max(1, Math.round(att.size / 1024))} KB)
+                {formatFileSizeKb(att.size)}
               </span>
 
               {att.status === "uploading" && (
                 <div className="flex items-center gap-1 text-[10px] text-accent">
                   <Loader2 className="size-3 animate-spin" />
-                  <span>{att.progress}%</span>
+                  <span>{formatProgressPercent(att.progress)}</span>
                 </div>
               )}
               {att.status === "ready" && (
@@ -1003,7 +1012,7 @@ export function Composer({
                 .filter((a) => a.status === "error" && a.error)
                 .map((a) => (
                   <p key={a.id}>
-                    <span className="font-semibold">{a.name}:</span> {a.error}
+                    <span className="font-semibold">{formatAttachmentColon(a.name)}</span> {a.error}
                   </p>
                 ))}
             </div>
@@ -1014,20 +1023,20 @@ export function Composer({
               a.error?.toLowerCase().includes("plan")
           ) && (
             <div className="mt-1 flex flex-wrap items-center gap-3 border-t border-danger/20 pt-2 text-[11px] text-fg-muted">
-              <span>Workspace attachment limit reached for this plan.</span>
+              <span>{tWorkspace("attachmentLimitReached")}</span>
               <div className="flex items-center gap-2">
                 <Link
                   href="/settings/billing"
                   className="font-medium text-accent hover:underline cursor-pointer"
                 >
-                  Upgrade plan
+                  {tResponse("upgradePlan")}
                 </Link>
                 <span>•</span>
                 <Link
                   href="/workspaces"
                   className="font-medium text-fg hover:underline cursor-pointer"
                 >
-                  Start a new workspace
+                  {tWorkspace("startNew")}
                 </Link>
               </div>
             </div>
@@ -1249,7 +1258,7 @@ export function Composer({
               >
                 <Sparkles className="h-3 w-3 text-accent" />
                 <span className="max-w-[110px] truncate">{activeModel.name}</span>
-                <span className="text-[10px] text-muted">({activeModel.creditHint})</span>
+                <span className="text-[10px] text-muted">{formatCreditHint(activeModel.creditHint)}</span>
                 <ChevronDown className="h-3 w-3 text-muted" />
               </button>
             </PopoverTrigger>
@@ -1300,7 +1309,7 @@ export function Composer({
               id="composer-char-count"
               className="text-[11px] font-mono text-muted"
             >
-              {prompt.length.toLocaleString()} / {MAX_PROMPT_LENGTH.toLocaleString()}
+              {t("charCount", { current: format.number(prompt.length), max: format.number(MAX_PROMPT_LENGTH) })}
             </span>
           )}
 

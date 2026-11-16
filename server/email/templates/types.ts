@@ -30,6 +30,13 @@ export interface InvitationData {
 
 export interface NewSignInData {
   time: string;
+  /** ISO time; when present the email formats it in the reader's language. */
+  timeIso?: string;
+  browser?: string | null;
+  os?: string | null;
+  /** A device name set by the person or a phone's model (language-neutral). */
+  customDevice?: string | null;
+  /** English label, kept for older notifications. */
   device?: string;
   ipAddress?: string;
   location?: string;

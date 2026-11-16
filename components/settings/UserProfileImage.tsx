@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Camera, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { getApiErrorMessage } from "@/lib/api/error-message";
 
 export interface UserProfileImageProps {
   user: SessionProps;
@@ -21,6 +23,8 @@ export function UserProfileImage({
   isCustomAvatar: initialIsCustom = false,
 }: UserProfileImageProps) {
   const router = useRouter();
+  const t = useTranslations("User.avatar");
+  const tRoot = useTranslations();
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const [currentAvatarUrl, setCurrentAvatarUrl] = React.useState<string | null>(
@@ -54,12 +58,12 @@ export function UserProfileImage({
 
     const allowedTypes = ["image/png", "image/jpeg", "image/webp"];
     if (!allowedTypes.includes(file.type)) {
-      toast.error("Avatar must be a PNG, JPEG, or WebP image");
+      toast.error(t("invalidType"));
       return;
     }
 
     if (file.size > 2 * 1024 * 1024) {
-      toast.error("Avatar image must be 2 MB or less");
+      toast.error(t("tooLarge"));
       return;
     }
 
@@ -159,11 +163,10 @@ export function UserProfileImage({
 
       setCurrentAvatarUrl(newUrl);
       setIsCustom(true);
-      toast.success("Profile picture updated");
+      toast.success(t("updated"));
       router.refresh();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to update profile picture";
-      toast.error(msg);
+      toast.error(getApiErrorMessage(err, tRoot, t("updateFailed")));
     } finally {
       setIsUploading(false);
     }
@@ -185,10 +188,10 @@ export function UserProfileImage({
 
       setCurrentAvatarUrl(newUrl);
       setIsCustom(false);
-      toast.success("Reverted to social provider picture");
+      toast.success(t("reverted"));
       router.refresh();
     } catch {
-      toast.error("Failed to remove avatar");
+      toast.error(t("removeFailed"));
     } finally {
       setIsUploading(false);
     }
@@ -211,7 +214,7 @@ export function UserProfileImage({
           onClick={() => fileInputRef.current?.click()}
           disabled={isUploading}
           className="absolute inset-0 flex items-center justify-center rounded-full bg-overlay/50 text-accent-fg opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer disabled:cursor-not-allowed"
-          aria-label="Upload profile picture"
+          aria-label={t("changePicture")}
         >
           {isUploading ? (
             <Loader2 className="h-6 w-6 animate-spin" />
@@ -236,7 +239,7 @@ export function UserProfileImage({
             ) : (
               <Camera className="h-4 w-4" />
             )}
-            Change picture
+            {t("changePicture")}
           </Button>
 
           {isCustom && (
@@ -249,13 +252,13 @@ export function UserProfileImage({
               className="gap-1.5 text-danger hover:text-danger hover:bg-danger/10"
             >
               <Trash2 className="h-4 w-4" />
-              Remove
+              {t("remove")}
             </Button>
           )}
         </div>
 
         <p className="text-xs text-subtle">
-          Allowed: PNG, JPEG, or WebP. Max 2 MB. Square cropped (512×512).
+          {t("allowedFormats")}
         </p>
 
         <input

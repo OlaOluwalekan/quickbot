@@ -62,16 +62,13 @@ const Registered = ({
           callbackURL: DEFAULT_LOGIN_REDIRECT,
         });
         setResponse({
-          message: "If the account exists, a verification email was sent.",
+          message: t("verificationSentIfExists"),
           success: true,
         });
         setCount(RESEND_SECONDS);
-      } catch (err: unknown) {
+      } catch {
         setResponse({
-          message:
-            err instanceof Error
-              ? err.message
-              : "Failed to send verification email",
+          message: t("verificationSendFailed"),
           success: false,
         });
       }
@@ -99,7 +96,7 @@ const Registered = ({
             className="flex items-center justify-center gap-2 rounded-xl border border-danger/30 bg-danger/10 px-3.5 py-2.5 text-xs font-medium text-danger"
           >
             <AlertTriangle className="h-4 w-4 shrink-0" strokeWidth={1.5} />
-            <span>No account email provided. Redirecting...</span>
+            <span>{t("noEmailProvided")}</span>
           </div>
         )}
 

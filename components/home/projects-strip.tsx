@@ -20,6 +20,7 @@ export function ProjectsStrip({
   onRequestNewProject,
 }: ProjectsStripProps) {
   const tHome = useTranslations("Home");
+  const tCommon = useTranslations("Common");
 
   if (loading) {
     return (
@@ -87,7 +88,7 @@ export function ProjectsStrip({
             </div>
 
             <div className="flex items-center justify-between text-[11px] text-subtle pt-2 border-t border-border/50">
-              <span>{project.workspacesCount} workspaces</span>
+              <span>{tCommon("workspacesCount", { count: project.workspacesCount })}</span>
               <span className="flex items-center gap-1">
                 <Users className="h-3 w-3" strokeWidth={1.5} />
                 <span>{project.membersCount}</span>

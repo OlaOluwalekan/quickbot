@@ -17,6 +17,10 @@ export interface DocumentImageProps {
  * can't be shown: a box with the image's description stands in their place.
  * The description is ordinary text, so it can be highlighted like the rest.
  */
+function formatImagePrefix(prefix: string) {
+  return `${prefix}: `;
+}
+
 export function DocumentImage({ src, alt, className }: DocumentImageProps) {
   const t = useTranslations("Documents");
   const srcString = typeof src === "string" ? src : undefined;
@@ -36,7 +40,7 @@ export function DocumentImage({ src, alt, className }: DocumentImageProps) {
       {description ? (
         <>
           <span className="sr-only" data-annot-ignore="true">
-            {t("imagePlaceholder")}:{" "}
+            {formatImagePrefix(t("imagePlaceholder"))}
           </span>
           <span>{description}</span>
         </>

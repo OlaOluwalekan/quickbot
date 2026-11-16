@@ -2,9 +2,9 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { Coins, Sparkles } from "lucide-react";
-import { formatNumber } from "@/utils/format";
+
 import { Button } from "@/components/ui/button";
 import type { HomeCredits } from "@/lib/api/hooks/home";
 
@@ -16,6 +16,7 @@ export interface CreditsCardProps {
 
 export function CreditsCard({ credits, showPlanAction = true }: CreditsCardProps) {
   const tHome = useTranslations("Home");
+  const format = useFormatter();
   const isFree = credits.plan.toLowerCase() === "free";
 
   return (
@@ -33,7 +34,7 @@ export function CreditsCard({ credits, showPlanAction = true }: CreditsCardProps
           </h3>
           <p className="text-xs text-muted mt-0.5">
             <span className="font-semibold text-fg text-sm">
-              {formatNumber(credits.balance)}
+              {format.number(credits.balance)}
             </span>{" "}
             {tHome("creditsRemaining", { count: credits.balance })}
           </p>

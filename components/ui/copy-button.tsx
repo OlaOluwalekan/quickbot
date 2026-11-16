@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Check, Copy } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button, type ButtonProps } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -15,14 +16,17 @@ export interface CopyButtonProps
 
 export function CopyButton({
   value,
-  label = "Copy to clipboard",
-  copiedLabel = "Copied",
+  label: labelProp,
+  copiedLabel: copiedLabelProp,
   showText = false,
   variant = "ghost",
   size = "icon",
   className,
   ...props
 }: CopyButtonProps) {
+  const t = useTranslations("Common");
+  const label = labelProp ?? t("copyToClipboard");
+  const copiedLabel = copiedLabelProp ?? t("copiedShort");
   const [copied, setCopied] = React.useState(false);
 
   const handleCopy = async () => {

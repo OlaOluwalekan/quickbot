@@ -19,7 +19,7 @@ import { limit, resolveClientIp } from "@/server/http/rate-limit";
 import { env } from "@/server/env";
 import { ApiError } from "@/server/http/errors";
 import { Markdown } from "@/components/markdown";
-import { getTranslations } from "next-intl/server";
+import { getFormatter, getTranslations } from "next-intl/server";
 import { Button } from "@/components/ui/button";
 
 export const dynamic = "force-dynamic";
@@ -46,12 +46,16 @@ export const metadata: Metadata = {
   },
 };
 
+const isImageMime = (mime: string) => mime.startsWith("image/");
+
 export default async function PublicSharePage({
   params,
 }: {
   params: Promise<{ token: string }>;
 }) {
   const { token } = await params;
+  const t = await getTranslations("PublicShare");
+  const format = await getFormatter();
   const tDocs = await getTranslations("Documents");
 
   // Same validated IP resolution as the API route (only trusts proxy headers when TRUST_PROXY=true)
@@ -66,9 +70,9 @@ export default async function PublicSharePage({
       return (
         <div className="min-h-screen bg-bg text-fg flex flex-col items-center justify-center p-6">
           <div className="max-w-md w-full rounded-2xl border border-border bg-surface p-6 text-center space-y-3">
-            <h1 className="text-lg font-semibold text-fg">Too many requests</h1>
+            <h1 className="text-lg font-semibold text-fg">{t("tooManyRequestsTitle")}</h1>
             <p className="text-sm text-muted">
-              Please wait a moment and refresh this page to view the shared link.
+              {t("tooManyRequestsDesc")}
             </p>
           </div>
         </div>
@@ -100,13 +104,13 @@ export default async function PublicSharePage({
             <span className="inline-flex items-center gap-1 rounded-md bg-surface-2 px-2 py-0.5 text-xs font-medium text-muted shrink-0">
               <Globe className="h-3 w-3 text-accent" />
               <span>
-                {payload.scope === "WORKSPACE" ? "Shared workspace" : "Shared response"}
+                {payload.scope === "WORKSPACE" ? t("workspaceScope") : t("responseScope")}
               </span>
             </span>
           </div>
 
           <Button asChild size="sm" className="shrink-0 text-xs sm:text-sm">
-            <Link href="/auth/register">Create your own workspace</Link>
+            <Link href="/auth/register">{t("createWorkspaceCta")}</Link>
           </Button>
         </div>
       </header>
@@ -122,15 +126,16 @@ export default async function PublicSharePage({
             {payload.authorName && (
               <span className="inline-flex items-center gap-1.5 font-medium text-fg">
                 <UserIcon className="h-3.5 w-3.5 text-accent" />
-                <span>Shared by {payload.authorName}</span>
+                <span>{t("sharedBy", { name: payload.authorName })}</span>
               </span>
             )}
             <span>
-              Shared on{" "}
-              {new Date(payload.createdAt).toLocaleDateString(undefined, {
-                year: "numeric",
-                month: "short",
-                day: "numeric",
+              {t("sharedOn", {
+                date: format.dateTime(new Date(payload.createdAt), {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                }),
               })}
             </span>
           </div>
@@ -139,7 +144,7 @@ export default async function PublicSharePage({
         {/* Responses Timeline */}
         {payload.responses.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-border bg-surface p-8 text-center text-sm text-muted">
-            No responses in this shared view yet.
+            {t("emptyResponses")}
           </div>
         ) : (
           <div className="space-y-8">
@@ -172,7 +177,7 @@ export default async function PublicSharePage({
                     {res.attachments.length > 0 && (
                       <div className="flex flex-wrap gap-2">
                         {res.attachments.map((att) =>
-                          att.mime.startsWith("image/") ? (
+                          isImageMime(att.mime) ? (
                             <a
                               key={att.id}
                               href={att.signedUrl}
@@ -258,7 +263,7 @@ export default async function PublicSharePage({
                               {doc.originalName}
                             </span>
                             <span className="text-accent underline ml-1">
-                              Download
+                              {t("download")}
                             </span>
                           </a>
                         ))}
@@ -269,7 +274,7 @@ export default async function PublicSharePage({
                     {res.citations.length > 0 && (
                       <div className="border-t border-border/60 pt-3 space-y-2">
                         <div className="text-xs font-semibold uppercase tracking-wider text-muted">
-                          Sources ({res.citations.length})
+                          {t("sources", { count: res.citations.length })}
                         </div>
                         <div className="grid gap-1.5 sm:grid-cols-2">
                           {res.citations.map((c) => (
@@ -321,10 +326,10 @@ export default async function PublicSharePage({
       <footer className="border-t border-border bg-surface/60 py-6 mt-12">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted">
           <p>
-            Shared via <span className="font-semibold text-fg">Klecx</span> — AI workspace for deep thinking and collaboration.
+            {t("footerNote", { brand: "Klecx" })}
           </p>
           <Button asChild variant="outline" size="sm" className="text-xs">
-            <Link href="/auth/register">Create your own workspace</Link>
+            <Link href="/auth/register">{t("createWorkspaceCta")}</Link>
           </Button>
         </div>
       </footer>

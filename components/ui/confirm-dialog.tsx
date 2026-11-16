@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import {
   Dialog,
   DialogContent,
@@ -36,14 +37,16 @@ export function ConfirmDialog({
   onOpenChange,
   title,
   description,
-  confirmLabel = "Confirm",
-  cancelLabel = "Cancel",
+  confirmLabel,
+  cancelLabel,
   variant = "destructive",
   confirmText,
   confirmPlaceholder,
   loading = false,
   onConfirm,
 }: ConfirmDialogProps) {
+  const t = useTranslations("Common");
+
   const [typed, setTyped] = React.useState("");
   const inputId = React.useId();
 
@@ -76,11 +79,7 @@ export function ConfirmDialog({
           {confirmText && (
             <div className="space-y-2 pt-1">
               <Label htmlFor={inputId} className="text-xs text-muted">
-                Type{" "}
-                <span className="rounded bg-surface-2 px-1.5 py-0.5 font-mono font-semibold text-fg">
-                  {confirmText}
-                </span>{" "}
-                to confirm:
+                {t("confirmPrompt", { text: confirmText })}
               </Label>
               <Input
                 id={inputId}
@@ -99,7 +98,7 @@ export function ConfirmDialog({
               disabled={loading}
               onClick={() => handleOpenChange(false)}
             >
-              {cancelLabel}
+              {cancelLabel ?? t("cancel")}
             </Button>
             <Button
               type="submit"
@@ -107,7 +106,7 @@ export function ConfirmDialog({
               disabled={!isMatch || loading}
             >
               {loading && <Spinner size="sm" className="mr-1" />}
-              {confirmLabel}
+              {confirmLabel ?? t("confirm")}
             </Button>
           </DialogFooter>
         </form>

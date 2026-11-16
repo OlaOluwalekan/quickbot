@@ -6,8 +6,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { AlertTriangle, CheckCircle2, Lock, Mail, User } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { getAuthErrorMessage } from "@/lib/api/error-message";
 import { authClient } from "@/lib/auth-client";
-import { RegisterSchema, type RegisterInput } from "@/lib/schemas/auth";
+import {
+  AUTH_VALIDATION_VALUES,
+  RegisterSchema,
+  type RegisterInput,
+} from "@/lib/schemas/auth";
 import { DEFAULT_LOGIN_REDIRECT } from "@/utils/routes";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +27,7 @@ import { cn } from "@/lib/utils";
 
 const RegisterForm = (): React.JSX.Element => {
   const t = useTranslations("Auth");
+  const tRoot = useTranslations();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [response, setResponse] = useState({
@@ -53,24 +59,23 @@ const RegisterForm = (): React.JSX.Element => {
 
         if (error) {
           setResponse({
-            message: error.message || "Registration failed",
+            message: getAuthErrorMessage(error, tRoot, t("registerFailed")),
             success: false,
           });
           return;
         }
 
         setResponse({
-          message:
-            "Registration successful! Check your inbox to verify your email.",
+          message: t("registerSuccess"),
           success: true,
         });
 
         router.push(
           `/auth/registered?accountId=${encodeURIComponent(values.email)}`
         );
-      } catch (err: unknown) {
+      } catch {
         setResponse({
-          message: err instanceof Error ? err.message : "Registration failed",
+          message: t("registerFailed"),
           success: false,
         });
       }
@@ -103,7 +108,7 @@ const RegisterForm = (): React.JSX.Element => {
                   />
                 </div>
               </FormControl>
-              <FormMessage />
+              <FormMessage values={AUTH_VALIDATION_VALUES} />
             </FormItem>
           )}
         />
@@ -127,7 +132,7 @@ const RegisterForm = (): React.JSX.Element => {
                   />
                 </div>
               </FormControl>
-              <FormMessage />
+              <FormMessage values={AUTH_VALIDATION_VALUES} />
             </FormItem>
           )}
         />
@@ -151,7 +156,7 @@ const RegisterForm = (): React.JSX.Element => {
                   />
                 </div>
               </FormControl>
-              <FormMessage />
+              <FormMessage values={AUTH_VALIDATION_VALUES} />
             </FormItem>
           )}
         />
@@ -175,7 +180,7 @@ const RegisterForm = (): React.JSX.Element => {
                   />
                 </div>
               </FormControl>
-              <FormMessage />
+              <FormMessage values={AUTH_VALIDATION_VALUES} />
             </FormItem>
           )}
         />

@@ -26,6 +26,10 @@ import { cn } from "@/lib/utils";
 
 type DrawerTab = "comments" | "asks" | "queue";
 
+const formatCountParens = (count: number) => `(${count})`;
+const SCOPE_WORKSPACE = "workspace" as const;
+const SCOPE_RESPONSE = "response" as const;
+
 interface DrawerAuthor {
   id: string;
   name?: string | null;
@@ -177,14 +181,14 @@ export function AllAnnotationsDrawer({
         <SheetHeader className="p-4 border-b border-border space-y-0 shrink-0">
           <SheetTitle className="text-sm font-semibold flex items-center gap-2">
             <span>{t("title")}</span>
-            <span className="text-xs font-normal text-muted">({scoped.length})</span>
+            <span className="text-xs font-normal text-muted">{formatCountParens(scoped.length)}</span>
           </SheetTitle>
           <SheetDescription className="sr-only">{t("description")}</SheetDescription>
         </SheetHeader>
 
         <div className="flex items-center gap-1.5 px-4 py-2 border-b border-border bg-surface/50 text-xs shrink-0">
-          {scopeButton("workspace", t("filterEntireWorkspace"))}
-          {activeResponseId && scopeButton("response", t("filterThisResponse"))}
+          {scopeButton(SCOPE_WORKSPACE, t("filterEntireWorkspace"))}
+          {activeResponseId && scopeButton(SCOPE_RESPONSE, t("filterThisResponse"))}
         </div>
 
         <Tabs

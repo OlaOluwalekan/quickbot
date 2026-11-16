@@ -26,7 +26,7 @@ const Logo = ({
         className
       )}
       role="img"
-      aria-label="Klecx Logo"
+      aria-label="Klecx"
     >
       {/* Prefix "Kl" */}
       <span

@@ -62,6 +62,10 @@ export interface SelectionToolbarProps {
   }) => void;
 }
 
+const formatCommentShortcut = (mac: boolean) => (mac ? "⌥⌘M" : "Ctrl+Alt+M");
+const formatAskShortcut = (mac: boolean) => (mac ? "⌥⌘A" : "Ctrl+Alt+A");
+const formatQueueShortcut = (mac: boolean) => (mac ? "⌘↵" : "Ctrl+↵");
+
 export function SelectionToolbar({
   workspaceId: workspaceIdProp,
   canAnnotate = true,
@@ -598,7 +602,7 @@ export function SelectionToolbar({
                 <MessageSquare className="h-3.5 w-3.5" />
                 <span>{t("comment")}</span>
                 <kbd className="hidden sm:inline-block ml-1 text-[10px] text-fg-muted font-mono opacity-60">
-                  {isMac ? "⌥⌘M" : "Ctrl+Alt+M"}
+                  {formatCommentShortcut(isMac)}
                 </kbd>
               </Button>
             </Gated>
@@ -622,7 +626,7 @@ export function SelectionToolbar({
                 <HelpCircle className="h-3.5 w-3.5" />
                 <span>{t("ask")}</span>
                 <kbd className="hidden sm:inline-block ml-1 text-[10px] text-fg-muted font-mono opacity-60">
-                  {isMac ? "⌥⌘A" : "Ctrl+Alt+A"}
+                  {formatAskShortcut(isMac)}
                 </kbd>
               </Button>
             </Gated>
@@ -753,7 +757,7 @@ export function SelectionToolbar({
               >
                 {t("addToQueue")}
                 <kbd className="hidden sm:inline-block ml-1 text-[9px] text-fg-muted font-mono opacity-60">
-                  {isMac ? "⌘↵" : "Ctrl+↵"}
+                  {formatQueueShortcut(isMac)}
                 </kbd>
               </Button>
               <Button

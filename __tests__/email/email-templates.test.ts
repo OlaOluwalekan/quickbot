@@ -296,3 +296,24 @@ describe("Step 1.7 & F0.2 — Transactional Email Module", () => {
     });
   });
 });
+
+describe("F5.1 — new sign-in email in the reader's language", () => {
+  it("builds the device and the time in French, with no English left", async () => {
+    const r = await renderEmail(
+      "new-sign-in",
+      "someone@example.com",
+      {
+        time: "Mon, 16 Nov 2026 13:30:00 GMT",
+        timeIso: "2026-11-16T13:30:00.000Z",
+        browser: "Chrome",
+        os: "macOS",
+        customDevice: null,
+      },
+      { locale: "fr" }
+    );
+    expect(r.text).toContain("Chrome sur macOS");
+    expect(r.text).toContain("16 novembre 2026");
+    expect(r.text).toContain("IP inconnue");
+    expect(r.text).not.toMatch(/\bon macOS\b|Unknown|GMT\b/);
+  });
+});

@@ -1,5 +1,6 @@
 import * as React from "react";
 import { Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 export interface SpinnerProps extends React.HTMLAttributes<HTMLSpanElement> {
@@ -15,10 +16,12 @@ const sizeClasses: Record<NonNullable<SpinnerProps["size"]>, string> = {
 
 export function Spinner({
   size = "md",
-  label = "Loading",
+  label,
   className,
   ...props
 }: SpinnerProps) {
+  const t = useTranslations("Common");
+  label ??= t("loading");
   return (
     <span
       role="status"

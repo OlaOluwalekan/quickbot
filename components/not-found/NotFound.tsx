@@ -3,10 +3,12 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { useUiStore } from "@/lib/stores/ui";
 import { Button } from "@/components/ui/button";
 
 const NotFound = () => {
+  const t = useTranslations("NotFound");
   const setCurrentPageTitle = useUiStore((s) => s.setCurrentPageTitle);
 
   useEffect(() => {
@@ -20,21 +22,21 @@ const NotFound = () => {
           width="196"
           height="248"
           src="/404.png"
-          alt="Logo"
+          alt={t("logoAlt")}
           className="w-full"
         />
       </div>
       <div className="flex flex-col justify-center items-center gap-2">
         <p className="text-xl font-semibold text-fg">
-          Sorry! This page cannot be found
+          {t("title")}
         </p>
         <p className="text-sm text-muted">
-          It has either been removed or does not exist
+          {t("description")}
         </p>
       </div>
       <div>
         <Button asChild>
-          <Link href="/">Back Home</Link>
+          <Link href="/">{t("backHome")}</Link>
         </Button>
       </div>
     </div>

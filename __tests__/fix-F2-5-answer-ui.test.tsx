@@ -21,7 +21,7 @@ import {
 
 jest.mock("next-intl", () => ({
   // Used by the annotation preview card inside AnswerBody (F2.6).
-  useFormatter: () => ({ relativeTime: () => "" }),
+  useFormatter: () => jest.requireActual("../test-utils/next-intl").createFormatter(),
   useNow: () => new Date(),
   useTranslations: () => (key: string) => key,
 }));

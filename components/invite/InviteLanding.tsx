@@ -4,6 +4,8 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Users, AlertCircle, CheckCircle2, ArrowRight, Clock, Shield } from "lucide-react";
+import { useFormatter, useTranslations } from "next-intl";
+import { getApiErrorMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { authClient } from "@/lib/auth-client";
@@ -35,6 +37,9 @@ export type InviteLandingProps =
 
 export function InviteLanding({ token, invitationId }: InviteLandingProps) {
   const router = useRouter();
+  const tInvite = useTranslations("Invite");
+  const tRoot = useTranslations();
+  const format = useFormatter();
   const lookup = token
     ? { key: "token", value: token }
     : { key: "id", value: invitationId ?? "" };
@@ -62,12 +67,12 @@ export function InviteLanding({ token, invitationId }: InviteLandingProps) {
         const data = json?.data ?? json;
         setInviteInfo(data);
         if (!data?.valid) {
-          setErrorMsg(data?.error || "This invitation is invalid or has expired.");
+          setErrorMsg(data?.error || tInvite("unavailableDefault"));
         }
       })
       .catch(() => {
         if (!isMounted) return;
-        setErrorMsg("Failed to load invitation. Please try again.");
+        setErrorMsg(tInvite("loadError"));
       })
       .finally(() => {
         if (isMounted) setLoading(false);
@@ -77,7 +82,7 @@ export function InviteLanding({ token, invitationId }: InviteLandingProps) {
       isMounted = false;
     };
     // Id lookups depend on who is signed in, so refetch when the session changes
-  }, [lookup.key, lookup.value, session?.user?.id]);
+  }, [lookup.key, lookup.value, session?.user?.id, tInvite]);
 
   const handleAccept = async () => {
     if (!lookup.value || accepting) return;
@@ -92,17 +97,17 @@ export function InviteLanding({ token, invitationId }: InviteLandingProps) {
       });
       const json = await res.json();
       if (!res.ok) {
-        throw new Error(json?.error?.message || "Failed to accept invitation");
+        throw json?.error ?? { status: res.status };
       }
       const data = json?.data ?? json;
-      toast.success(data?.message || "Invitation accepted!");
+      toast.success(tInvite("acceptedSuccess"));
       if (data?.workspaceId) {
         router.push(`/workspaces/${data.workspaceId}`);
       } else {
         router.push("/workspaces");
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to accept invitation";
+      const msg = getApiErrorMessage(err, tRoot, tInvite("acceptError"));
       toast.error(msg);
       setErrorMsg(msg);
     } finally {
@@ -115,7 +120,7 @@ export function InviteLanding({ token, invitationId }: InviteLandingProps) {
       <div className="min-h-screen flex items-center justify-center bg-bg p-4">
         <div className="flex flex-col items-center gap-3">
           <Spinner className="h-8 w-8 text-accent" />
-          <p className="text-sm text-muted">Checking invitation...</p>
+          <p className="text-sm text-muted">{tInvite("checking")}</p>
         </div>
       </div>
     );
@@ -128,10 +133,10 @@ export function InviteLanding({ token, invitationId }: InviteLandingProps) {
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-accent-soft text-accent">
             <Users className="h-6 w-6" />
           </div>
-          <h1 className="text-xl font-bold text-fg">Sign in to view this invitation</h1>
+          <h1 className="text-xl font-bold text-fg">{tInvite("signInRequiredTitle")}</h1>
           <Button asChild className="w-full gap-2">
             <Link href={`/login?callbackUrl=${encodeURIComponent(selfPath)}`}>
-              Sign in
+              {tInvite("signInButton")}
               <ArrowRight className="h-4 w-4" />
             </Link>
           </Button>
@@ -147,13 +152,13 @@ export function InviteLanding({ token, invitationId }: InviteLandingProps) {
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-danger-soft text-danger">
             <AlertCircle className="h-6 w-6" />
           </div>
-          <h1 className="text-xl font-bold text-fg">Invitation Unavailable</h1>
+          <h1 className="text-xl font-bold text-fg">{tInvite("unavailableTitle")}</h1>
           <p className="text-sm text-muted">
-            {errorMsg || inviteInfo?.error || "This invitation link is invalid, revoked, or has expired."}
+            {errorMsg || inviteInfo?.error || tInvite("unavailableDefault")}
           </p>
           <div className="pt-2">
             <Button asChild variant="outline" className="w-full">
-              <Link href="/workspaces">Go to Dashboard</Link>
+              <Link href="/workspaces">{tInvite("goToDashboard")}</Link>
             </Button>
           </div>
         </div>
@@ -161,10 +166,10 @@ export function InviteLanding({ token, invitationId }: InviteLandingProps) {
     );
   }
 
-  const resourceTitle = inviteInfo.workspace?.title || inviteInfo.project?.name || "Workspace";
-  const resourceType = inviteInfo.workspace ? "workspace" : "project";
-  const inviterName = inviteInfo.inviter?.name || "A collaborator";
-  const roleName = inviteInfo.role?.toLowerCase() || "member";
+  const resourceTitle = inviteInfo.workspace?.title || inviteInfo.project?.name || tInvite("resourceWorkspace");
+  const resourceType = inviteInfo.workspace ? tInvite("resourceWorkspace").toLowerCase() : tInvite("resourceProject").toLowerCase();
+  const inviterName = inviteInfo.inviter?.name || tInvite("defaultInviter");
+  const roleName = inviteInfo.role ? inviteInfo.role.toLowerCase() : tInvite("roleMember");
   const isEmailMatch = Boolean(actor && inviteInfo.signedInEmailMatches);
 
   return (
@@ -174,32 +179,34 @@ export function InviteLanding({ token, invitationId }: InviteLandingProps) {
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-accent-soft text-accent shadow-sm">
             <Users className="h-7 w-7" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-fg">You&apos;ve Been Invited</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-fg">{tInvite("heading")}</h1>
           <p className="text-sm text-muted">
-            <span className="font-semibold text-fg">{inviterName}</span> invited you to join the{" "}
-            {resourceType}{" "}
-            <span className="font-semibold text-fg">&ldquo;{resourceTitle}&rdquo;</span> as a{" "}
-            <span className="font-semibold text-accent capitalize">{roleName}</span>.
+            {tInvite("invitedTo", {
+              inviter: inviterName,
+              resourceType,
+              resourceTitle,
+              role: roleName,
+            })}
           </p>
         </div>
 
         <div className="rounded-xl border border-border bg-surface-2 p-4 text-xs space-y-2 text-muted">
           <div className="flex items-center justify-between">
             <span className="flex items-center gap-1.5">
-              <Shield className="h-3.5 w-3.5 text-accent" /> Role
+              <Shield className="h-3.5 w-3.5 text-accent" /> {tInvite("roleLabel")}
             </span>
             <span className="font-medium text-fg uppercase">{inviteInfo.role}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span>Sent to</span>
+            <span>{tInvite("sentTo")}</span>
             <span className="font-medium text-fg font-mono">{inviteInfo.email}</span>
           </div>
           {inviteInfo.expiresAt && (
             <div className="flex items-center justify-between">
               <span className="flex items-center gap-1.5">
-                <Clock className="h-3.5 w-3.5" /> Expires
+                <Clock className="h-3.5 w-3.5" /> {tInvite("expires")}
               </span>
-              <span>{new Date(inviteInfo.expiresAt).toLocaleDateString()}</span>
+              <span>{format.dateTime(new Date(inviteInfo.expiresAt), { dateStyle: "medium" })}</span>
             </div>
           )}
         </div>
@@ -207,17 +214,17 @@ export function InviteLanding({ token, invitationId }: InviteLandingProps) {
         {!actor ? (
           <div className="space-y-3 pt-2">
             <p className="text-xs text-center text-subtle">
-              Please sign in with the invited email address to accept.
+              {tInvite("signInPrompt")}
             </p>
             <Button asChild className="w-full gap-2">
               <Link href={`/login?callbackUrl=${encodeURIComponent(selfPath)}`}>
-                Sign in to Accept
+                {tInvite("signInToAccept")}
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
             <Button asChild variant="outline" className="w-full">
               <Link href={`/signup?callbackUrl=${encodeURIComponent(selfPath)}`}>
-                Create an Account
+                {tInvite("createAccount")}
               </Link>
             </Button>
           </div>
@@ -226,20 +233,21 @@ export function InviteLanding({ token, invitationId }: InviteLandingProps) {
             <div className="rounded-lg border border-warning/40 bg-warning-soft p-3 text-xs text-warning space-y-1">
               <div className="flex items-center gap-1.5 font-medium">
                 <AlertCircle className="h-4 w-4 shrink-0" />
-                <span>Account Mismatch</span>
+                <span>{tInvite("accountMismatchTitle")}</span>
               </div>
               <p>
-                You are currently signed in as <span className="font-semibold">{actor.email}</span>,
-                but this invitation was sent to{" "}
-                <span className="font-semibold">{inviteInfo.email}</span>.
+                {tInvite("accountMismatchDesc", {
+                  currentEmail: actor.email,
+                  invitedEmail: inviteInfo.email ?? "",
+                })}
               </p>
             </div>
             <p className="text-xs text-center text-muted">
-              Please sign in with the invited account to accept this invitation.
+              {tInvite("switchAccountPrompt")}
             </p>
             <Button asChild variant="outline" className="w-full">
               <Link href={`/login?callbackUrl=${encodeURIComponent(selfPath)}`}>
-                Switch Account
+                {tInvite("switchAccount")}
               </Link>
             </Button>
           </div>
@@ -253,12 +261,16 @@ export function InviteLanding({ token, invitationId }: InviteLandingProps) {
               {accepting ? (
                 <>
                   <Spinner className="h-4 w-4" />
-                  <span>Joining {resourceTitle}...</span>
+                  <span>{tInvite("joining", { title: resourceTitle })}</span>
                 </>
               ) : (
                 <>
                   <CheckCircle2 className="h-4 w-4" />
-                  <span>Accept & Join {resourceType === "workspace" ? "Workspace" : "Project"}</span>
+                  <span>
+                    {tInvite("acceptAndJoin", {
+                      resourceType: inviteInfo.workspace ? tInvite("resourceWorkspace") : tInvite("resourceProject"),
+                    })}
+                  </span>
                 </>
               )}
             </Button>

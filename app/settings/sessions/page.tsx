@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { requireActor } from "@/server/auth/session";
+import { getTranslations } from "next-intl/server";
 import LocaleSwitcher from "@/components/layout/locale-switcher";
 import AppName from "@/components/logo/AppName";
 import Logo from "@/components/logo/Logo";
@@ -18,6 +19,8 @@ export const metadata: Metadata = {
 
 export default async function SessionsPage() {
   await requireActor();
+  const t = await getTranslations("Settings.sessions");
+  const tSettings = await getTranslations("Settings");
 
   return (
     <div className="min-h-screen w-full bg-bg text-fg flex flex-col">
@@ -33,7 +36,7 @@ export default async function SessionsPage() {
             <Button asChild variant="outline" size="sm">
               <Link href="/settings" className="flex items-center gap-1.5">
                 <ArrowLeft className="w-3.5 h-3.5" />
-                Settings
+                {tSettings("title")}
               </Link>
             </Button>
           </div>
@@ -45,13 +48,13 @@ export default async function SessionsPage() {
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2 text-primary font-semibold text-xs tracking-wider uppercase">
             <Shield className="w-4 h-4" />
-            Security
+            {t("security")}
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-            Sessions & Devices
+            {t("title")}
           </h1>
           <p className="text-xs sm:text-sm text-muted">
-            View all browser and mobile sessions currently authorized to access your account.
+            {t("subtitle")}
           </p>
         </div>
 

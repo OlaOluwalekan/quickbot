@@ -103,7 +103,7 @@ export default async function CookiesPage() {
                     <th className="p-3.5">{t("cookies.cookieNameHeader")}</th>
                     <th className="p-3.5">{t("cookies.cookiePurposeHeader")}</th>
                     <th className="p-3.5">{t("cookies.cookieDurationHeader")}</th>
-                    <th className="p-3.5">Type</th>
+                    <th className="p-3.5">{t("cookies.tableType")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border text-fg-muted">

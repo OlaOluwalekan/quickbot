@@ -16,7 +16,27 @@
     "copied": "Copied to clipboard",
     "download": "Download",
     "tokens": "Tokens",
-    "language": "Language"
+    "language": "Language",
+    "confirmPrompt": "Type {text} to confirm:",
+    "closeDialog": "Close dialog",
+    "closePanel": "Close panel",
+    "commandPalette": "Command Palette",
+    "selectLanguage": "Select language",
+    "breadcrumb": "Breadcrumb",
+    "sharedWorkspace": "Shared Workspace",
+    "sharedBy": "Shared by {name}",
+    "workspacesCount": "{count, plural, one {# workspace} other {# workspaces}}",
+    "imageOutput": "Image output",
+    "untrustedBlocked": "Untrusted external image blocked: ",
+    "editResponsePlaceholder": "Edit response content...",
+    "nothingToPreview": "Nothing to preview.",
+    "workspaceSingular": "Workspace",
+    "allRightsReserved": "All rights reserved.",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "confirm": "Confirm",
+    "copyToClipboard": "Copy to clipboard",
+    "copiedShort": "Copied"
   },
   "Header": {
     "features": "Features",
@@ -62,11 +82,11 @@
     "orContinueWith": "Or continue with email",
     "google": "Google",
     "github": "GitHub",
-    "emailPlaceholder": "name@company.com",
+    "emailPlaceholder": "name@example.com",
     "emailLabel": "Email Address",
     "namePlaceholder": "Your full name",
     "nameLabel": "Full Name",
-    "passwordPlaceholder": "Enter your password",
+    "passwordPlaceholder": "••••••••••••",
     "passwordLabel": "Password",
     "confirmPasswordPlaceholder": "Confirm your password",
     "confirmPasswordLabel": "Confirm New Password",
@@ -78,7 +98,7 @@
     "noAccount": "Don't have an account?",
     "createAccountLink": "Create one",
     "registerTitle": "Create your account",
-    "registerSubtitle": "Start with 10,000 free tokens on Klecx",
+    "registerSubtitle": "Start free with {credits, plural, one {# credit} other {# credits}} every month",
     "registerButton": "Create Account",
     "registering": "Creating account...",
     "alreadyHaveAccount": "Already have an account?",
@@ -125,7 +145,48 @@
     "resendVerifyEmail": "Resend Verification Email",
     "resending": "Sending verification email...",
     "resendCooldown": "Resend available in {seconds}s",
-    "resendSent": "Verification email sent! Check your inbox."
+    "resendSent": "Verification email sent! Check your inbox.",
+    "emailAddress": "Email Address",
+    "noEmailProvided": "No account email provided. Redirecting...",
+    "resetFailed": "Couldn't reset your password. The link may have expired.",
+    "unexpectedError": "An unexpected error occurred. Please try again.",
+    "registerFailed": "Registration failed. Please try again.",
+    "registerSuccess": "Registration successful! Check your inbox to verify your email.",
+    "sessionEnded": "Your session has ended or was signed out from another device. Please sign in again.",
+    "verifyBeforeSignIn": "Please check your inbox and verify your email address before signing in.",
+    "signedIn": "Signed in successfully",
+    "emailVerified": "Email verified successfully",
+    "verificationSentIfExists": "If the account exists, a verification email was sent.",
+    "verificationSendFailed": "Couldn't send the verification email. Please try again.",
+    "emailRequired": "Please enter your email address.",
+    "resetRateLimited": "Too many password reset requests. Please wait an hour before trying again.",
+    "validation": {
+      "invalidEmail": "Invalid email address",
+      "passwordRequired": "Password is required",
+      "passwordTooShort": "Password must be at least {min} characters",
+      "passwordTooLong": "Password must be at most {max} characters",
+      "nameLength": "Name must be between {nameMin} and {nameMax} characters",
+      "passwordsDoNotMatch": "Passwords do not match"
+    },
+    "errors": {
+      "INVALID_EMAIL_OR_PASSWORD": "Invalid email or password",
+      "INVALID_EMAIL": "Invalid email address",
+      "INVALID_PASSWORD": "Incorrect password",
+      "EMAIL_NOT_VERIFIED": "Please verify your email address before signing in.",
+      "EMAIL_ALREADY_VERIFIED": "This email address is already verified.",
+      "USER_ALREADY_EXISTS": "An account with this email already exists.",
+      "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL": "An account with this email already exists. Use another email.",
+      "PASSWORD_TOO_SHORT": "Your password is too short.",
+      "PASSWORD_TOO_LONG": "Your password is too long.",
+      "INVALID_TOKEN": "This link is invalid or has already been used.",
+      "TOKEN_EXPIRED": "This link has expired. Request a new one.",
+      "USER_NOT_FOUND": "No account was found.",
+      "SESSION_EXPIRED": "Your session has expired. Please sign in again.",
+      "FAILED_TO_CREATE_USER": "Your account couldn't be created. Please try again.",
+      "FAILED_TO_CREATE_SESSION": "You couldn't be signed in. Please try again.",
+      "SOCIAL_ACCOUNT_ALREADY_LINKED": "This sign-in account is already linked to another user.",
+      "CREDENTIAL_ACCOUNT_NOT_FOUND": "This account doesn't use a password. Sign in with your provider instead."
+    }
   },
   "Chat": {
     "newChat": "New Workspace",
@@ -163,7 +224,7 @@
     "generatedImageAlt": "AI generated image by Klecx",
     "settings": "Settings",
     "logout": "Sign Out",
-    "tokensRemaining": "{count} tokens left",
+    "tokensRemaining": "{count, plural, one {# token left} other {# tokens left}}",
     "outOfTokens": "You have run out of tokens. Please top up your balance.",
     "promptRequired": "Please enter a prompt first.",
     "streamError": "Failed to generate response. Please try again.",
@@ -187,7 +248,9 @@
     "dropFilesHere": "Drop files to attach",
     "webSearchOff": "Web search is off",
     "changeInSettings": "Change in Settings",
-    "capGenerate": "generate responses"
+    "capGenerate": "generate responses",
+    "imageWithAttachments": "Image generation can't be combined with file or image attachments.",
+    "charCount": "{current} / {max}"
   },
   "Settings": {
     "ai": {
@@ -230,6 +293,45 @@
       "saveName": "Save name",
       "cancelEdit": "Cancel",
       "editName": "Edit name"
+    },
+    "sessions": {
+      "title": "Sessions & Devices",
+      "security": "Security",
+      "subtitle": "View all browser and mobile sessions currently authorized to access your account.",
+      "activeHeading": "Active Sessions",
+      "activeDescription": "Manage devices signed into your account and revoke access remotely.",
+      "signOutOthers": "Sign out of all other devices",
+      "signingOut": "Signing out...",
+      "loading": "Loading active sessions...",
+      "empty": "No active sessions found.",
+      "currentDevice": "This device",
+      "lastActive": "Last active: {time}",
+      "activeNow": "Active now",
+      "justNow": "Just now",
+      "minutesAgo": "{count}m ago",
+      "hoursAgo": "{count}h ago",
+      "daysAgo": "{count}d ago",
+      "recently": "Recently",
+      "signOut": "Sign out",
+      "loadError": "Could not load active sessions",
+      "revokedSuccess": "Device signed out",
+      "revokeFailed": "Failed to revoke session",
+      "revokedOthersSuccess": "Signed out of all other devices",
+      "revokedOthersFailed": "Failed to revoke sessions",
+      "invalidPassword": "Incorrect password. Please try again.",
+      "rateLimited": "Too many attempts. Please wait a few minutes and try again.",
+      "enterPassword": "Please enter your password",
+      "confirmAuthTitle": "Confirm Recent Authentication",
+      "confirmAuthDesc": "Signing out of other devices is a sensitive security action. Please re-enter your password to proceed.",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "Enter your password",
+      "cancel": "Cancel",
+      "verifying": "Verifying...",
+      "confirmAndSignOut": "Confirm & Sign out",
+      "unknownBrowser": "Unknown browser",
+      "unknownOs": "Unknown system",
+      "deviceOn": "{browser} on {os}",
+      "deviceInfo": "{browser} • {os}"
     }
   },
   "Email": {
@@ -268,7 +370,13 @@
       "greeting": "Hi,",
       "body": "A new sign-in to your Klecx account was detected on {time} from {device} ({ipAddress}, {location}).",
       "button": "Review Account Activity",
-      "disclaimer": "If this was you, no action is required. If you did not sign in at this time, please change your password immediately."
+      "disclaimer": "If this was you, no action is required. If you did not sign in at this time, please change your password immediately.",
+      "deviceOn": "{browser} on {os}",
+      "unknownBrowser": "an unknown browser",
+      "unknownOs": "an unknown system",
+      "unknownDevice": "an unknown device",
+      "unknownIp": "unknown IP",
+      "unknownLocation": "unknown location"
     },
     "passwordChanged": {
       "subject": "Security Alert: Your Klecx password was changed",
@@ -406,6 +514,7 @@
     "expandSidebar": "Expand sidebar",
     "pinSidebar": "Keep sidebar open",
     "openNavigation": "Open navigation menu",
+    "sidebarNavigation": "Sidebar navigation",
     "closeNavigation": "Close navigation menu",
     "rename": "Rename",
     "moveToProject": "Move to project",
@@ -414,7 +523,7 @@
     "share": "Share",
     "delete": "Delete",
     "creditsPlan": "{plan} Plan",
-    "creditsBalance": "{count} credits",
+    "creditsBalance": "{count, plural, one {# credit} other {# credits}}",
     "usageLink": "Usage",
     "settings": "Settings",
     "help": "Help & Documentation",
@@ -435,7 +544,8 @@
     "toggleTheme": "Toggle theme",
     "openSettings": "Open settings",
     "expandProject": "Show workspaces in {name}",
-    "collapseProject": "Hide workspaces in {name}"
+    "collapseProject": "Hide workspaces in {name}",
+    "usernameClaimed": "Username claimed: @{username}"
   },
   "Home": {
     "greetingMorning": "Good morning, {name}",
@@ -467,7 +577,13 @@
     "retry": "Retry",
     "errorLoadingHome": "Unable to load workspace home.",
     "studioBadge": "{appName} Studio",
-    "creditsRemaining": "{count, plural, one {credit} other {credits}} remaining"
+    "creditsRemaining": "{count, plural, one {credit} other {credits}} remaining",
+    "onboarding": {
+      "verify": "Verify",
+      "settings": "Settings",
+      "explore": "Explore",
+      "create": "Create"
+    }
   },
   "Templates": {
     "catWrite": "Write",
@@ -603,7 +719,13 @@
       "level": "L{level}",
       "sourceRemoved": "Source removed",
       "viewAnnotation": "View annotation"
-    }
+    },
+    "byAuthor": "by {name}",
+    "addedOn": "Added {date}",
+    "loadingImage": "Loading image...",
+    "imageFailed": "Image generation failed.",
+    "editPlaceholder": "Edit response content...",
+    "nothingToPreview": "Nothing to preview."
   },
   "Marketing": {
     "nav": {
@@ -645,7 +767,7 @@
       "subtitle": "Organize AI work into projects, keep every answer's versions, and ask questions about any passage without losing your train of thought.",
       "startFree": "Start free",
       "seePricing": "See pricing",
-      "geminiFlash": "Gemini 2.5 Flash",
+      "geminiFlash": "Fast & Efficient",
       "projectsLabel": "Projects",
       "workspacesInProject": "Workspaces in Project",
       "active": "Active",
@@ -657,7 +779,14 @@
       "responseSnippet2": "PgBouncer in transaction pooling mode",
       "responseSnippet3": "ahead of your primary and read nodes.",
       "askPassage": "Ask about this passage",
-      "sideQuestion": "Side Question: What is the failover lag between primary and replica?"
+      "sideQuestion": "Side Question: What is the failover lag between primary and replica?",
+      "mockPath": "klecx/workspaces/ws_arch_01",
+      "mockProject1": "Database Architecture",
+      "mockProject2": "Product Roadmap 2027",
+      "mockWorkspace1": "Postgres Pooling vs Replicas",
+      "mockWorkspace2": "Redis Event Invalidation",
+      "mockWorkspace3": "Prisma Indexing Audit",
+      "mockConfig": "pool_mode = transaction | max_client_conn = 10000 | default_pool_size = 50"
     },
     "features": {
       "badge": "Architected for Builders",
@@ -748,60 +877,6 @@
       "groundingTitle": "Web Search Grounding",
       "groundingDesc": "+3 credits surcharge per grounded query",
       "footnoteDisclaimer": "* Monthly plan credits do not roll over to maintain transparent unit costs. You can cancel directly in Account Settings at any time.",
-      "plans": {
-        "FREE": {
-          "name": "Free",
-          "tagline": "Explore the workspace model with essential capabilities.",
-          "f1": "100 credits / month (no rollover)",
-          "f2": "Daily spend cap of 30 credits",
-          "f3": "1 concurrent generation turn",
-          "f4": "Economy model access",
-          "f5": "3 attachments per workspace (5 MB max)",
-          "f6": "Markdown document export",
-          "f7": "Read-only workspace & response sharing"
-        },
-        "LITE": {
-          "name": "Lite",
-          "tagline": "For individual builders and researchers working daily.",
-          "f1": "800 credits / month (no rollover)",
-          "f2": "Daily spend cap: 25% of monthly balance",
-          "f3": "2 concurrent generation turns",
-          "f4": "Economy & Standard text models",
-          "f5": "Native AI image generation",
-          "f6": "Web-search grounding support",
-          "f7": "10 attachments per workspace (15 MB max)",
-          "f8": "Up to 2 workspace collaborators",
-          "f9": "Markdown, PDF & Word exports"
-        },
-        "STANDARD": {
-          "name": "Standard",
-          "tagline": "Our recommended plan for power users and small teams.",
-          "f1": "1,800 credits / month (no rollover)",
-          "f2": "Daily spend cap: 25% of monthly balance",
-          "f3": "3 concurrent generation turns",
-          "f4": "Economy & Standard text models",
-          "f5": "Native AI image generation",
-          "f6": "Web-search grounding support",
-          "f7": "25 attachments per workspace (25 MB max)",
-          "f8": "Up to 5 workspace collaborators",
-          "f9": "Full export suite (MD, PDF, DOCX)",
-          "f10": "Priority customer support"
-        },
-        "PRO": {
-          "name": "Pro",
-          "tagline": "Maximum throughput, highest limits, and team collaboration.",
-          "f1": "3,500 credits / month (no rollover)",
-          "f2": "Daily spend cap: 20% of monthly balance",
-          "f3": "5 concurrent generation turns",
-          "f4": "All models including future advanced tiers",
-          "f5": "Native AI image generation",
-          "f6": "Web-search grounding support",
-          "f7": "50 attachments per workspace (50 MB max)",
-          "f8": "Up to 15 workspace collaborators",
-          "f9": "Full export suite (MD, PDF, DOCX)",
-          "f10": "Activity audit trail & role management"
-        }
-      },
       "comparison": {
         "title": "Detailed Plan Comparison",
         "subtitle": "Everything included across each plan level at a glance.",
@@ -844,7 +919,9 @@
         "cap30": "30 credits",
         "cap25pct": "25% of balance",
         "cap20pct": "20% of balance"
-      }
+      },
+      "priceFormat": "${price}",
+      "creditsCount": "{count, plural, one {# Credit} other {# Credits}}"
     },
     "faq": {
       "badge": "Clear Answers",
@@ -921,6 +998,12 @@
       "supportText": "Have questions, feedback, or need enterprise support? Our support team responds to all inquiries within 3 business days.",
       "emailLabel": "Email:",
       "tryFree": "Try Klecx Free"
+    },
+    "featureRow": {
+      "shareUrl": "klecx.app/s/share_7x9qL",
+      "formatMd": ".md (Markdown)",
+      "formatPdf": ".pdf (Document)",
+      "formatDocx": ".docx (Word)"
     }
   },
   "Legal": {
@@ -994,7 +1077,8 @@
       "cookieSidebar": "Remembers collapsed or expanded sidebar state.",
       "durationSession": "30 days (rolling)",
       "durationYear": "1 year",
-      "durationState": "Persistent local preference"
+      "durationState": "Persistent local preference",
+      "tableType": "Type"
     }
   },
   "Help": {
@@ -1011,7 +1095,7 @@
     },
     "allCategories": "All Categories",
     "readTime": "read",
-    "articlesFound": "{count} articles found",
+    "articlesFound": "{count, plural, one {# article found} other {# articles found}}",
     "noResultsTitle": "No articles found",
     "noResultsDesc": "Try adjusting your search terms or browse all categories above.",
     "backToHelp": "Back to Help Center",
@@ -1073,7 +1157,10 @@
     "abuseInboxDesc": "For security reports or acceptable use violations:",
     "quickAnswersHeading": "Looking for quick answers?",
     "quickAnswersDesc": "Check out our searchable guides in the Help Center.",
-    "visitHelpCenter": "Visit Help Center"
+    "visitHelpCenter": "Visit Help Center",
+    "website": "Website",
+    "charCount": "{current} / {max}",
+    "submitFailed": "Couldn't send your support request. Please try again."
   },
   "Status": {
     "title": "System Status",
@@ -1159,6 +1246,86 @@
       "reconnecting": "Reconnecting...",
       "retryButton": "Retry connection",
       "dismiss": "Dismiss"
+    },
+    "api": {
+      "generic": "An unexpected error occurred. Please try again.",
+      "bad_request": "The request was invalid or malformed.",
+      "unauthorized": "Please sign in to continue.",
+      "insufficient_credits": "You do not have enough credits to complete this action.",
+      "forbidden": "You do not have permission to perform this action.",
+      "not_found": "The requested resource could not be found.",
+      "conflict": "A conflict occurred while processing your request.",
+      "validation_error": "Please check your input and try again.",
+      "unprocessable_entity": "Unable to process this request.",
+      "content_blocked": "This prompt was blocked by safety guidelines.",
+      "rate_limited": "Too many requests. Please wait a moment before retrying.",
+      "daily_cap_reached": "You have reached your daily credit cap.",
+      "member_limit_reached": "Workspace member limit reached.",
+      "upload_failed": "Failed to upload file. Please try again.",
+      "file_too_large": "The file is too large for your plan.",
+      "invalid_file_type": "The selected file type is not supported.",
+      "transfer_failed": "Failed to transfer workspace ownership.",
+      "FRESH_LOGIN_REQUIRED": "For your security, please sign in again to do this.",
+      "INVALID_PASSWORD": "Incorrect password.",
+      "admin_toggles_not_allowed": "Admins always can comment and ask; these settings can't be changed for them.",
+      "answer_in_progress": "An answer is already being written. Please wait for it to finish.",
+      "collaborator_cap_exceeded": "You've reached your monthly credit limit for this owner's workspaces.",
+      "daily_voice_limit": "You've reached today's voice input limit for your plan.",
+      "document_empty": "No text was found in this file.",
+      "document_limit": "This workspace already has the maximum number of documents.",
+      "document_not_regenerable": "An uploaded document can't be regenerated.",
+      "document_type_unsupported": "Only MD, TXT, DOCX and CSV files can be added to a workspace as documents.",
+      "document_unreadable": "This file couldn't be read as a document.",
+      "document_page_limit": "This file has too many pages to be read.",
+      "document_timeout": "Reading this file took too long. Try a smaller file.",
+      "duplicate_request": "This request was already sent.",
+      "duration_too_long": "Recordings can be at most 2 minutes long.",
+      "edit_conflict": "This text was changed since you started editing. Reload it and try again.",
+      "email_mismatch": "This invitation was sent to a different email address. Switch accounts to accept it.",
+      "email_not_verified": "The email address must be verified first.",
+      "empty_document": "There is no text to review.",
+      "empty_file": "The recording is empty.",
+      "internal_error": "Something went wrong on our side. Please try again.",
+      "invalid_audio_format": "This recording isn't in a supported audio format.",
+      "unsupported_audio_type": "This audio type isn't supported.",
+      "invalid_confirmation": "The confirmation text doesn't match.",
+      "invalid_duration": "The recording length is invalid.",
+      "invalid_form_data": "The upload was incomplete. Please try again.",
+      "missing_audio": "No recording was received.",
+      "no_speech": "No speech was detected in the recording.",
+      "klecx_note_forbidden": "You don't have permission to record Klecx notes in this workspace.",
+      "member_inherited": "This member's access comes from the project. Remove them from the project instead.",
+      "member_limit_exceeded": "You can't invite new members while you're over your plan's member limit.",
+      "note_annotation_deleted": "The comment this note belongs to was deleted.",
+      "not_reviewable": "Only text can be reviewed.",
+      "plan_upgrade_required": "This format isn't included in the workspace owner's plan.",
+      "recipient_not_member": "The new owner must already be a member.",
+      "recipient_suspended": "The new owner's access is suspended.",
+      "role_below_inherited": "A workspace role can't be lower than the role inherited from the project.",
+      "suggestion_closed": "This quick fix can no longer be changed.",
+      "transfer_already_pending": "An ownership transfer is already pending.",
+      "transfer_busy": "A response is being generated. Try again when it's finished.",
+      "transfer_expired": "This ownership transfer request has expired.",
+      "transfer_member_limit": "This transfer would go over the new owner's plan member limit.",
+      "transfer_not_pending": "This ownership transfer is no longer pending.",
+      "username_already_changed": "Your username can only be changed once.",
+      "username_claim_failed": "This username couldn't be claimed. Please try another.",
+      "username_taken": "This username is already taken.",
+      "invalid_request": "The AI model couldn't process this request.",
+      "auth": "The AI service is temporarily unavailable. Please try again later.",
+      "rate_limit": "The AI service is busy right now. Please try again in a moment.",
+      "timeout": "The answer took too long. Please try again.",
+      "timeout_orphaned": "The answer was interrupted. Please try again.",
+      "unavailable": "The AI service is temporarily unavailable. Please try again later.",
+      "safety": "This request was blocked by our safety guidelines.",
+      "unknown": "Something went wrong. Please try again.",
+      "generation_error": "The answer couldn't be generated. Please try again.",
+      "reply_error": "The answer couldn't be generated. Please try again.",
+      "review_failed": "The review stopped before it finished. Please try again.",
+      "internal": "Something went wrong on our side. Please try again.",
+      "network_error": "Connection lost. Check your internet connection and try again.",
+      "network": "Connection lost. Check your internet connection and try again.",
+      "connection": "The connection closed before the answer finished. Please try again."
     }
   },
   "Gates": {
@@ -1504,7 +1671,10 @@
       "workspace": "a workspace",
       "yourWorkspace": "your workspace",
       "role": "a collaborator",
-      "device": "a new device"
+      "device": "a new device",
+      "deviceOn": "{browser} on {os}",
+      "browser": "an unknown browser",
+      "os": "an unknown system"
     },
     "items": {
       "INVITE_RECEIVED": {
@@ -1533,7 +1703,7 @@
       "CREDITS_LOW": {
         "title": "Credits running low (80% used)",
         "description": "You have few credits left this period.",
-        "descriptionCount": "You have {count} credits left this period."
+        "descriptionCount": "{count, plural, one {You have # credit left this period.} other {You have # credits left this period.}}"
       },
       "CREDITS_EXHAUSTED": {
         "title": "Out of credits (100% used)",
@@ -1560,7 +1730,7 @@
         "title": "Queued questions answered",
         "description": "Your queued questions were answered.",
         "descriptionOne": "1 queued question was answered.",
-        "descriptionCount": "{count} queued questions were answered."
+        "descriptionCount": "{count, plural, one {# queued question was answered.} other {# queued questions were answered.}}"
       },
       "OWNERSHIP_TRANSFER_REQUESTED": {
         "title": "Ownership transfer request",
@@ -1600,9 +1770,9 @@
     },
     "bell": {
       "label": "Notifications",
-      "labelUnread": "Notifications ({count} unread)",
+      "labelUnread": "{count, plural, one {Notifications (# unread)} other {Notifications (# unread)}}",
       "title": "Notifications",
-      "newCount": "{count} new",
+      "newCount": "{count, plural, one {# new} other {# new}}",
       "markAllReadTitle": "Mark all as read",
       "markAllRead": "Mark all read",
       "settings": "Notification settings",
@@ -1624,7 +1794,7 @@
       "inAppFor": "{label}: in-app notifications",
       "emailFor": "{label}: email notifications",
       "recentTitle": "Recent notifications",
-      "unreadCount": "{count} unread",
+      "unreadCount": "{count, plural, one {# unread} other {# unread}}",
       "recentDescription": "Your recent account and workspace activity alerts.",
       "filter": "Show notifications",
       "filterAll": "All",
@@ -1686,7 +1856,7 @@
     "levelWithQuote": "Level {level}: «{quote}»",
     "resize": "Resize column",
     "allAnnotations": "All annotations",
-    "moreSpines": "{count} more levels",
+    "moreSpines": "{count, plural, one {# more level} other {# more levels}}",
     "hiddenLevels": "Hidden levels",
     "loading": "Loading thread…",
     "notAvailable": "This thread is no longer available.",
@@ -1750,6 +1920,27 @@
         "credits": "The workspace doesn't have enough credits to answer these questions.",
         "failed": "The questions couldn't be answered. Try again."
       }
+    },
+    "queue": {
+      "buttonLabel": "Questions",
+      "ariaDefault": "Questions queue",
+      "ariaCount": "Questions ({count})",
+      "title": "Question Queue",
+      "answering": "Answering...",
+      "loading": "Loading questions...",
+      "emptyTitle": "Queue is empty",
+      "emptyDesc": "Highlight text in any response and choose “Add question” to build your queue.",
+      "emptyQuestion": "(Empty question)",
+      "cancel": "Cancel",
+      "save": "Save",
+      "editLabel": "Edit question",
+      "removeLabel": "Remove question",
+      "estimatedCredits": "{count, plural, one {~# credit} other {~# credits}}",
+      "askAll": "Ask all ({count})",
+      "removedSuccess": "Question removed from queue",
+      "removeFailed": "Failed to remove question",
+      "updatedSuccess": "Question updated",
+      "updateFailed": "Failed to update question"
     }
   },
   "Documents": {
@@ -1807,7 +1998,7 @@
       "unreadable": "This file couldn't be read. It may be damaged or password-protected.",
       "empty": "No text was found in this file.",
       "timeout": "This file took too long to process. Try a smaller file.",
-      "limit": "This workspace already has {count} documents, which is the limit. Delete one to add another."
+      "limit": "This workspace already has {count, plural, one {# document} other {# documents}}, which is the limit. Delete one to add another."
     },
     "copy": "Copy",
     "cancelDrop": "Cancel",
@@ -1917,5 +2108,332 @@
     "editorLabel": "Document text (Markdown)",
     "editorPlaceholder": "Write the document in Markdown…",
     "oldRevisionReadOnly": "This is an older revision. Switch to the latest revision to edit."
+  },
+  "Plans": {
+    "FREE": {
+      "name": "Free",
+      "tagline": "Explore the workspace model with essential capabilities.",
+      "features": {
+        "credits": "100 credits / month (no rollover)",
+        "dailyCap": "Daily spend cap of 30 credits",
+        "concurrency": "1 concurrent generation turn",
+        "models": "Economy model access",
+        "attachments": "3 attachments per workspace (5 MB max)",
+        "exports": "Markdown document export",
+        "sharing": "Read-only workspace & response sharing"
+      }
+    },
+    "LITE": {
+      "name": "Lite",
+      "tagline": "For individual builders and researchers working daily.",
+      "features": {
+        "credits": "800 credits / month (no rollover)",
+        "dailyCap": "Daily spend cap: 25% of monthly balance",
+        "concurrency": "2 concurrent generation turns",
+        "models": "Economy & Standard text models",
+        "images": "Native AI image generation",
+        "search": "Web-search grounding support",
+        "attachments": "10 attachments per workspace (15 MB max)",
+        "collaborators": "Up to 2 workspace collaborators",
+        "exports": "Markdown, PDF & Word exports"
+      }
+    },
+    "STANDARD": {
+      "name": "Standard",
+      "badge": "Most Popular",
+      "tagline": "Our recommended plan for power users and small teams.",
+      "features": {
+        "credits": "1,800 credits / month (no rollover)",
+        "dailyCap": "Daily spend cap: 25% of monthly balance",
+        "concurrency": "3 concurrent generation turns",
+        "models": "Economy & Standard text models",
+        "images": "Native AI image generation",
+        "search": "Web-search grounding support",
+        "attachments": "25 attachments per workspace (25 MB max)",
+        "collaborators": "Up to 5 workspace collaborators",
+        "exports": "Full export suite (MD, PDF, DOCX)",
+        "support": "Priority customer support"
+      }
+    },
+    "PRO": {
+      "name": "Pro",
+      "tagline": "Maximum throughput, highest limits, and team collaboration.",
+      "features": {
+        "credits": "3,500 credits / month (no rollover)",
+        "dailyCap": "Daily spend cap: 20% of monthly balance",
+        "concurrency": "5 concurrent generation turns",
+        "models": "All models including future advanced tiers",
+        "images": "Native AI image generation",
+        "search": "Web-search grounding support",
+        "attachments": "50 attachments per workspace (50 MB max)",
+        "collaborators": "Up to 15 workspace collaborators",
+        "exports": "Full export suite (MD, PDF, DOCX)",
+        "audit": "Activity audit trail & role management"
+      }
+    }
+  },
+  "Workspace": {
+    "defaultTitle": "New workspace",
+    "composerAria": "Composer",
+    "attachmentLimitReached": "Workspace attachment limit reached for this plan.",
+    "startNew": "Start a new workspace",
+    "connectionError": "Please check your connection and try refreshing your workspace data."
+  },
+  "Share": {
+    "title": "Share \"{title}\"",
+    "description": "Manage collaborators, public share links, and {resource} activity",
+    "resource": {
+      "workspace": "workspace",
+      "project": "project"
+    },
+    "copyLink": "Copy Link",
+    "copied": "Copied",
+    "linkCopied": "Link copied to clipboard",
+    "tabs": {
+      "people": "People ({count})",
+      "invitations": "Invitations",
+      "publicLink": "Public Link",
+      "activity": "Activity"
+    },
+    "invite": {
+      "label": "Invite people by email or @username",
+      "placeholder": "colleague@example.com or @username",
+      "selectRole": "Select role",
+      "button": "Invite",
+      "disclaimer": "Sends a 7-day, single-use invitation link. Counts toward the owner's plan member limit.",
+      "pendingHeading": "Pending Invitations",
+      "pendingCount": "{count, plural, one {# pending} other {# pending}}",
+      "noPending": "No pending invitations.",
+      "expires": "Expires {date}",
+      "resend": "Resend",
+      "revoke": "Revoke",
+      "revoked": "Invitation revoked",
+      "resent": "Invitation resent"
+    },
+    "members": {
+      "heading": "Members ({count})",
+      "you": "You",
+      "owner": "Owner",
+      "unlimited": "Unlimited",
+      "unlimitedAria": "Monthly credit cap (leave blank for unlimited)",
+      "save": "Save",
+      "cancel": "Cancel",
+      "capTooltip": "Monthly credit cap: covers everything this person spends from the owner's credits, across all of the owner's workspaces",
+      "capOption": "Cap: {credits} cr/mo",
+      "customCap": "Custom cap...",
+      "inheritedCapTitle": "Credit cap is set on the project's members",
+      "monthlyCapTitle": "Monthly credit cap",
+      "leave": "Leave {resource}",
+      "remove": "Remove member"
+    },
+    "public": {
+      "heading": "Create Public Share Link",
+      "scopeLabel": "Share scope",
+      "entireWorkspace": "Entire workspace",
+      "thisResponseOnly": "This response only",
+      "versionLabel": "Version to display",
+      "editedIfAvailable": "Edited if available",
+      "originalAiOutput": "Original AI output",
+      "expirationLabel": "Expiration",
+      "noExpiration": "No expiration",
+      "days7": "7 days",
+      "days30": "30 days",
+      "sharingSingleResponse": "Sharing single response:",
+      "showAuthor": "Show my name on the public page",
+      "warning": "Anyone with this link can read this {scope, select, RESPONSE {response} other {workspace}}. They don't need an account. Annotations, comments, questions, collaborators, and edit history are never included. For uploaded documents, only the text is shared — the original file is not downloadable from public links.",
+      "createButton": "Create public link",
+      "createdHeading": "Your public share link (shown only once)",
+      "readyToShare": "Ready to share",
+      "copy": "Copy",
+      "activeHeading": "Public Share Links",
+      "activeCount": "{count, plural, one {# active} other {# active}}",
+      "noLinks": "No public links created yet.",
+      "singleResponseBadge": "Single response",
+      "workspaceBadge": "Workspace",
+      "originalBadge": "Original",
+      "editedBadge": "Edited",
+      "viewsCount": "{count, plural, one {# view} other {# views}}",
+      "expiresOn": "Expires {date}",
+      "neverExpires": "Never expires",
+      "authorShown": "Author shown",
+      "status": {
+        "ACTIVE": "Active",
+        "REVOKED": "Revoked",
+        "EXPIRED": "Expired"
+      }
+    },
+    "activity": {
+      "empty": "No activity recorded yet.",
+      "collaborator": "Collaborator",
+      "user": "User",
+      "actions": {
+        "workspace_created": "created the workspace “{title}”",
+        "workspace_renamed": "renamed the workspace to “{title}”",
+        "workspace_archived": "archived the workspace",
+        "workspace_unarchived": "took the workspace out of the archive",
+        "workspace_deleted": "moved the workspace to the trash",
+        "workspace_restored": "restored the workspace from the trash",
+        "project_created": "created the project “{name}”",
+        "project_renamed": "renamed the project to “{name}”",
+        "project_archived": "archived the project",
+        "project_unarchived": "took the project out of the archive",
+        "project_deleted": "deleted the project",
+        "member_added": "joined as {role}",
+        "member_removed": "removed a member",
+        "member_left": "left",
+        "member_role_changed": "changed a member's role to {role}",
+        "member_cap_changed": "changed a member's credit cap",
+        "invitation_created": "invited {email} as {role}",
+        "invitation_revoked": "revoked the invitation for {email}",
+        "invitation_resent": "resent the invitation to {email}",
+        "share_created": "created a public link",
+        "share_revoked": "revoked a public link",
+        "ownership_transferred": "became the owner",
+        "response_created": "generated a response",
+        "response_regenerated": "regenerated a response",
+        "response_edited": "edited a response",
+        "annotation_comment": "added a comment",
+        "annotation_ask": "asked Klecx a question",
+        "document_uploaded": "added the document “{name}”",
+        "note_created": "recorded a Klecx note",
+        "note_archived": "archived a Klecx note",
+        "note_restored": "restored a Klecx note",
+        "note_deleted": "deleted a Klecx note",
+        "other": "made a change"
+      }
+    },
+    "toasts": {
+      "activityLoadFailed": "Failed to load activity log",
+      "inviteSent": "Invitation sent",
+      "inviteFailed": "Couldn't send the invitation",
+      "revokeInviteFailed": "Couldn't revoke the invitation",
+      "resendInviteFailed": "Couldn't resend the invitation",
+      "selectResponse": "Please select a response to share",
+      "linkCreatedCopied": "Public link created and copied to clipboard",
+      "linkCreated": "Public link created",
+      "createLinkFailed": "Couldn't create the share link",
+      "linkRevoked": "Share link revoked immediately",
+      "revokeLinkFailed": "Couldn't revoke the share link",
+      "copyFailed": "Couldn't copy the link",
+      "capUpdateFailed": "Couldn't update the credit cap",
+      "capUnlimited": "Collaborator credit cap set to unlimited",
+      "capSet": "{count, plural, one {Collaborator credit cap set to # credit/month} other {Collaborator credit cap set to # credits/month}}",
+      "capInvalid": "Please enter a whole number of 0 or more",
+      "roleUpdated": "Member role updated",
+      "roleUpdateFailed": "Couldn't update the member's role",
+      "confirmLeave": "Are you sure you want to leave this {resource}?",
+      "confirmRemove": "Are you sure you want to remove this member?",
+      "left": "You have left the {resource}",
+      "memberRemoved": "Member removed",
+      "removeFailed": "Couldn't remove the member"
+    }
+  },
+  "Invite": {
+    "checking": "Checking invitation...",
+    "signInRequiredTitle": "Sign in to view this invitation",
+    "signInButton": "Sign in",
+    "unavailableTitle": "Invitation Unavailable",
+    "unavailableDefault": "This invitation is invalid or has expired.",
+    "loadError": "Failed to load invitation. Please try again.",
+    "acceptError": "Failed to accept invitation",
+    "acceptedSuccess": "Invitation accepted!",
+    "goToDashboard": "Go to Dashboard",
+    "heading": "You've Been Invited",
+    "invitedTo": "{inviter} invited you to join the {resourceType} “{resourceTitle}” as a {role}.",
+    "roleLabel": "Role",
+    "sentTo": "Sent to",
+    "expires": "Expires",
+    "signInPrompt": "Please sign in with the invited email address to accept.",
+    "signInToAccept": "Sign in to Accept",
+    "createAccount": "Create an Account",
+    "accountMismatchTitle": "Account Mismatch",
+    "accountMismatchDesc": "You are currently signed in as {currentEmail}, but this invitation was sent to {invitedEmail}.",
+    "switchAccountPrompt": "Please sign in with the invited account to accept this invitation.",
+    "switchAccount": "Switch Account",
+    "joining": "Joining {title}...",
+    "acceptAndJoin": "Accept & Join {resourceType}",
+    "resourceWorkspace": "Workspace",
+    "resourceProject": "Project",
+    "roleMember": "member",
+    "defaultInviter": "A collaborator"
+  },
+  "User": {
+    "defaultName": "User",
+    "claim": {
+      "bannerTitle": "Choose your username",
+      "bannerText": "you can change it only once.",
+      "bannerButton": "Claim username",
+      "dismissAria": "Dismiss banner",
+      "titleChoose": "Choose your username",
+      "titleConfirm": "Confirm your username",
+      "descChoose": "Every account has a unique username. You can customize yours exactly once.",
+      "descConfirm": "This cannot be changed again. Please confirm your choice.",
+      "usernameLabel": "Username",
+      "placeholder": "yourname",
+      "takenError": "Username is already taken or unavailable.",
+      "available": "Username is available!",
+      "preview": "Preview:",
+      "rules": "Rules: 3–30 characters, lowercase letters, numbers, and underscores. Must start with a letter.",
+      "noticeTitle": "Important notice:",
+      "noticeDesc": "Once set, your username cannot be changed through the app. You are claiming:",
+      "later": "Later",
+      "continue": "Continue",
+      "back": "Back",
+      "confirmAndClaim": "Confirm & Claim",
+      "alreadyChanged": "Username can only be changed once. You have already claimed a username.",
+      "claimedByOther": "This username was just claimed by someone else.",
+      "failed": "Failed to claim username. Please try again.",
+      "networkError": "Network error. Please try again."
+    },
+    "avatar": {
+      "cropTitle": "Crop Profile Picture",
+      "cropDesc": "Drag to reposition and use the slider to zoom. Your picture will be cropped to a square.",
+      "zoomAria": "Zoom",
+      "cancel": "Cancel",
+      "saveAndUpload": "Save & Upload",
+      "changePicture": "Change picture",
+      "remove": "Remove",
+      "allowedFormats": "Allowed: PNG, JPEG, or WebP. Max 2 MB. Square cropped (512×512).",
+      "invalidType": "Your picture must be a PNG, JPEG or WebP image",
+      "tooLarge": "Your picture must be 2 MB or less",
+      "updated": "Profile picture updated",
+      "updateFailed": "Couldn't update your profile picture",
+      "reverted": "Reverted to your sign-in provider's picture",
+      "removeFailed": "Couldn't remove your picture"
+    }
+  },
+  "PublicShare": {
+    "tooManyRequestsTitle": "Too many requests",
+    "tooManyRequestsDesc": "Please wait a moment and refresh this page to view the shared link.",
+    "workspaceScope": "Shared workspace",
+    "responseScope": "Shared response",
+    "createWorkspaceCta": "Create your own workspace",
+    "sharedBy": "Shared by {name}",
+    "sharedOn": "Shared on {date}",
+    "emptyResponses": "No responses in this shared view yet.",
+    "download": "Download",
+    "sources": "Sources ({count})",
+    "footerNote": "Shared via {brand} — AI workspace for deep thinking and collaboration."
+  },
+  "Code": {
+    "enableWrap": "Enable line wrap",
+    "disableWrap": "Disable line wrap",
+    "wrap": "Wrap",
+    "unwrap": "Unwrap",
+    "copy": "Copy",
+    "copyCode": "Copy code",
+    "copied": "Copied"
+  },
+  "NotFound": {
+    "logoAlt": "Logo",
+    "title": "Sorry! This page cannot be found",
+    "description": "It has either been removed or does not exist",
+    "backHome": "Back Home"
+  },
+  "PromptAttachment": {
+    "loading": "Loading preview...",
+    "cannotRender": "This file format cannot be rendered directly in the preview.",
+    "downloadOrOpen": "Download / Open File",
+    "openInNewTab": "Open in new tab"
   }
 }

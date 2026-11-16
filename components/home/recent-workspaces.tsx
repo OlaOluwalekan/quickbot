@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { ArrowUpRight, Clock, FolderKanban, MessageSquare } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatCustomDate } from "@/utils/format";
+import { useActivityDate } from "@/lib/i18n/use-activity-date";
 import type { HomeRecentWorkspace } from "@/lib/api/hooks/home";
 
 export interface RecentWorkspacesProps {
@@ -15,6 +15,8 @@ export interface RecentWorkspacesProps {
 
 export function RecentWorkspaces({ items, loading = false }: RecentWorkspacesProps) {
   const tHome = useTranslations("Home");
+  const tCommon = useTranslations("Common");
+  const formatActivityDate = useActivityDate();
 
   if (loading) {
     return (
@@ -88,10 +90,10 @@ export function RecentWorkspaces({ items, loading = false }: RecentWorkspacesPro
               ) : (
                 <span className="inline-flex items-center gap-1">
                   <MessageSquare className="h-3 w-3 shrink-0" strokeWidth={1.5} />
-                  <span>Workspace</span>
+                  <span>{tCommon("workspaceSingular")}</span>
                 </span>
               )}
-              <span>{formatCustomDate(ws.lastActivityAt)}</span>
+              <span>{formatActivityDate(ws.lastActivityAt)}</span>
             </div>
           </Link>
         ))}

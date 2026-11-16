@@ -51,7 +51,12 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { toast } from "sonner";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
+import {
+  getApiErrorMessage,
+  LocalizedError,
+  readApiError,
+} from "@/lib/api/error-message";
 import { cn } from "@/lib/utils";
 
 const ROLE_RANK: Record<string, number> = {
@@ -59,6 +64,20 @@ const ROLE_RANK: Record<string, number> = {
   COMMENTER: 2,
   EDITOR: 3,
   ADMIN: 4,
+};
+
+const ALL_ROLES = ["VIEWER", "COMMENTER", "EDITOR", "ADMIN"] as const;
+
+const formatCreditsCap = (used?: number, cap?: number | null) =>
+  `${used ?? 0} / ${cap === null || cap === undefined ? "∞ cr" : `${cap} cr`}`;
+
+const formatCreditsCapShort = (used?: number, cap?: number | null) =>
+  `${used ?? 0} / ${cap === null || cap === undefined ? "∞" : cap} cr`;
+
+const formatTokenPrefix = (prefix: string) => `/s/${prefix}…`;
+const formatPromptQuote = (prompt: string, maxLen = 100) => {
+  const truncated = prompt.length > maxLen ? `${prompt.slice(0, maxLen)}…` : prompt;
+  return `"${truncated}"`;
 };
 
 interface MemberItem {
@@ -232,6 +251,9 @@ export function ShareAndPeopleDialog({
   const tMembers = useTranslations("Members");
   const tTransfer = useTranslations("Transfer");
   const tLimits = useTranslations("MemberLimits");
+  const tShare = useTranslations("Share");
+  const tRoot = useTranslations();
+  const format = useFormatter();
   const roleLabel = (role: string) =>
     role in ROLE_RANK
       ? tMembers(`roles.${role as "VIEWER" | "COMMENTER" | "EDITOR" | "ADMIN"}`)
@@ -240,7 +262,7 @@ export function ShareAndPeopleDialog({
   const resourceTitle =
     (isProject ? projectName : workspaceTitle) ||
     (isProject ? "Project" : "Workspace");
-  const resourceLabel = isProject ? "project" : "workspace";
+  const resourceLabel = isProject ? tShare("resource.project") : tShare("resource.workspace");
   const baseApiPath = isProject
     ? `/api/v1/projects/${resourceId}`
     : `/api/v1/workspaces/${resourceId}`;
@@ -416,7 +438,7 @@ export function ShareAndPeopleDialog({
         setActivities(Array.isArray(data?.items) ? data.items : []);
       }
     } catch {
-      toast.error("Failed to load activity log");
+      toast.error(tShare("toasts.activityLoadFailed"));
     } finally {
       setLoadingActivity(false);
     }
@@ -445,17 +467,15 @@ export function ShareAndPeopleDialog({
       });
       const json = await res.json();
       if (!res.ok) {
-        throw new Error(json?.error?.message || "Failed to send invitation");
+        throw json?.error ?? {};
       }
-      toast.success("Invitation sent");
+      toast.success(tShare("toasts.inviteSent"));
       setEmailOrUsername("");
       fetchInvites();
       fetchMembers();
       fetchActivity();
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : "Failed to send invitation";
-      toast.error(msg);
+      toast.error(getApiErrorMessage(err, tRoot, tShare("toasts.inviteFailed")));
     } finally {
       setSendingInvite(false);
     }
@@ -467,17 +487,14 @@ export function ShareAndPeopleDialog({
         method: "DELETE",
       });
       if (!res.ok) {
-        const json = await res.json();
-        throw new Error(json?.error?.message || "Failed to revoke invitation");
+        throw await readApiError(res);
       }
-      toast.success("Invitation revoked");
+      toast.success(tShare("invite.revoked"));
       setPendingInvites((prev) => prev.filter((i) => i.id !== inviteId));
       fetchMembers();
       fetchActivity();
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : "Failed to revoke invitation";
-      toast.error(msg);
+      toast.error(getApiErrorMessage(err, tRoot, tShare("toasts.revokeInviteFailed")));
     }
   };
 
@@ -487,16 +504,13 @@ export function ShareAndPeopleDialog({
         method: "POST",
       });
       if (!res.ok) {
-        const json = await res.json();
-        throw new Error(json?.error?.message || "Failed to resend invitation");
+        throw await readApiError(res);
       }
-      toast.success("Invitation resent");
+      toast.success(tShare("invite.resent"));
       fetchInvites();
       fetchActivity();
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : "Failed to resend invitation";
-      toast.error(msg);
+      toast.error(getApiErrorMessage(err, tRoot, tShare("toasts.resendInviteFailed")));
     }
   };
 
@@ -504,7 +518,7 @@ export function ShareAndPeopleDialog({
     e.preventDefault();
     if (isProject || !workspaceId || creatingShare) return;
     if (shareScope === "RESPONSE" && !shareResponseId) {
-      toast.error("Please select a response to share");
+      toast.error(tShare("toasts.selectResponse"));
       return;
     }
 
@@ -527,7 +541,7 @@ export function ShareAndPeopleDialog({
       });
       const json = await res.json();
       if (!res.ok) {
-        throw new Error(json?.error?.message || "Failed to create share link");
+        throw json?.error ?? {};
       }
       const data = json?.data ?? json;
       const url = data?.url as string | undefined;
@@ -537,17 +551,15 @@ export function ShareAndPeopleDialog({
           await navigator.clipboard.writeText(url);
           setCopiedShareUrl(true);
           setTimeout(() => setCopiedShareUrl(false), 2500);
-          toast.success("Public link created and copied to clipboard");
+          toast.success(tShare("toasts.linkCreatedCopied"));
         } catch {
-          toast.success("Public link created");
+          toast.success(tShare("toasts.linkCreated"));
         }
       }
       fetchShares();
       fetchActivity();
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : "Failed to create share link";
-      toast.error(msg);
+      toast.error(getApiErrorMessage(err, tRoot, tShare("toasts.createLinkFailed")));
     } finally {
       setCreatingShare(false);
     }
@@ -559,16 +571,13 @@ export function ShareAndPeopleDialog({
         method: "DELETE",
       });
       if (!res.ok) {
-        const json = await res.json();
-        throw new Error(json?.error?.message || "Failed to revoke share link");
+        throw await readApiError(res);
       }
-      toast.success("Share link revoked immediately");
+      toast.success(tShare("toasts.linkRevoked"));
       fetchShares();
       fetchActivity();
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : "Failed to revoke share link";
-      toast.error(msg);
+      toast.error(getApiErrorMessage(err, tRoot, tShare("toasts.revokeLinkFailed")));
     }
   };
 
@@ -577,10 +586,10 @@ export function ShareAndPeopleDialog({
     try {
       await navigator.clipboard.writeText(createdShareUrl);
       setCopiedShareUrl(true);
-      toast.success("Public link copied to clipboard");
+      toast.success(tShare("linkCopied"));
       setTimeout(() => setCopiedShareUrl(false), 2000);
     } catch {
-      toast.error("Failed to copy link");
+      toast.error(tShare("toasts.copyFailed"));
     }
   };
 
@@ -595,20 +604,17 @@ export function ShareAndPeopleDialog({
         body: JSON.stringify({ monthlyCreditCap }),
       });
       if (!res.ok) {
-        const json = await res.json();
-        throw new Error(json?.error?.message || "Failed to update credit cap");
+        throw await readApiError(res);
       }
       toast.success(
         monthlyCreditCap === null
-          ? "Collaborator credit cap set to unlimited"
-          : `Collaborator credit cap set to ${monthlyCreditCap} credits/month`
+          ? tShare("toasts.capUnlimited")
+          : tShare("toasts.capSet", { count: monthlyCreditCap })
       );
       fetchMembers();
       fetchActivity();
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : "Failed to update credit cap";
-      toast.error(msg);
+      toast.error(getApiErrorMessage(err, tRoot, tShare("toasts.capUpdateFailed")));
     }
   };
 
@@ -631,7 +637,7 @@ export function ShareAndPeopleDialog({
     if (trimmed) {
       const parsed = Number(trimmed);
       if (!Number.isInteger(parsed) || parsed < 0) {
-        toast.error("Please enter a whole number of 0 or more");
+        toast.error(tShare("toasts.capInvalid"));
         return;
       }
       cap = parsed;
@@ -652,14 +658,12 @@ export function ShareAndPeopleDialog({
         body: JSON.stringify({ [capability]: value }),
       });
       if (!res.ok) {
-        const json = await res.json();
-        throw new Error(json?.error?.message || tMembers("capabilities.updateFailed"));
+        throw await readApiError(res);
       }
       toast.success(tMembers("capabilities.updated"));
       fetchMembers();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : tMembers("capabilities.updateFailed");
-      toast.error(msg);
+      toast.error(getApiErrorMessage(err, tRoot, tMembers("capabilities.updateFailed")));
     }
   };
 
@@ -673,23 +677,42 @@ export function ShareAndPeopleDialog({
       if (!res.ok) {
         const json = await res.json();
         if (json?.error?.code === "role_below_inherited") {
-          throw new Error(tMembers("errors.belowInherited"));
+          throw new LocalizedError(tMembers("errors.belowInherited"));
         }
-        throw new Error(json?.error?.message || "Failed to update member role");
+        throw json?.error ?? {};
       }
-      toast.success("Member role updated");
+      toast.success(tShare("toasts.roleUpdated"));
       fetchMembers();
       fetchActivity();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to update role";
-      toast.error(msg);
+      toast.error(getApiErrorMessage(err, tRoot, tShare("toasts.roleUpdateFailed")));
     }
+  };
+
+  /** One sentence per logged action, in the person's language. */
+  const describeActivity = (act: ActivityItem): string => {
+    const meta = act.meta ?? {};
+    const str = (v: unknown) => (typeof v === "string" ? v : "");
+    const roleOf = (v: unknown) => {
+      const role = str(v);
+      return role && tMembers.has(`roles.${role}`) ? tMembers(`roles.${role}`) : role;
+    };
+    let key = act.action.replace(/\./g, "_");
+    if (key === "annotation_created") key = meta.kind === "ASK" ? "annotation_ask" : "annotation_comment";
+    if (key === "member_removed" && meta.selfLeave === true) key = "member_left";
+    if (!tShare.has(`activity.actions.${key}`)) key = "other";
+    return tShare(`activity.actions.${key}`, {
+      title: str(meta.title),
+      name: str(meta.name),
+      email: str(meta.email),
+      role: roleOf(meta.newRole ?? meta.role),
+    });
   };
 
   const handleRemoveMember = async (targetUserId: string, isSelf = false) => {
     const confirmMsg = isSelf
-      ? `Are you sure you want to leave this ${resourceLabel}?`
-      : "Are you sure you want to remove this member?";
+      ? tShare("toasts.confirmLeave", { resource: resourceLabel })
+      : tShare("toasts.confirmRemove");
     if (!window.confirm(confirmMsg)) return;
 
     try {
@@ -699,24 +722,24 @@ export function ShareAndPeopleDialog({
       if (!res.ok) {
         const json = await res.json();
         if (json?.error?.code === "member_inherited") {
-          throw new Error(tMembers("errors.inheritedMember"));
+          throw new LocalizedError(tMembers("errors.inheritedMember"));
         }
-        throw new Error(json?.error?.message || "Failed to remove member");
+        throw json?.error ?? {};
       }
       toast.success(
-        isSelf ? `You have left the ${resourceLabel}` : "Member removed"
+        isSelf
+          ? tShare("toasts.left", { resource: resourceLabel })
+          : tShare("toasts.memberRemoved")
       );
       if (isSelf) {
         onOpenChange(false);
-        window.location.href = "/workspaces";
+        window.location.assign("/workspaces");
       } else {
         fetchMembers();
         fetchActivity();
       }
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : "Failed to remove member";
-      toast.error(msg);
+      toast.error(getApiErrorMessage(err, tRoot, tShare("toasts.removeFailed")));
     }
   };
 
@@ -868,7 +891,7 @@ export function ShareAndPeopleDialog({
       : `${window.location.origin}/workspaces/${resourceId}`;
     navigator.clipboard.writeText(url);
     setCopiedLink(true);
-    toast.success("Link copied to clipboard");
+    toast.success(tShare("linkCopied"));
     setTimeout(() => setCopiedLink(false), 2000);
   };
 
@@ -889,7 +912,7 @@ export function ShareAndPeopleDialog({
         htmlFor="inviteInput"
         className="text-xs font-semibold uppercase tracking-wider text-muted"
       >
-        Invite people by email or @username
+        {tShare("invite.label")}
       </Label>
       <div className="flex flex-col sm:flex-row gap-2">
         <div className="relative flex-1">
@@ -897,7 +920,7 @@ export function ShareAndPeopleDialog({
           <Input
             id="inviteInput"
             type="text"
-            placeholder="colleague@example.com or @username"
+            placeholder={tShare("invite.placeholder")}
             className="pl-9 h-9 bg-surface text-sm"
             value={emailOrUsername}
             onChange={(e) => setEmailOrUsername(e.target.value)}
@@ -908,15 +931,15 @@ export function ShareAndPeopleDialog({
           <Select value={inviteRole} onValueChange={setInviteRole}>
             <SelectTrigger
               className="w-32 h-9 bg-surface text-xs"
-              aria-label="Select role"
+              aria-label={tShare("invite.selectRole")}
             >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="VIEWER">Viewer</SelectItem>
-              <SelectItem value="COMMENTER">Commenter</SelectItem>
-              <SelectItem value="EDITOR">Editor</SelectItem>
-              {isOwner && <SelectItem value="ADMIN">Admin</SelectItem>}
+              <SelectItem value="VIEWER">{roleLabel("VIEWER")}</SelectItem>
+              <SelectItem value="COMMENTER">{roleLabel("COMMENTER")}</SelectItem>
+              <SelectItem value="EDITOR">{roleLabel("EDITOR")}</SelectItem>
+              {isOwner && <SelectItem value="ADMIN">{roleLabel("ADMIN")}</SelectItem>}
             </SelectContent>
           </Select>
           <Gated reason={inviteGateReason}>
@@ -931,17 +954,14 @@ export function ShareAndPeopleDialog({
               ) : (
                 <>
                   <UserPlus className="h-3.5 w-3.5" />
-                  <span>Invite</span>
+                  <span>{tShare("invite.button")}</span>
                 </>
               )}
             </Button>
           </Gated>
         </div>
       </div>
-      <p className="text-[11px] text-subtle">
-        Sends a 7-day, single-use invitation link. Counts toward the
-        owner&apos;s plan member limit.
-      </p>
+      <p className="text-[11px] text-subtle">{tShare("invite.disclaimer")}</p>
     </form>
   );
 
@@ -954,14 +974,9 @@ export function ShareAndPeopleDialog({
               <div className="min-w-0">
                 <DialogTitle className="text-xl font-bold flex items-center gap-2 text-fg">
                   <Users className="h-5 w-5 text-accent shrink-0" />
-                  <span className="truncate">
-                    Share &ldquo;{resourceTitle}&rdquo;
-                  </span>
+                  <span className="truncate">{tShare("title", { title: resourceTitle })}</span>
                 </DialogTitle>
-                <DialogDescription className="text-sm text-muted mt-1">
-                  Manage collaborators, public share links, and {resourceLabel}{" "}
-                  activity
-                </DialogDescription>
+                <DialogDescription className="text-sm text-muted mt-1">{tShare("description", { resource: resourceLabel })}</DialogDescription>
               </div>
               {!isProject && (
                 <Button
@@ -975,7 +990,7 @@ export function ShareAndPeopleDialog({
                   ) : (
                     <Copy className="h-3.5 w-3.5" />
                   )}
-                  <span>{copiedLink ? "Copied" : "Copy Link"}</span>
+                  <span>{copiedLink ? tShare("copied") : tShare("copyLink")}</span>
                 </Button>
               )}
             </div>
@@ -995,7 +1010,7 @@ export function ShareAndPeopleDialog({
                   className="rounded-none border-b-2 border-transparent data-[state=active]:border-accent data-[state=active]:bg-transparent data-[state=active]:shadow-none px-2 text-sm font-medium gap-1.5"
                 >
                   <Users className="h-4 w-4" />
-                  <span>People ({allMembers.length})</span>
+                  <span>{tShare("tabs.people", { count: allMembers.length })}</span>
                 </TabsTrigger>
                 {canManage && (
                   <TabsTrigger
@@ -1003,7 +1018,7 @@ export function ShareAndPeopleDialog({
                     className="rounded-none border-b-2 border-transparent data-[state=active]:border-accent data-[state=active]:bg-transparent data-[state=active]:shadow-none px-2 text-sm font-medium gap-1.5"
                   >
                     <UserPlus className="h-4 w-4" />
-                    <span>Invitations</span>
+                    <span>{tShare("tabs.invitations")}</span>
                     {pendingInvites.length > 0 && (
                       <Badge
                         variant="secondary"
@@ -1020,7 +1035,7 @@ export function ShareAndPeopleDialog({
                     className="rounded-none border-b-2 border-transparent data-[state=active]:border-accent data-[state=active]:bg-transparent data-[state=active]:shadow-none px-2 text-sm font-medium gap-1.5"
                   >
                     <Globe className="h-4 w-4" />
-                    <span>Public Link</span>
+                    <span>{tShare("tabs.publicLink")}</span>
                     {activeShareCount > 0 && (
                       <Badge
                         variant="secondary"
@@ -1036,7 +1051,7 @@ export function ShareAndPeopleDialog({
                   className="rounded-none border-b-2 border-transparent data-[state=active]:border-accent data-[state=active]:bg-transparent data-[state=active]:shadow-none px-2 text-sm font-medium gap-1.5"
                 >
                   <Activity className="h-4 w-4" />
-                  <span>Activity</span>
+                  <span>{tShare("tabs.activity")}</span>
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -1150,7 +1165,7 @@ export function ShareAndPeopleDialog({
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <h3 className="text-xs font-semibold uppercase tracking-wider text-muted">
-                      Members ({allMembers.length})
+                      {tShare("members.heading", { count: allMembers.length })}
                     </h3>
                   </div>
 
@@ -1173,7 +1188,7 @@ export function ShareAndPeopleDialog({
                               {m.avatarUrl ? (
                                 <AvatarImage
                                   src={m.avatarUrl}
-                                  alt={m.name || "Member"}
+                                  alt={m.name || tShare("members.owner")}
                                 />
                               ) : null}
                               <AvatarFallback className="bg-surface-2 text-xs font-semibold">
@@ -1190,12 +1205,12 @@ export function ShareAndPeopleDialog({
                                     variant="secondary"
                                     className="text-[10px] px-1.5 py-0"
                                   >
-                                    You
+                                    {tShare("members.you")}
                                   </Badge>
                                 )}
                                 {isMemberOwner && (
                                   <span className="inline-flex items-center gap-1 text-[11px] font-medium text-accent bg-accent-soft px-1.5 py-0.5 rounded-md">
-                                    <Crown className="h-3 w-3" /> Owner
+                                    <Crown className="h-3 w-3" /> {tShare("members.owner")}
                                   </span>
                                 )}
                                 {(m.inherited || m.inheritedRole) && (
@@ -1241,8 +1256,8 @@ export function ShareAndPeopleDialog({
                                       value: e.target.value,
                                     })
                                   }
-                                  placeholder="Unlimited"
-                                  aria-label="Monthly credit cap (leave blank for unlimited)"
+                                  placeholder={tShare("members.unlimited")}
+                                  aria-label={tShare("members.unlimitedAria")}
                                   className="h-8 w-24 text-xs"
                                 />
                                 <Button
@@ -1250,7 +1265,7 @@ export function ShareAndPeopleDialog({
                                   size="sm"
                                   className="h-8 px-2 text-xs"
                                 >
-                                  Save
+                                  {tShare("members.save")}
                                 </Button>
                                 <Button
                                   type="button"
@@ -1259,7 +1274,7 @@ export function ShareAndPeopleDialog({
                                   className="h-8 px-2 text-xs"
                                   onClick={() => setCustomCap(null)}
                                 >
-                                  Cancel
+                                  {tShare("members.cancel")}
                                 </Button>
                               </form>
                             ) : isOwner && !(m.inherited && !isProject) ? (
@@ -1278,35 +1293,19 @@ export function ShareAndPeopleDialog({
                               >
                                 <SelectTrigger
                                   className="h-8 text-xs w-36 bg-surface"
-                                  title="Monthly credit cap: covers everything this person spends from the owner's credits, across all of the owner's workspaces"
+                                  title={tShare("members.capTooltip")}
                                 >
                                   <span className="truncate">
-                                    {m.monthlyCreditsUsed ?? 0} /{" "}
-                                    {m.monthlyCreditCap === null ||
-                                    m.monthlyCreditCap === undefined
-                                      ? "∞ cr"
-                                      : `${m.monthlyCreditCap} cr`}
+                                    {formatCreditsCap(m.monthlyCreditsUsed, m.monthlyCreditCap)}
                                   </span>
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="100">
-                                    Cap: 100 cr/mo
-                                  </SelectItem>
-                                  <SelectItem value="300">
-                                    Cap: 300 cr/mo
-                                  </SelectItem>
-                                  <SelectItem value="500">
-                                    Cap: 500 cr/mo
-                                  </SelectItem>
-                                  <SelectItem value="1000">
-                                    Cap: 1000 cr/mo
-                                  </SelectItem>
-                                  <SelectItem value="unlimited">
-                                    Unlimited
-                                  </SelectItem>
-                                  <SelectItem value="custom">
-                                    Custom cap...
-                                  </SelectItem>
+                                  <SelectItem value="100">{tShare("members.capOption", { credits: 100 })}</SelectItem>
+                                  <SelectItem value="300">{tShare("members.capOption", { credits: 300 })}</SelectItem>
+                                  <SelectItem value="500">{tShare("members.capOption", { credits: 500 })}</SelectItem>
+                                  <SelectItem value="1000">{tShare("members.capOption", { credits: 1000 })}</SelectItem>
+                                  <SelectItem value="unlimited">{tShare("members.unlimited")}</SelectItem>
+                                  <SelectItem value="custom">{tShare("members.customCap")}</SelectItem>
                                 </SelectContent>
                               </Select>
                             ) : (
@@ -1315,21 +1314,16 @@ export function ShareAndPeopleDialog({
                                 className="text-[11px] text-muted font-mono"
                                 title={
                                   m.inherited && !isProject
-                                    ? "Credit cap is set on the project's members"
-                                    : "Monthly credit cap"
+                                    ? tShare("members.inheritedCapTitle")
+                                    : tShare("members.monthlyCapTitle")
                                 }
                               >
-                                {m.monthlyCreditsUsed ?? 0} /{" "}
-                                {m.monthlyCreditCap === null ||
-                                m.monthlyCreditCap === undefined
-                                  ? "∞"
-                                  : m.monthlyCreditCap}{" "}
-                                cr
+                                {formatCreditsCapShort(m.monthlyCreditsUsed, m.monthlyCreditCap)}
                               </Badge>
                             ))}
                           {isMemberOwner ? (
                             <span className="text-xs font-semibold text-muted px-2 py-1">
-                              Owner
+                              {tShare("members.owner")}
                             </span>
                           ) : canEditThisMember ? (
                             <div className="flex flex-col items-end gap-0.5">
@@ -1350,9 +1344,10 @@ export function ShareAndPeopleDialog({
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {["VIEWER", "COMMENTER", "EDITOR", ...(isOwner ? ["ADMIN"] : [])]
+                                  {ALL_ROLES
                                     .filter(
                                       (role) =>
+                                        (isOwner || role !== "ADMIN") &&
                                         ROLE_RANK[role]! >=
                                         (m.inheritedRole ? (ROLE_RANK[m.inheritedRole] ?? 1) : 1)
                                     )
@@ -1407,11 +1402,7 @@ export function ShareAndPeopleDialog({
                               variant="ghost"
                               size="sm"
                               className="h-8 w-8 p-0 text-muted hover:text-danger"
-                              title={
-                                isSelf
-                                  ? `Leave ${resourceLabel}`
-                                  : "Remove member"
-                              }
+                              title={isSelf ? tShare("members.leave", { resource: resourceLabel }) : tShare("members.remove")}
                               onClick={() =>
                                 handleRemoveMember(m.userId, isSelf)
                               }
@@ -1585,21 +1576,14 @@ export function ShareAndPeopleDialog({
                 </div>
 
                 <div className="space-y-3">
-                  <h3 className="text-sm font-semibold text-fg flex items-center justify-between">
-                    <span>Pending Invitations</span>
-                    <span className="text-xs font-normal text-muted">
-                      {pendingInvites.length} pending
-                    </span>
-                  </h3>
+                  <h3 className="text-sm font-semibold text-fg flex items-center justify-between"><span>{tShare("invite.pendingHeading")}</span><span className="text-xs font-normal text-muted">{tShare("invite.pendingCount", { count: pendingInvites.length })}</span></h3>
 
                   {loadingInvites ? (
                     <div className="py-4 text-center">
                       <Spinner className="h-5 w-5 text-accent mx-auto" />
                     </div>
                   ) : pendingInvites.length === 0 ? (
-                    <p className="text-xs text-muted py-4 text-center border border-dashed border-border rounded-xl">
-                      No pending invitations.
-                    </p>
+                    <p className="text-xs text-muted py-4 text-center border border-dashed border-border rounded-xl">{tShare("invite.noPending")}</p>
                   ) : (
                     <div className="space-y-2">
                       {pendingInvites.map((inv) => (
@@ -1616,12 +1600,13 @@ export function ShareAndPeopleDialog({
                                 variant="outline"
                                 className="text-[10px] uppercase"
                               >
-                                {inv.role}
+                                {roleLabel(inv.role)}
                               </Badge>
                             </div>
                             <p className="text-subtle text-[11px]">
-                              Expires{" "}
-                              {new Date(inv.expiresAt).toLocaleDateString()}
+                              {tShare("invite.expires", {
+                                date: format.dateTime(new Date(inv.expiresAt), { dateStyle: "medium" }),
+                              })}
                             </p>
                           </div>
                           <div className="flex items-center gap-1 shrink-0">
@@ -1631,16 +1616,13 @@ export function ShareAndPeopleDialog({
                               className="h-7 text-xs px-2 gap-1 text-muted hover:text-accent"
                               onClick={() => handleResendInvite(inv.id)}
                             >
-                              <RotateCcw className="h-3 w-3" /> Resend
+                              <RotateCcw className="h-3 w-3" /> {tShare("invite.resend")}
                             </Button>
                             <Button
                               variant="ghost"
                               size="sm"
                               className="h-7 text-xs px-2 text-muted hover:text-danger"
-                              onClick={() => handleRevokeInvite(inv.id)}
-                            >
-                              Revoke
-                            </Button>
+                              onClick={() => handleRevokeInvite(inv.id)}>{tShare("invite.revoke")}</Button>
                           </div>
                         </div>
                       ))}
@@ -1663,14 +1645,14 @@ export function ShareAndPeopleDialog({
                   <div className="flex items-center justify-between gap-2">
                     <h3 className="text-xs font-semibold uppercase tracking-wider text-muted flex items-center gap-1.5">
                       <Globe className="h-3.5 w-3.5 text-accent" />
-                      <span>Create Public Share Link</span>
+                      <span>{tShare("public.heading")}</span>
                     </h3>
                   </div>
 
                   {/* Scope & View selectors */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div className="space-y-1.5">
-                      <Label className="text-xs text-muted">Share scope</Label>
+                      <Label className="text-xs text-muted">{tShare("public.scopeLabel")}</Label>
                       <Select
                         value={shareScope}
                         onValueChange={(v) => {
@@ -1683,11 +1665,11 @@ export function ShareAndPeopleDialog({
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="WORKSPACE">
-                            Entire workspace
+                            {tShare("public.entireWorkspace")}
                           </SelectItem>
                           {shareResponseId && (
                             <SelectItem value="RESPONSE">
-                              This response only
+                              {tShare("public.thisResponseOnly")}
                             </SelectItem>
                           )}
                         </SelectContent>
@@ -1696,7 +1678,7 @@ export function ShareAndPeopleDialog({
 
                     <div className="space-y-1.5">
                       <Label className="text-xs text-muted">
-                        Version to display
+                        {tShare("public.versionLabel")}
                       </Label>
                       <Select
                         value={shareView}
@@ -1711,17 +1693,17 @@ export function ShareAndPeopleDialog({
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="EDITED_IF_AVAILABLE">
-                            Edited if available
+                            {tShare("public.editedIfAvailable")}
                           </SelectItem>
                           <SelectItem value="ORIGINAL">
-                            Original AI output
+                            {tShare("public.originalAiOutput")}
                           </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label className="text-xs text-muted">Expiration</Label>
+                      <Label className="text-xs text-muted">{tShare("public.expirationLabel")}</Label>
                       <Select
                         value={shareExpiry}
                         onValueChange={(v) =>
@@ -1732,9 +1714,9 @@ export function ShareAndPeopleDialog({
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="none">No expiration</SelectItem>
-                          <SelectItem value="7">7 days</SelectItem>
-                          <SelectItem value="30">30 days</SelectItem>
+                          <SelectItem value="none">{tShare("public.noExpiration")}</SelectItem>
+                          <SelectItem value="7">{tShare("public.days7")}</SelectItem>
+                          <SelectItem value="30">{tShare("public.days30")}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -1743,11 +1725,10 @@ export function ShareAndPeopleDialog({
                   {shareScope === "RESPONSE" && initialResponsePrompt && (
                     <div className="rounded-lg border border-border bg-surface px-3 py-2 text-xs text-muted">
                       <span className="font-semibold text-fg">
-                        Sharing single response:{" "}
+                        {tShare("public.sharingSingleResponse")}{" "}
                       </span>
                       <span className="italic">
-                        &ldquo;{initialResponsePrompt.slice(0, 100)}
-                        {initialResponsePrompt.length > 100 ? "…" : ""}&rdquo;
+                        {formatPromptQuote(initialResponsePrompt)}
                       </span>
                     </div>
                   )}
@@ -1760,20 +1741,13 @@ export function ShareAndPeopleDialog({
                       onChange={(e) => setShareShowAuthor(e.target.checked)}
                       className="h-4 w-4 rounded border-border text-accent focus:ring-accent"
                     />
-                    <span>Show my name on the public page</span>
+                    <span>{tShare("public.showAuthor")}</span>
                   </label>
 
                   {/* Warning Banner */}
                   <div className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 p-3 text-xs text-fg">
                     <ShieldAlert className="h-4 w-4 text-warning shrink-0 mt-0.5" />
-                    <p>
-                      Anyone with this link can read this{" "}
-                      {shareScope === "RESPONSE" ? "response" : "workspace"}.
-                      They don&apos;t need an account. Annotations, comments,
-                      questions, collaborators, and edit history are never
-                      included. For uploaded documents, only the text is shared
-                      — the original file is not downloadable from public links.
-                    </p>
+                    <p>{tShare("public.warning", { scope: shareScope })}</p>
                   </div>
 
                   <div className="flex justify-end">
@@ -1788,7 +1762,7 @@ export function ShareAndPeopleDialog({
                       ) : (
                         <>
                           <LinkIcon className="h-3.5 w-3.5" />
-                          <span>Create public link</span>
+                          <span>{tShare("public.createButton")}</span>
                         </>
                       )}
                     </Button>
@@ -1798,14 +1772,7 @@ export function ShareAndPeopleDialog({
                 {/* One-time Created Link Display */}
                 {createdShareUrl && (
                   <div className="rounded-xl border border-accent/40 bg-accent-soft/20 p-4 space-y-2">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-semibold text-fg">
-                        Your public share link (shown only once)
-                      </span>
-                      <Badge variant="secondary" className="text-[10px]">
-                        Ready to share
-                      </Badge>
-                    </div>
+                    <div className="flex items-center justify-between text-xs"><span className="font-semibold text-fg">{tShare("public.createdHeading")}</span><Badge variant="secondary" className="text-[10px]">{tShare("public.readyToShare")}</Badge></div>
                     <div className="flex items-center gap-2">
                       <Input
                         readOnly
@@ -1825,7 +1792,7 @@ export function ShareAndPeopleDialog({
                         ) : (
                           <Copy className="h-3.5 w-3.5" />
                         )}
-                        <span>{copiedShareUrl ? "Copied" : "Copy"}</span>
+                        <span>{copiedShareUrl ? tShare("copied") : tShare("public.copy")}</span>
                       </Button>
                     </div>
                   </div>
@@ -1834,12 +1801,7 @@ export function ShareAndPeopleDialog({
                 {/* Existing Share Links */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-fg">
-                      Public Share Links
-                    </h3>
-                    <span className="text-xs text-muted">
-                      {activeShareCount} active
-                    </span>
+                    <h3 className="text-sm font-semibold text-fg">{tShare("public.activeHeading")}</h3><span className="text-xs text-muted">{tShare("public.activeCount", { count: activeShareCount })}</span>
                   </div>
 
                   {loadingShares ? (
@@ -1847,9 +1809,7 @@ export function ShareAndPeopleDialog({
                       <Spinner className="h-5 w-5 text-accent mx-auto" />
                     </div>
                   ) : shareLinks.length === 0 ? (
-                    <p className="text-xs text-muted py-6 text-center border border-dashed border-border rounded-xl">
-                      No public links created yet.
-                    </p>
+                    <p className="text-xs text-muted py-6 text-center border border-dashed border-border rounded-xl">{tShare("public.noLinks")}</p>
                   ) : (
                     <div className="space-y-2">
                       {shareLinks.map((link) => (
@@ -1860,7 +1820,7 @@ export function ShareAndPeopleDialog({
                           <div className="space-y-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="font-mono font-semibold text-fg">
-                                /s/{link.tokenPrefix}…
+                                {formatTokenPrefix(link.tokenPrefix)}
                               </span>
                               <Badge
                                 variant={
@@ -1870,49 +1830,43 @@ export function ShareAndPeopleDialog({
                                 }
                                 className="text-[10px] uppercase"
                               >
-                                {link.status}
+                                {tShare(`public.status.${link.status}`)}
                               </Badge>
                               <Badge
                                 variant="outline"
                                 className="text-[10px] uppercase text-muted"
                               >
-                                {link.scope === "RESPONSE"
-                                  ? "Single response"
-                                  : "Workspace"}
+                                {link.scope === "RESPONSE" ? tShare("public.singleResponseBadge") : tShare("public.workspaceBadge")}
                               </Badge>
                               <Badge
                                 variant="outline"
                                 className="text-[10px] text-muted"
                               >
-                                {link.view === "ORIGINAL"
-                                  ? "Original"
-                                  : "Edited"}
+                                {link.view === "ORIGINAL" ? tShare("public.originalBadge") : tShare("public.editedBadge")}
                               </Badge>
                             </div>
                             {link.scope === "RESPONSE" &&
                               link.responsePrompt && (
                                 <p className="text-[11px] text-muted truncate max-w-md italic">
-                                  &ldquo;{link.responsePrompt}&rdquo;
+                                  {formatPromptQuote(link.responsePrompt)}
                                 </p>
                               )}
                             <div className="flex items-center gap-3 text-[11px] text-subtle flex-wrap">
                               <span className="inline-flex items-center gap-1">
                                 <Eye className="h-3 w-3" />
-                                {link.viewCount}{" "}
-                                {link.viewCount === 1 ? "view" : "views"}
+                                {tShare("public.viewsCount", { count: link.viewCount })}
                               </span>
                               {link.expiresAt ? (
                                 <span className="inline-flex items-center gap-1">
                                   <Clock className="h-3 w-3" />
-                                  Expires{" "}
-                                  {new Date(
-                                    link.expiresAt
-                                  ).toLocaleDateString()}
+                                  {tShare("public.expiresOn", {
+                                    date: format.dateTime(new Date(link.expiresAt), { dateStyle: "medium" }),
+                                  })}
                                 </span>
                               ) : (
-                                <span>Never expires</span>
+                                <span>{tShare("public.neverExpires")}</span>
                               )}
-                              {link.showAuthor && <span>Author shown</span>}
+                              {link.showAuthor && <span>{tShare("public.authorShown")}</span>}
                             </div>
                           </div>
 
@@ -1922,10 +1876,7 @@ export function ShareAndPeopleDialog({
                               variant="ghost"
                               size="sm"
                               className="h-8 text-xs px-2.5 text-muted hover:text-danger shrink-0"
-                              onClick={() => handleRevokeShareLink(link.id)}
-                            >
-                              Revoke
-                            </Button>
+                              onClick={() => handleRevokeShareLink(link.id)}>{tShare("invite.revoke")}</Button>
                           )}
                         </div>
                       ))}
@@ -1945,9 +1896,7 @@ export function ShareAndPeopleDialog({
                   <Spinner className="h-6 w-6 text-accent mx-auto" />
                 </div>
               ) : activities.length === 0 ? (
-                <p className="text-xs text-muted py-8 text-center border border-dashed border-border rounded-xl">
-                  No activity recorded yet.
-                </p>
+                <p className="text-xs text-muted py-8 text-center border border-dashed border-border rounded-xl">{tShare("activity.empty")}</p>
               ) : (
                 <div className="space-y-3">
                   {activities.map((act) => (
@@ -1959,7 +1908,7 @@ export function ShareAndPeopleDialog({
                         {act.actor.image ? (
                           <AvatarImage
                             src={act.actor.image}
-                            alt={act.actor.name || "User"}
+                            alt={act.actor.name || tShare("activity.user")}
                           />
                         ) : null}
                         <AvatarFallback className="bg-surface-2 text-[10px] font-semibold">
@@ -1969,12 +1918,10 @@ export function ShareAndPeopleDialog({
                       <div className="min-w-0 flex-1 space-y-0.5">
                         <div className="flex items-center justify-between gap-2">
                           <span className="font-semibold text-fg">
-                            {act.actor.name ||
-                              act.actor.username ||
-                              "Collaborator"}
+                            {act.actor.name || act.actor.username || tShare("activity.collaborator")}
                           </span>
                           <span className="text-[11px] text-subtle shrink-0">
-                            {new Date(act.createdAt).toLocaleString(undefined, {
+                            {format.dateTime(new Date(act.createdAt), {
                               month: "short",
                               day: "numeric",
                               hour: "2-digit",
@@ -1983,14 +1930,7 @@ export function ShareAndPeopleDialog({
                           </span>
                         </div>
                         <p className="text-muted text-xs">
-                          <span className="font-medium text-fg">
-                            {act.action}
-                          </span>
-                          {act.meta && Object.keys(act.meta).length > 0 && (
-                            <span className="text-subtle ml-1 font-mono text-[11px]">
-                              {JSON.stringify(act.meta)}
-                            </span>
-                          )}
+                          {describeActivity(act)}
                         </p>
                       </div>
                     </div>

@@ -103,12 +103,12 @@ export function EditResponse({
           onKeyDown={handleKeyDown}
           rows={Math.min(18, Math.max(6, content.split("\n").length + 2))}
           className="w-full resize-y font-mono text-xs sm:text-sm leading-relaxed p-3 rounded-xl border-border bg-bg/60 text-fg focus-visible:ring-accent"
-          placeholder="Edit response content..."
+          placeholder={t("editPlaceholder")}
           disabled={isSaving}
         />
       ) : (
         <div className="min-h-[120px] max-h-[400px] overflow-y-auto p-3 rounded-xl border border-border bg-bg/40 text-sm leading-relaxed text-fg whitespace-pre-wrap select-text">
-          {content || <span className="italic text-fg-muted">Nothing to preview.</span>}
+          {content || <span className="italic text-fg-muted">{t("nothingToPreview")}</span>}
         </div>
       )}
 

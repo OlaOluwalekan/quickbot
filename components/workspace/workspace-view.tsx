@@ -9,6 +9,7 @@ import Link from "next/link";
 import { ArrowUpLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { getApiErrorCode } from "@/lib/api/error-message";
 import { useQueryClient } from "@tanstack/react-query";
 import { useUiStore } from "@/lib/stores/ui";
 import {
@@ -344,7 +345,7 @@ export function WorkspaceView({
             router.refresh();
           },
           onError: (err) => {
-            useGenerationStore.getState().failStream(workspace.id, err.message || err.code);
+            useGenerationStore.getState().failStream(workspace.id, err.code || "unknown");
             useGenerationStore.getState().setController(workspace.id, null);
           },
         },
@@ -353,7 +354,7 @@ export function WorkspaceView({
         if (!abortController.signal.aborted) {
           useGenerationStore.getState().failStream(
             workspace.id,
-            err instanceof Error ? err.message : "Stream failed",
+            getApiErrorCode(err) ?? "network_error",
           );
           useGenerationStore.getState().setController(workspace.id, null);
         }
@@ -444,7 +445,7 @@ export function WorkspaceView({
             router.refresh();
           },
           onError: (err) => {
-            useGenerationStore.getState().failStream(workspace.id, err.message || err.code);
+            useGenerationStore.getState().failStream(workspace.id, err.code || "unknown");
             useGenerationStore.getState().setController(workspace.id, null);
           },
         },
@@ -453,7 +454,7 @@ export function WorkspaceView({
         if (!abortController.signal.aborted) {
           useGenerationStore.getState().failStream(
             workspace.id,
-            err instanceof Error ? err.message : "Regeneration failed",
+            getApiErrorCode(err) ?? "network_error",
           );
           useGenerationStore.getState().setController(workspace.id, null);
         }

@@ -6,7 +6,7 @@ describe("Brand Logo Component", () => {
   it("renders full wordmark by default (Kl, styled 'e', cx)", () => {
     const { container } = render(<Logo />);
 
-    const logo = screen.getByRole("img", { name: "Klecx Logo" });
+    const logo = screen.getByRole("img", { name: "Klecx" });
     expect(logo).toBeInTheDocument();
 
     const prefix = container.querySelector("span:nth-child(1)");
@@ -43,7 +43,7 @@ describe("Brand Logo Component", () => {
   it("applies design system color tokens (text-fg for text, text-accent for mark)", () => {
     const { container } = render(<Logo />);
 
-    const logoRoot = screen.getByRole("img", { name: "Klecx Logo" });
+    const logoRoot = screen.getByRole("img", { name: "Klecx" });
     expect(logoRoot).toHaveClass("text-fg");
 
     const markWrapper = container.querySelector("span:nth-child(2)");

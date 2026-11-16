@@ -1150,7 +1150,7 @@ export function AnnotationLayer({
                       >
                         <div className="min-w-0 flex-1 space-y-0.5">
                           <div className="flex items-center gap-1 text-[11px] text-fg">
-                            {renderKindIcon(dk, "h-3 w-3 shrink-0 text-accent")}
+                            {renderKindIcon(dk, cn("h-3 w-3 shrink-0 text-accent"))}
                             <span className="font-medium truncate">{name}</span>
                             {hasKlecxNote(item) && (
                               <KlecxLogoDot className="h-2 w-2 text-accent shrink-0" />

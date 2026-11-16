@@ -25,12 +25,10 @@ jest.mock("../lib/stores/ui", () => ({
     }),
 }));
 
+// Resolve translations from the real English messages
+jest.mock("next-intl", () => jest.requireActual("../test-utils/next-intl").nextIntlMock);
+
 // Mock sonner toast
-jest.mock("next-intl", () => ({
-  useTranslations:
-    () => (key: string, values?: Record<string, string | number>) =>
-      values ? `${key}:${Object.values(values).join(",")}` : key,
-}));
 
 jest.mock("sonner", () => ({
   toast: {
@@ -149,8 +147,8 @@ describe("Step 6.5 — QuestionQueuePopover UI", () => {
       expect(screen.getByTestId("composer-queue-ask-all")).toBeInTheDocument();
       expect(screen.getByText("Ask all (2)")).toBeInTheDocument();
       // Only the nested question carries a level label.
-      expect(screen.getAllByText(/^queueLevel/)).toHaveLength(1);
-      expect(screen.getByText("queueLevel:2")).toBeInTheDocument();
+      expect(screen.getAllByText(/^In an answer · level/)).toHaveLength(1);
+      expect(screen.getByText("In an answer · level 2")).toBeInTheDocument();
       expect(screen.getByText(/credits/i)).toBeInTheDocument();
     });
   });

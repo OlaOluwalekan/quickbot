@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import {
   FileText,
   FileSpreadsheet,
@@ -112,6 +112,7 @@ export function DocumentCard({
   const t = useTranslations("Documents");
   const tReview = useTranslations("Review");
   const tGates = useTranslations("Documents.caps");
+  const format = useFormatter();
   // Download formats come from the workspace owner's plan (decided 2026-11-14).
   const { data: workspace } = useWorkspace(userId, workspaceId);
   const [annotations, setAnnotations] = React.useState<AnnotationItem[]>([]);
@@ -238,11 +239,8 @@ export function DocumentCard({
         ? new Date(response.createdAt)
         : response.createdAt;
     if (Number.isNaN(d.getTime())) return null;
-    return d.toLocaleDateString(undefined, {
-      month: "short",
-      day: "numeric",
-    });
-  }, [response.createdAt]);
+    return format.dateTime(d, { month: "short", day: "numeric" });
+  }, [response.createdAt, format]);
 
   return (
     <article

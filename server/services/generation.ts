@@ -43,6 +43,7 @@ import {
 } from "@/server/ai";
 import {
   PLANS,
+  PLAN_LOG_NAMES,
   PlanKey,
   getDailyCapForPlan,
 } from "@/server/billing/plans";
@@ -1291,7 +1292,7 @@ export async function createAndStreamGeneration(
     const spentToday = await getDailyUsage(billedAccountId);
     if (spentToday + reserveAmount > dailyCap) {
       throw Errors.paymentRequired(
-        `Daily credit cap of ${dailyCap} credits reached for your ${PLANS[userPlan].name} plan.`
+        `Daily credit cap of ${dailyCap} credits reached for your ${PLAN_LOG_NAMES[userPlan]} plan.`
       );
     }
   }

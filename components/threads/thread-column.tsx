@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import Logo from "@/components/logo/Logo";
 import { QuickFixBlock, ReviewChips } from "@/components/annotations/quick-fix";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -64,6 +64,11 @@ export interface ThreadColumnProps {
   onNavigate: (index: number) => void;
   className?: string;
 }
+
+const PENDING_QUESTION_KEY = "pending-question" as const;
+const STREAMING_ANSWER_KEY = "streaming-answer" as const;
+const ROLE_USER = "USER" as const;
+const ROLE_ASSISTANT = "ASSISTANT" as const;
 
 interface AnnotationAuthor {
   id: string;
@@ -148,6 +153,7 @@ export function ThreadColumn({
   className,
 }: ThreadColumnProps) {
   const t = useTranslations("Threads");
+  const format = useFormatter();
 
   const [annotation, setAnnotation] = React.useState<AnnotationDetail | null>(null);
   const [chain, setChain] = React.useState<AnnotationDetail[]>([]);
@@ -559,7 +565,7 @@ export function ThreadColumn({
           </div>
           {msg.createdAt && (
             <time className="text-[10px] text-muted" dateTime={msg.createdAt}>
-              {new Date(msg.createdAt).toLocaleTimeString([], {
+              {format.dateTime(new Date(msg.createdAt), {
                 hour: "2-digit",
                 minute: "2-digit",
               })}
@@ -920,8 +926,8 @@ export function ThreadColumn({
               {/* A follow-up that was just sent (saved by the server with its answer) */}
               {showLive && stream?.question &&
                 renderMessage({
-                  key: "pending-question",
-                  role: "USER",
+                  key: PENDING_QUESTION_KEY,
+                  role: ROLE_USER,
                   content: stream.question,
                   author: lastMessage?.role === "USER" ? lastMessage.author : annotation.createdBy,
                 })}
@@ -929,8 +935,8 @@ export function ThreadColumn({
               {/* The answer, shown while it streams */}
               {showLive &&
                 renderMessage({
-                  key: "streaming-answer",
-                  role: "ASSISTANT",
+                  key: STREAMING_ANSWER_KEY,
+                  role: ROLE_ASSISTANT,
                   content: stream?.text ?? "",
                   thoughtSummary: stream?.thoughtSummary,
                   citations: stream?.citations,

@@ -109,6 +109,10 @@ function initial(person?: ProjectPersonDto) {
   return (person?.name || person?.username || "?").charAt(0).toUpperCase();
 }
 
+function formatPlusCount(count: number) {
+  return `+${count}`;
+}
+
 export function ProjectView({
   project: initialProject,
   initialWorkspaces,
@@ -601,7 +605,7 @@ export function ProjectView({
               ))}
               {totalPeople > headerPeople.length && (
                 <span className="bg-surface-2 ring-surface text-fg flex h-8 w-8 items-center justify-center rounded-full text-[10px] font-semibold ring-2">
-                  +{totalPeople - headerPeople.length}
+                  {formatPlusCount(totalPeople - headerPeople.length)}
                 </span>
               )}
             </button>

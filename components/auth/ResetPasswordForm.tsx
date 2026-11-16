@@ -4,28 +4,32 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { getAuthErrorMessage } from "@/lib/api/error-message";
+import { PASSWORD_MIN_LENGTH } from "@/lib/schemas/auth";
 import { Lock, CheckCircle2, AlertCircle, ArrowLeft, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth-client";
 
+/** `label` is an `Auth.*` message key. */
 function calculateStrength(password: string): { score: number; label: string; color: string } {
   if (!password) return { score: 0, label: "", color: "bg-border" };
 
   let score = 0;
-  if (password.length >= 10) score += 1;
+  if (password.length >= PASSWORD_MIN_LENGTH) score += 1;
   if (password.length >= 14) score += 1;
   if (/[A-Z]/.test(password) && /[a-z]/.test(password)) score += 1;
   if (/[0-9]/.test(password)) score += 1;
   if (/[^A-Za-z0-9]/.test(password)) score += 1;
 
-  if (score <= 2) return { score: 1, label: "Weak (minimum 10 characters required)", color: "bg-danger" };
-  if (score <= 3) return { score: 2, label: "Medium", color: "bg-warning" };
-  return { score: 3, label: "Strong password", color: "bg-success" };
+  if (score <= 2) return { score: 1, label: "strengthWeak", color: "bg-danger" };
+  if (score <= 3) return { score: 2, label: "strengthMedium", color: "bg-warning" };
+  return { score: 3, label: "strengthStrong", color: "bg-success" };
 }
 
 export function ResetPasswordForm() {
   const t = useTranslations("Auth");
+  const tRoot = useTranslations();
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -71,8 +75,8 @@ export function ResetPasswordForm() {
     e.preventDefault();
     setError(null);
 
-    if (password.length < 10) {
-      setError("Password must be at least 10 characters long.");
+    if (password.length < PASSWORD_MIN_LENGTH) {
+      setError(tRoot("Auth.validation.passwordTooShort", { min: PASSWORD_MIN_LENGTH }));
       return;
     }
 
@@ -90,13 +94,13 @@ export function ResetPasswordForm() {
       });
 
       if (resetErr) {
-        setError(resetErr.message || "Failed to reset password. Link may have expired.");
+        setError(getAuthErrorMessage(resetErr, tRoot, t("resetFailed")));
         return;
       }
 
       setSuccess(true);
-    } catch (err: any) {
-      setError(err?.message || "An unexpected error occurred. Please try again.");
+    } catch {
+      setError(t("unexpectedError"));
     } finally {
       setLoading(false);
     }
@@ -120,7 +124,7 @@ export function ResetPasswordForm() {
         <div className="pt-2">
           <Button asChild className="w-full rounded-xl text-xs">
             <Link href="/auth/login">
-              {t("goToSignIn") || "Sign in with new password"}
+              {t("goToSignIn")}
             </Link>
           </Button>
         </div>
@@ -160,7 +164,7 @@ export function ResetPasswordForm() {
               minLength={10}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••••••"
+              placeholder={t("passwordPlaceholder")}
               className="h-11 pl-10 pr-10 bg-surface-2/40 border-border text-xs"
             />
             <button
@@ -183,7 +187,7 @@ export function ResetPasswordForm() {
               </div>
               <p className="text-[11px] text-fg-subtle flex items-center gap-1">
                 <ShieldCheck className="h-3 w-3 text-accent" />
-                <span>{strength.label}</span>
+                <span>{strength.label ? t(strength.label) : null}</span>
               </p>
             </div>
           )}
@@ -202,7 +206,7 @@ export function ResetPasswordForm() {
               minLength={10}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="••••••••••••"
+              placeholder={t("passwordPlaceholder")}
               className="h-11 pl-10 bg-surface-2/40 border-border text-xs"
             />
           </div>
