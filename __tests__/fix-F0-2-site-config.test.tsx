@@ -166,6 +166,9 @@ describe("Step F0.2 — Site configuration: emails, company identity, links from
         excerpt: "use PostgreSQL instead",
         actionUrl: "https://klecx.vyraxity.com/workspaces/wksp-1#annotation-1",
       },
+      welcome: {
+        name: "Ada",
+      },
     };
 
     const allTemplates: EmailTemplateName[] = [

@@ -30,6 +30,7 @@ import {
   renderMemberRestored,
 } from "./templates/member-limits";
 import { renderMentioned } from "./templates/mentioned";
+import { renderWelcome } from "./templates/welcome";
 
 export type {
   EmailTemplateMap,
@@ -134,6 +135,8 @@ export async function renderEmail<T extends EmailTemplateName>(
         t,
         to
       );
+    case "welcome":
+      return renderWelcome(data as EmailTemplateMap["welcome"], t, to);
     case "reset-password":
       return renderResetPassword(
         data as EmailTemplateMap["reset-password"],

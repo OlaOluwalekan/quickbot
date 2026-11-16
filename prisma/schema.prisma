@@ -60,6 +60,7 @@ model User {
   usernameChangeCount  Int                 @default(0) @map("username_change_count")
   usernameChangedAt    DateTime?           @map("username_changed_at")
   usernameClaimedAt    DateTime?           @map("username_claimed_at")
+  welcomeEmailSentAt   DateTime?           @map("welcome_email_sent_at")
   auditLogs            AuditLog[]
   avatarAttachmentId   String?             @unique @map("avatar_attachment_id")
   avatarAttachment     Attachment?         @relation("UserAvatarAttachment", fields: [avatarAttachmentId], references: [id], onDelete: SetNull)

@@ -367,6 +367,23 @@
       "body": "{authorName} vous a mentionné : {excerpt}",
       "button": "Voir le commentaire",
       "disclaimer": "Vous recevez cet e-mail car quelqu'un vous a mentionné dans un commentaire d'espace de travail."
+    },
+    "welcome": {
+      "subject": "Bienvenue sur Klecx — Votre espace de travail IA",
+      "heading": "Bienvenue sur Klecx",
+      "greeting": "Bonjour,",
+      "greetingWithName": "Bonjour {name},",
+      "body": "Bienvenue sur Klecx ! Nous sommes ravis de vous aider à explorer, rédiger, rechercher et créer avec l'IA.",
+      "getStartedTitle": "Voici 3 façons de commencer :",
+      "step1Title": "Créer un espace de travail",
+      "step1Desc": "Commencez par une question, une consigne ou importez des documents pour explorer des idées et générer des réponses.",
+      "step2Title": "Surligner du texte pour commenter ou demander",
+      "step2Desc": "Surlignez n'importe quelle partie d'une réponse pour poser des questions de suivi ou ajouter des notes collaboratives.",
+      "step3Title": "Organiser avec des projets",
+      "step3Desc": "Regroupez les espaces de travail associés dans des projets pour organiser vos recherches et brouillons.",
+      "button": "Ouvrir Klecx",
+      "helpNotice": "Besoin d'aide pour démarrer ? Consultez notre Centre d'aide sur {helpUrl} ou contactez l'assistance à {supportEmail}.",
+      "disclaimer": "Vous avez reçu cet e-mail car vous vous êtes inscrit sur Klecx."
     }
   },
   "AppShell": {
