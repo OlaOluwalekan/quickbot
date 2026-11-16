@@ -15,13 +15,13 @@ If you run into an unexpected issue while using Klecx, this guide covers the mos
 If a generation shows a pulsing indicator but doesn't stream tokens after 15 seconds:
 1. **Network Disconnection**: Check your internet connection. Server-sent events (SSE) require an uninterrupted streaming connection.
 2. **Click Retry**: If a generation fails or drops, an inline **Retry** banner will appear. Clicking **Retry** generates a fresh idempotency key so you are never charged double credits.
-3. **Model Outage**: Check our public status dashboard at [/status](/status) to see if Google Gemini or downstream infrastructure is experiencing elevated latency.
+3. **Model Outage**: Check our public status dashboard at [/status](/status) to see if AI generation or downstream infrastructure is experiencing elevated latency.
 
 ## "Insufficient Credits" Banner
 
 If you receive a 402 Insufficient Credits notice:
 - Your workspace prompt requires more credits than your current balance holds.
-- Switch to an Economy model (`Gemini Flash`) to reduce credit requirements, or upgrade your plan in [/pricing](/pricing).
+- Switch to an Economy model (`Fast model`) to reduce credit requirements, or upgrade your plan in [/pricing](/pricing).
 
 ## Reset Password Link Not Received
 

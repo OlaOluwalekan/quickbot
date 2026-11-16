@@ -120,7 +120,7 @@ export function UiShowcase() {
     boolean | "indeterminate"
   >(true);
   const [radioValue, setRadioValue] = React.useState("balanced");
-  const [selectValue, setSelectValue] = React.useState("gemini-2.5-flash");
+  const [selectValue, setSelectValue] = React.useState("fast");
 
   const form = useForm<CreateProjectInput>({
     resolver: zodResolver(createProjectSchema),
@@ -245,11 +245,11 @@ export function UiShowcase() {
                       <SelectValue placeholder="Choose model" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="gemini-2.5-flash">
-                        Gemini 2.5 Flash (Fast)
+                      <SelectItem value="fast">
+                        Fast model
                       </SelectItem>
-                      <SelectItem value="gemini-2.5-pro">
-                        Gemini 2.5 Pro (Deep Reasoning)
+                      <SelectItem value="standard">
+                        Standard model
                       </SelectItem>
                     </SelectContent>
                   </Select>

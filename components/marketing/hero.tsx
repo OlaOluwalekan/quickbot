@@ -87,7 +87,7 @@ export function MarketingHero() {
                   variant="outline"
                   className="border-border/80 bg-surface font-mono text-[10px]"
                 >
-                  {t("geminiFlash")}
+                  {t("modelBadge")}
                 </Badge>
               </div>
             </div>

@@ -61,7 +61,7 @@
     "featuresHeading": "Conçu pour la vitesse, la clarté et la profondeur créative",
     "featuresSubheading": "Tout ce dont vous avez besoin pour passer d'une idée brute à un résultat soigné en quelques secondes.",
     "feature1Title": "Streaming SSE en Temps Réel",
-    "feature1Desc": "Voyez les réponses s'afficher mot par mot grâce aux Server-Sent Events à faible latence propulsés par l'API Interactions de Google.",
+    "feature1Desc": "Voyez les réponses s'afficher mot par mot grâce au streaming Server-Sent Events à faible latence.",
     "feature2Title": "Génération d'Images Native",
     "feature2Desc": "Basculez instantanément entre le raisonnement conversationnel et la création d'images IA haute résolution dans n'importe quelle discussion.",
     "feature3Title": "Mémoire Multi-Tours Contextuelle",
@@ -753,7 +753,7 @@
       "acceptableUse": "Politique d'utilisation acceptable",
       "cookies": "Politique de cookies",
       "trustTitle": "Confiance & Transparence",
-      "trustDisclosure": "Klecx est une interface indépendante conçue sur des modèles d'IA tiers (actuellement Google Gemini). Nous facturons en toute transparence selon les coûts réels de calcul, sans pratiques trompeuses.",
+      "trustDisclosure": "Klecx est un espace de travail indépendant conçu sur des modèles d'IA tiers. Nous facturons en toute transparence selon les coûts réels de calcul, sans pratiques trompeuses.",
       "allRightsReserved": "Tous droits réservés.",
       "help": "Centre d'aide",
       "support": "Contacter le support",
@@ -767,7 +767,6 @@
       "subtitle": "Organisez vos recherches d'IA en projets, conservez les versions de chaque réponse et posez des questions sur n'importe quel passage sans perdre le fil.",
       "startFree": "Commencer gratuitement",
       "seePricing": "Voir les tarifs",
-      "geminiFlash": "Rapide et efficace",
       "projectsLabel": "Projets",
       "workspacesInProject": "Espaces dans le projet",
       "active": "Actif",
@@ -786,7 +785,8 @@
       "mockWorkspace1": "Mutualisation Postgres vs Répliques",
       "mockWorkspace2": "Invalidation des événements Redis",
       "mockWorkspace3": "Audit d'indexation Prisma",
-      "mockConfig": "pool_mode = transaction | max_client_conn = 10000 | default_pool_size = 50"
+      "mockConfig": "pool_mode = transaction | max_client_conn = 10000 | default_pool_size = 50",
+      "modelBadge": "Modèle standard"
     },
     "features": {
       "badge": "Conçu pour les bâtisseurs",
@@ -830,7 +830,7 @@
         "previewTitle": "Versions de réponse",
         "v1Label": "v1 (Rapide)",
         "v2Label": "v2 (Raisonnement Standard)",
-        "activeInfo": "Actif : Version 2 sur 2 (Généré avec Gemini 2.5 Flash, 1 800 jetons)"
+        "activeInfo": "Actif : version 2 sur 2 · Modèle standard · 7 crédits"
       },
       "share": {
         "badge": "Collaboration",
@@ -945,8 +945,8 @@
           "a": "Si vous n'êtes pas satisfait au cours des 14 premiers jours et avez utilisé moins de 20% de votre quota mensuel de crédits, contactez le support pour un remboursement rapide."
         },
         "models": {
-          "q": "Quels modèles d'IA font fonctionner Klecx ?",
-          "a": "Klecx est une interface indépendante reposant sur des modèles tiers très performants (actuellement la gamme Google Gemini Flash pour un temps de réponse rapide et la génération d'images). Nous indiquons clairement le modèle utilisé."
+          "q": "Quels modèles d'IA alimentent Klecx ?",
+          "a": "Klecx est un espace de travail indépendant reposant sur des modèles d'IA tiers très performants (notamment les niveaux de modèles Rapide et Standard pour le raisonnement à faible latence et la synthèse d'images spécialisée). Nous identifions clairement chaque niveau de modèle et ne cachons jamais ce qui traite vos requêtes."
         },
         "privacy": {
           "q": "Mes conversations restent-elles confidentielles ?",
@@ -989,7 +989,7 @@
       "threadBullet3": "Vos échanges s'accumulent dans une barre latérale chronologique pêle-mêle sans dossiers ni organisation par projets.",
       "threadProblemOutro": "Klecx remplace les fils éphémères par des Espaces et Projets durables, attribue à chaque réponse un historique de versions et permet de poser des questions directement sur des passages précis.",
       "disclosureBadge": "Déclaration obligatoire d'architecture",
-      "disclosureText": "Klecx est une interface indépendante conçue sur des modèles d'IA tiers (actuellement Google Gemini). Nous ne sommes pas Google et nous ne revendiquons pas la propriété des modèles sous-jacents. Nous développons un client professionnel offrant raisonnement multi-tour, annotations, versionnage et export de documents.",
+      "disclosureText": "Klecx est un espace de travail indépendant conçu sur des modèles d'IA tiers. Nous ne possédons pas ces modèles. Nous fournissons un client d'espace de travail spécialisé pour développeurs permettant le raisonnement multi-tours avec état, les annotations de passages, le suivi de versions et les exports de documents.",
       "privateTitle": "Privé par défaut",
       "privateText": "Vos espaces, prompts, notes et fichiers joints sont strictement privés. Toutes les données sont chiffrées en transit et au repos. Nous ne vendons pas vos données et ne les utilisons pas pour entraîner des modèles publics.",
       "noFakeTitle": "Zéro artifice marketing",
@@ -1175,24 +1175,24 @@
     "lastChecked": "Dernière vérification : En direct",
     "services": {
       "ai": {
-        "name": "Moteur d'inférence et de génération IA",
+        "name": "Génération d'IA",
         "desc": "Points d'accès de diffusion continue pour les modèles d'IA générative."
       },
       "auth": {
-        "name": "Authentification et sessions",
-        "desc": "Comptes utilisateurs, vérification et conservation des sessions."
+        "name": "Connexion et comptes",
+        "desc": "Comptes d'utilisateurs, vérification et stockage des sessions."
       },
       "db": {
-        "name": "Base de données PostgreSQL et cache",
-        "desc": "Persistance des données, espaces de travail et contrôle de débit en mémoire."
+        "name": "Base de données et cache",
+        "desc": "Persistance des données, espaces de travail et limitation de débit distribuée."
       },
       "storage": {
-        "name": "Asset & File Storage",
-        "desc": "Stockage sécurisé des ressources et traitement des pièces jointes aux documents."
+        "name": "Stockage de fichiers",
+        "desc": "Stockage cloud sécurisé et traitement des pièces jointes."
       },
       "email": {
-        "name": "Service de courriels transactionnels",
-        "desc": "Envoi d'e-mails pour les vérifications, réinitialisations de mot de passe et notifications."
+        "name": "E-mail",
+        "desc": "Distribution d'e-mails pour les vérifications, réinitialisations de mot de passe et alertes."
       }
     },
     "incidentHeading": "Incidents Récents",
