@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { BRAND, markDataUri } from "@/lib/brand/mark";
 
 export const runtime = "nodejs";
 export const alt = "Klecx — AI Workspace";
@@ -19,7 +20,7 @@ export default async function Image() {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: "#0d0f17",
+          backgroundColor: BRAND.tileDark,
           color: "#f3f4f6",
           fontFamily: "sans-serif",
           padding: "60px 80px",
@@ -57,21 +58,14 @@ export default async function Image() {
             }}
           >
             <span>Kl</span>
-            <svg
-              width="86"
-              height="86"
-              viewBox="0 0 100 100"
-              fill="none"
+            { }
+            <img
+              src={markDataUri({ color: BRAND.accentDark })}
+              width={86}
+              height={86}
+              alt=""
               style={{ margin: "0 6px" }}
-            >
-              <path
-                d="M 75 36 H 37 V 63.5 H 91.75 V 8.25 H 8.25 V 91.75 H 91.75"
-                stroke="#8b5cf6"
-                strokeWidth="16.5"
-                strokeLinecap="square"
-                strokeLinejoin="miter"
-              />
-            </svg>
+            />
             <span>cx</span>
           </div>
         </div>
