@@ -50,6 +50,7 @@ function QuestionQueuePopoverInner({
 }: QuestionQueuePopoverProps) {
   const queryClient = useQueryClient();
   const tThreads = useTranslations("Threads");
+  const tQueue = useTranslations("Threads.queue");
   const [isOpen, setIsOpen] = React.useState(false);
   const [isRunning, setIsRunning] = React.useState(false);
   const [editingId, setEditingId] = React.useState<string | null>(null);
@@ -85,9 +86,9 @@ function QuestionQueuePopoverInner({
       queryClient.invalidateQueries({
         queryKey: ["workspaces", workspaceId, "annotations"],
       });
-      toast.success("Question removed from queue");
+      toast.success(tQueue("removedSuccess"));
     } catch {
-      toast.error("Failed to remove question");
+      toast.error(tQueue("removeFailed"));
     }
   };
 
@@ -124,9 +125,9 @@ function QuestionQueuePopoverInner({
       );
       setEditingId(null);
       setEditText("");
-      toast.success("Question updated");
+      toast.success(tQueue("updatedSuccess"));
     } catch {
-      toast.error("Failed to update question");
+      toast.error(tQueue("updateFailed"));
     }
   };
 
@@ -256,6 +257,8 @@ function QuestionQueuePopoverInner({
 
   const estimatedCredits = Math.max(1, queuedCount * 2);
 
+  const formatQuote = (text: string) => `“${text}”`;
+
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
@@ -264,13 +267,13 @@ function QuestionQueuePopoverInner({
           data-testid="composer-queue-button"
           aria-label={
             queuedCount > 0
-              ? `Questions (${queuedCount})`
-              : "Questions queue"
+              ? tQueue("ariaCount", { count: queuedCount })
+              : tQueue("ariaDefault")
           }
           title={
             queuedCount > 0
-              ? `Questions (${queuedCount})`
-              : "Questions queue"
+              ? tQueue("ariaCount", { count: queuedCount })
+              : tQueue("ariaDefault")
           }
           className={cn(
             "relative flex h-7 items-center justify-center rounded-lg px-2 text-xs font-medium transition-colors cursor-pointer border",
@@ -281,7 +284,7 @@ function QuestionQueuePopoverInner({
           )}
         >
           <Layers className="h-3.5 w-3.5 mr-1" strokeWidth={1.5} />
-          <span>Questions</span>
+          <span>{tQueue("buttonLabel")}</span>
           {queuedCount > 0 && (
             <span
               data-testid="composer-queue-badge"
@@ -303,7 +306,7 @@ function QuestionQueuePopoverInner({
         <div className="flex items-center justify-between border-b border-border/60 px-3.5 py-2.5">
           <div className="flex items-center gap-1.5">
             <Layers className="h-4 w-4 text-accent" />
-            <span className="text-xs font-semibold">Question Queue</span>
+            <span className="text-xs font-semibold">{tQueue("title")}</span>
             {queuedCount > 0 && (
               <span className="rounded-full bg-accent/15 px-2 py-0.2 text-[10px] font-medium text-accent">
                 {queuedCount}
@@ -313,7 +316,7 @@ function QuestionQueuePopoverInner({
           {isRunning && (
             <div className="flex items-center gap-1 text-[11px] text-accent font-medium">
               <Loader2 className="h-3 w-3 animate-spin" />
-              <span>Answering...</span>
+              <span>{tQueue("answering")}</span>
             </div>
           )}
         </div>
@@ -323,13 +326,13 @@ function QuestionQueuePopoverInner({
           {isLoading ? (
             <div className="py-6 flex items-center justify-center text-xs text-muted">
               <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
-              <span>Loading questions...</span>
+              <span>{tQueue("loading")}</span>
             </div>
           ) : queuedCount === 0 ? (
             <div className="py-6 text-center text-xs text-muted px-4 space-y-1">
-              <p className="font-medium text-fg">Queue is empty</p>
+              <p className="font-medium text-fg">{tQueue("emptyTitle")}</p>
               <p className="text-[11px] text-subtle">
-                Highlight text in any response and choose &ldquo;Add question&rdquo; to build your queue.
+                {tQueue("emptyDesc")}
               </p>
             </div>
           ) : (
@@ -353,7 +356,7 @@ function QuestionQueuePopoverInner({
                 >
                   {/* Quoted passage snippet */}
                   <div className="border-l-2 border-accent/60 pl-2 text-[11px] italic text-subtle line-clamp-2">
-                    &ldquo;{q.anchorExact}&rdquo;
+                    {formatQuote(q.anchorExact)}
                   </div>
 
                   {/* Where the question was asked, for questions inside an answer */}
@@ -380,26 +383,26 @@ function QuestionQueuePopoverInner({
                           onClick={() => setEditingId(null)}
                           className="px-2 py-0.5 rounded text-[11px] text-muted hover:text-fg hover:bg-surface-2"
                         >
-                          Cancel
+                          {tQueue("cancel")}
                         </button>
                         <button
                           type="button"
                           onClick={(e) => saveEdit(q.id, e)}
                           className="px-2 py-0.5 rounded text-[11px] bg-accent text-accent-fg font-medium"
                         >
-                          Save
+                          {tQueue("save")}
                         </button>
                       </div>
                     </div>
                   ) : (
                     <div className="flex items-start justify-between gap-2 pt-0.5">
                       <p className="font-medium text-fg flex-1">
-                        {userMsg?.content || "(Empty question)"}
+                        {userMsg?.content || tQueue("emptyQuestion")}
                       </p>
                       <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity shrink-0">
                         <button
                           type="button"
-                          aria-label="Edit question"
+                          aria-label={tQueue("editLabel")}
                           onClick={(e) => startEditing(q, e)}
                           className="p-1 rounded text-muted hover:text-fg hover:bg-surface-2 transition-colors"
                         >
@@ -407,7 +410,7 @@ function QuestionQueuePopoverInner({
                         </button>
                         <button
                           type="button"
-                          aria-label="Remove question"
+                          aria-label={tQueue("removeLabel")}
                           onClick={(e) => handleRemoveQuestion(q.id, e)}
                           className="p-1 rounded text-muted hover:text-danger hover:bg-surface-2 transition-colors"
                         >
@@ -426,7 +429,7 @@ function QuestionQueuePopoverInner({
         {queuedCount > 0 && (
           <div className="border-t border-border/60 bg-surface-2/60 p-2.5 flex items-center justify-between gap-2">
             <span className="text-[11px] text-subtle font-medium">
-              ~{estimatedCredits} credits
+              {tQueue("estimatedCredits", { count: estimatedCredits })}
             </span>
             <Button
               type="button"
@@ -439,12 +442,12 @@ function QuestionQueuePopoverInner({
               {isRunning ? (
                 <>
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  <span>Answering...</span>
+                  <span>{tQueue("answering")}</span>
                 </>
               ) : (
                 <>
                   <Play className="h-3 w-3 fill-current" />
-                  <span>Ask all ({queuedCount})</span>
+                  <span>{tQueue("askAll", { count: queuedCount })}</span>
                 </>
               )}
             </Button>
@@ -457,20 +460,21 @@ function QuestionQueuePopoverInner({
 
 export function QuestionQueuePopover(props: QuestionQueuePopoverProps) {
   const queryClient = React.useContext(QueryClientContext);
+  const tQueue = useTranslations("Threads.queue");
   if (!queryClient) {
     return (
       <button
         type="button"
         disabled
         data-testid="composer-queue-button"
-        aria-label="Questions queue"
+        aria-label={tQueue("ariaDefault")}
         className={cn(
           "relative flex h-7 items-center justify-center rounded-lg px-2 text-xs font-medium bg-surface-2 border-border/50 text-muted opacity-60 cursor-default border",
           props.className
         )}
       >
         <Layers className="h-3.5 w-3.5 mr-1" strokeWidth={1.5} />
-        <span>Questions</span>
+        <span>{tQueue("buttonLabel")}</span>
       </button>
     );
   }

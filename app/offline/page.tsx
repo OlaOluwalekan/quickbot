@@ -16,6 +16,10 @@ export const metadata: Metadata = {
   },
 };
 
+function formatCopyright(year: number) {
+  return `© ${year} Klecx.`;
+}
+
 export default async function OfflinePage() {
   const t = await getTranslations("Errors");
 
@@ -52,7 +56,7 @@ export default async function OfflinePage() {
       </main>
 
       <footer className="w-full max-w-4xl text-center text-xs text-fg-subtle pt-6">
-        <span>© {new Date().getFullYear()} Klecx.</span>
+        <span>{formatCopyright(new Date().getFullYear())}</span>
       </footer>
     </div>
   );

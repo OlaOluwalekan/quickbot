@@ -98,7 +98,7 @@ export function ForgotPasswordForm() {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-1.5">
           <label className="text-xs font-semibold text-fg">
-            Email Address
+            {t("emailLabel")}
           </label>
           <div className="relative">
             <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-fg-subtle" />
@@ -107,7 +107,7 @@ export function ForgotPasswordForm() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="name@example.com"
+              placeholder={t("emailPlaceholder")}
               className="h-11 pl-10 bg-surface-2/40 border-border text-xs"
             />
           </div>

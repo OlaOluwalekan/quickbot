@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { type DialogProps } from "@radix-ui/react-dialog";
 import { Command as CommandPrimitive } from "cmdk";
 import { Search } from "lucide-react";
@@ -24,10 +25,18 @@ const Command = React.forwardRef<
 Command.displayName = CommandPrimitive.displayName;
 
 function CommandDialog({ children, ...props }: DialogProps) {
+  let title = "Command Palette";
+  try {
+    const t = useTranslations("Common");
+    title = t("commandPalette");
+  } catch {
+    // fallback if outside Intl provider
+  }
+
   return (
     <Dialog {...props}>
       <DialogContent className="overflow-hidden p-0 shadow-lg">
-        <DialogTitle className="sr-only">Command Palette</DialogTitle>
+        <DialogTitle className="sr-only">{title}</DialogTitle>
         <Command className="**:[[cmdk-group-heading]]:text-muted [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-input-wrapper]_svg]:h-4 [&_[cmdk-input-wrapper]_svg]:w-4 [&_[cmdk-item]_svg]:h-4 [&_[cmdk-item]_svg]:w-4 **:[[cmdk-group-heading]]:px-2 **:[[cmdk-group-heading]]:font-medium **:[[cmdk-group]]:px-2 **:[[cmdk-input]]:h-11 **:[[cmdk-item]]:px-2 **:[[cmdk-item]]:py-2.5">
           {children}
         </Command>

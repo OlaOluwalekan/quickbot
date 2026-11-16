@@ -1,6 +1,20 @@
 import * as React from "react";
-import { PLANS, BILLING_FAQ } from "@/server/billing/plans";
+import { PLANS } from "@/server/billing/plans";
 import { getSiteConfig } from "@/server/config/site";
+import enMessages from "@/messages/en.json";
+
+function resolveMessageKey(keyPath: string): string {
+  const parts = keyPath.split(".");
+  let cur: unknown = enMessages;
+  for (const p of parts) {
+    if (cur && typeof cur === "object" && p in (cur as Record<string, unknown>)) {
+      cur = (cur as Record<string, unknown>)[p];
+    } else {
+      return keyPath;
+    }
+  }
+  return typeof cur === "string" ? cur : keyPath;
+}
 
 export function JsonLd({ data }: { data: Record<string, unknown> }) {
   return (
@@ -68,11 +82,11 @@ export function SoftwareApplicationJsonLd({ siteUrl }: { siteUrl?: string }) {
   const resolvedSiteUrl = siteUrl || site.appUrl;
   const offers = Object.values(PLANS).map((plan) => ({
     "@type": "Offer",
-    name: `${plan.name} Plan`,
+    name: `${resolveMessageKey(plan.name)} Plan`,
     price: plan.priceMonthly,
     priceCurrency: "USD",
     category: "Subscription",
-    description: plan.tagline,
+    description: resolveMessageKey(plan.tagline),
     url: `${resolvedSiteUrl}/pricing`,
   }));
 
@@ -95,15 +109,16 @@ export function SoftwareApplicationJsonLd({ siteUrl }: { siteUrl?: string }) {
 }
 
 export function PricingFaqJsonLd() {
+  const faqItems = Object.values(enMessages.Marketing.faq.items);
   const data = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
-    mainEntity: BILLING_FAQ.map((faq) => ({
+    mainEntity: faqItems.map((faq) => ({
       "@type": "Question",
-      name: faq.question,
+      name: faq.q,
       acceptedAnswer: {
         "@type": "Answer",
-        text: faq.answer,
+        text: faq.a,
       },
     })),
   };

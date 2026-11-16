@@ -12,6 +12,7 @@ import {
   KeyRound,
   CheckCircle2,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -40,6 +41,7 @@ export interface SessionItem {
 }
 
 export function SessionsList() {
+  const t = useTranslations("Settings.sessions");
   const [sessions, setSessions] = React.useState<SessionItem[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [revokingId, setRevokingId] = React.useState<string | null>(null);
@@ -68,11 +70,11 @@ export function SessionsList() {
       setSessions(json.data || []);
       setNow(Date.now());
     } catch {
-      toast.error("Could not load active sessions");
+      toast.error(t("loadError"));
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [t]);
 
   React.useEffect(() => {
     fetchSessions();
@@ -86,12 +88,12 @@ export function SessionsList() {
       });
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData?.error?.message || "Failed to revoke session");
+        throw new Error(errorData?.error?.message || t("revokeFailed"));
       }
-      toast.success("Device signed out");
+      toast.success(t("revokedSuccess"));
       setSessions((prev) => prev.filter((s) => s.id !== sessionId));
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to revoke session";
+      const msg = err instanceof Error ? err.message : t("revokeFailed");
       toast.error(msg);
     } finally {
       setRevokingId(null);
@@ -117,20 +119,20 @@ export function SessionsList() {
           return;
         }
         if (code === "INVALID_PASSWORD") {
-          throw new Error("Incorrect password. Please try again.");
+          throw new Error(t("invalidPassword"));
         }
         if (res.status === 429) {
-          throw new Error("Too many attempts. Please wait a few minutes and try again.");
+          throw new Error(t("rateLimited"));
         }
-        throw new Error(errJson?.error?.message || "Failed to revoke other sessions");
+        throw new Error(errJson?.error?.message || t("revokedOthersFailed"));
       }
 
-      toast.success("Signed out of all other devices");
+      toast.success(t("revokedOthersSuccess"));
       setReAuthDialogOpen(false);
       setPassword("");
       await fetchSessions();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to revoke sessions";
+      const msg = err instanceof Error ? err.message : t("revokedOthersFailed");
       toast.error(msg);
     } finally {
       setIsRevokingOthers(false);
@@ -141,7 +143,7 @@ export function SessionsList() {
   const handleConfirmPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!password.trim()) {
-      toast.error("Please enter your password");
+      toast.error(t("enterPassword"));
       return;
     }
     setIsSubmittingPassword(true);
@@ -151,18 +153,20 @@ export function SessionsList() {
   };
 
   const formatRelativeTime = (dateStr: string, isCurrent: boolean) => {
-    if (isCurrent) return "Active now";
+    if (isCurrent) return t("activeNow");
     try {
       const d = new Date(dateStr);
       const diffSecs = Math.max(0, Math.floor((now - d.getTime()) / 1000));
-      if (diffSecs < 60) return "Just now";
-      if (diffSecs < 3600) return `${Math.floor(diffSecs / 60)}m ago`;
-      if (diffSecs < 86400) return `${Math.floor(diffSecs / 3600)}h ago`;
-      return `${Math.floor(diffSecs / 86400)}d ago`;
+      if (diffSecs < 60) return t("justNow");
+      if (diffSecs < 3600) return t("minutesAgo", { count: Math.floor(diffSecs / 60) });
+      if (diffSecs < 86400) return t("hoursAgo", { count: Math.floor(diffSecs / 3600) });
+      return t("daysAgo", { count: Math.floor(diffSecs / 86400) });
     } catch {
-      return "Recently";
+      return t("recently");
     }
   };
+
+  const formatDeviceInfo = (browser: string, os: string) => `${browser} • ${os}`;
 
   const otherSessionsCount = sessions.filter((s) => !s.current).length;
 
@@ -170,9 +174,9 @@ export function SessionsList() {
     <div className="w-full flex flex-col gap-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-border">
         <div>
-          <h2 className="text-lg font-bold text-fg">Active Sessions</h2>
+          <h2 className="text-lg font-bold text-fg">{t("activeHeading")}</h2>
           <p className="text-xs sm:text-sm text-muted mt-0.5">
-            Manage devices signed into your account and revoke access remotely.
+            {t("activeDescription")}
           </p>
         </div>
         {otherSessionsCount > 0 && (
@@ -186,12 +190,12 @@ export function SessionsList() {
             {isRevokingOthers ? (
               <>
                 <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                Signing out...
+                {t("signingOut")}
               </>
             ) : (
               <>
                 <LogOut className="w-3.5 h-3.5 mr-1.5" />
-                Sign out of all other devices
+                {t("signOutOthers")}
               </>
             )}
           </Button>
@@ -201,11 +205,11 @@ export function SessionsList() {
       {isLoading ? (
         <div className="flex items-center justify-center py-12 text-muted">
           <Loader2 className="w-6 h-6 animate-spin mr-2" />
-          <span className="text-sm">Loading active sessions...</span>
+          <span className="text-sm">{t("loading")}</span>
         </div>
       ) : sessions.length === 0 ? (
         <div className="text-center py-12 text-muted text-sm">
-          No active sessions found.
+          {t("empty")}
         </div>
       ) : (
         <div className="flex flex-col gap-3">
@@ -248,7 +252,7 @@ export function SessionsList() {
                       {isCurrent && (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-success/15 text-success border border-success/30">
                           <CheckCircle2 className="w-3 h-3" />
-                          This device
+                          {t("currentDevice")}
                         </span>
                       )}
                       <span className="text-[11px] px-1.5 py-0.5 rounded bg-surface-2 text-muted uppercase font-mono">
@@ -257,9 +261,7 @@ export function SessionsList() {
                     </div>
 
                     <div className="flex items-center gap-3 text-xs text-muted flex-wrap">
-                      <span>
-                        {session.browser} • {session.os}
-                      </span>
+                      <span>{formatDeviceInfo(session.browser, session.os)}</span>
                       {session.country && (
                         <span className="inline-flex items-center gap-1">
                           <Globe className="w-3 h-3" />
@@ -275,7 +277,7 @@ export function SessionsList() {
 
                     <div className="flex items-center gap-1.5 text-[11px] text-muted mt-0.5">
                       <Clock className="w-3 h-3" />
-                      <span>Last active: {formatRelativeTime(session.lastActiveAt, isCurrent)}</span>
+                      <span>{t("lastActive", { time: formatRelativeTime(session.lastActiveAt, isCurrent) })}</span>
                     </div>
                   </div>
                 </div>
@@ -291,7 +293,7 @@ export function SessionsList() {
                     {isRevokingThis ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     ) : (
-                      "Sign out"
+                      t("signOut")
                     )}
                   </Button>
                 )}
@@ -308,12 +310,11 @@ export function SessionsList() {
             <div className="flex items-center gap-2 text-warning mb-1">
               <ShieldAlert className="w-5 h-5" />
               <DialogTitle className="text-base font-semibold">
-                Confirm Recent Authentication
+                {t("confirmAuthTitle")}
               </DialogTitle>
             </div>
             <DialogDescription className="text-xs sm:text-sm text-muted">
-              Signing out of other devices is a sensitive security action. Please
-              re-enter your password to proceed.
+              {t("confirmAuthDesc")}
             </DialogDescription>
           </DialogHeader>
 
@@ -324,14 +325,14 @@ export function SessionsList() {
                 className="text-xs font-semibold text-muted flex items-center gap-1"
               >
                 <KeyRound className="w-3.5 h-3.5" />
-                Password
+                {t("passwordLabel")}
               </label>
               <Input
                 id="reauth-password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
+                placeholder={t("passwordPlaceholder")}
                 className="text-sm bg-bg border-border text-fg"
                 autoFocus
                 required
@@ -350,7 +351,7 @@ export function SessionsList() {
                 disabled={isSubmittingPassword}
                 className="text-xs"
               >
-                Cancel
+                {t("cancel")}
               </Button>
               <Button
                 type="submit"
@@ -361,10 +362,10 @@ export function SessionsList() {
                 {isSubmittingPassword ? (
                   <>
                     <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                    Verifying...
+                    {t("verifying")}
                   </>
                 ) : (
-                  "Confirm & Sign out"
+                  t("confirmAndSignOut")
                 )}
               </Button>
             </DialogFooter>

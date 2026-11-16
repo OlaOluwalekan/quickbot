@@ -53,6 +53,7 @@ export function WorkspaceHome({
   const tAppShell = useTranslations("AppShell");
   const tCommon = useTranslations("Common");
   const tTemplates = useTranslations("Templates");
+  const tWorkspace = useTranslations("Workspace");
 
   const setCurrentPageTitle = useUiStore((s) => s.setCurrentPageTitle);
   const setCurrentPageId = useUiStore((s) => s.setCurrentPageId);
@@ -132,7 +133,7 @@ export function WorkspaceHome({
           {tHome("errorLoadingHome")}
         </h2>
         <p className="text-xs sm:text-sm text-muted mb-4 max-w-sm">
-          Please check your connection and try refreshing your workspace data.
+          {tWorkspace("connectionError")}
         </p>
         <Button onClick={() => refetch()} variant="outline" size="sm" className="gap-2">
           <RefreshCw className="h-3.5 w-3.5" />

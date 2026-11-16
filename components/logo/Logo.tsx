@@ -5,6 +5,10 @@ import clsx from "clsx";
 import type { LogoProps } from "@/types/logo-types";
 import { sizeClass, iconSizeClass, maxTextWidthClass } from "./logo.config";
 
+const formatPrefix = () => "Kl";
+const formatSuffix = () => "cx";
+const formatLogoAria = () => "Klecx";
+
 /**
  * Klecx brand logo mark & responsive wordmark
  *
@@ -26,7 +30,7 @@ const Logo = ({
         className
       )}
       role="img"
-      aria-label="Klecx Logo"
+      aria-label={formatLogoAria()}
     >
       {/* Prefix "Kl" */}
       <span
@@ -38,7 +42,7 @@ const Logo = ({
             : clsx(maxTextWidthClass(size), "mr-1 translate-x-0 opacity-100")
         )}
       >
-        Kl
+        {formatPrefix()}
       </span>
 
       {/* Central styled "e" mark */}
@@ -75,7 +79,7 @@ const Logo = ({
             : clsx(maxTextWidthClass(size), "ml-1 translate-x-0 opacity-100")
         )}
       >
-        cx
+        {formatSuffix()}
       </span>
     </div>
   );

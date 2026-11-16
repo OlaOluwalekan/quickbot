@@ -23,6 +23,7 @@ import { REVIEW_PRESETS } from "@/lib/schemas/document-review";
 import { cn } from "@/lib/utils";
 
 type ReviewPreset = (typeof REVIEW_PRESETS)[number];
+const VISIBILITY_OPTIONS = ["WORKSPACE", "PRIVATE"] as const;
 
 export interface DocumentReviewProps {
   /** The response version reviewed; unused when `documentId` is set. */
@@ -248,7 +249,7 @@ export function DocumentReview({
           aria-labelledby={`review-visibility-${versionId}`}
           className="flex items-center rounded-md border border-border p-0.5 bg-surface"
         >
-          {(["WORKSPACE", "PRIVATE"] as const).map((v) => (
+          {VISIBILITY_OPTIONS.map((v) => (
             <button
               key={v}
               type="button"

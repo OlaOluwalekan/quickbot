@@ -24,12 +24,18 @@ type GateTranslator = (
   values?: Record<string, string | number>
 ) => string;
 
-function gateMessage(reason: GateReason, t: GateTranslator): string {
+function gateMessage(
+  reason: GateReason,
+  t: GateTranslator,
+  tPlans: (key: string) => string
+): string {
   switch (reason.code) {
-    case "requires_plan":
+    case "requires_plan": {
+      const planKey = PLANS[reason.plan]?.name ?? reason.plan;
       return t("requires_plan", {
-        plan: PLANS[reason.plan]?.name ?? reason.plan,
+        plan: tPlans(planKey),
       });
+    }
     case "member_limit":
       return t("member_limit", { limit: reason.limit });
     case "attachment_limit":
@@ -40,10 +46,12 @@ function gateMessage(reason: GateReason, t: GateTranslator): string {
       return t("no_permission", { capability: reason.capability });
     case "max_depth":
       return t("max_depth", { depth: reason.depth });
-    case "owner_plan":
+    case "owner_plan": {
+      const planKey = PLANS[reason.plan]?.name ?? reason.plan;
       return t("owner_plan", {
-        plan: PLANS[reason.plan]?.name ?? reason.plan,
+        plan: tPlans(planKey),
       });
+    }
     case "out_of_credits":
       return t("out_of_credits");
     case "owner_out_of_credits":
@@ -68,6 +76,7 @@ export function Gated({
   side = "top",
 }: GatedProps) {
   const t = useTranslations("Gates");
+  const tPlans = useTranslations();
   const [open, setOpen] = React.useState(false);
   const closeTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -92,7 +101,7 @@ export function Gated({
     return children;
   }
 
-  const message = gateMessage(reason, t as GateTranslator);
+  const message = gateMessage(reason, t as GateTranslator, tPlans);
   const upgradeLabel = t("upgrade");
   const childProps = (children.props ?? {}) as Record<string, unknown>;
 

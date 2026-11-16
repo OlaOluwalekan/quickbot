@@ -20,6 +20,16 @@ export interface MentionItem {
   avatarUrl?: string | null;
 }
 
+function formatMentionTestId(item: MentionItem) {
+  return item.kind === "klecx"
+    ? "mention-item-klecx"
+    : `mention-item-${item.username}`;
+}
+
+function formatMentionKey(item: MentionItem) {
+  return item.kind === "klecx" ? "klecx" : item.id || item.username;
+}
+
 export interface MentionTextareaProps extends Omit<
   React.TextareaHTMLAttributes<HTMLTextAreaElement>,
   "onChange"
@@ -282,16 +292,11 @@ export const MentionTextarea = React.forwardRef<
             ) : (
               items.map((item, idx) => {
                 const isSelected = idx === selectedIndex;
-                const testId =
-                  item.kind === "klecx"
-                    ? "mention-item-klecx"
-                    : `mention-item-${item.username}`;
+                const testId = formatMentionTestId(item);
 
                 return (
                   <button
-                    key={
-                      item.kind === "klecx" ? "klecx" : item.id || item.username
-                    }
+                    key={formatMentionKey(item)}
                     type="button"
                     role="option"
                     aria-selected={isSelected}

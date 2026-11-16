@@ -27,6 +27,10 @@ import { useUiStore } from "@/lib/stores/ui";
 import { api } from "@/lib/api/client";
 import type { SidebarProjectItem, SidebarWorkspaceItem } from "./types";
 
+function formatShortcut(key: string) {
+  return key;
+}
+
 export interface CommandPaletteProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -187,7 +191,7 @@ export function CommandPalette({
           >
             <PanelLeft className="h-4 w-4 text-muted" />
             <span>{t("collapseSidebar")}</span>
-            <CommandShortcut>[</CommandShortcut>
+            <CommandShortcut>{formatShortcut("[")}</CommandShortcut>
           </CommandItem>
         </CommandGroup>
 

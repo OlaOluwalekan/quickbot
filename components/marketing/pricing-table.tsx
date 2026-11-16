@@ -15,6 +15,7 @@ export function MarketingPricingTable({
   isTeaser?: boolean;
 }) {
   const t = useTranslations("Marketing.pricing");
+  const tPlans = useTranslations();
   const [billingCycle, setBillingCycle] = React.useState<"month" | "year">("month");
 
   const planKeys: PlanKey[] = ["FREE", "LITE", "STANDARD", "PRO"];
@@ -99,17 +100,17 @@ export function MarketingPricingTable({
                 <div className="space-y-4">
                   <div>
                     <h3 className="text-lg font-bold text-fg">
-                      {t(`plans.${plan.id}.name`)}
+                      {tPlans(plan.name)}
                     </h3>
                     <p className="mt-1 text-xs text-fg-muted leading-relaxed min-h-[32px]">
-                      {t(`plans.${plan.id}.tagline`)}
+                      {tPlans(plan.tagline)}
                     </p>
                   </div>
 
                   {/* Price */}
                   <div className="flex items-baseline gap-1">
                     <span className="text-3xl sm:text-4xl font-extrabold tracking-tight text-fg">
-                      ${price}
+                      {t("priceFormat", { price })}
                     </span>
                     <span className="text-xs text-fg-muted font-medium">{period}</span>
                   </div>
@@ -117,7 +118,7 @@ export function MarketingPricingTable({
                   {/* Credit Metric */}
                   <div className="p-3 rounded-xl border border-border/80 bg-surface-2 text-xs space-y-1">
                     <div className="font-semibold text-fg flex items-center justify-between">
-                      <span>{plan.credits.toLocaleString()} Credits</span>
+                      <span>{t("creditsCount", { count: plan.credits.toLocaleString() })}</span>
                       <span className="text-[10px] text-fg-subtle">{t("creditsRenewed")}</span>
                     </div>
                     <div className="text-[11px] text-fg-muted">
@@ -133,10 +134,10 @@ export function MarketingPricingTable({
                       {t("includedHeading")}
                     </div>
                     <ul className="space-y-2 text-xs">
-                      {plan.features.map((_, idx) => (
-                        <li key={idx} className="flex items-start gap-2 text-fg/90">
+                      {plan.features.map((featureKey) => (
+                        <li key={featureKey} className="flex items-start gap-2 text-fg/90">
                           <Check className="h-3.5 w-3.5 text-accent shrink-0 mt-0.5" />
-                          <span>{t(`plans.${plan.id}.f${idx + 1}`)}</span>
+                          <span>{tPlans(featureKey)}</span>
                         </li>
                       ))}
                     </ul>
@@ -158,7 +159,7 @@ export function MarketingPricingTable({
                     <Link href={plan.id === "FREE" ? "/auth/register" : `/auth/register?plan=${plan.id.toLowerCase()}`}>
                       {plan.id === "FREE"
                         ? t("startFree")
-                        : t("subscribeTo", { name: t(`plans.${plan.id}.name`) })}
+                        : t("subscribeTo", { name: tPlans(plan.name) })}
                     </Link>
                   </Button>
                 </div>

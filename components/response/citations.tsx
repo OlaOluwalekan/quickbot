@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { ChevronDown, ChevronUp, ExternalLink, Globe } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import {
   Popover,
@@ -31,6 +32,11 @@ export function extractHostname(rawUrl: string): string {
   }
 }
 
+const formatCitationIndex = (idx: number) => `[${idx}]`;
+const formatSourceAria = (idx: number, title: string) => `Source ${idx}: ${title}`;
+const formatSourcesCount = (lbl: string, count: number) => `${lbl} (${count})`;
+const formatSourceHost = (host: string) => `· ${host}`;
+
 export interface CitationMarkerPopoverProps {
   citation: CitationDto;
 }
@@ -39,7 +45,7 @@ export function CitationMarkerPopover({
   citation,
 }: CitationMarkerPopoverProps) {
   if (!isValidHttpUrl(citation.url)) {
-    return <span>[{citation.index}]</span>;
+    return <span>{formatCitationIndex(citation.index)}</span>;
   }
 
   const hostname = extractHostname(citation.url);
@@ -54,10 +60,10 @@ export function CitationMarkerPopover({
         <button
           type="button"
           data-testid={`citation-marker-${citation.index}`}
-          aria-label={`Source ${citation.index}: ${displayTitle}`}
+          aria-label={formatSourceAria(citation.index, displayTitle)}
           className="bg-accent-soft text-accent border-accent/30 hover:bg-accent hover:text-accent-fg mx-0.5 inline-flex h-4 min-w-4 cursor-pointer items-center justify-center rounded border px-1 align-baseline font-mono text-[10px] leading-none font-semibold transition-colors"
         >
-          [{citation.index}]
+          {formatCitationIndex(citation.index)}
         </button>
       </PopoverTrigger>
       <PopoverContent
@@ -82,7 +88,7 @@ export function CitationMarkerPopover({
             {hostname}
           </span>
           <span className="bg-surface-2 text-fg-muted ml-auto rounded px-1.5 py-0.5 font-mono text-[10px]">
-            [{citation.index}]
+            {formatCitationIndex(citation.index)}
           </span>
         </div>
 
@@ -115,11 +121,13 @@ export interface SourcesAccordionProps {
 
 export function SourcesAccordion({
   citations,
-  label = "Sources",
+  label,
   defaultOpen = false,
   className,
 }: SourcesAccordionProps) {
+  const t = useTranslations("Response");
   const [open, setOpen] = React.useState(defaultOpen);
+  const displayLabel = label || t("sources");
 
   const validCitations = React.useMemo(() => {
     if (!citations || citations.length === 0) return [];
@@ -150,7 +158,7 @@ export function SourcesAccordion({
         <div className="flex items-center gap-2">
           <Globe className="text-accent h-3.5 w-3.5" />
           <span>
-            {label} ({validCitations.length})
+            {formatSourcesCount(displayLabel, validCitations.length)}
           </span>
         </div>
         {open ? (
@@ -182,7 +190,7 @@ export function SourcesAccordion({
                   className="group/src flex items-start gap-2.5"
                 >
                   <span className="bg-accent-soft text-accent border-accent/30 mt-0.5 inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded border px-1 font-mono text-[10px] font-semibold">
-                    [{cit.index}]
+                    {formatCitationIndex(cit.index)}
                   </span>
 
                   <div className="min-w-0 flex-1 space-y-0.5">
@@ -203,7 +211,7 @@ export function SourcesAccordion({
                         {displayTitle}
                       </span>
                       <span className="text-fg-muted shrink-0 font-mono text-[10px]">
-                        · {hostname}
+                        {formatSourceHost(hostname)}
                       </span>
                       <ExternalLink className="text-fg-muted group-hover/src:text-accent ml-auto h-3 w-3 shrink-0" />
                     </div>

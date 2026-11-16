@@ -65,6 +65,11 @@ export interface ThreadColumnProps {
   className?: string;
 }
 
+const PENDING_QUESTION_KEY = "pending-question" as const;
+const STREAMING_ANSWER_KEY = "streaming-answer" as const;
+const ROLE_USER = "USER" as const;
+const ROLE_ASSISTANT = "ASSISTANT" as const;
+
 interface AnnotationAuthor {
   id: string;
   name?: string | null;
@@ -920,8 +925,8 @@ export function ThreadColumn({
               {/* A follow-up that was just sent (saved by the server with its answer) */}
               {showLive && stream?.question &&
                 renderMessage({
-                  key: "pending-question",
-                  role: "USER",
+                  key: PENDING_QUESTION_KEY,
+                  role: ROLE_USER,
                   content: stream.question,
                   author: lastMessage?.role === "USER" ? lastMessage.author : annotation.createdBy,
                 })}
@@ -929,8 +934,8 @@ export function ThreadColumn({
               {/* The answer, shown while it streams */}
               {showLive &&
                 renderMessage({
-                  key: "streaming-answer",
-                  role: "ASSISTANT",
+                  key: STREAMING_ANSWER_KEY,
+                  role: ROLE_ASSISTANT,
                   content: stream?.text ?? "",
                   thoughtSummary: stream?.thoughtSummary,
                   citations: stream?.citations,

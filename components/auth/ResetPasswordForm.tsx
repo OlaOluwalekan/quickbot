@@ -120,7 +120,7 @@ export function ResetPasswordForm() {
         <div className="pt-2">
           <Button asChild className="w-full rounded-xl text-xs">
             <Link href="/auth/login">
-              {t("goToSignIn") || "Sign in with new password"}
+              {t("goToSignIn")}
             </Link>
           </Button>
         </div>
@@ -160,7 +160,7 @@ export function ResetPasswordForm() {
               minLength={10}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••••••"
+              placeholder={t("passwordPlaceholder")}
               className="h-11 pl-10 pr-10 bg-surface-2/40 border-border text-xs"
             />
             <button
@@ -202,7 +202,7 @@ export function ResetPasswordForm() {
               minLength={10}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="••••••••••••"
+              placeholder={t("passwordPlaceholder")}
               className="h-11 pl-10 bg-surface-2/40 border-border text-xs"
             />
           </div>

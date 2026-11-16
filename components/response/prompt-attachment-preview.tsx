@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import {
   FileText,
   Sparkles,
@@ -30,6 +31,7 @@ export function PromptAttachmentPreview({
 }: {
   attachment: AttachmentData;
 }) {
+  const t = useTranslations("PromptAttachment");
   const [url, setUrl] = React.useState<string | null>(null);
   const [isOpen, setIsOpen] = React.useState(false);
   const isImage =
@@ -158,7 +160,7 @@ export function PromptAttachmentPreview({
               ) : (
                 <div className="flex items-center gap-2 text-sm text-fg-muted">
                   <Sparkles className="size-4 animate-spin text-accent" />
-                  <span>Loading preview...</span>
+                  <span>{t("loading")}</span>
                 </div>
               )
             ) : isPdf && url ? (
@@ -175,7 +177,7 @@ export function PromptAttachmentPreview({
                     {attachment.originalName}
                   </p>
                   <p className="text-xs text-fg-muted">
-                    This file format cannot be rendered directly in the preview.
+                    {t("cannotRender")}
                   </p>
                 </div>
                 {url && (
@@ -186,7 +188,7 @@ export function PromptAttachmentPreview({
                     className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-xs font-medium text-accent-fg hover:opacity-90 transition-opacity"
                   >
                     <Download className="size-3.5" />
-                    <span>Download / Open File</span>
+                    <span>{t("downloadOrOpen")}</span>
                   </a>
                 )}
               </div>
@@ -202,7 +204,7 @@ export function PromptAttachmentPreview({
                 className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-fg hover:bg-surface-2 transition-colors"
               >
                 <ExternalLink className="size-3.5" />
-                <span>Open in new tab</span>
+                <span>{t("openInNewTab")}</span>
               </a>
             )}
           </div>

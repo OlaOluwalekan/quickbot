@@ -9,6 +9,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Check, AlertCircle, Loader2, ArrowRight } from "lucide-react";
@@ -27,6 +28,7 @@ export function ClaimUsernameDialog({
   currentUsername,
   onSuccess,
 }: ClaimUsernameDialogProps) {
+  const t = useTranslations("User.claim");
   const [value, setValue] = React.useState("");
   const [debouncedValue, setDebouncedValue] = React.useState("");
   const [isChecking, setIsChecking] = React.useState(false);
@@ -114,12 +116,12 @@ export function ClaimUsernameDialog({
         const err = body.error || body;
         if (res.status === 409) {
           if (err.code === "username_already_changed") {
-            setSubmitError("Username can only be changed once. You have already claimed a username.");
+            setSubmitError(t("alreadyChanged"));
           } else {
-            setSubmitError(err.message || "This username was just claimed by someone else.");
+            setSubmitError(err.message || t("claimedByOther"));
           }
         } else {
-          setSubmitError(err.message || "Failed to claim username. Please try again.");
+          setSubmitError(err.message || t("failed"));
         }
         setIsSubmitting(false);
         return;
@@ -128,7 +130,7 @@ export function ClaimUsernameDialog({
       onSuccess?.(payload.username || debouncedValue);
       onOpenChange(false);
     } catch {
-      setSubmitError("Network error. Please try again.");
+      setSubmitError(t("networkError"));
       setIsSubmitting(false);
     }
   };
@@ -144,6 +146,8 @@ export function ClaimUsernameDialog({
     setSubmitError(null);
   };
 
+  const formatUsernameHandle = (handle: string) => `@${handle}`;
+
   return (
     <Dialog
       open={open}
@@ -155,12 +159,12 @@ export function ClaimUsernameDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {confirmStep ? "Confirm your username" : "Choose your username"}
+            {confirmStep ? t("titleConfirm") : t("titleChoose")}
           </DialogTitle>
           <DialogDescription>
             {confirmStep
-              ? "This cannot be changed again. Please confirm your choice."
-              : "Every account has a unique username. You can customize yours exactly once."}
+              ? t("descConfirm")
+              : t("descChoose")}
           </DialogDescription>
         </DialogHeader>
 
@@ -178,7 +182,7 @@ export function ClaimUsernameDialog({
                 htmlFor="username-input"
                 className="text-xs font-medium text-subtle"
               >
-                Username
+                {t("usernameLabel")}
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-subtle font-mono text-sm">
@@ -191,7 +195,7 @@ export function ClaimUsernameDialog({
                     setValue(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""));
                     setSubmitError(null);
                   }}
-                  placeholder="yourname"
+                  placeholder={t("placeholder")}
                   className="pl-8 pr-10 font-mono text-sm"
                   maxLength={30}
                   autoFocus
@@ -213,33 +217,33 @@ export function ClaimUsernameDialog({
                 <p className="text-xs text-danger">{validationError}</p>
               )}
               {!validationError && !isChecking && isAvailable === false && (
-                <p className="text-xs text-danger">Username is already taken or unavailable.</p>
+                <p className="text-xs text-danger">{t("takenError")}</p>
               )}
               {!validationError && !isChecking && isAvailable === true && (
-                <p className="text-xs text-success">Username is available!</p>
+                <p className="text-xs text-success">{t("available")}</p>
               )}
             </div>
 
             <div className="rounded-lg border border-border bg-surface-2 p-3">
-              <p className="text-xs text-subtle mb-1">Preview:</p>
+              <p className="text-xs text-subtle mb-1">{t("preview")}</p>
               <p className="font-mono text-sm text-fg font-medium">
-                @{value.trim() || currentUsername || "username"}
+                {formatUsernameHandle(value.trim() || currentUsername || "username")}
               </p>
             </div>
 
             <p className="text-xs text-subtle">
-              Rules: 3–30 characters, lowercase letters, numbers, and underscores. Must start with a letter.
+              {t("rules")}
             </p>
           </div>
         ) : (
           <div className="space-y-4 py-2">
             <div className="rounded-lg border border-warning/30 bg-warning/10 p-4 text-sm text-fg">
-              <p className="font-semibold text-warning mb-1">Important notice:</p>
+              <p className="font-semibold text-warning mb-1">{t("noticeTitle")}</p>
               <p className="text-subtle">
-                Once set, your username cannot be changed through the app. You are claiming:
+                {t("noticeDesc")}
               </p>
               <p className="mt-2 text-base font-mono font-bold text-fg">
-                @{debouncedValue}
+                {formatUsernameHandle(debouncedValue)}
               </p>
             </div>
           </div>
@@ -253,14 +257,14 @@ export function ClaimUsernameDialog({
                 onClick={() => onOpenChange(false)}
                 disabled={isSubmitting}
               >
-                Later
+                {t("later")}
               </Button>
               <Button
                 onClick={() => setConfirmStep(true)}
                 disabled={!debouncedValue || isAvailable !== true || isChecking}
                 className="gap-1.5"
               >
-                Continue
+                {t("continue")}
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </>
@@ -271,7 +275,7 @@ export function ClaimUsernameDialog({
                 onClick={() => setConfirmStep(false)}
                 disabled={isSubmitting}
               >
-                Back
+                {t("back")}
               </Button>
               <Button
                 onClick={handleClaim}
@@ -279,7 +283,7 @@ export function ClaimUsernameDialog({
                 className="gap-1.5"
               >
                 {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                Confirm & Claim
+                {t("confirmAndClaim")}
               </Button>
             </>
           )}

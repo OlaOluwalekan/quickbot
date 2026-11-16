@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Cropper, { type Area, type Point } from "react-easy-crop";
+import { useTranslations } from "next-intl";
 import {
   Dialog,
   DialogContent,
@@ -26,6 +27,7 @@ export function AvatarCropDialog({
   imageSrc,
   onCropComplete,
 }: AvatarCropDialogProps) {
+  const t = useTranslations("User.avatar");
   const [crop, setCrop] = React.useState<Point>({ x: 0, y: 0 });
   const [zoom, setZoom] = React.useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = React.useState<Area | null>(null);
@@ -107,9 +109,9 @@ export function AvatarCropDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Crop Profile Picture</DialogTitle>
+          <DialogTitle>{t("cropTitle")}</DialogTitle>
           <DialogDescription>
-            Drag to reposition and use the slider to zoom. Your picture will be cropped to a square.
+            {t("cropDesc")}
           </DialogDescription>
         </DialogHeader>
 
@@ -139,7 +141,7 @@ export function AvatarCropDialog({
             value={zoom}
             onChange={(e) => setZoom(Number(e.target.value))}
             className="w-full accent-primary cursor-pointer"
-            aria-label="Zoom"
+            aria-label={t("zoomAria")}
           />
           <ZoomIn className="h-4 w-4 text-subtle shrink-0" />
         </div>
@@ -150,7 +152,7 @@ export function AvatarCropDialog({
             onClick={() => onOpenChange(false)}
             disabled={isProcessing}
           >
-            Cancel
+            {t("cancel")}
           </Button>
           <Button
             onClick={handleConfirm}
@@ -158,7 +160,7 @@ export function AvatarCropDialog({
             className="gap-1.5"
           >
             {isProcessing && <Loader2 className="h-4 w-4 animate-spin" />}
-            Save & Upload
+            {t("saveAndUpload")}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -99,7 +99,7 @@ const Registered = ({
             className="flex items-center justify-center gap-2 rounded-xl border border-danger/30 bg-danger/10 px-3.5 py-2.5 text-xs font-medium text-danger"
           >
             <AlertTriangle className="h-4 w-4 shrink-0" strokeWidth={1.5} />
-            <span>No account email provided. Redirecting...</span>
+            <span>{t("noEmailProvided")}</span>
           </div>
         )}
 

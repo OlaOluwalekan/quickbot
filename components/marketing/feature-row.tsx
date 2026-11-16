@@ -86,6 +86,7 @@ export function MarketingFeatureRow({
 
 export function MarketingFeatureList() {
   const t = useTranslations("Marketing.features");
+  const tRow = useTranslations("Marketing.featureRow");
 
   const features: FeatureItem[] = [
     {
@@ -192,7 +193,7 @@ export function MarketingFeatureList() {
       previewContent: (
         <div className="p-4 rounded-xl border border-border bg-surface shadow-2xs text-xs space-y-3 font-mono">
           <div className="p-2.5 rounded-lg bg-surface-2 border border-border flex items-center justify-between">
-            <span className="text-fg truncate">klecx.app/s/share_7x9qL</span>
+            <span className="text-fg truncate">{tRow("shareUrl")}</span>
             <span className="text-[10px] text-success font-semibold px-2 py-0.5 bg-success/10 rounded">{t("share.liveBadge")}</span>
           </div>
           <div className="text-[11px] text-fg-muted space-y-1">
@@ -218,13 +219,13 @@ export function MarketingFeatureList() {
           <div className="text-fg font-semibold">{t("export.previewTitle")}</div>
           <div className="grid grid-cols-3 gap-2 text-center text-[11px] font-medium">
             <div className="p-2 rounded-lg border border-border bg-surface-2 hover:border-accent cursor-pointer transition-colors">
-              .md (Markdown)
+              {tRow("formatMd")}
             </div>
             <div className="p-2 rounded-lg border border-border bg-surface-2 hover:border-accent cursor-pointer transition-colors">
-              .pdf (Document)
+              {tRow("formatPdf")}
             </div>
             <div className="p-2 rounded-lg border border-border bg-surface-2 hover:border-accent cursor-pointer transition-colors">
-              .docx (Word)
+              {tRow("formatDocx")}
             </div>
           </div>
         </div>

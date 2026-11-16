@@ -47,6 +47,10 @@ type NotificationsTranslator = ReturnType<typeof useTranslations>;
 
 const ROLE_KEYS = ["OWNER", "ADMIN", "EDITOR", "COMMENTER", "VIEWER"];
 
+function formatUnreadBadge(count: number): string | number {
+  return count > 99 ? "99+" : count;
+}
+
 function text(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value : null;
 }
@@ -433,7 +437,7 @@ export function NotificationBell() {
               data-testid="notification-unread-badge"
               className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold text-accent-fg shadow-2xs"
             >
-              {unreadCount > 99 ? "99+" : unreadCount}
+              {formatUnreadBadge(unreadCount)}
             </span>
           )}
         </Button>

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import {
   Dialog,
   DialogContent,
@@ -31,6 +32,11 @@ export interface ConfirmDialogProps {
   onConfirm: () => void | Promise<void>;
 }
 
+function formatConfirmPrompt(text: string, template?: string): string {
+  if (template) return template.replace("{text}", text);
+  return `Type ${text} to confirm:`;
+}
+
 export function ConfirmDialog({
   open,
   onOpenChange,
@@ -44,6 +50,14 @@ export function ConfirmDialog({
   loading = false,
   onConfirm,
 }: ConfirmDialogProps) {
+  let promptTemplate: string | undefined;
+  try {
+    const t = useTranslations("Common");
+    promptTemplate = t("confirmPrompt");
+  } catch {
+    // fallback outside Intl provider
+  }
+
   const [typed, setTyped] = React.useState("");
   const inputId = React.useId();
 
@@ -76,11 +90,7 @@ export function ConfirmDialog({
           {confirmText && (
             <div className="space-y-2 pt-1">
               <Label htmlFor={inputId} className="text-xs text-muted">
-                Type{" "}
-                <span className="rounded bg-surface-2 px-1.5 py-0.5 font-mono font-semibold text-fg">
-                  {confirmText}
-                </span>{" "}
-                to confirm:
+                {formatConfirmPrompt(confirmText, promptTemplate)}
               </Label>
               <Input
                 id={inputId}

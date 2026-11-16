@@ -168,6 +168,8 @@ function isDirectUrl(val: string): boolean {
   );
 }
 
+const joinChainIds = (chain: Array<{ id: string }>) => chain.map((s) => s.id).join(",");
+
 export function ResponseCard({
   response,
   workspaceId,
@@ -185,6 +187,8 @@ export function ResponseCard({
 }: ResponseCardProps) {
   const t = useTranslations("Response");
   const tChat = useTranslations("Chat");
+  const tUser = useTranslations("User");
+  const tCommon = useTranslations("Common");
   const tExportFormats = useTranslations("Documents.downloadFormats");
   const tExportCaps = useTranslations("Documents.caps");
   const tReview = useTranslations("Review");
@@ -497,9 +501,7 @@ export function ResponseCard({
                 const crossThreadHref =
                   isCrossWorkspace && response.sourceWorkspaceId
                     ? chain && chain.length > 0
-                      ? `/workspaces/${response.sourceWorkspaceId}?thread=${chain
-                          .map((s) => s.id)
-                          .join(",")}`
+                      ? `/workspaces/${response.sourceWorkspaceId}?thread=${joinChainIds(chain)}`
                       : `/workspaces/${response.sourceWorkspaceId}`
                     : null;
 
@@ -638,7 +640,7 @@ export function ResponseCard({
           {memberCount > 1 && response.author ? (
             <Avatar className="border-border h-8 w-8 rounded-xl border" title={response.author.name}>
               {response.author.avatarUrl ? (
-                <AvatarImage src={response.author.avatarUrl} alt={response.author.name || "User"} />
+                <AvatarImage src={response.author.avatarUrl} alt={response.author.name || tUser("defaultName")} />
               ) : null}
               <AvatarFallback className="bg-surface-2 text-xs font-medium">
                 {response.author.name?.charAt(0) || "U"}
@@ -666,7 +668,7 @@ export function ResponseCard({
 
               {memberCount > 1 && response.author?.name ? (
                 <span className="text-xs text-subtle font-medium">
-                  by {response.author.name}
+                  {t("byAuthor", { name: response.author.name })}
                 </span>
               ) : null}
 
@@ -682,7 +684,9 @@ export function ResponseCard({
                     </Badge>
                   </TooltipTrigger>
                   <TooltipContent>
-                    Added {response.createdAt ? new Date(response.createdAt).toLocaleDateString() : ""}
+                    {t("addedOn", {
+                      date: response.createdAt ? new Date(response.createdAt).toLocaleDateString() : "",
+                    })}
                   </TooltipContent>
                 </Tooltip>
               )}
@@ -817,7 +821,7 @@ export function ResponseCard({
                         className="h-8 text-xs"
                       >
                         <Maximize2 className="mr-1 h-3.5 w-3.5" />
-                        Preview
+                        {t("preview")}
                       </Button>
                       <Button
                         size="sm"
@@ -878,7 +882,7 @@ export function ResponseCard({
                 >
                   <ImageIcon className="text-fg-muted/60 h-10 w-10" />
                   <span className="text-fg-muted text-xs font-medium">
-                    Loading image...
+                    {t("loadingImage")}
                   </span>
                 </div>
               ) : (
@@ -888,7 +892,7 @@ export function ResponseCard({
                 >
                   <ImageIcon className="text-danger/70 h-8 w-8" />
                   <span className="text-danger text-xs font-medium">
-                    Image generation failed.
+                    {t("imageFailed")}
                   </span>
                   {onRegenerate && (
                     <Gated reason={regenerateGateReason}>
@@ -951,7 +955,7 @@ export function ResponseCard({
                           {doc.originalName}
                         </span>
                         <span className="text-accent ml-1 underline">
-                          Download
+                          {tCommon("download")}
                         </span>
                       </a>
                     ))}

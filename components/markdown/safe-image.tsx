@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { ImageIcon, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SafeLink } from "./safe-link";
@@ -40,6 +41,7 @@ export function isAllowedImageSrc(src?: string): boolean {
 }
 
 export function SafeImage({ src, alt, className, ...props }: SafeImageProps) {
+  const t = useTranslations("Common");
   const srcString = typeof src === "string" ? src : undefined;
   const isAllowed = isAllowedImageSrc(srcString);
 
@@ -49,7 +51,7 @@ export function SafeImage({ src, alt, className, ...props }: SafeImageProps) {
     return (
       <span className="inline-flex items-center gap-1.5 px-2 py-1 my-1 rounded-md border border-border bg-surface-2 text-xs text-fg-muted font-mono">
         <ShieldAlert className="h-3.5 w-3.5 text-warning shrink-0" aria-hidden="true" />
-        <span className="sr-only">Untrusted external image blocked: </span>
+        <span className="sr-only">{t("untrustedBlocked")}</span>
         <SafeLink href={srcString}>
           {alt ? `[Blocked image: ${alt}]` : `[Blocked external image: ${srcString || ""}]`}
         </SafeLink>
@@ -62,7 +64,7 @@ export function SafeImage({ src, alt, className, ...props }: SafeImageProps) {
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={srcString}
-        alt={alt || "Image output"}
+        alt={alt || t("imageOutput")}
         loading="lazy"
         className={cn(
           "max-w-full h-auto object-contain rounded-xl transition-all duration-200",

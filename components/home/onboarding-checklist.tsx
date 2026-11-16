@@ -15,6 +15,8 @@ export interface OnboardingChecklistProps {
   onRequestNewProject: () => void;
 }
 
+const formatPercent = (n: number) => `${n}%`;
+
 export function OnboardingChecklist({
   onboarding,
   onTryTemplate,
@@ -34,7 +36,7 @@ export function OnboardingChecklist({
           href="/auth/verify/verification"
           className="text-xs font-semibold text-accent hover:underline flex items-center gap-0.5"
         >
-          <span>Verify</span>
+          <span>{tHome("onboarding.verify")}</span>
           <ChevronRight className="h-3 w-3" />
         </Link>
       ) : null,
@@ -48,7 +50,7 @@ export function OnboardingChecklist({
           href="/settings"
           className="text-xs font-semibold text-accent hover:underline flex items-center gap-0.5"
         >
-          <span>Settings</span>
+          <span>{tHome("onboarding.settings")}</span>
           <ChevronRight className="h-3 w-3" />
         </Link>
       ) : null,
@@ -63,7 +65,7 @@ export function OnboardingChecklist({
           onClick={onTryTemplate}
           className="text-xs font-semibold text-accent hover:underline flex items-center gap-0.5 cursor-pointer"
         >
-          <span>Explore</span>
+          <span>{tHome("onboarding.explore")}</span>
           <ChevronRight className="h-3 w-3" />
         </button>
       ) : null,
@@ -78,7 +80,7 @@ export function OnboardingChecklist({
           onClick={onRequestNewProject}
           className="text-xs font-semibold text-accent hover:underline flex items-center gap-0.5 cursor-pointer"
         >
-          <span>Create</span>
+          <span>{tHome("onboarding.create")}</span>
           <ChevronRight className="h-3 w-3" />
         </button>
       ) : null,
@@ -128,7 +130,7 @@ export function OnboardingChecklist({
       <div className="space-y-1.5 mb-4">
         <div className="flex items-center justify-between text-xs font-medium text-muted">
           <span>{tHome("completedOf", { completed: completedCount, total: totalCount })}</span>
-          <span>{progressPercent}%</span>
+          <span>{formatPercent(progressPercent)}</span>
         </div>
         <div className="w-full h-1.5 rounded-full bg-surface-3 overflow-hidden">
           <div

@@ -34,11 +34,11 @@ jest.mock("next-intl", () => ({
               : undefined,
           ns
         );
-      let template = typeof found === "string" ? found : key;
+      const template = typeof found === "string" ? found : key;
       if (values) {
-        Object.entries(values).forEach(([k, v]) => {
-          template = template.replace(`{${k}}`, String(v));
-        });
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { IntlMessageFormat } = require("intl-messageformat");
+        return String(new IntlMessageFormat(template, "en").format(values));
       }
       return template;
     };

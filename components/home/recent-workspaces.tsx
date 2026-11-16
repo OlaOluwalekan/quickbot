@@ -15,6 +15,7 @@ export interface RecentWorkspacesProps {
 
 export function RecentWorkspaces({ items, loading = false }: RecentWorkspacesProps) {
   const tHome = useTranslations("Home");
+  const tCommon = useTranslations("Common");
 
   if (loading) {
     return (
@@ -88,7 +89,7 @@ export function RecentWorkspaces({ items, loading = false }: RecentWorkspacesPro
               ) : (
                 <span className="inline-flex items-center gap-1">
                   <MessageSquare className="h-3 w-3 shrink-0" strokeWidth={1.5} />
-                  <span>Workspace</span>
+                  <span>{tCommon("workspaceSingular")}</span>
                 </span>
               )}
               <span>{formatCustomDate(ws.lastActivityAt)}</span>

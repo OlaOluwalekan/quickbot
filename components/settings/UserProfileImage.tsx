@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Camera, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 export interface UserProfileImageProps {
   user: SessionProps;
@@ -21,6 +22,7 @@ export function UserProfileImage({
   isCustomAvatar: initialIsCustom = false,
 }: UserProfileImageProps) {
   const router = useRouter();
+  const t = useTranslations("User.avatar");
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const [currentAvatarUrl, setCurrentAvatarUrl] = React.useState<string | null>(
@@ -211,7 +213,7 @@ export function UserProfileImage({
           onClick={() => fileInputRef.current?.click()}
           disabled={isUploading}
           className="absolute inset-0 flex items-center justify-center rounded-full bg-overlay/50 text-accent-fg opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer disabled:cursor-not-allowed"
-          aria-label="Upload profile picture"
+          aria-label={t("changePicture")}
         >
           {isUploading ? (
             <Loader2 className="h-6 w-6 animate-spin" />
@@ -236,7 +238,7 @@ export function UserProfileImage({
             ) : (
               <Camera className="h-4 w-4" />
             )}
-            Change picture
+            {t("changePicture")}
           </Button>
 
           {isCustom && (
@@ -249,13 +251,13 @@ export function UserProfileImage({
               className="gap-1.5 text-danger hover:text-danger hover:bg-danger/10"
             >
               <Trash2 className="h-4 w-4" />
-              Remove
+              {t("remove")}
             </Button>
           )}
         </div>
 
         <p className="text-xs text-subtle">
-          Allowed: PNG, JPEG, or WebP. Max 2 MB. Square cropped (512×512).
+          {t("allowedFormats")}
         </p>
 
         <input

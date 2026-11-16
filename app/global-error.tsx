@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { AlertTriangle, RefreshCw, LifeBuoy } from "lucide-react";
+import enMessages from "@/messages/en.json";
 
 export default function GlobalError({
   error,
@@ -10,6 +11,8 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const t = enMessages.GlobalError;
+
   React.useEffect(() => {
     console.error("[Global Error]", {
       digest: error.digest,
@@ -29,14 +32,14 @@ export default function GlobalError({
             <AlertTriangle className="h-6 w-6" />
           </div>
 
-          <h1 className="text-xl font-bold text-fg">Critical System Error</h1>
+          <h1 className="text-xl font-bold text-fg">{t.title}</h1>
           <p className="mt-2 text-sm text-fg-muted">
-            An unexpected error interrupted the application. Your data is safe.
+            {t.description}
           </p>
 
           {error.digest && (
             <div className="mt-4 rounded-lg border border-border/70 bg-surface-2/60 px-3 py-2 text-xs">
-              <span className="text-fg-muted">Error Reference: </span>
+              <span className="text-fg-muted">{t.errorRef}</span>
               <code className="font-mono font-bold text-fg">
                 {error.digest}
               </code>
@@ -50,7 +53,7 @@ export default function GlobalError({
               className="inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-2 text-xs font-semibold text-accent-fg hover:opacity-90 transition-opacity"
             >
               <RefreshCw className="h-3.5 w-3.5" />
-              <span>Try again</span>
+              <span>{t.tryAgain}</span>
             </button>
 
             <a
@@ -58,7 +61,7 @@ export default function GlobalError({
               className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-4 py-2 text-xs font-semibold text-fg hover:bg-surface-2 transition-colors"
             >
               <LifeBuoy className="h-3.5 w-3.5 text-accent" />
-              <span>Contact Support</span>
+              <span>{t.contactSupport}</span>
             </a>
           </div>
         </div>

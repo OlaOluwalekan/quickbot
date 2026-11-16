@@ -38,12 +38,15 @@ jest.mock("../server/http/rate-limit", () => ({
 }));
 
 jest.mock("next-intl", () => ({
-  useTranslations: (namespace: string) => {
+  useTranslations: (namespace?: string) => {
     return (key: string, values?: Record<string, unknown>) => {
-      const ns = (
-        enMessages as unknown as Record<string, Record<string, string>>
-      )[namespace] || {};
-      const template = ns[key] || key;
+      const fullPath = namespace ? `${namespace}.${key}` : key;
+      const parts = fullPath.split(".");
+      let curr: any = enMessages;
+      for (const p of parts) {
+        curr = curr?.[p];
+      }
+      const template = typeof curr === "string" ? curr : key;
       // Real ICU formatting (plurals in Gates.member_limit since F4.4).
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { IntlMessageFormat } = require("intl-messageformat");

@@ -8,6 +8,8 @@ import {
 } from "@/components/marketing";
 import { Layers } from "lucide-react";
 
+const formatStepNumber = (n: number) => n.toString().padStart(2, "0");
+
 export function FeaturesView() {
   const t = useTranslations("Marketing.featuresPage");
 
@@ -44,7 +46,7 @@ export function FeaturesView() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="p-6 rounded-2xl border border-border bg-surface shadow-2xs space-y-3">
               <div className="w-10 h-10 rounded-xl bg-accent-soft text-accent flex items-center justify-center font-bold">
-                01
+                {formatStepNumber(1)}
               </div>
               <h3 className="text-base font-bold text-fg">{t("p1Title")}</h3>
               <p className="text-xs sm:text-sm text-fg-muted leading-relaxed">
@@ -54,7 +56,7 @@ export function FeaturesView() {
 
             <div className="p-6 rounded-2xl border border-border bg-surface shadow-2xs space-y-3">
               <div className="w-10 h-10 rounded-xl bg-accent-soft text-accent flex items-center justify-center font-bold">
-                02
+                {formatStepNumber(2)}
               </div>
               <h3 className="text-base font-bold text-fg">{t("p2Title")}</h3>
               <p className="text-xs sm:text-sm text-fg-muted leading-relaxed">
@@ -64,7 +66,7 @@ export function FeaturesView() {
 
             <div className="p-6 rounded-2xl border border-border bg-surface shadow-2xs space-y-3">
               <div className="w-10 h-10 rounded-xl bg-accent-soft text-accent flex items-center justify-center font-bold">
-                03
+                {formatStepNumber(3)}
               </div>
               <h3 className="text-base font-bold text-fg">{t("p3Title")}</h3>
               <p className="text-xs sm:text-sm text-fg-muted leading-relaxed">

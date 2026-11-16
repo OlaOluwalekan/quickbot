@@ -79,7 +79,7 @@ export function MarketingHero() {
                   <div className="bg-success/60 h-2.5 w-2.5 rounded-full" />
                 </div>
                 <span className="text-fg-subtle ml-2 font-mono text-[11px]">
-                  klecx/workspaces/ws_arch_01
+                  {t("mockPath")}
                 </span>
               </div>
               <div className="flex items-center gap-2">
@@ -104,11 +104,11 @@ export function MarketingHero() {
                   <div className="mt-1 space-y-0.5">
                     <div className="bg-accent/10 text-accent flex items-center gap-2 rounded-md px-2 py-1.5 font-medium">
                       <FolderKanban className="h-3.5 w-3.5 shrink-0" />
-                      <span className="truncate">Database Architecture</span>
+                      <span className="truncate">{t("mockProject1")}</span>
                     </div>
                     <div className="text-fg-muted hover:bg-surface-2 flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors">
                       <FolderKanban className="h-3.5 w-3.5 shrink-0" />
-                      <span className="truncate">Product Roadmap 2027</span>
+                      <span className="truncate">{t("mockProject2")}</span>
                     </div>
                   </div>
                 </div>
@@ -120,17 +120,17 @@ export function MarketingHero() {
                   <div className="mt-1 space-y-0.5">
                     <div className="bg-surface border-border/60 text-fg flex items-center justify-between rounded-md border px-2 py-1.5 font-medium shadow-2xs">
                       <span className="truncate">
-                        Postgres Pooling vs Replicas
+                        {t("mockWorkspace1")}
                       </span>
                       <span className="text-accent text-[10px]">
                         {t("active")}
                       </span>
                     </div>
                     <div className="text-fg-muted hover:bg-surface-2 flex items-center justify-between rounded-md px-2 py-1.5 transition-colors">
-                      <span className="truncate">Redis Event Invalidation</span>
+                      <span className="truncate">{t("mockWorkspace2")}</span>
                     </div>
                     <div className="text-fg-muted hover:bg-surface-2 flex items-center justify-between rounded-md px-2 py-1.5 transition-colors">
-                      <span className="truncate">Prisma Indexing Audit</span>
+                      <span className="truncate">{t("mockWorkspace3")}</span>
                     </div>
                   </div>
                 </div>
@@ -183,8 +183,7 @@ export function MarketingHero() {
 
                     <div className="border-border bg-surface-2 text-fg-muted rounded-lg border p-2.5 font-mono text-[11px]">
                       <code>
-                        pool_mode = transaction | max_client_conn = 10000 |
-                        default_pool_size = 50
+                        {t("mockConfig")}
                       </code>
                     </div>
                   </div>

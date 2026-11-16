@@ -13,6 +13,7 @@ export interface SharedWorkspacesProps {
 
 export function SharedWorkspaces({ items }: SharedWorkspacesProps) {
   const tHome = useTranslations("Home");
+  const tCommon = useTranslations("Common");
 
   if (!items || items.length === 0) {
     return null;
@@ -47,14 +48,14 @@ export function SharedWorkspaces({ items }: SharedWorkspacesProps) {
 
               <div className="flex items-center gap-1.5 text-xs text-muted mb-2">
                 <Users className="h-3.5 w-3.5 shrink-0 text-subtle" strokeWidth={1.5} />
-                <span className="truncate">Shared by {ws.ownerName}</span>
+                <span className="truncate">{tCommon("sharedBy", { name: ws.ownerName })}</span>
               </div>
             </div>
 
             <div className="flex items-center justify-between text-[11px] text-subtle pt-2 border-t border-border/50">
               <span className="inline-flex items-center gap-1">
                 <MessageSquare className="h-3 w-3 shrink-0" strokeWidth={1.5} />
-                <span>Shared Workspace</span>
+                <span>{tCommon("sharedWorkspace")}</span>
               </span>
               <span>{formatCustomDate(ws.lastActivityAt)}</span>
             </div>

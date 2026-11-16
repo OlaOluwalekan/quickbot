@@ -8,6 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { authClient } from "@/lib/auth-client";
 
+const formatCharCount = (curr: number, max: number) => `${curr} / ${max.toLocaleString()}`;
+const formatRequiredStar = () => "*";
+
 export function SupportForm() {
   const t = useTranslations("Support");
   const { data: session } = authClient.useSession();
@@ -153,7 +156,7 @@ export function SupportForm() {
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Honeypot field (hidden from genuine users) */}
         <div className="hidden" aria-hidden="true">
-          <label htmlFor="website-hp">Website</label>
+          <label htmlFor="website-hp">{t("website")}</label>
           <input
             id="website-hp"
             type="text"
@@ -180,7 +183,7 @@ export function SupportForm() {
           {/* Email */}
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-fg">
-              {t("emailLabel")} <span className="text-danger">*</span>
+              {t("emailLabel")} <span className="text-danger">{formatRequiredStar()}</span>
             </label>
             <Input
               type="email"
@@ -196,7 +199,7 @@ export function SupportForm() {
         {/* Topic */}
         <div className="space-y-1.5">
           <label className="text-xs font-semibold text-fg">
-            {t("topicLabel")} <span className="text-danger">*</span>
+            {t("topicLabel")} <span className="text-danger">{formatRequiredStar()}</span>
           </label>
           <select
             value={topic}
@@ -216,10 +219,10 @@ export function SupportForm() {
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
             <label className="text-xs font-semibold text-fg">
-              {t("messageLabel")} <span className="text-danger">*</span>
+              {t("messageLabel")} <span className="text-danger">{formatRequiredStar()}</span>
             </label>
             <span className="text-[11px] font-mono text-fg-subtle">
-              {message.length} / 5,000
+              {formatCharCount(message.length, 5000)}
             </span>
           </div>
           <textarea

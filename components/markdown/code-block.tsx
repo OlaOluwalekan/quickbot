@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Check, Copy, WrapText } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -43,6 +44,7 @@ export interface CodeBlockProps extends React.HTMLAttributes<HTMLPreElement> {
 }
 
 export function CodeBlock({ children, className, ...props }: CodeBlockProps) {
+  const t = useTranslations("Code");
   const [copied, setCopied] = React.useState(false);
   const [isWrapped, setIsWrapped] = React.useState(false);
   const [highlightedHtml, setHighlightedHtml] = React.useState<string | null>(null);
@@ -144,14 +146,14 @@ export function CodeBlock({ children, className, ...props }: CodeBlockProps) {
             variant="ghost"
             size="sm"
             onClick={() => setIsWrapped(!isWrapped)}
-            title={isWrapped ? "Disable line wrap" : "Enable line wrap"}
+            title={isWrapped ? t("disableWrap") : t("enableWrap")}
             className={cn(
               "h-6 px-1.5 text-[11px] text-fg-muted hover:text-fg",
               isWrapped && "text-accent bg-accent-soft"
             )}
           >
             <WrapText className="h-3 w-3 mr-1" />
-            <span className="hidden sm:inline">{isWrapped ? "Unwrap" : "Wrap"}</span>
+            <span className="hidden sm:inline">{isWrapped ? t("unwrap") : t("wrap")}</span>
           </Button>
 
           {/* Copy button */}
@@ -160,18 +162,18 @@ export function CodeBlock({ children, className, ...props }: CodeBlockProps) {
             variant="ghost"
             size="sm"
             onClick={handleCopy}
-            title={copied ? "Copied" : "Copy code"}
+            title={copied ? t("copied") : t("copyCode")}
             className="h-6 px-1.5 text-[11px] text-fg-muted hover:text-fg"
           >
             {copied ? (
               <>
                 <Check className="h-3 w-3 mr-1 text-accent" />
-                <span className="text-accent font-medium">Copied</span>
+                <span className="text-accent font-medium">{t("copied")}</span>
               </>
             ) : (
               <>
                 <Copy className="h-3 w-3 mr-1" />
-                <span>Copy</span>
+                <span>{t("copy")}</span>
               </>
             )}
           </Button>

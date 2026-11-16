@@ -34,8 +34,8 @@ export interface PlanDefinition {
 export const PLANS: Record<"FREE" | "LITE" | "STANDARD" | "PRO", PlanDefinition> = {
   FREE: {
     id: "FREE",
-    name: "Free",
-    tagline: "Explore the workspace model with essential capabilities.",
+    name: "Plans.FREE.name",
+    tagline: "Plans.FREE.tagline",
     priceMonthly: 0,
     priceYearly: 0,
     credits: 100,
@@ -53,19 +53,19 @@ export const PLANS: Record<"FREE" | "LITE" | "STANDARD" | "PRO", PlanDefinition>
       voiceSecondsPerDay: 120,
     },
     features: [
-      "100 credits / month (no rollover)",
-      "Daily spend cap of 30 credits",
-      "1 concurrent generation turn",
-      "Economy model access",
-      "3 attachments per workspace (5 MB max)",
-      "Markdown document export",
-      "Read-only workspace & response sharing",
+      "Plans.FREE.features.credits",
+      "Plans.FREE.features.dailyCap",
+      "Plans.FREE.features.concurrency",
+      "Plans.FREE.features.models",
+      "Plans.FREE.features.attachments",
+      "Plans.FREE.features.exports",
+      "Plans.FREE.features.sharing",
     ],
   },
   LITE: {
     id: "LITE",
-    name: "Lite",
-    tagline: "For individual builders and researchers working daily.",
+    name: "Plans.LITE.name",
+    tagline: "Plans.LITE.tagline",
     priceMonthly: 4.99,
     priceYearly: 49,
     credits: 800,
@@ -83,23 +83,23 @@ export const PLANS: Record<"FREE" | "LITE" | "STANDARD" | "PRO", PlanDefinition>
       voiceSecondsPerDay: 600,
     },
     features: [
-      "800 credits / month (no rollover)",
-      "Daily spend cap: 25% of monthly balance",
-      "2 concurrent generation turns",
-      "Economy & Standard text models",
-      "Native AI image generation",
-      "Web-search grounding support",
-      "10 attachments per workspace (15 MB max)",
-      "Up to 2 workspace collaborators",
-      "Markdown, PDF & Word exports",
+      "Plans.LITE.features.credits",
+      "Plans.LITE.features.dailyCap",
+      "Plans.LITE.features.concurrency",
+      "Plans.LITE.features.models",
+      "Plans.LITE.features.images",
+      "Plans.LITE.features.search",
+      "Plans.LITE.features.attachments",
+      "Plans.LITE.features.collaborators",
+      "Plans.LITE.features.exports",
     ],
   },
   STANDARD: {
     id: "STANDARD",
-    name: "Standard",
-    badge: "Most Popular",
+    name: "Plans.STANDARD.name",
+    badge: "Plans.STANDARD.badge",
     popular: true,
-    tagline: "Our recommended plan for power users and small teams.",
+    tagline: "Plans.STANDARD.tagline",
     priceMonthly: 9.99,
     priceYearly: 99,
     credits: 1800,
@@ -117,22 +117,22 @@ export const PLANS: Record<"FREE" | "LITE" | "STANDARD" | "PRO", PlanDefinition>
       voiceSecondsPerDay: 1200,
     },
     features: [
-      "1,800 credits / month (no rollover)",
-      "Daily spend cap: 25% of monthly balance",
-      "3 concurrent generation turns",
-      "Economy & Standard text models",
-      "Native AI image generation",
-      "Web-search grounding support",
-      "25 attachments per workspace (25 MB max)",
-      "Up to 5 workspace collaborators",
-      "Full export suite (MD, PDF, DOCX)",
-      "Priority customer support",
+      "Plans.STANDARD.features.credits",
+      "Plans.STANDARD.features.dailyCap",
+      "Plans.STANDARD.features.concurrency",
+      "Plans.STANDARD.features.models",
+      "Plans.STANDARD.features.images",
+      "Plans.STANDARD.features.search",
+      "Plans.STANDARD.features.attachments",
+      "Plans.STANDARD.features.collaborators",
+      "Plans.STANDARD.features.exports",
+      "Plans.STANDARD.features.support",
     ],
   },
   PRO: {
     id: "PRO",
-    name: "Pro",
-    tagline: "Maximum throughput, highest limits, and team collaboration.",
+    name: "Plans.PRO.name",
+    tagline: "Plans.PRO.tagline",
     priceMonthly: 16.99,
     priceYearly: 169,
     credits: 3500,
@@ -150,62 +150,21 @@ export const PLANS: Record<"FREE" | "LITE" | "STANDARD" | "PRO", PlanDefinition>
       voiceSecondsPerDay: 2400,
     },
     features: [
-      "3,500 credits / month (no rollover)",
-      "Daily spend cap: 20% of monthly balance",
-      "5 concurrent generation turns",
-      "All models including future advanced tiers",
-      "Native AI image generation",
-      "Web-search grounding support",
-      "50 attachments per workspace (50 MB max)",
-      "Up to 15 workspace collaborators",
-      "Full export suite (MD, PDF, DOCX)",
-      "Activity audit trail & role management",
+      "Plans.PRO.features.credits",
+      "Plans.PRO.features.dailyCap",
+      "Plans.PRO.features.concurrency",
+      "Plans.PRO.features.models",
+      "Plans.PRO.features.images",
+      "Plans.PRO.features.search",
+      "Plans.PRO.features.attachments",
+      "Plans.PRO.features.collaborators",
+      "Plans.PRO.features.exports",
+      "Plans.PRO.features.audit",
     ],
   },
 } as const;
 
 export type PlanKey = keyof typeof PLANS;
-
-/**
- * Frequently Asked Questions for pricing & marketing pages
- */
-export interface FAQItem {
-  question: string;
-  answer: string;
-}
-
-export const BILLING_FAQ: FAQItem[] = [
-  {
-    question: "What is a credit and how does it work?",
-    answer:
-      "Credits represent units of computational work. A standard conversational prompt and response typically consumes around 7 credits. Image generation requires approximately 35 credits, and web-grounded search adds a small surcharge (+3 credits). We charge based on what provider models cost to run, with zero markup tricks.",
-  },
-  {
-    question: "Do unused credits roll over to the next month?",
-    answer:
-      "No. Monthly plan credits expire and reset at the beginning of each billing cycle to maintain sustainable, transparent unit economics. If you ever purchase optional credit top-up packs in the future, those remain valid for 12 months.",
-  },
-  {
-    question: "Can I cancel my subscription inside the app?",
-    answer:
-      "Yes. You can cancel at any time directly in your Account Settings with a single click. There are no retention labyrinths or phone calls required. Upon cancellation, your plan remains active until the end of your current paid billing period.",
-  },
-  {
-    question: "What is your refund policy?",
-    answer:
-      "If you are unsatisfied with your subscription within the first 14 days of purchase and have used less than 20% of your monthly credit allowance, contact support for a prompt refund. Unused portions of that cycle's credit grant are reversed.",
-  },
-  {
-    question: "Which AI models power Klecx?",
-    answer:
-      "Klecx is an independent interface built on top of high-performance third-party AI models (currently Google Gemini Flash-class models for low-latency reasoning and specialized image synthesis). We clearly label each model key and never hide what runs your requests.",
-  },
-  {
-    question: "Is my conversation data kept private?",
-    answer:
-      "Yes. Your prompts, responses, notes, and workspace files are private by default. All data is encrypted in transit and at rest. We do not sell your personal data or use your private conversations to train public models.",
-  },
-];
 
 const userPlanOverrides = new Map<string, PlanKey>();
 

@@ -17,7 +17,8 @@ import sitemap from "@/app/sitemap";
 import robots from "@/app/robots";
 import { metadata as appLayoutMetadata } from "@/app/(app)/layout";
 import { metadata as settingsMetadata } from "@/app/settings/page";
-import { PLANS, BILLING_FAQ } from "@/server/billing/plans";
+import { PLANS } from "@/server/billing/plans";
+import enMessages from "@/messages/en.json";
 
 describe("Step 4.2 — SEO and Security Headers", () => {
   describe("Favicon and Brand Icon Assets", () => {
@@ -205,10 +206,11 @@ describe("Step 4.2 — SEO and Security Headers", () => {
     });
 
     test("FAQ items provide clear questions and answers", () => {
-      expect(BILLING_FAQ.length).toBeGreaterThanOrEqual(5);
-      for (const faq of BILLING_FAQ) {
-        expect(faq.question.length).toBeGreaterThan(5);
-        expect(faq.answer.length).toBeGreaterThan(10);
+      const faqItems = Object.values(enMessages.Marketing.faq.items);
+      expect(faqItems.length).toBeGreaterThanOrEqual(5);
+      for (const faq of faqItems) {
+        expect(faq.q.length).toBeGreaterThan(5);
+        expect(faq.a.length).toBeGreaterThan(10);
       }
     });
   });

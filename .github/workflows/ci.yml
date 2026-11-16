@@ -36,6 +36,7 @@ jobs:
       - run: npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code
       - run: npm run lint
       - run: npm run check:tokens
+      - run: npm run check:i18n
       - run: npm run typecheck
       - run: npm test -- --ci
       - run: npm run build

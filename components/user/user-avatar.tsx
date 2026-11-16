@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { getInitials, getAvatarColorClass } from "@/lib/avatar-shared";
 import { cn } from "@/lib/utils";
@@ -38,6 +39,7 @@ export function UserAvatar({
   size = "md",
   className,
 }: UserAvatarProps) {
+  const t = useTranslations("User");
   const effectiveName = name ?? user?.name ?? null;
   const effectiveEmail = email ?? user?.email ?? null;
   const effectiveId = userId ?? user?.id ?? effectiveName ?? effectiveEmail ?? "";
@@ -51,7 +53,7 @@ export function UserAvatar({
       {effectiveSrc && (
         <AvatarImage
           src={effectiveSrc}
-          alt={effectiveName || "User"}
+          alt={effectiveName || t("defaultName")}
           className="object-cover"
         />
       )}

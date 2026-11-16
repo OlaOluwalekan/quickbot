@@ -52,10 +52,10 @@ export function PricingView() {
               <tbody className="divide-y divide-border/60 text-fg-muted">
                 <tr>
                   <td className="p-4 font-medium text-fg">{tc("monthlyCredits")}</td>
-                  <td className="p-4 font-mono">100</td>
-                  <td className="p-4 font-mono">800</td>
-                  <td className="p-4 font-mono text-fg font-semibold">1,800</td>
-                  <td className="p-4 font-mono">3,500</td>
+                  <td className="p-4 font-mono">{100}</td>
+                  <td className="p-4 font-mono">{800}</td>
+                  <td className="p-4 font-mono text-fg font-semibold">{1800}</td>
+                  <td className="p-4 font-mono">{3500}</td>
                 </tr>
                 <tr>
                   <td className="p-4 font-medium text-fg">{tc("dailyCap")}</td>

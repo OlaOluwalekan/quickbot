@@ -16,7 +16,22 @@
     "copied": "Copié dans le presse-papiers",
     "download": "Télécharger",
     "tokens": "Jetons",
-    "language": "Langue"
+    "language": "Langue",
+    "confirmPrompt": "Tapez {text} pour confirmer :",
+    "closeDialog": "Fermer la boîte de dialogue",
+    "closePanel": "Fermer le panneau",
+    "commandPalette": "Palette de commandes",
+    "selectLanguage": "Sélectionner la langue",
+    "breadcrumb": "Fil d'Ariane",
+    "sharedWorkspace": "Espace partagé",
+    "sharedBy": "Partagé par {name}",
+    "workspacesCount": "{count, plural, one {# espace} other {# espaces}}",
+    "imageOutput": "Image générée",
+    "untrustedBlocked": "Image externe non fiable bloquée : ",
+    "editResponsePlaceholder": "Modifier le contenu de la réponse...",
+    "nothingToPreview": "Rien à prévisualiser.",
+    "workspaceSingular": "Espace",
+    "allRightsReserved": "Tous droits réservés."
   },
   "Header": {
     "features": "Fonctionnalités",
@@ -62,11 +77,11 @@
     "orContinueWith": "Ou continuer avec votre e-mail",
     "google": "Google",
     "github": "GitHub",
-    "emailPlaceholder": "nom@entreprise.com",
+    "emailPlaceholder": "nom@exemple.com",
     "emailLabel": "Adresse e-mail",
     "namePlaceholder": "Votre nom complet",
     "nameLabel": "Nom complet",
-    "passwordPlaceholder": "Entrez votre mot de passe",
+    "passwordPlaceholder": "••••••••••••",
     "passwordLabel": "Mot de passe",
     "confirmPasswordPlaceholder": "Confirmez votre mot de passe",
     "confirmPasswordLabel": "Confirmer le Mot de Passe",
@@ -125,7 +140,9 @@
     "resendVerifyEmail": "Renvoyer l'Email de Confirmation",
     "resending": "Envoi en cours...",
     "resendCooldown": "Renvoi disponible dans {seconds}s",
-    "resendSent": "Email de confirmation envoyé !"
+    "resendSent": "Email de confirmation envoyé !",
+    "emailAddress": "Adresse e-mail",
+    "noEmailProvided": "Aucun e-mail de compte fourni. Redirection..."
   },
   "Chat": {
     "newChat": "Nouvel espace de travail",
@@ -230,6 +247,41 @@
       "saveName": "Enregistrer le nom",
       "cancelEdit": "Annuler",
       "editName": "Modifier le nom"
+    },
+    "sessions": {
+      "title": "Sessions et appareils",
+      "security": "Sécurité",
+      "subtitle": "Consultez toutes les sessions de navigateur et mobiles actuellement autorisées à accéder à votre compte.",
+      "activeHeading": "Sessions actives",
+      "activeDescription": "Gérez les appareils connectés à votre compte et révoquez l'accès à distance.",
+      "signOutOthers": "Déconnecter tous les autres appareils",
+      "signingOut": "Déconnexion en cours...",
+      "loading": "Chargement des sessions actives...",
+      "empty": "Aucune session active trouvée.",
+      "currentDevice": "Cet appareil",
+      "lastActive": "Dernière activité : {time}",
+      "activeNow": "Actif maintenant",
+      "justNow": "À l'instant",
+      "minutesAgo": "il y a {count}m",
+      "hoursAgo": "il y a {count}h",
+      "daysAgo": "il y a {count}j",
+      "recently": "Récemment",
+      "signOut": "Se déconnecter",
+      "loadError": "Impossible de charger les sessions actives",
+      "revokedSuccess": "Appareil déconnecté",
+      "revokeFailed": "Échec de la révocation de la session",
+      "revokedOthersSuccess": "Déconnexion réussie sur tous les autres appareils",
+      "revokedOthersFailed": "Échec de la révocation des sessions",
+      "invalidPassword": "Mot de passe incorrect. Veuillez réessayer.",
+      "rateLimited": "Trop de tentatives. Veuillez patienter quelques minutes et réessayer.",
+      "enterPassword": "Veuillez entrer votre mot de passe",
+      "confirmAuthTitle": "Confirmer l'authentification récente",
+      "confirmAuthDesc": "La déconnexion d'autres appareils est une action sensible. Veuillez saisir votre mot de passe pour continuer.",
+      "passwordLabel": "Mot de passe",
+      "passwordPlaceholder": "Entrez votre mot de passe",
+      "cancel": "Annuler",
+      "verifying": "Vérification...",
+      "confirmAndSignOut": "Confirmer et déconnecter"
     }
   },
   "Email": {
@@ -467,7 +519,13 @@
     "retry": "Réessayer",
     "errorLoadingHome": "Impossible de charger la page d'accueil de l'espace.",
     "studioBadge": "{appName} Studio",
-    "creditsRemaining": "{count, plural, one {crédit restant} other {crédits restants}}"
+    "creditsRemaining": "{count, plural, one {crédit restant} other {crédits restants}}",
+    "onboarding": {
+      "verify": "Vérifier",
+      "settings": "Paramètres",
+      "explore": "Explorer",
+      "create": "Créer"
+    }
   },
   "Templates": {
     "catWrite": "Écrire",
@@ -544,8 +602,8 @@
     }
   },
   "Response": {
-    "version": "Version {current} of {total}",
-    "versionAria": "Version {current} of {total}",
+    "version": "Version {current} sur {total}",
+    "versionAria": "Version {current} sur {total}",
     "previousVersion": "Previous version",
     "nextVersion": "Next version",
     "edited": "Modifié",
@@ -558,16 +616,16 @@
     "edit": "Modifier",
     "saveEdit": "Enregistrer la modification",
     "cancel": "Annuler",
-    "editHelper": "Your edit is saved separately; the AI original is kept.",
+    "editHelper": "Votre modification est enregistrée séparément ; l'original généré par l'IA est conservé.",
     "readAloud": "Read aloud",
     "share": "Share",
     "export": "Export",
     "moreOptions": "More options",
-    "copyLink": "Copy link to response",
+    "copyLink": "Copier le lien vers la réponse",
     "delete": "Delete response",
-    "deleteConfirm": "Are you sure you want to delete this response?",
+    "deleteConfirm": "Êtes-vous sûr de vouloir supprimer cette réponse ?",
     "thinking": "Réflexion…",
-    "thoughtFor": "Thought for {seconds}s",
+    "thoughtFor": "Réflexion pendant {seconds}s",
     "thoughtProcess": "Thought process",
     "showThinking": "Show thinking",
     "hideThinking": "Hide thinking",
@@ -579,9 +637,9 @@
     "searchLimitReached": "Limite quotidienne de recherches web atteinte",
     "tryAgain": "Try again",
     "jumpToLatest": "Jump to latest",
-    "offline": "You are currently offline. Check your network connection.",
-    "contextTruncated": "Conversation context was truncated to fit model token limits.",
-    "outOfCredits": "Insufficient credits to generate this response.",
+    "offline": "Vous êtes actuellement hors ligne. Vérifiez votre connexion réseau.",
+    "contextTruncated": "Le contexte de la conversation a été tronqué pour respecter les limites de tokens du modèle.",
+    "outOfCredits": "Crédits insuffisants pour générer cette réponse.",
     "upgradePlan": "Upgrade plan",
     "expandPrompt": "Show more",
     "collapsePrompt": "Show less",
@@ -591,9 +649,9 @@
     "modelStandard": "Standard",
     "modelEconomy": "Fast & Efficient",
     "modelPro": "Deep Reasoning",
-    "readAloudSoon": "Read aloud will be available in Phase 9",
+    "readAloudSoon": "La lecture à voix haute sera bientôt disponible.",
     "shareNoPermission": "Seuls les propriétaires et administrateurs de l'espace de travail peuvent créer des liens publics",
-    "exportSoon": "Exporting will be available in Phase 5",
+    "exportSoon": "L'exportation sera bientôt disponible.",
     "sources": "Sources",
     "downloadImage": "Télécharger l'image",
     "promoted": {
@@ -603,7 +661,13 @@
       "level": "N{level}",
       "sourceRemoved": "Source supprimée",
       "viewAnnotation": "Voir l'annotation"
-    }
+    },
+    "byAuthor": "par {name}",
+    "addedOn": "Ajouté le {date}",
+    "loadingImage": "Chargement de l'image...",
+    "imageFailed": "Échec de la génération de l'image.",
+    "editPlaceholder": "Modifier le contenu de la réponse...",
+    "nothingToPreview": "Rien à prévisualiser."
   },
   "Marketing": {
     "nav": {
@@ -645,7 +709,7 @@
       "subtitle": "Organisez vos recherches d'IA en projets, conservez les versions de chaque réponse et posez des questions sur n'importe quel passage sans perdre le fil.",
       "startFree": "Commencer gratuitement",
       "seePricing": "Voir les tarifs",
-      "geminiFlash": "Gemini 2.5 Flash",
+      "geminiFlash": "Rapide et efficace",
       "projectsLabel": "Projets",
       "workspacesInProject": "Espaces dans le projet",
       "active": "Actif",
@@ -657,7 +721,14 @@
       "responseSnippet2": "PgBouncer en mode transaction",
       "responseSnippet3": "en amont de vos nœuds primaires et répliques.",
       "askPassage": "Poser une question sur ce passage",
-      "sideQuestion": "Question secondaire : Quel est le délai de basculement entre primaire et réplique ?"
+      "sideQuestion": "Question secondaire : Quel est le délai de basculement entre primaire et réplique ?",
+      "mockPath": "klecx/workspaces/ws_arch_01",
+      "mockProject1": "Architecture de base de données",
+      "mockProject2": "Feuille de route produit 2027",
+      "mockWorkspace1": "Mutualisation Postgres vs Répliques",
+      "mockWorkspace2": "Invalidation des événements Redis",
+      "mockWorkspace3": "Audit d'indexation Prisma",
+      "mockConfig": "pool_mode = transaction | max_client_conn = 10000 | default_pool_size = 50"
     },
     "features": {
       "badge": "Conçu pour les bâtisseurs",
@@ -844,7 +915,9 @@
         "cap30": "30 crédits",
         "cap25pct": "25% du solde",
         "cap20pct": "20% du solde"
-      }
+      },
+      "priceFormat": "${price}",
+      "creditsCount": "{count} crédits"
     },
     "faq": {
       "badge": "Réponses claires",
@@ -921,6 +994,12 @@
       "supportText": "Une question, une remarque ou un besoin spécifique pour votre entreprise ? Notre équipe vous répond sous 3 jours ouvrés.",
       "emailLabel": "Courriel :",
       "tryFree": "Essayer Klecx gratuitement"
+    },
+    "featureRow": {
+      "shareUrl": "klecx.app/s/share_7x9qL",
+      "formatMd": ".md (Markdown)",
+      "formatPdf": ".pdf (Document)",
+      "formatDocx": ".docx (Word)"
     }
   },
   "Legal": {
@@ -930,71 +1009,72 @@
       "title": "Politique de Confidentialité",
       "subtitle": "Pratiques claires concernant vos données personnelles.",
       "storageHeading": "1. What We Store",
-      "storageBody": "We collect and store account information (email address, display name, profile image if provided), authentication tokens, workspace metadata, prompts, AI responses, version edit histories, and files you upload to Cloudinary.",
-      "processorsHeading": "2. Third-Party Sub-Processors",
-      "processorsBody": "We process your data using dedicated enterprise providers: Google Gemini (generative AI models and inference), Cloudinary (secure asset and image hosting), Resend (transactional email delivery), and Creem (payment processing, subscriptions, and merchant of record). We do not sell your personal data or provide training data to public model pools.",
-      "retentionHeading": "3. Data Retention & Deletion",
-      "retentionBody": "Soft-deleted workspaces and conversations remain recoverable in your trash for 30 days, after which they are permanently purged from database tables and storage buckets. Automated backups are rotated and expired on a 30-day rolling cycle.",
-      "rightsHeading": "4. Your Rights (GDPR & CCPA)",
-      "rightsBody": "You have the right to access, export, rectify, or permanently delete your account and all associated workspace data at any time directly through your Account Settings. If you submit a deletion request, all associated personal records and credentials are erased.",
+      "storageBody": "Nous collectons et conservons les informations relatives à votre compte (adresse e-mail, nom d'affichage, photo de profil le cas échéant), les jetons d'authentification, les métadonnées des espaces de travail, les requêtes, les réponses générées, l'historique des versions et les fichiers téléversés.",
+      "processorsHeading": "2. Sous-traitants tiers",
+      "processorsBody": "Nous traitons vos données par le biais de prestataires professionnels dédiés : modèles d'IA générative et inférence, hébergement sécurisé des médias et fichiers, remise des courriels transactionnels et gestion des abonnements ou paiements. Nous ne vendons pas vos données personnelles et ne les utilisons pas pour entraîner des modèles publics.",
+      "retentionHeading": "3. Conservation et suppression des données",
+      "retentionBody": "Les espaces de travail et échanges supprimés restent récupérables dans votre corbeille pendant 30 jours, après quoi ils sont définitivement purgés des bases de données et du stockage. Les sauvegardes automatiques expirent selon un cycle glissant de 30 jours.",
+      "rightsHeading": "4. Vos droits (RGPD et CCPA)",
+      "rightsBody": "Vous disposez du droit d'accéder à vos données, de les exporter, de les rectifier ou de supprimer définitivement votre compte et l'ensemble de vos espaces de travail à tout moment depuis les Paramètres du compte. En cas de demande de suppression, toutes les informations personnelles et identifiants associés sont effacés.",
       "childrenHeading": "5. Age Restrictions",
-      "childrenBody": "Klecx is designed for professional and educational adult productivity. It is not intended for or directed at children under the age of 18 (or under 16 in applicable European jurisdictions). We do not knowingly collect personal data from minors.",
-      "contactHeading": "6. Contact Our Privacy Team",
-      "contactBody": "For privacy inquiries, data subject access requests, or regulatory questions, contact {privacyEmail} or {supportEmail}."
+      "childrenBody": "Klecx est conçu pour la productivité professionnelle et des adultes. Il n'est pas destiné ni adressé aux personnes de moins de 18 ans (ou 16 ans selon les juridictions européennes applicables). Nous ne collectons pas sciemment de données relatives à des mineurs.",
+      "contactHeading": "6. Contacter notre équipe chargée de la vie privée",
+      "contactBody": "Pour toute question relative à la protection des données ou pour exercer vos droits, contactez {privacyEmail} ou {supportEmail}."
     },
     "terms": {
       "title": "Conditions d'Utilisation",
       "subtitle": "Conditions régissant l'utilisation de Klecx et abonnements.",
       "accountHeading": "1. Account Terms",
-      "accountBody": "You must be 18 years or older to create an account. You are responsible for safeguarding your login credentials and for all activities that occur under your account.",
-      "creditsHeading": "2. Credits, Subscriptions & Refunds",
-      "creditsBody": "Subscriptions provide recurring credit allocations every billing period. Monthly plan credits do not roll over to subsequent months and expire at cycle reset. Paid credit packs remain valid while your account is in good standing. Refunds may be requested within 14 days of billing if technical issues prevented normal usage.",
-      "sharingHeading": "3. Public Links & Workspace Sharing",
-      "sharingBody": "When you generate a public share link (/s/:token), the conversation is accessible to anyone holding the URL. You are solely responsible for ensuring shared conversations do not contain confidential secrets, credentials, or proprietary third-party data.",
-      "ownershipHeading": "4. Intellectual Property & Ownership",
-      "ownershipBody": "As between you and Klecx, you retain ownership of all original text and content you submit. Subject to applicable model terms and copyright law, you own the rights to the outputs generated by AI models in your workspaces.",
-      "disclaimerHeading": "5. AI Output Disclaimer",
-      "disclaimerBody": "Outputs are generated by probabilistic machine learning models. Klecx does not guarantee the factual accuracy, completeness, or reliability of any AI-generated response. You must review and verify critical code, medical, financial, or legal suggestions before relying on them.",
-      "terminationHeading": "6. Termination & Governing Law",
-      "terminationBody": "We reserve the right to suspend or terminate accounts that violate our Acceptable Use Policy. These terms are governed by and construed in accordance with the laws of Delaware, United States, without regard to conflict of law principles."
+      "accountBody": "Vous devez avoir au moins 18 ans pour créer un compte. Vous êtes responsable du maintien de la sécurité de vos identifiants de connexion et de toutes les activités effectuées depuis votre compte.",
+      "creditsHeading": "2. Crédits, abonnements et remboursements",
+      "creditsBody": "Les abonnements fournissent une attribution régulière de crédits pour chaque période de facturation. Les crédits mensuels ne sont pas reportables et expirent à chaque renouvellement de cycle. Les packs de crédits payants restent valables tant que le compte est actif. Un remboursement peut être demandé sous 14 jours si un problème technique a empêché l'utilisation normale du service.",
+      "sharingHeading": "3. Liens publics et partage d'espaces de travail",
+      "sharingBody": "Lorsque vous générez un lien de partage public (/s/:token), la conversation est accessible à toute personne disposant de l'URL. Vous êtes seul responsable de vous assurer que le contenu partagé ne contient aucun secret, identifiant confidentiel ou donnée privée de tiers.",
+      "ownershipHeading": "4. Propriété intellectuelle",
+      "ownershipBody": "Vous conservez l'entière propriété de l'ensemble des textes originaux et contenus que vous soumettez. Conformément aux conditions du modèle et aux lois sur le droit d'auteur, vous détenez les droits relatifs aux résultats produits par les modèles d'IA dans vos espaces de travail.",
+      "disclaimerHeading": "5. Avertissement relatif aux résultats de l'IA",
+      "disclaimerBody": "Les réponses sont produites par des modèles d'apprentissage automatique probabilistes. Klecx ne garantit ni l'exactitude factuelle, ni l'exhaustivité, ni la fiabilité des contenus générés par l'IA. Vous devez vérifier toute suggestion critique sur le plan technique, médical, financier ou juridique avant de vous y fier.",
+      "terminationHeading": "6. Résiliation et droit applicable",
+      "terminationBody": "Nous nous réservons le droit de suspendre ou clôturer tout compte contrevenant à notre Politique d'utilisation acceptable. Les présentes conditions sont régies et interprétées conformément au droit applicable sans égard aux principes de conflit de lois."
     },
     "acceptableUse": {
       "title": "Politique d'Utilisation Acceptable",
       "subtitle": "Normes de sécurité et cas interdits.",
-      "prohibitedHeading": "1. Prohibited Use Cases",
-      "prohibitedIntro": "To maintain platform safety and comply with partner policies, the following activities are strictly prohibited on Klecx:",
+      "prohibitedHeading": "1. Usages strictement interdits",
+      "prohibitedIntro": "Afin de garantir la sécurité de la plateforme et de respecter les réglementations, les activités suivantes sont formellement interdites sur Klecx :",
       "prohibitedItems": [
-        "Explicit sexual, pornographic, or NSFW content generation.",
-        "Romantic AI companionship or synthetic intimacy role-play.",
-        "Harassment, hate speech, defamation, or promoting violence against individuals or groups.",
-        "Malware creation, exploit development, phishing, or cybersecurity attacks.",
-        "Fraud, identity theft, unauthorized impersonation, or deception.",
-        "Face-swapping, deepfakes, or manipulating the likeness of real living people without explicit consent.",
-        "Academic dishonesty, plagiarism, or acting as an 'essay mill' for school submissions.",
-        "Any activity that violates local, state, federal, or international law.",
-        "Circumventing rate limits, credit constraints, or security safeguards."
+        "Génération de contenus sexuels explicites, pornographiques ou inappropriés.",
+        "Jeux de rôle d'intimité synthétique ou de compagnie amoureuse avec une IA.",
+        "Harcèlement, propos haineux, diffamation ou incitation à la violence contre des personnes ou groupes.",
+        "Création de logiciels malveillants, développement d'exploits, hameçonnage ou cyberattaques.",
+        "Fraude, usurpation d'identité, tromperie ou manipulation délibérée.",
+        "Échange de visages, trucages vidéo (deepfakes) ou manipulation de l'image de personnes vivantes sans leur consentement exprès.",
+        "Fraude académique, plagiat ou rédaction de devoirs scolaires et universitaires pour autrui.",
+        "Toute activité contrevenant aux lois locales, nationales ou internationales applicables.",
+        "Contournement des quotas d'utilisation, des limites de crédits ou des dispositifs de sécurité."
       ],
-      "enforcementHeading": "2. Monitoring & Enforcement",
-      "enforcementBody": "We employ automated rate-limiting, keyword filtering, and abuse detection. Violations of this policy will result in immediate content blocking, prompt termination, temporary suspension, or permanent account revocation without refund.",
-      "reportingHeading": "3. How to Report Abuse",
-      "reportingBody": "If you detect abusive content, prompt misuse, or copyright infringement created using Klecx, report it immediately to our dedicated abuse inbox at {abuseEmail}. We investigate all valid reports within 24 hours."
+      "enforcementHeading": "2. Surveillance et sanctions",
+      "enforcementBody": "Nous appliquons des limitations automatisées de débit, des filtres sémantiques et des mécanismes de détection des abus. Tout manquement à ces règles entraînera le blocage immédiat du contenu, l'arrêt de la requête, la suspension temporaire ou la résiliation définitive du compte sans remboursement.",
+      "reportingHeading": "3. Signaler un abus",
+      "reportingBody": "Si vous constatez un contenu abusif, un détournement du service ou une atteinte au droit d'auteur sur Klecx, signalez-le immédiatement à notre adresse dédiée {abuseEmail}. Nous examinons chaque signalement valide sous 24 heures."
     },
     "cookies": {
       "title": "Politique des Cookies",
       "subtitle": "Nous n'utilisons que des cookies strictement essentiels.",
-      "overviewHeading": "1. Essential Cookies Only",
-      "overviewBody": "Klecx does not use third-party advertising cookies, cross-site trackers, or marketing pixels. We only set first-party cookies necessary for authentication, session security, and user preferences.",
+      "overviewHeading": "1. Uniquement des cookies essentiels",
+      "overviewBody": "Klecx n'utilise aucun cookie publicitaire tiers, traceur intersite ou pixel marketing. Nous déposons uniquement des cookies internes strictement nécessaires à l'authentification, à la sécurité des sessions et aux préférences de l'utilisateur.",
       "cookieTableHeading": "2. Cookies We Set",
       "cookieNameHeader": "Cookie Name",
       "cookiePurposeHeader": "Purpose",
       "cookieDurationHeader": "Duration",
-      "cookieAuth": "Authentication session token and csrf validation.",
-      "cookieLocale": "Stores your selected interface language preference.",
-      "cookieTheme": "Remembers light, dark, or system color theme.",
-      "cookieSidebar": "Remembers collapsed or expanded sidebar state.",
+      "cookieAuth": "Jeton de session d'authentification et validation CSRF.",
+      "cookieLocale": "Conserve votre préférence de langue pour l'interface.",
+      "cookieTheme": "Mémorise le thème clair, sombre ou système.",
+      "cookieSidebar": "Mémorise l'état replié ou déployé du panneau latéral.",
       "durationSession": "30 days (rolling)",
       "durationYear": "1 year",
-      "durationState": "Persistent local preference"
+      "durationState": "Préférence locale persistante",
+      "tableType": "Type"
     }
   },
   "Help": {
@@ -1073,7 +1153,9 @@
     "abuseInboxDesc": "Pour les signalements de sécurité ou manquements aux règles :",
     "quickAnswersHeading": "Vous cherchez une réponse rapide ?",
     "quickAnswersDesc": "Consultez nos guides détaillés dans le Centre d'Aide.",
-    "visitHelpCenter": "Accéder au Centre d'Aide"
+    "visitHelpCenter": "Accéder au Centre d'Aide",
+    "website": "Site web",
+    "charCount": "{current} / {max}"
   },
   "Status": {
     "title": "État du Système",
@@ -1088,24 +1170,24 @@
     "lastChecked": "Dernière vérification : En direct",
     "services": {
       "ai": {
-        "name": "AI Inference & Generation Engine",
-        "desc": "Google Gemini 2.5 Flash & Pro model streaming endpoints."
+        "name": "Moteur d'inférence et de génération IA",
+        "desc": "Points d'accès de diffusion continue pour les modèles d'IA générative."
       },
       "auth": {
-        "name": "Authentication & Sessions",
-        "desc": "Better Auth user accounts, verification, and session storage."
+        "name": "Authentification et sessions",
+        "desc": "Comptes utilisateurs, vérification et conservation des sessions."
       },
       "db": {
-        "name": "PostgreSQL Database & Cache",
-        "desc": "Prisma data persistence, workspaces, and Upstash Redis rate limits."
+        "name": "Base de données PostgreSQL et cache",
+        "desc": "Persistance des données, espaces de travail et contrôle de débit en mémoire."
       },
       "storage": {
         "name": "Asset & File Storage",
-        "desc": "Cloudinary CDN media storage and document attachment processing."
+        "desc": "Stockage sécurisé des ressources et traitement des pièces jointes aux documents."
       },
       "email": {
-        "name": "Transactional Email Service",
-        "desc": "Resend email delivery for verifications, password resets, and support."
+        "name": "Service de courriels transactionnels",
+        "desc": "Envoi d'e-mails pour les vérifications, réinitialisations de mot de passe et notifications."
       }
     },
     "incidentHeading": "Incidents Récents",
@@ -1159,6 +1241,25 @@
       "reconnecting": "Reconnexion en cours...",
       "retryButton": "Réessayer la connexion",
       "dismiss": "Ignorer"
+    },
+    "api": {
+      "generic": "Une erreur inattendue est survenue. Veuillez réessayer.",
+      "bad_request": "La requête est invalide ou mal formée.",
+      "unauthorized": "Veuillez vous connecter pour continuer.",
+      "insufficient_credits": "Vous n'avez pas assez de crédits pour effectuer cette action.",
+      "forbidden": "Vous n'avez pas l'autorisation d'effectuer cette action.",
+      "not_found": "La ressource demandée est introuvable.",
+      "conflict": "Un conflit est survenu lors du traitement de votre requête.",
+      "validation_error": "Veuillez vérifier vos données et réessayer.",
+      "unprocessable_entity": "Impossible de traiter cette requête.",
+      "content_blocked": "Cette consigne a été bloquée par les règles de sécurité.",
+      "rate_limited": "Trop de requêtes. Veuillez patienter avant de réessayer.",
+      "daily_cap_reached": "Vous avez atteint votre plafond quotidien de crédits.",
+      "member_limit_reached": "Limite de membres de l'espace de travail atteinte.",
+      "upload_failed": "Échec du téléversement du fichier. Veuillez réessayer.",
+      "file_too_large": "Le fichier est trop volumineux pour votre forfait.",
+      "invalid_file_type": "Le type de fichier sélectionné n'est pas pris en charge.",
+      "transfer_failed": "Échec du transfert de propriété de l'espace de travail."
     }
   },
   "Gates": {
@@ -1750,6 +1851,27 @@
         "credits": "L'espace de travail n'a pas assez de crédits pour répondre à ces questions.",
         "failed": "Les questions n'ont pas pu recevoir de réponse. Réessayez."
       }
+    },
+    "queue": {
+      "buttonLabel": "Questions",
+      "ariaDefault": "File de questions",
+      "ariaCount": "Questions ({count})",
+      "title": "File de questions",
+      "answering": "Réponse en cours...",
+      "loading": "Chargement des questions...",
+      "emptyTitle": "La file est vide",
+      "emptyDesc": "Surlignez du texte dans une réponse et choisissez « Ajouter une question » pour remplir votre file.",
+      "emptyQuestion": "(Question vide)",
+      "cancel": "Annuler",
+      "save": "Enregistrer",
+      "editLabel": "Modifier la question",
+      "removeLabel": "Supprimer la question",
+      "estimatedCredits": "~{count} crédits",
+      "askAll": "Tout demander ({count})",
+      "removedSuccess": "Question retirée de la file",
+      "removeFailed": "Échec de la suppression de la question",
+      "updatedSuccess": "Question mise à jour",
+      "updateFailed": "Échec de la mise à jour de la question"
     }
   },
   "Documents": {
@@ -1917,5 +2039,268 @@
     "editorLabel": "Texte du document (Markdown)",
     "editorPlaceholder": "Rédigez le document en Markdown…",
     "oldRevisionReadOnly": "Ceci est une ancienne révision. Passez à la dernière révision pour la modifier."
+  },
+  "Plans": {
+    "FREE": {
+      "name": "Gratuit",
+      "tagline": "Découvrez l'espace de travail avec les fonctionnalités essentielles.",
+      "features": {
+        "credits": "100 crédits / mois (sans report)",
+        "dailyCap": "Plafond quotidien de 30 crédits",
+        "concurrency": "1 génération concurrente",
+        "models": "Accès au modèle économique",
+        "attachments": "3 pièces jointes par espace (5 Mo max)",
+        "exports": "Exportation de documents en Markdown",
+        "sharing": "Partage en lecture seule d'espaces et réponses"
+      }
+    },
+    "LITE": {
+      "name": "Lite",
+      "tagline": "Pour les créateurs et chercheurs travaillant au quotidien.",
+      "features": {
+        "credits": "800 crédits / mois (sans report)",
+        "dailyCap": "Plafond quotidien : 25% du solde mensuel",
+        "concurrency": "2 générations concurrentes",
+        "models": "Modèles de texte économique et standard",
+        "images": "Génération d'images par IA native",
+        "search": "Prise en charge de la recherche web",
+        "attachments": "10 pièces jointes par espace (15 Mo max)",
+        "collaborators": "Jusqu'à 2 collaborateurs par espace",
+        "exports": "Exportations Markdown, PDF et Word"
+      }
+    },
+    "STANDARD": {
+      "name": "Standard",
+      "badge": "Le plus populaire",
+      "tagline": "Notre forfait recommandé pour les utilisateurs intensifs et équipes.",
+      "features": {
+        "credits": "1 800 crédits / mois (sans report)",
+        "dailyCap": "Plafond quotidien : 25% du solde mensuel",
+        "concurrency": "3 générations concurrentes",
+        "models": "Modèles de texte économique et standard",
+        "images": "Génération d'images par IA native",
+        "search": "Prise en charge de la recherche web",
+        "attachments": "25 pièces jointes par espace (25 Mo max)",
+        "collaborators": "Jusqu'à 5 collaborateurs par espace",
+        "exports": "Suite d'exportation complète (MD, PDF, DOCX)",
+        "support": "Support client prioritaire"
+      }
+    },
+    "PRO": {
+      "name": "Pro",
+      "tagline": "Débit maximal, plafonds les plus élevés et collaboration d'équipe.",
+      "features": {
+        "credits": "3 500 crédits / mois (sans report)",
+        "dailyCap": "Plafond quotidien : 20% du solde mensuel",
+        "concurrency": "5 générations concurrentes",
+        "models": "Tous les modèles y compris les futurs niveaux avancés",
+        "images": "Génération d'images par IA native",
+        "search": "Prise en charge de la recherche web",
+        "attachments": "50 pièces jointes par espace (50 Mo max)",
+        "collaborators": "Jusqu'à 15 collaborateurs par espace",
+        "exports": "Suite d'exportation complète (MD, PDF, DOCX)",
+        "audit": "Historique d'activité et gestion des rôles"
+      }
+    }
+  },
+  "Workspace": {
+    "defaultTitle": "Nouvel espace de travail",
+    "composerAria": "Compositeur",
+    "attachmentLimitReached": "Limite de pièces jointes de l'espace atteinte pour ce forfait.",
+    "startNew": "Démarrer un nouvel espace",
+    "connectionError": "Veuillez vérifier votre connexion et actualiser les données de votre espace."
+  },
+  "Share": {
+    "title": "Partager \"{title}\"",
+    "description": "Gérez les collaborateurs, les liens publics et l'activité de {resource}",
+    "resource": {
+      "workspace": "l'espace de travail",
+      "project": "le projet"
+    },
+    "copyLink": "Copier le lien",
+    "copied": "Copié",
+    "linkCopied": "Lien copié dans le presse-papier",
+    "tabs": {
+      "people": "Personnes ({count})",
+      "invitations": "Invitations",
+      "publicLink": "Lien public",
+      "activity": "Activité"
+    },
+    "invite": {
+      "label": "Inviter des personnes par e-mail ou @identifiant",
+      "placeholder": "collegue@exemple.com ou @identifiant",
+      "selectRole": "Sélectionner un rôle",
+      "button": "Inviter",
+      "disclaimer": "Envoie un lien d'invitation à usage unique valable 7 jours. Compte dans la limite de membres du forfait du propriétaire.",
+      "pendingHeading": "Invitations en attente",
+      "pendingCount": "{count} en attente",
+      "noPending": "Aucune invitation en attente.",
+      "expires": "Expire le {date}",
+      "resend": "Renvoyer",
+      "revoke": "Révoquer",
+      "revoked": "Invitation révoquée",
+      "resent": "Invitation renvoyée"
+    },
+    "members": {
+      "heading": "Membres ({count})",
+      "you": "Vous",
+      "owner": "Propriétaire",
+      "unlimited": "Illimité",
+      "unlimitedAria": "Plafond mensuel de crédits (laisser vide pour illimité)",
+      "save": "Enregistrer",
+      "cancel": "Annuler",
+      "capTooltip": "Plafond mensuel de crédits : couvre tout ce que cette personne dépense sur les crédits du propriétaire sur tous ses espaces de travail",
+      "capOption": "Plafond : {credits} cr/mois",
+      "customCap": "Plafond personnalisé...",
+      "inheritedCapTitle": "Le plafond de crédits est défini sur les membres du projet",
+      "monthlyCapTitle": "Plafond mensuel de crédits",
+      "leave": "Quitter {resource}",
+      "remove": "Retirer le membre"
+    },
+    "public": {
+      "heading": "Créer un lien de partage public",
+      "scopeLabel": "Portée du partage",
+      "entireWorkspace": "Tout l'espace de travail",
+      "thisResponseOnly": "Cette réponse uniquement",
+      "versionLabel": "Version à afficher",
+      "editedIfAvailable": "Modifiée si disponible",
+      "originalAiOutput": "Sortie originale de l'IA",
+      "expirationLabel": "Expiration",
+      "noExpiration": "Pas d'expiration",
+      "days7": "7 jours",
+      "days30": "30 jours",
+      "sharingSingleResponse": "Partage d'une seule réponse :",
+      "showAuthor": "Afficher mon nom sur la page publique",
+      "warning": "Toute personne disposant de ce lien peut lire cet {scope, select, RESPONSE {réponse} other {espace de travail}}. Aucun compte n'est requis. Les annotations, commentaires, questions, collaborateurs et l'historique des modifications ne sont jamais inclus. Pour les documents téléversés, seul le texte est partagé — le fichier d'origine n'est pas téléchargeable depuis les liens publics.",
+      "createButton": "Créer un lien public",
+      "createdHeading": "Votre lien de partage public (affiché une seule fois)",
+      "readyToShare": "Prêt à être partagé",
+      "copy": "Copier",
+      "activeHeading": "Liens de partage public",
+      "activeCount": "{count} actifs",
+      "noLinks": "Aucun lien public créé pour le moment.",
+      "singleResponseBadge": "Réponse unique",
+      "workspaceBadge": "Espace de travail",
+      "originalBadge": "Original",
+      "editedBadge": "Modifié",
+      "viewsCount": "{count, plural, one {# vue} other {# vues}}",
+      "expiresOn": "Expire le {date}",
+      "neverExpires": "N'expire jamais",
+      "authorShown": "Auteur affiché"
+    },
+    "activity": {
+      "empty": "Aucune activité enregistrée pour l'instant.",
+      "collaborator": "Collaborateur",
+      "user": "Utilisateur"
+    }
+  },
+  "Invite": {
+    "checking": "Vérification de l'invitation...",
+    "signInRequiredTitle": "Connectez-vous pour voir cette invitation",
+    "signInButton": "Se connecter",
+    "unavailableTitle": "Invitation indisponible",
+    "unavailableDefault": "Cette invitation est invalide ou a expiré.",
+    "loadError": "Échec du chargement de l'invitation. Veuillez réessayer.",
+    "acceptError": "Échec de l'acceptation de l'invitation",
+    "acceptedSuccess": "Invitation acceptée !",
+    "goToDashboard": "Aller au tableau de bord",
+    "heading": "Vous avez été invité",
+    "invitedTo": "{inviter} vous a invité à rejoindre le {resourceType} « {resourceTitle} » en tant que {role}.",
+    "roleLabel": "Rôle",
+    "sentTo": "Envoyé à",
+    "expires": "Expire le",
+    "signInPrompt": "Veuillez vous connecter avec l'adresse e-mail invitée pour accepter.",
+    "signInToAccept": "Se connecter pour accepter",
+    "createAccount": "Créer un compte",
+    "accountMismatchTitle": "Discordance de compte",
+    "accountMismatchDesc": "Vous êtes actuellement connecté en tant que {currentEmail}, mais cette invitation a été envoyée à {invitedEmail}.",
+    "switchAccountPrompt": "Veuillez vous connecter avec le compte invité pour accepter cette invitation.",
+    "switchAccount": "Changer de compte",
+    "joining": "Connexion à {title}...",
+    "acceptAndJoin": "Accepter et rejoindre {resourceType}",
+    "resourceWorkspace": "Espace",
+    "resourceProject": "Projet",
+    "roleMember": "membre",
+    "defaultInviter": "Un collaborateur"
+  },
+  "User": {
+    "defaultName": "Utilisateur",
+    "claim": {
+      "bannerTitle": "Choisissez votre nom d'utilisateur",
+      "bannerText": "vous ne pouvez le modifier qu'une seule fois.",
+      "bannerButton": "Revendiquer le nom d'utilisateur",
+      "dismissAria": "Ignorer la bannière",
+      "titleChoose": "Choisissez votre nom d'utilisateur",
+      "titleConfirm": "Confirmez votre nom d'utilisateur",
+      "descChoose": "Chaque compte a un nom d'utilisateur unique. Vous pouvez personnaliser le vôtre une seule fois.",
+      "descConfirm": "Cela ne pourra plus être modifié. Veuillez confirmer votre choix.",
+      "usernameLabel": "Nom d'utilisateur",
+      "placeholder": "votrenom",
+      "takenError": "Ce nom d'utilisateur est déjà pris ou indisponible.",
+      "available": "Le nom d'utilisateur est disponible !",
+      "preview": "Aperçu :",
+      "rules": "Règles : 3 à 30 caractères, lettres minuscules, chiffres et traits de soulignement. Doit commencer par une lettre.",
+      "noticeTitle": "Avis important :",
+      "noticeDesc": "Une fois défini, votre nom d'utilisateur ne pourra plus être modifié via l'application. Vous réclamez :",
+      "later": "Plus tard",
+      "continue": "Continuer",
+      "back": "Retour",
+      "confirmAndClaim": "Confirmer et réclamer",
+      "alreadyChanged": "Le nom d'utilisateur ne peut être modifié qu'une seule fois. Vous l'avez déjà revendiqué.",
+      "claimedByOther": "Ce nom d'utilisateur vient d'être pris par quelqu'un d'autre.",
+      "failed": "Échec de la revendication du nom d'utilisateur. Veuillez réessayer.",
+      "networkError": "Erreur réseau. Veuillez réessayer."
+    },
+    "avatar": {
+      "cropTitle": "Recadrer la photo de profil",
+      "cropDesc": "Faites glisser pour repositionner et utilisez le curseur pour zoomer. Votre photo sera recadrée en carré.",
+      "zoomAria": "Zoom",
+      "cancel": "Annuler",
+      "saveAndUpload": "Enregistrer et téléverser",
+      "changePicture": "Changer la photo",
+      "remove": "Supprimer",
+      "allowedFormats": "Autorisé : PNG, JPEG ou WebP. Max 2 Mo. Recadrage carré (512×512)."
+    }
+  },
+  "PublicShare": {
+    "tooManyRequestsTitle": "Trop de requêtes",
+    "tooManyRequestsDesc": "Veuillez patienter un instant et actualiser cette page pour afficher le lien partagé.",
+    "workspaceScope": "Espace partagé",
+    "responseScope": "Réponse partagée",
+    "createWorkspaceCta": "Créez votre propre espace",
+    "sharedBy": "Partagé par {name}",
+    "sharedOn": "Partagé le {date}",
+    "emptyResponses": "Aucune réponse dans cette vue partagée pour le moment.",
+    "download": "Télécharger",
+    "sources": "Sources ({count})",
+    "footerNote": "Partagé via {brand} — Espace de travail IA pour la réflexion approfondie et la collaboration."
+  },
+  "Code": {
+    "enableWrap": "Activer le retour à la ligne",
+    "disableWrap": "Désactiver le retour à la ligne",
+    "wrap": "Ajuster",
+    "unwrap": "Ne pas ajuster",
+    "copy": "Copier",
+    "copyCode": "Copier le code",
+    "copied": "Copié"
+  },
+  "GlobalError": {
+    "title": "Erreur critique du système",
+    "description": "Une erreur inattendue a interrompu l'application. Vos données sont en sécurité.",
+    "errorRef": "Référence d'erreur : ",
+    "tryAgain": "Réessayer",
+    "contactSupport": "Contacter le support"
+  },
+  "NotFound": {
+    "logoAlt": "Logo",
+    "title": "Désolé ! Cette page est introuvable",
+    "description": "Elle a été supprimée ou n'existe pas",
+    "backHome": "Retour à l'accueil"
+  },
+  "PromptAttachment": {
+    "loading": "Chargement de l'aperçu...",
+    "cannotRender": "Ce format de fichier ne peut pas être prévisualisé directement.",
+    "downloadOrOpen": "Télécharger / Ouvrir le fichier",
+    "openInNewTab": "Ouvrir dans un nouvel onglet"
   }
 }

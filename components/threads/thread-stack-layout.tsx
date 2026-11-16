@@ -46,6 +46,10 @@ const SINGLE_COLUMN_QUERY = "(max-width: 1023px)";
 const spineClass =
   "w-[44px] h-full flex flex-col items-center py-4 bg-surface/80 border-r border-border hover:bg-surface text-muted hover:text-foreground transition-colors shrink-0 group focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent";
 
+function formatPlusCount(count?: number) {
+  return `+${count ?? 0}`;
+}
+
 function truncateQuote(quote: string | undefined, max = 60): string {
   const text = (quote ?? "").trim();
   return text.length > max ? `${text.slice(0, max - 1)}…` : text;
@@ -380,7 +384,7 @@ export function ThreadStackLayout({
                 >
                   <MoreHorizontal className="w-4 h-4 mb-3 text-accent" />
                   <span className="text-[11px] font-bold text-foreground">
-                    +{col.groupedCount}
+                    {formatPlusCount(col.groupedCount)}
                   </span>
                 </button>
               </DropdownMenuTrigger>

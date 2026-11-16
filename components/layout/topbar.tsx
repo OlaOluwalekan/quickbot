@@ -60,6 +60,7 @@ export function Topbar({
   const t = useTranslations("AppShell");
   const tChat = useTranslations("Chat");
   const tThreads = useTranslations("Threads");
+  const tCommon = useTranslations("Common");
   const pathname = usePathname();
   const mobileNavIsOpen = useUiStore((s) => s.mobileNavIsOpen);
   const toggleMobileNavOpen = useUiStore((s) => s.toggleMobileNavOpen);
@@ -166,7 +167,7 @@ export function Topbar({
         </Button>
 
         <nav
-          aria-label="Breadcrumb"
+          aria-label={tCommon("breadcrumb")}
           className="flex min-w-0 flex-1 items-center gap-1.5 text-sm"
         >
           {projectPageName !== null ? (
