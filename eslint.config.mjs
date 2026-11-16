@@ -34,6 +34,25 @@ const eslintConfig = [
       i18next: i18nextPlugin,
     },
     rules: {
+      // The JSX-only rule above can't see strings passed to toasts.
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector:
+            "CallExpression[callee.object.name='toast'] > Literal.arguments:first-child[value=/[A-Za-z]/]",
+          message: "Toast text must come from next-intl (messages/*.json).",
+        },
+        {
+          selector:
+            "CallExpression[callee.name='toast'] > Literal.arguments:first-child[value=/[A-Za-z]/]",
+          message: "Toast text must come from next-intl (messages/*.json).",
+        },
+        {
+          selector:
+            "CallExpression[callee.object.name='toast'] > TemplateLiteral.arguments:first-child",
+          message: "Toast text must come from next-intl (messages/*.json).",
+        },
+      ],
       "i18next/no-literal-string": [
         "error",
         {
@@ -74,6 +93,8 @@ const eslintConfig = [
               "cr",
               "cr/mo",
               "∞",
+              "\\[",
+              "\\*",
               "TRANSFER",
               "ADMIN",
               "EDITOR",

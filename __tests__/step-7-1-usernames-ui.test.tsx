@@ -7,6 +7,8 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { ClaimUsernameBanner } from "@/components/user/claim-username-banner";
 import { ClaimUsernameDialog } from "@/components/user/claim-username-dialog";
 
+jest.mock("next-intl", () => jest.requireActual("../test-utils/next-intl").nextIntlMock);
+
 // Mock fetch globally
 const originalFetch = global.fetch;
 

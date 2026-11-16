@@ -142,7 +142,11 @@
     "resendCooldown": "Renvoi disponible dans {seconds}s",
     "resendSent": "Email de confirmation envoyé !",
     "emailAddress": "Adresse e-mail",
-    "noEmailProvided": "Aucun e-mail de compte fourni. Redirection..."
+    "noEmailProvided": "Aucun e-mail de compte fourni. Redirection...",
+    "resetFailed": "Impossible de réinitialiser votre mot de passe. Le lien a peut-être expiré.",
+    "unexpectedError": "Une erreur inattendue s'est produite. Veuillez réessayer.",
+    "registerFailed": "L'inscription a échoué. Veuillez réessayer.",
+    "registerSuccess": "Inscription réussie ! Consultez votre boîte de réception pour vérifier votre e-mail."
   },
   "Chat": {
     "newChat": "Nouvel espace de travail",
@@ -204,7 +208,8 @@
     "dropFilesHere": "Déposez les fichiers à joindre",
     "webSearchOff": "La recherche web est désactivée",
     "changeInSettings": "Modifier dans les paramètres",
-    "capGenerate": "générer des réponses"
+    "capGenerate": "générer des réponses",
+    "imageWithAttachments": "La génération d'images ne peut pas être combinée avec des fichiers ou des images joints."
   },
   "Settings": {
     "ai": {
@@ -458,6 +463,7 @@
     "expandSidebar": "Développer la barre latérale",
     "pinSidebar": "Garder la barre latérale ouverte",
     "openNavigation": "Ouvrir le menu de navigation",
+    "sidebarNavigation": "Navigation de la barre latérale",
     "closeNavigation": "Fermer le menu de navigation",
     "rename": "Renommer",
     "moveToProject": "Déplacer vers un projet",
@@ -487,7 +493,8 @@
     "toggleTheme": "Changer de thème",
     "openSettings": "Ouvrir les paramètres",
     "expandProject": "Afficher les espaces de travail de {name}",
-    "collapseProject": "Masquer les espaces de travail de {name}"
+    "collapseProject": "Masquer les espaces de travail de {name}",
+    "usernameClaimed": "Nom d'utilisateur réservé : @{username}"
   },
   "Home": {
     "greetingMorning": "Bonjour, {name}",
@@ -604,11 +611,11 @@
   "Response": {
     "version": "Version {current} sur {total}",
     "versionAria": "Version {current} sur {total}",
-    "previousVersion": "Previous version",
-    "nextVersion": "Next version",
+    "previousVersion": "Version précédente",
+    "nextVersion": "Version suivante",
     "edited": "Modifié",
-    "viewingEdited": "Viewing edited",
-    "viewOriginal": "View original",
+    "viewingEdited": "Version modifiée affichée",
+    "viewOriginal": "Voir l'original",
     "copy": "Copier",
     "copied": "Copié",
     "copyFailed": "Impossible de copier dans le presse-papiers",
@@ -617,38 +624,38 @@
     "saveEdit": "Enregistrer la modification",
     "cancel": "Annuler",
     "editHelper": "Votre modification est enregistrée séparément ; l'original généré par l'IA est conservé.",
-    "readAloud": "Read aloud",
-    "share": "Share",
-    "export": "Export",
-    "moreOptions": "More options",
+    "readAloud": "Lire à voix haute",
+    "share": "Partager",
+    "export": "Exporter",
+    "moreOptions": "Plus d'options",
     "copyLink": "Copier le lien vers la réponse",
-    "delete": "Delete response",
+    "delete": "Supprimer la réponse",
     "deleteConfirm": "Êtes-vous sûr de vouloir supprimer cette réponse ?",
     "thinking": "Réflexion…",
     "thoughtFor": "Réflexion pendant {seconds}s",
-    "thoughtProcess": "Thought process",
-    "showThinking": "Show thinking",
-    "hideThinking": "Hide thinking",
-    "preparing": "Preparing…",
-    "writing": "Writing…",
-    "saving": "Saving…",
+    "thoughtProcess": "Raisonnement",
+    "showThinking": "Afficher le raisonnement",
+    "hideThinking": "Masquer le raisonnement",
+    "preparing": "Préparation…",
+    "writing": "Rédaction…",
+    "saving": "Enregistrement…",
     "searching": "Recherche sur le web…",
     "searchedWeb": "Recherche web : « {query} »",
     "searchLimitReached": "Limite quotidienne de recherches web atteinte",
-    "tryAgain": "Try again",
-    "jumpToLatest": "Jump to latest",
+    "tryAgain": "Réessayer",
+    "jumpToLatest": "Aller au plus récent",
     "offline": "Vous êtes actuellement hors ligne. Vérifiez votre connexion réseau.",
     "contextTruncated": "Le contexte de la conversation a été tronqué pour respecter les limites de tokens du modèle.",
     "outOfCredits": "Crédits insuffisants pour générer cette réponse.",
-    "upgradePlan": "Upgrade plan",
-    "expandPrompt": "Show more",
-    "collapsePrompt": "Show less",
-    "preview": "Preview",
-    "editor": "Editor",
-    "revertToOriginal": "Revert to original",
+    "upgradePlan": "Changer de forfait",
+    "expandPrompt": "Afficher plus",
+    "collapsePrompt": "Afficher moins",
+    "preview": "Aperçu",
+    "editor": "Éditeur",
+    "revertToOriginal": "Revenir à l'original",
     "modelStandard": "Standard",
-    "modelEconomy": "Fast & Efficient",
-    "modelPro": "Deep Reasoning",
+    "modelEconomy": "Rapide et efficace",
+    "modelPro": "Raisonnement approfondi",
     "readAloudSoon": "La lecture à voix haute sera bientôt disponible.",
     "shareNoPermission": "Seuls les propriétaires et administrateurs de l'espace de travail peuvent créer des liens publics",
     "exportSoon": "L'exportation sera bientôt disponible.",
@@ -819,60 +826,6 @@
       "groundingTitle": "Recherche web connectée",
       "groundingDesc": "+3 crédits par requête enrichie par recherche web",
       "footnoteDisclaimer": "* Les crédits mensuels ne sont pas reportables afin de garantir des coûts unitaires transparents. Annulation directe dans vos paramètres à tout moment.",
-      "plans": {
-        "FREE": {
-          "name": "Free",
-          "tagline": "Découvrez le modèle des espaces de travail avec les fonctionnalités essentielles.",
-          "f1": "100 crédits / mois (non reportables)",
-          "f2": "Plafond quotidien de 30 crédits",
-          "f3": "1 échange de génération simultané",
-          "f4": "Accès au modèle Economy",
-          "f5": "3 pièces jointes par espace (5 Mo max)",
-          "f6": "Export au format Markdown",
-          "f7": "Partage en lecture seule d'espaces et réponses"
-        },
-        "LITE": {
-          "name": "Lite",
-          "tagline": "Pour les indépendants et chercheurs travaillant au quotidien.",
-          "f1": "800 crédits / mois (non reportables)",
-          "f2": "Plafond quotidien : 25% du solde mensuel",
-          "f3": "2 échanges de génération simultanés",
-          "f4": "Modèles de texte Economy et Standard",
-          "f5": "Génération native d'images IA",
-          "f6": "Recherche web connectée",
-          "f7": "10 pièces jointes par espace (15 Mo max)",
-          "f8": "Jusqu'à 2 collaborateurs par espace",
-          "f9": "Exports Markdown, PDF et Word"
-        },
-        "STANDARD": {
-          "name": "Standard",
-          "tagline": "Notre forfait recommandé pour les utilisateurs intensifs et équipes.",
-          "f1": "1 800 crédits / mois (non reportables)",
-          "f2": "Plafond quotidien : 25% du solde mensuel",
-          "f3": "3 échanges de génération simultanés",
-          "f4": "Modèles de texte Economy et Standard",
-          "f5": "Génération native d'images IA",
-          "f6": "Recherche web connectée",
-          "f7": "25 pièces jointes par espace (25 Mo max)",
-          "f8": "Jusqu'à 5 collaborateurs par espace",
-          "f9": "Suite complète d'exportation (MD, PDF, DOCX)",
-          "f10": "Support client prioritaire"
-        },
-        "PRO": {
-          "name": "Pro",
-          "tagline": "Capacité maximale, plafonds élevés et collaboration d'équipe.",
-          "f1": "3 500 crédits / mois (non reportables)",
-          "f2": "Plafond quotidien : 20% du solde mensuel",
-          "f3": "5 échanges de génération simultanés",
-          "f4": "Tous les modèles, y compris les futurs modèles avancés",
-          "f5": "Génération native d'images IA",
-          "f6": "Recherche web connectée",
-          "f7": "50 pièces jointes par espace (50 Mo max)",
-          "f8": "Jusqu'à 15 collaborateurs par espace",
-          "f9": "Suite complète d'exportation (MD, PDF, DOCX)",
-          "f10": "Journal d'audit et gestion des rôles"
-        }
-      },
       "comparison": {
         "title": "Comparatif détaillé des forfaits",
         "subtitle": "Toutes les capacités incluses en un coup d'œil.",
@@ -1155,7 +1108,8 @@
     "quickAnswersDesc": "Consultez nos guides détaillés dans le Centre d'Aide.",
     "visitHelpCenter": "Accéder au Centre d'Aide",
     "website": "Site web",
-    "charCount": "{current} / {max}"
+    "charCount": "{current} / {max}",
+    "submitFailed": "Impossible d'envoyer votre demande d'assistance. Veuillez réessayer."
   },
   "Status": {
     "title": "État du Système",
@@ -2192,6 +2146,31 @@
       "empty": "Aucune activité enregistrée pour l'instant.",
       "collaborator": "Collaborateur",
       "user": "Utilisateur"
+    },
+    "toasts": {
+      "activityLoadFailed": "Impossible de charger le journal d'activité",
+      "inviteSent": "Invitation envoyée",
+      "inviteFailed": "Impossible d'envoyer l'invitation",
+      "revokeInviteFailed": "Impossible de révoquer l'invitation",
+      "resendInviteFailed": "Impossible de renvoyer l'invitation",
+      "selectResponse": "Sélectionnez une réponse à partager",
+      "linkCreatedCopied": "Lien public créé et copié dans le presse-papier",
+      "linkCreated": "Lien public créé",
+      "createLinkFailed": "Impossible de créer le lien de partage",
+      "linkRevoked": "Lien de partage révoqué immédiatement",
+      "revokeLinkFailed": "Impossible de révoquer le lien de partage",
+      "copyFailed": "Impossible de copier le lien",
+      "capUpdateFailed": "Impossible de mettre à jour le plafond de crédits",
+      "capUnlimited": "Plafond de crédits du collaborateur : illimité",
+      "capSet": "Plafond de crédits du collaborateur : {count} crédits/mois",
+      "capInvalid": "Saisissez un nombre entier supérieur ou égal à 0",
+      "roleUpdated": "Rôle du membre mis à jour",
+      "roleUpdateFailed": "Impossible de mettre à jour le rôle du membre",
+      "confirmLeave": "Voulez-vous vraiment quitter {resource} ?",
+      "confirmRemove": "Voulez-vous vraiment retirer ce membre ?",
+      "left": "Vous avez quitté {resource}",
+      "memberRemoved": "Membre retiré",
+      "removeFailed": "Impossible de retirer le membre"
     }
   },
   "Invite": {
@@ -2259,7 +2238,13 @@
       "saveAndUpload": "Enregistrer et téléverser",
       "changePicture": "Changer la photo",
       "remove": "Supprimer",
-      "allowedFormats": "Autorisé : PNG, JPEG ou WebP. Max 2 Mo. Recadrage carré (512×512)."
+      "allowedFormats": "Autorisé : PNG, JPEG ou WebP. Max 2 Mo. Recadrage carré (512×512).",
+      "invalidType": "L'image doit être au format PNG, JPEG ou WebP",
+      "tooLarge": "L'image doit faire 2 Mo au maximum",
+      "updated": "Photo de profil mise à jour",
+      "updateFailed": "Impossible de mettre à jour votre photo de profil",
+      "reverted": "Photo de votre fournisseur de connexion rétablie",
+      "removeFailed": "Impossible de supprimer votre photo"
     }
   },
   "PublicShare": {
@@ -2283,13 +2268,6 @@
     "copy": "Copier",
     "copyCode": "Copier le code",
     "copied": "Copié"
-  },
-  "GlobalError": {
-    "title": "Erreur critique du système",
-    "description": "Une erreur inattendue a interrompu l'application. Vos données sont en sécurité.",
-    "errorRef": "Référence d'erreur : ",
-    "tryAgain": "Réessayer",
-    "contactSupport": "Contacter le support"
   },
   "NotFound": {
     "logoAlt": "Logo",

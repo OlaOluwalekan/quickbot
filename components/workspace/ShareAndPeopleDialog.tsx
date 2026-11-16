@@ -52,6 +52,11 @@ import {
 } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
+import {
+  getApiErrorMessage,
+  LocalizedError,
+  readApiError,
+} from "@/lib/api/error-message";
 import { cn } from "@/lib/utils";
 
 const ROLE_RANK: Record<string, number> = {
@@ -247,6 +252,7 @@ export function ShareAndPeopleDialog({
   const tTransfer = useTranslations("Transfer");
   const tLimits = useTranslations("MemberLimits");
   const tShare = useTranslations("Share");
+  const tRoot = useTranslations();
   const roleLabel = (role: string) =>
     role in ROLE_RANK
       ? tMembers(`roles.${role as "VIEWER" | "COMMENTER" | "EDITOR" | "ADMIN"}`)
@@ -431,7 +437,7 @@ export function ShareAndPeopleDialog({
         setActivities(Array.isArray(data?.items) ? data.items : []);
       }
     } catch {
-      toast.error("Failed to load activity log");
+      toast.error(tShare("toasts.activityLoadFailed"));
     } finally {
       setLoadingActivity(false);
     }
@@ -460,17 +466,15 @@ export function ShareAndPeopleDialog({
       });
       const json = await res.json();
       if (!res.ok) {
-        throw new Error(json?.error?.message || "Failed to send invitation");
+        throw json?.error ?? {};
       }
-      toast.success("Invitation sent");
+      toast.success(tShare("toasts.inviteSent"));
       setEmailOrUsername("");
       fetchInvites();
       fetchMembers();
       fetchActivity();
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : "Failed to send invitation";
-      toast.error(msg);
+      toast.error(getApiErrorMessage(err, tRoot, tShare("toasts.inviteFailed")));
     } finally {
       setSendingInvite(false);
     }
@@ -482,17 +486,14 @@ export function ShareAndPeopleDialog({
         method: "DELETE",
       });
       if (!res.ok) {
-        const json = await res.json();
-        throw new Error(json?.error?.message || "Failed to revoke invitation");
+        throw await readApiError(res);
       }
-      toast.success("Invitation revoked");
+      toast.success(tShare("invite.revoked"));
       setPendingInvites((prev) => prev.filter((i) => i.id !== inviteId));
       fetchMembers();
       fetchActivity();
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : "Failed to revoke invitation";
-      toast.error(msg);
+      toast.error(getApiErrorMessage(err, tRoot, tShare("toasts.revokeInviteFailed")));
     }
   };
 
@@ -502,16 +503,13 @@ export function ShareAndPeopleDialog({
         method: "POST",
       });
       if (!res.ok) {
-        const json = await res.json();
-        throw new Error(json?.error?.message || "Failed to resend invitation");
+        throw await readApiError(res);
       }
-      toast.success("Invitation resent");
+      toast.success(tShare("invite.resent"));
       fetchInvites();
       fetchActivity();
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : "Failed to resend invitation";
-      toast.error(msg);
+      toast.error(getApiErrorMessage(err, tRoot, tShare("toasts.resendInviteFailed")));
     }
   };
 
@@ -519,7 +517,7 @@ export function ShareAndPeopleDialog({
     e.preventDefault();
     if (isProject || !workspaceId || creatingShare) return;
     if (shareScope === "RESPONSE" && !shareResponseId) {
-      toast.error("Please select a response to share");
+      toast.error(tShare("toasts.selectResponse"));
       return;
     }
 
@@ -542,7 +540,7 @@ export function ShareAndPeopleDialog({
       });
       const json = await res.json();
       if (!res.ok) {
-        throw new Error(json?.error?.message || "Failed to create share link");
+        throw json?.error ?? {};
       }
       const data = json?.data ?? json;
       const url = data?.url as string | undefined;
@@ -552,17 +550,15 @@ export function ShareAndPeopleDialog({
           await navigator.clipboard.writeText(url);
           setCopiedShareUrl(true);
           setTimeout(() => setCopiedShareUrl(false), 2500);
-          toast.success("Public link created and copied to clipboard");
+          toast.success(tShare("toasts.linkCreatedCopied"));
         } catch {
-          toast.success("Public link created");
+          toast.success(tShare("toasts.linkCreated"));
         }
       }
       fetchShares();
       fetchActivity();
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : "Failed to create share link";
-      toast.error(msg);
+      toast.error(getApiErrorMessage(err, tRoot, tShare("toasts.createLinkFailed")));
     } finally {
       setCreatingShare(false);
     }
@@ -574,16 +570,13 @@ export function ShareAndPeopleDialog({
         method: "DELETE",
       });
       if (!res.ok) {
-        const json = await res.json();
-        throw new Error(json?.error?.message || "Failed to revoke share link");
+        throw await readApiError(res);
       }
-      toast.success("Share link revoked immediately");
+      toast.success(tShare("toasts.linkRevoked"));
       fetchShares();
       fetchActivity();
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : "Failed to revoke share link";
-      toast.error(msg);
+      toast.error(getApiErrorMessage(err, tRoot, tShare("toasts.revokeLinkFailed")));
     }
   };
 
@@ -592,10 +585,10 @@ export function ShareAndPeopleDialog({
     try {
       await navigator.clipboard.writeText(createdShareUrl);
       setCopiedShareUrl(true);
-      toast.success("Public link copied to clipboard");
+      toast.success(tShare("linkCopied"));
       setTimeout(() => setCopiedShareUrl(false), 2000);
     } catch {
-      toast.error("Failed to copy link");
+      toast.error(tShare("toasts.copyFailed"));
     }
   };
 
@@ -610,20 +603,17 @@ export function ShareAndPeopleDialog({
         body: JSON.stringify({ monthlyCreditCap }),
       });
       if (!res.ok) {
-        const json = await res.json();
-        throw new Error(json?.error?.message || "Failed to update credit cap");
+        throw await readApiError(res);
       }
       toast.success(
         monthlyCreditCap === null
-          ? "Collaborator credit cap set to unlimited"
-          : `Collaborator credit cap set to ${monthlyCreditCap} credits/month`
+          ? tShare("toasts.capUnlimited")
+          : tShare("toasts.capSet", { count: monthlyCreditCap })
       );
       fetchMembers();
       fetchActivity();
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : "Failed to update credit cap";
-      toast.error(msg);
+      toast.error(getApiErrorMessage(err, tRoot, tShare("toasts.capUpdateFailed")));
     }
   };
 
@@ -646,7 +636,7 @@ export function ShareAndPeopleDialog({
     if (trimmed) {
       const parsed = Number(trimmed);
       if (!Number.isInteger(parsed) || parsed < 0) {
-        toast.error("Please enter a whole number of 0 or more");
+        toast.error(tShare("toasts.capInvalid"));
         return;
       }
       cap = parsed;
@@ -667,14 +657,12 @@ export function ShareAndPeopleDialog({
         body: JSON.stringify({ [capability]: value }),
       });
       if (!res.ok) {
-        const json = await res.json();
-        throw new Error(json?.error?.message || tMembers("capabilities.updateFailed"));
+        throw await readApiError(res);
       }
       toast.success(tMembers("capabilities.updated"));
       fetchMembers();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : tMembers("capabilities.updateFailed");
-      toast.error(msg);
+      toast.error(getApiErrorMessage(err, tRoot, tMembers("capabilities.updateFailed")));
     }
   };
 
@@ -688,23 +676,22 @@ export function ShareAndPeopleDialog({
       if (!res.ok) {
         const json = await res.json();
         if (json?.error?.code === "role_below_inherited") {
-          throw new Error(tMembers("errors.belowInherited"));
+          throw new LocalizedError(tMembers("errors.belowInherited"));
         }
-        throw new Error(json?.error?.message || "Failed to update member role");
+        throw json?.error ?? {};
       }
-      toast.success("Member role updated");
+      toast.success(tShare("toasts.roleUpdated"));
       fetchMembers();
       fetchActivity();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to update role";
-      toast.error(msg);
+      toast.error(getApiErrorMessage(err, tRoot, tShare("toasts.roleUpdateFailed")));
     }
   };
 
   const handleRemoveMember = async (targetUserId: string, isSelf = false) => {
     const confirmMsg = isSelf
-      ? `Are you sure you want to leave this ${resourceLabel}?`
-      : "Are you sure you want to remove this member?";
+      ? tShare("toasts.confirmLeave", { resource: resourceLabel })
+      : tShare("toasts.confirmRemove");
     if (!window.confirm(confirmMsg)) return;
 
     try {
@@ -714,24 +701,24 @@ export function ShareAndPeopleDialog({
       if (!res.ok) {
         const json = await res.json();
         if (json?.error?.code === "member_inherited") {
-          throw new Error(tMembers("errors.inheritedMember"));
+          throw new LocalizedError(tMembers("errors.inheritedMember"));
         }
-        throw new Error(json?.error?.message || "Failed to remove member");
+        throw json?.error ?? {};
       }
       toast.success(
-        isSelf ? `You have left the ${resourceLabel}` : "Member removed"
+        isSelf
+          ? tShare("toasts.left", { resource: resourceLabel })
+          : tShare("toasts.memberRemoved")
       );
       if (isSelf) {
         onOpenChange(false);
-        window.location.href = "/workspaces";
+        window.location.assign("/workspaces");
       } else {
         fetchMembers();
         fetchActivity();
       }
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : "Failed to remove member";
-      toast.error(msg);
+      toast.error(getApiErrorMessage(err, tRoot, tShare("toasts.removeFailed")));
     }
   };
 

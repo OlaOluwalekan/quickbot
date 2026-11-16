@@ -69,9 +69,6 @@ import type {
 export type DateBucket = "today" | "yesterday" | "previous7Days" | "older";
 
 const DATE_BUCKETS: DateBucket[] = ["today", "yesterday", "previous7Days", "older"];
-const formatBracket = () => "[";
-const formatCmdK = () => "⌘K";
-const formatCtrlK = () => "Ctrl K";
 
 export function getDateBucket(isoDate: string, now = new Date()): DateBucket {
   const date = new Date(isoDate);
@@ -334,7 +331,7 @@ export function Sidebar({
   return (
     <TooltipProvider delayDuration={150}>
       <aside
-        aria-label={t("openNavigation")}
+        aria-label={t("sidebarNavigation")}
         data-collapsed={isCollapsedRail ? "true" : "false"}
         className={cn(
           "border-border bg-surface text-fg flex h-full flex-col border-r transition-[width] duration-200 ease-in-out select-none",
@@ -390,7 +387,7 @@ export function Sidebar({
                 <span>
                   {toggleLabel}{" "}
                   <kbd className="bg-surface-3 ml-1 rounded px-1 py-0.5 font-mono text-[10px]">
-                    {formatBracket()}
+                    [
                   </kbd>
                 </span>
               </TooltipContent>
@@ -440,7 +437,7 @@ export function Sidebar({
                   <span>
                     {t("search")}{" "}
                     <kbd className="bg-surface-3 ml-1 rounded px-1 py-0.5 font-mono text-[10px]">
-                      {formatCmdK()}
+                      ⌘K
                     </kbd>
                   </span>
                 </TooltipContent>
@@ -466,7 +463,7 @@ export function Sidebar({
                   <span>{t("search")}</span>
                 </span>
                 <kbd className="border-border bg-surface-2 text-subtle rounded border px-1.5 py-0.5 font-mono text-[10px]">
-                  {formatCtrlK()}
+                  Ctrl K
                 </kbd>
               </Button>
             </>

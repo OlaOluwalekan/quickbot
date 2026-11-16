@@ -2,7 +2,10 @@
 
 import * as React from "react";
 import { AlertTriangle, RefreshCw, LifeBuoy } from "lucide-react";
-import enMessages from "@/messages/en.json";
+import { GLOBAL_ERROR_COPY, resolveGlobalErrorLocale } from "@/lib/i18n/global-error";
+import { defaultLocale } from "@/i18n/config";
+
+const noopSubscribe = () => () => {};
 
 export default function GlobalError({
   error,
@@ -11,7 +14,14 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  const t = enMessages.GlobalError;
+  // The page can be server-rendered, where the cookie isn't readable here:
+  // the server snapshot uses the default locale, the client its own choice.
+  const locale = React.useSyncExternalStore(
+    noopSubscribe,
+    resolveGlobalErrorLocale,
+    () => defaultLocale
+  );
+  const t = GLOBAL_ERROR_COPY[locale];
 
   React.useEffect(() => {
     console.error("[Global Error]", {
@@ -25,7 +35,7 @@ export default function GlobalError({
     : "/support";
 
   return (
-    <html lang="en">
+    <html lang={locale}>
       <body className="min-h-screen w-full flex items-center justify-center bg-bg text-fg font-sans antialiased p-4">
         <div className="w-full max-w-lg rounded-2xl border border-border/80 bg-surface/95 p-8 sm:p-10 text-center shadow-md">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-accent-soft text-accent">

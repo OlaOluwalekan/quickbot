@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
+import { getApiErrorMessage } from "@/lib/api/error-message";
 import { Mail, Clock, ShieldCheck, CheckCircle2, AlertCircle, Send, Info } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -9,10 +10,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { authClient } from "@/lib/auth-client";
 
 const formatCharCount = (curr: number, max: number) => `${curr} / ${max.toLocaleString()}`;
-const formatRequiredStar = () => "*";
 
 export function SupportForm() {
   const t = useTranslations("Support");
+  const tRoot = useTranslations();
   const { data: session } = authClient.useSession();
 
   const [name, setName] = React.useState("");
@@ -93,12 +94,12 @@ export function SupportForm() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error?.message || "Failed to submit support request.");
+        throw data?.error ?? {};
       }
 
       setTicketId(data.data?.ticketId || "submitted");
-    } catch (err: any) {
-      setError(err.message || "An unexpected error occurred. Please try again.");
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, tRoot, t("submitFailed")));
     } finally {
       setLoading(false);
     }
@@ -183,7 +184,7 @@ export function SupportForm() {
           {/* Email */}
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-fg">
-              {t("emailLabel")} <span className="text-danger">{formatRequiredStar()}</span>
+              {t("emailLabel")} <span className="text-danger">*</span>
             </label>
             <Input
               type="email"
@@ -199,7 +200,7 @@ export function SupportForm() {
         {/* Topic */}
         <div className="space-y-1.5">
           <label className="text-xs font-semibold text-fg">
-            {t("topicLabel")} <span className="text-danger">{formatRequiredStar()}</span>
+            {t("topicLabel")} <span className="text-danger">*</span>
           </label>
           <select
             value={topic}
@@ -219,7 +220,7 @@ export function SupportForm() {
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
             <label className="text-xs font-semibold text-fg">
-              {t("messageLabel")} <span className="text-danger">{formatRequiredStar()}</span>
+              {t("messageLabel")} <span className="text-danger">*</span>
             </label>
             <span className="text-[11px] font-mono text-fg-subtle">
               {formatCharCount(message.length, 5000)}

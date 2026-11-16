@@ -718,7 +718,7 @@ export function AppShell({
         currentUsername={user.username}
         onSuccess={(newUsername) => {
           setClaimedUsername(newUsername);
-          toast.success(`Username claimed: @${newUsername}`);
+          toast.success(t("usernameClaimed", { username: newUsername }));
           router.refresh();
         }}
       />

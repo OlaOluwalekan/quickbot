@@ -2,19 +2,8 @@ import React from "react";
 import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { Markdown } from "@/components/markdown";
 
-// Mock next-intl translations
-jest.mock("next-intl", () => ({
-  useTranslations: () => (key: string) => {
-    const map: Record<string, string> = {
-      copyCode: "Copy code",
-      codeCopied: "Copied!",
-      toggleWrap: "Toggle wrap",
-      blockedImage: "Blocked external image",
-      visitLink: "Visit link",
-    };
-    return map[key] || key;
-  },
-}));
+// Resolve translations from the real English messages
+jest.mock("next-intl", () => jest.requireActual("../test-utils/next-intl").nextIntlMock);
 
 describe("Markdown Security & Rendering", () => {
   const originalClipboard = navigator.clipboard;

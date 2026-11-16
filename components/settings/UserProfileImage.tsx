@@ -9,6 +9,7 @@ import { Camera, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { getApiErrorMessage } from "@/lib/api/error-message";
 
 export interface UserProfileImageProps {
   user: SessionProps;
@@ -23,6 +24,7 @@ export function UserProfileImage({
 }: UserProfileImageProps) {
   const router = useRouter();
   const t = useTranslations("User.avatar");
+  const tRoot = useTranslations();
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const [currentAvatarUrl, setCurrentAvatarUrl] = React.useState<string | null>(
@@ -56,12 +58,12 @@ export function UserProfileImage({
 
     const allowedTypes = ["image/png", "image/jpeg", "image/webp"];
     if (!allowedTypes.includes(file.type)) {
-      toast.error("Avatar must be a PNG, JPEG, or WebP image");
+      toast.error(t("invalidType"));
       return;
     }
 
     if (file.size > 2 * 1024 * 1024) {
-      toast.error("Avatar image must be 2 MB or less");
+      toast.error(t("tooLarge"));
       return;
     }
 
@@ -161,11 +163,10 @@ export function UserProfileImage({
 
       setCurrentAvatarUrl(newUrl);
       setIsCustom(true);
-      toast.success("Profile picture updated");
+      toast.success(t("updated"));
       router.refresh();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to update profile picture";
-      toast.error(msg);
+      toast.error(getApiErrorMessage(err, tRoot, t("updateFailed")));
     } finally {
       setIsUploading(false);
     }
@@ -187,10 +188,10 @@ export function UserProfileImage({
 
       setCurrentAvatarUrl(newUrl);
       setIsCustom(false);
-      toast.success("Reverted to social provider picture");
+      toast.success(t("reverted"));
       router.refresh();
     } catch {
-      toast.error("Failed to remove avatar");
+      toast.error(t("removeFailed"));
     } finally {
       setIsUploading(false);
     }

@@ -142,7 +142,11 @@
     "resendCooldown": "Resend available in {seconds}s",
     "resendSent": "Verification email sent! Check your inbox.",
     "emailAddress": "Email Address",
-    "noEmailProvided": "No account email provided. Redirecting..."
+    "noEmailProvided": "No account email provided. Redirecting...",
+    "resetFailed": "Couldn't reset your password. The link may have expired.",
+    "unexpectedError": "An unexpected error occurred. Please try again.",
+    "registerFailed": "Registration failed. Please try again.",
+    "registerSuccess": "Registration successful! Check your inbox to verify your email."
   },
   "Chat": {
     "newChat": "New Workspace",
@@ -204,7 +208,8 @@
     "dropFilesHere": "Drop files to attach",
     "webSearchOff": "Web search is off",
     "changeInSettings": "Change in Settings",
-    "capGenerate": "generate responses"
+    "capGenerate": "generate responses",
+    "imageWithAttachments": "Image generation can't be combined with file or image attachments."
   },
   "Settings": {
     "ai": {
@@ -458,6 +463,7 @@
     "expandSidebar": "Expand sidebar",
     "pinSidebar": "Keep sidebar open",
     "openNavigation": "Open navigation menu",
+    "sidebarNavigation": "Sidebar navigation",
     "closeNavigation": "Close navigation menu",
     "rename": "Rename",
     "moveToProject": "Move to project",
@@ -487,7 +493,8 @@
     "toggleTheme": "Toggle theme",
     "openSettings": "Open settings",
     "expandProject": "Show workspaces in {name}",
-    "collapseProject": "Hide workspaces in {name}"
+    "collapseProject": "Hide workspaces in {name}",
+    "usernameClaimed": "Username claimed: @{username}"
   },
   "Home": {
     "greetingMorning": "Good morning, {name}",
@@ -819,60 +826,6 @@
       "groundingTitle": "Web Search Grounding",
       "groundingDesc": "+3 credits surcharge per grounded query",
       "footnoteDisclaimer": "* Monthly plan credits do not roll over to maintain transparent unit costs. You can cancel directly in Account Settings at any time.",
-      "plans": {
-        "FREE": {
-          "name": "Free",
-          "tagline": "Explore the workspace model with essential capabilities.",
-          "f1": "100 credits / month (no rollover)",
-          "f2": "Daily spend cap of 30 credits",
-          "f3": "1 concurrent generation turn",
-          "f4": "Economy model access",
-          "f5": "3 attachments per workspace (5 MB max)",
-          "f6": "Markdown document export",
-          "f7": "Read-only workspace & response sharing"
-        },
-        "LITE": {
-          "name": "Lite",
-          "tagline": "For individual builders and researchers working daily.",
-          "f1": "800 credits / month (no rollover)",
-          "f2": "Daily spend cap: 25% of monthly balance",
-          "f3": "2 concurrent generation turns",
-          "f4": "Economy & Standard text models",
-          "f5": "Native AI image generation",
-          "f6": "Web-search grounding support",
-          "f7": "10 attachments per workspace (15 MB max)",
-          "f8": "Up to 2 workspace collaborators",
-          "f9": "Markdown, PDF & Word exports"
-        },
-        "STANDARD": {
-          "name": "Standard",
-          "tagline": "Our recommended plan for power users and small teams.",
-          "f1": "1,800 credits / month (no rollover)",
-          "f2": "Daily spend cap: 25% of monthly balance",
-          "f3": "3 concurrent generation turns",
-          "f4": "Economy & Standard text models",
-          "f5": "Native AI image generation",
-          "f6": "Web-search grounding support",
-          "f7": "25 attachments per workspace (25 MB max)",
-          "f8": "Up to 5 workspace collaborators",
-          "f9": "Full export suite (MD, PDF, DOCX)",
-          "f10": "Priority customer support"
-        },
-        "PRO": {
-          "name": "Pro",
-          "tagline": "Maximum throughput, highest limits, and team collaboration.",
-          "f1": "3,500 credits / month (no rollover)",
-          "f2": "Daily spend cap: 20% of monthly balance",
-          "f3": "5 concurrent generation turns",
-          "f4": "All models including future advanced tiers",
-          "f5": "Native AI image generation",
-          "f6": "Web-search grounding support",
-          "f7": "50 attachments per workspace (50 MB max)",
-          "f8": "Up to 15 workspace collaborators",
-          "f9": "Full export suite (MD, PDF, DOCX)",
-          "f10": "Activity audit trail & role management"
-        }
-      },
       "comparison": {
         "title": "Detailed Plan Comparison",
         "subtitle": "Everything included across each plan level at a glance.",
@@ -1155,7 +1108,8 @@
     "quickAnswersDesc": "Check out our searchable guides in the Help Center.",
     "visitHelpCenter": "Visit Help Center",
     "website": "Website",
-    "charCount": "{current} / {max}"
+    "charCount": "{current} / {max}",
+    "submitFailed": "Couldn't send your support request. Please try again."
   },
   "Status": {
     "title": "System Status",
@@ -2192,6 +2146,31 @@
       "empty": "No activity recorded yet.",
       "collaborator": "Collaborator",
       "user": "User"
+    },
+    "toasts": {
+      "activityLoadFailed": "Failed to load activity log",
+      "inviteSent": "Invitation sent",
+      "inviteFailed": "Couldn't send the invitation",
+      "revokeInviteFailed": "Couldn't revoke the invitation",
+      "resendInviteFailed": "Couldn't resend the invitation",
+      "selectResponse": "Please select a response to share",
+      "linkCreatedCopied": "Public link created and copied to clipboard",
+      "linkCreated": "Public link created",
+      "createLinkFailed": "Couldn't create the share link",
+      "linkRevoked": "Share link revoked immediately",
+      "revokeLinkFailed": "Couldn't revoke the share link",
+      "copyFailed": "Couldn't copy the link",
+      "capUpdateFailed": "Couldn't update the credit cap",
+      "capUnlimited": "Collaborator credit cap set to unlimited",
+      "capSet": "Collaborator credit cap set to {count} credits/month",
+      "capInvalid": "Please enter a whole number of 0 or more",
+      "roleUpdated": "Member role updated",
+      "roleUpdateFailed": "Couldn't update the member's role",
+      "confirmLeave": "Are you sure you want to leave this {resource}?",
+      "confirmRemove": "Are you sure you want to remove this member?",
+      "left": "You have left the {resource}",
+      "memberRemoved": "Member removed",
+      "removeFailed": "Couldn't remove the member"
     }
   },
   "Invite": {
@@ -2259,7 +2238,13 @@
       "saveAndUpload": "Save & Upload",
       "changePicture": "Change picture",
       "remove": "Remove",
-      "allowedFormats": "Allowed: PNG, JPEG, or WebP. Max 2 MB. Square cropped (512×512)."
+      "allowedFormats": "Allowed: PNG, JPEG, or WebP. Max 2 MB. Square cropped (512×512).",
+      "invalidType": "Your picture must be a PNG, JPEG or WebP image",
+      "tooLarge": "Your picture must be 2 MB or less",
+      "updated": "Profile picture updated",
+      "updateFailed": "Couldn't update your profile picture",
+      "reverted": "Reverted to your sign-in provider's picture",
+      "removeFailed": "Couldn't remove your picture"
     }
   },
   "PublicShare": {
@@ -2283,13 +2268,6 @@
     "copy": "Copy",
     "copyCode": "Copy code",
     "copied": "Copied"
-  },
-  "GlobalError": {
-    "title": "Critical System Error",
-    "description": "An unexpected error interrupted the application. Your data is safe.",
-    "errorRef": "Error Reference: ",
-    "tryAgain": "Try again",
-    "contactSupport": "Contact Support"
   },
   "NotFound": {
     "logoAlt": "Logo",

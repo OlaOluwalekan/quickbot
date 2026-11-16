@@ -13,7 +13,7 @@ import { logActivity } from "./activity";
 import { notify, markNotificationReadByDedupeKey } from "./notify";
 import { sendEmail, maskEmail } from "@/server/email/send";
 import { env } from "@/server/env";
-import { PLANS, type PlanKey } from "@/server/billing/plans";
+import { PLAN_LOG_NAMES, type PlanKey } from "@/server/billing/plans";
 import { getEntitlements } from "@/server/billing/entitlements";
 import { getInviteCapacity } from "./member-limits";
 import type { WorkspaceRole, ProjectRole, Prisma } from "../db/generated/client";
@@ -135,7 +135,7 @@ async function assertMemberCapacity(
 
   if (used >= maxMembers) {
     throw Errors.forbidden(
-      `Plan member limit reached (${maxMembers} members max on ${PLANS[ownerPlanKey]?.name || "Free"} plan). Upgrade to invite more members.`,
+      `Plan member limit reached (${maxMembers} members max on ${PLAN_LOG_NAMES[ownerPlanKey] ?? "Free"} plan). Upgrade to invite more members.`,
       "member_limit_reached"
     );
   }

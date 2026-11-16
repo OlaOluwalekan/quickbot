@@ -90,13 +90,13 @@ export function ResetPasswordForm() {
       });
 
       if (resetErr) {
-        setError(resetErr.message || "Failed to reset password. Link may have expired.");
+        setError(t("resetFailed"));
         return;
       }
 
       setSuccess(true);
-    } catch (err: any) {
-      setError(err?.message || "An unexpected error occurred. Please try again.");
+    } catch {
+      setError(t("unexpectedError"));
     } finally {
       setLoading(false);
     }

@@ -53,15 +53,14 @@ const RegisterForm = (): React.JSX.Element => {
 
         if (error) {
           setResponse({
-            message: error.message || "Registration failed",
+            message: error.message || t("registerFailed"),
             success: false,
           });
           return;
         }
 
         setResponse({
-          message:
-            "Registration successful! Check your inbox to verify your email.",
+          message: t("registerSuccess"),
           success: true,
         });
 
@@ -70,7 +69,7 @@ const RegisterForm = (): React.JSX.Element => {
         );
       } catch (err: unknown) {
         setResponse({
-          message: err instanceof Error ? err.message : "Registration failed",
+          message: t("registerFailed"),
           success: false,
         });
       }

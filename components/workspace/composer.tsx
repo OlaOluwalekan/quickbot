@@ -546,7 +546,7 @@ export function Composer({
       .map((a) => a.attachmentId!);
 
     if (mode === "image" && (attachments.length > 0 || readyAttachmentIds.length > 0)) {
-      setCreationError("Image generation cannot be combined with file or image attachments.");
+      setCreationError(t("imageWithAttachments"));
       return;
     }
 

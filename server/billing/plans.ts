@@ -166,6 +166,18 @@ export const PLANS: Record<"FREE" | "LITE" | "STANDARD" | "PRO", PlanDefinition>
 
 export type PlanKey = keyof typeof PLANS;
 
+/**
+ * English plan names for developer-facing error messages and logs only.
+ * `PLANS[x].name` is a message key (`Plans.<PLAN>.name`); UI resolves it
+ * with next-intl, and users see `Errors.api.<code>` instead of these.
+ */
+export const PLAN_LOG_NAMES: Record<PlanKey, string> = {
+  FREE: "Free",
+  LITE: "Lite",
+  STANDARD: "Standard",
+  PRO: "Pro",
+};
+
 const userPlanOverrides = new Map<string, PlanKey>();
 
 export function setUserPlanOverride(userId: string, plan: PlanKey | null): void {
