@@ -128,3 +128,38 @@ describe("F5.1 — sign-in errors and form validation are translated", () => {
     }
   });
 });
+
+describe("F5.1 — activity log sentences", () => {
+  it("every action the server logs has a sentence in Share.activity.actions", () => {
+    const fs = jest.requireActual("node:fs") as typeof import("node:fs");
+    const path = jest.requireActual("node:path") as typeof import("node:path");
+    const files: string[] = [];
+    const walk = (d: string) => {
+      for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+        if (e.name === "generated") continue;
+        const p = path.join(d, e.name);
+        if (e.isDirectory()) walk(p);
+        else if (p.endsWith(".ts")) files.push(p);
+      }
+    };
+    walk(path.resolve(__dirname, "../server"));
+    const actions = new Set<string>();
+    for (const f of files) {
+      const src = fs.readFileSync(f, "utf8");
+      for (const m of src.matchAll(/action:\s*(?:[^"\n]*\?\s*)?"([a-z]+\.[a-z_]+)"(?:\s*:\s*"([a-z]+\.[a-z_]+)")?/g)) {
+        actions.add(m[1]!);
+        if (m[2]) actions.add(m[2]);
+      }
+    }
+    expect(actions.size).toBeGreaterThan(20);
+    const sentences = enMessages.Share.activity.actions as Record<string, string>;
+    const special: Record<string, string[]> = {
+      "annotation.created": ["annotation_comment", "annotation_ask"],
+      "member.removed": ["member_removed", "member_left"],
+    };
+    const missing = [...actions].filter((a) =>
+      (special[a] ?? [a.replace(/\./g, "_")]).some((k) => typeof sentences[k] !== "string")
+    );
+    expect(missing).toEqual([]);
+  });
+});

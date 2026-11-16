@@ -64,6 +64,19 @@ const eslintConfig = [
           selector: "Property[key.name='message'] > Literal.value[value=/[A-Za-z]{2} /]",
           message: "User-visible text must come from next-intl (messages/*.json).",
         },
+        {
+          // Dates and numbers follow the app's locale, not the browser's.
+          selector:
+            "CallExpression[callee.property.name=/^toLocale(Date|Time)?String$/]",
+          message:
+            "Use next-intl's useFormatter() / getFormatter() so dates and numbers follow the app's locale.",
+        },
+        {
+          // function Foo({ label = "Loading" }) — default text props
+          selector:
+            "ObjectPattern > Property > AssignmentPattern > Literal.right[value=/^[A-Z][a-z]+(\\s\\S+)*$/]",
+          message: "Default text must come from next-intl (messages/*.json).",
+        },
       ],
       "i18next/no-literal-string": [
         "error",

@@ -32,6 +32,11 @@ export function maskIp(ip?: string | null): string | null {
 /**
  * Parse user agent string with ua-parser-js into device, os, browser, and client type.
  */
+/** English fallbacks, kept for logs and emails; the UI translates them. */
+export const UNKNOWN_BROWSER = "Unknown Browser";
+export const UNKNOWN_OS = "Unknown OS";
+
+
 export function parseDeviceMetadata(
   userAgent?: string | null,
   customDeviceName?: string | null,
@@ -45,8 +50,8 @@ export function parseDeviceMetadata(
   const parser = new UAParser(userAgent || undefined);
   const result = parser.getResult();
 
-  const browserName = result.browser.name || "Unknown Browser";
-  const osName = result.os.name || "Unknown OS";
+  const browserName = result.browser.name || UNKNOWN_BROWSER;
+  const osName = result.os.name || UNKNOWN_OS;
   const isMobileDevice =
     result.device.type === "mobile" || result.device.type === "tablet";
   const client: "web" | "mobile" =
@@ -124,6 +129,16 @@ export async function checkAndAlertNewSignIn(newSession: {
         {
           sessionId: newSession.id,
           time: new Date().toUTCString(),
+          // Language-neutral parts, so the notification and the email can
+          // say "Chrome on macOS" in the reader's language.
+          timeIso: new Date().toISOString(),
+          browser: newParsed.browser === UNKNOWN_BROWSER ? null : newParsed.browser,
+          os: newParsed.os === UNKNOWN_OS ? null : newParsed.os,
+          customDevice:
+            newSession.deviceLabel &&
+            newSession.deviceLabel !== `${newParsed.browser} on ${newParsed.os}`
+              ? newSession.deviceLabel
+              : null,
           device: newSession.deviceLabel || newParsed.deviceLabel,
           ipAddress: maskIp(newSession.ipAddress) || undefined,
           location: newSession.country || undefined,

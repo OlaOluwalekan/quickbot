@@ -31,7 +31,12 @@
     "editResponsePlaceholder": "Modifier le contenu de la réponse...",
     "nothingToPreview": "Rien à prévisualiser.",
     "workspaceSingular": "Espace",
-    "allRightsReserved": "Tous droits réservés."
+    "allRightsReserved": "Tous droits réservés.",
+    "today": "Aujourd'hui",
+    "yesterday": "Hier",
+    "confirm": "Confirmer",
+    "copyToClipboard": "Copier dans le presse-papier",
+    "copiedShort": "Copié"
   },
   "Header": {
     "features": "Fonctionnalités",
@@ -93,7 +98,7 @@
     "noAccount": "Vous n'avez pas de compte ?",
     "createAccountLink": "Créer un compte",
     "registerTitle": "Créez votre compte",
-    "registerSubtitle": "Commencez avec 10 000 jetons gratuits sur Klecx",
+    "registerSubtitle": "Commencez gratuitement avec {credits, plural, one {# crédit} other {# crédits}} par mois",
     "registerButton": "Créer un compte",
     "registering": "Création du compte...",
     "alreadyHaveAccount": "Vous avez déjà un compte ?",
@@ -219,7 +224,7 @@
     "generatedImageAlt": "Image générée par l'IA Klecx",
     "settings": "Paramètres",
     "logout": "Déconnexion",
-    "tokensRemaining": "{count} jetons restants",
+    "tokensRemaining": "{count, plural, one {# jeton restant} other {# jetons restants}}",
     "outOfTokens": "Vous n'avez plus de jetons. Veuillez recharger votre solde.",
     "promptRequired": "Veuillez d'abord saisir une invite.",
     "streamError": "Échec de la génération de la réponse. Veuillez réessayer.",
@@ -244,7 +249,8 @@
     "webSearchOff": "La recherche web est désactivée",
     "changeInSettings": "Modifier dans les paramètres",
     "capGenerate": "générer des réponses",
-    "imageWithAttachments": "La génération d'images ne peut pas être combinée avec des fichiers ou des images joints."
+    "imageWithAttachments": "La génération d'images ne peut pas être combinée avec des fichiers ou des images joints.",
+    "charCount": "{current} / {max}"
   },
   "Settings": {
     "ai": {
@@ -321,7 +327,11 @@
       "passwordPlaceholder": "Entrez votre mot de passe",
       "cancel": "Annuler",
       "verifying": "Vérification...",
-      "confirmAndSignOut": "Confirmer et déconnecter"
+      "confirmAndSignOut": "Confirmer et déconnecter",
+      "unknownBrowser": "Navigateur inconnu",
+      "unknownOs": "Système inconnu",
+      "deviceOn": "{browser} sur {os}",
+      "deviceInfo": "{browser} • {os}"
     }
   },
   "Email": {
@@ -360,7 +370,13 @@
       "greeting": "Bonjour,",
       "body": "Une nouvelle connexion à votre compte Klecx a été détectée le {time} depuis {device} ({ipAddress}, {location}).",
       "button": "Consulter l'activité du compte",
-      "disclaimer": "S'il s'agissait de vous, aucune action n'est requise. Si vous ne vous êtes pas connecté à ce moment, veuillez modifier votre mot de passe immédiatement."
+      "disclaimer": "S'il s'agissait de vous, aucune action n'est requise. Si vous ne vous êtes pas connecté à ce moment, veuillez modifier votre mot de passe immédiatement.",
+      "deviceOn": "{browser} sur {os}",
+      "unknownBrowser": "un navigateur inconnu",
+      "unknownOs": "un système inconnu",
+      "unknownDevice": "un appareil inconnu",
+      "unknownIp": "IP inconnue",
+      "unknownLocation": "lieu inconnu"
     },
     "passwordChanged": {
       "subject": "Alerte de sécurité : Votre mot de passe Klecx a été modifié",
@@ -507,7 +523,7 @@
     "share": "Partager",
     "delete": "Supprimer",
     "creditsPlan": "Forfait {plan}",
-    "creditsBalance": "{count} crédits",
+    "creditsBalance": "{count, plural, one {# crédit} other {# crédits}}",
     "usageLink": "Utilisation",
     "settings": "Paramètres",
     "help": "Aide et documentation",
@@ -905,7 +921,7 @@
         "cap20pct": "20% du solde"
       },
       "priceFormat": "${price}",
-      "creditsCount": "{count} crédits"
+      "creditsCount": "{count, plural, one {# crédit} other {# crédits}}"
     },
     "faq": {
       "badge": "Réponses claires",
@@ -1079,7 +1095,7 @@
     },
     "allCategories": "Toutes les catégories",
     "readTime": "de lecture",
-    "articlesFound": "{count} articles trouvés",
+    "articlesFound": "{count, plural, one {# article trouvé} other {# articles trouvés}}",
     "noResultsTitle": "Aucun article trouvé",
     "noResultsDesc": "Modifiez votre recherche ou parcourez les catégories ci-dessus.",
     "backToHelp": "Retour au Centre d'Aide",
@@ -1655,7 +1671,10 @@
       "workspace": "un espace de travail",
       "yourWorkspace": "votre espace de travail",
       "role": "collaborateur",
-      "device": "un nouvel appareil"
+      "device": "un nouvel appareil",
+      "deviceOn": "{browser} sur {os}",
+      "browser": "un navigateur inconnu",
+      "os": "un système inconnu"
     },
     "items": {
       "INVITE_RECEIVED": {
@@ -1684,7 +1703,7 @@
       "CREDITS_LOW": {
         "title": "Crédits bientôt épuisés (80 % utilisés)",
         "description": "Il vous reste peu de crédits pour cette période.",
-        "descriptionCount": "Il vous reste {count} crédits pour cette période."
+        "descriptionCount": "{count, plural, one {Il vous reste # crédit pour cette période.} other {Il vous reste # crédits pour cette période.}}"
       },
       "CREDITS_EXHAUSTED": {
         "title": "Crédits épuisés (100 % utilisés)",
@@ -1711,7 +1730,7 @@
         "title": "Questions en file traitées",
         "description": "Vos questions en file ont reçu une réponse.",
         "descriptionOne": "1 question en file a reçu une réponse.",
-        "descriptionCount": "{count} questions en file ont reçu une réponse."
+        "descriptionCount": "{count, plural, one {# question en file a reçu une réponse.} other {# questions en file ont reçu une réponse.}}"
       },
       "OWNERSHIP_TRANSFER_REQUESTED": {
         "title": "Demande de transfert de propriété",
@@ -1751,9 +1770,9 @@
     },
     "bell": {
       "label": "Notifications",
-      "labelUnread": "Notifications ({count} non lues)",
+      "labelUnread": "{count, plural, one {Notifications (# non lue)} other {Notifications (# non lues)}}",
       "title": "Notifications",
-      "newCount": "{count} nouvelles",
+      "newCount": "{count, plural, one {# nouvelle} other {# nouvelles}}",
       "markAllReadTitle": "Tout marquer comme lu",
       "markAllRead": "Tout marquer lu",
       "settings": "Paramètres des notifications",
@@ -1775,7 +1794,7 @@
       "inAppFor": "{label} : notifications dans l'application",
       "emailFor": "{label} : notifications par e-mail",
       "recentTitle": "Notifications récentes",
-      "unreadCount": "{count} non lues",
+      "unreadCount": "{count, plural, one {# non lue} other {# non lues}}",
       "recentDescription": "Vos alertes récentes sur l'activité du compte et des espaces de travail.",
       "filter": "Afficher les notifications",
       "filterAll": "Toutes",
@@ -1837,7 +1856,7 @@
     "levelWithQuote": "Niveau {level} : « {quote} »",
     "resize": "Redimensionner la colonne",
     "allAnnotations": "Toutes les annotations",
-    "moreSpines": "{count} niveaux de plus",
+    "moreSpines": "{count, plural, one {# niveau de plus} other {# niveaux de plus}}",
     "hiddenLevels": "Niveaux masqués",
     "loading": "Chargement du fil…",
     "notAvailable": "Ce fil n'est plus disponible.",
@@ -1916,7 +1935,7 @@
       "save": "Enregistrer",
       "editLabel": "Modifier la question",
       "removeLabel": "Supprimer la question",
-      "estimatedCredits": "~{count} crédits",
+      "estimatedCredits": "{count, plural, one {~# crédit} other {~# crédits}}",
       "askAll": "Tout demander ({count})",
       "removedSuccess": "Question retirée de la file",
       "removeFailed": "Échec de la suppression de la question",
@@ -1979,7 +1998,7 @@
       "unreadable": "Impossible de lire ce fichier. Il est peut-être endommagé ou protégé par un mot de passe.",
       "empty": "Aucun texte n'a été trouvé dans ce fichier.",
       "timeout": "Le traitement de ce fichier a pris trop de temps. Essayez un fichier plus petit.",
-      "limit": "Cet espace de travail contient déjà {count} documents, la limite. Supprimez-en un pour en ajouter un autre."
+      "limit": "Cet espace de travail contient déjà {count, plural, one {# document} other {# documents}}, la limite. Supprimez-en un pour en ajouter un autre."
     },
     "copy": "Copier",
     "cancelDrop": "Annuler",
@@ -2183,7 +2202,7 @@
       "button": "Inviter",
       "disclaimer": "Envoie un lien d'invitation à usage unique valable 7 jours. Compte dans la limite de membres du forfait du propriétaire.",
       "pendingHeading": "Invitations en attente",
-      "pendingCount": "{count} en attente",
+      "pendingCount": "{count, plural, one {# en attente} other {# en attente}}",
       "noPending": "Aucune invitation en attente.",
       "expires": "Expire le {date}",
       "resend": "Renvoyer",
@@ -2227,7 +2246,7 @@
       "readyToShare": "Prêt à être partagé",
       "copy": "Copier",
       "activeHeading": "Liens de partage public",
-      "activeCount": "{count} actifs",
+      "activeCount": "{count, plural, one {# actif} other {# actifs}}",
       "noLinks": "Aucun lien public créé pour le moment.",
       "singleResponseBadge": "Réponse unique",
       "workspaceBadge": "Espace de travail",
@@ -2236,12 +2255,52 @@
       "viewsCount": "{count, plural, one {# vue} other {# vues}}",
       "expiresOn": "Expire le {date}",
       "neverExpires": "N'expire jamais",
-      "authorShown": "Auteur affiché"
+      "authorShown": "Auteur affiché",
+      "status": {
+        "ACTIVE": "Actif",
+        "REVOKED": "Révoqué",
+        "EXPIRED": "Expiré"
+      }
     },
     "activity": {
       "empty": "Aucune activité enregistrée pour l'instant.",
       "collaborator": "Collaborateur",
-      "user": "Utilisateur"
+      "user": "Utilisateur",
+      "actions": {
+        "workspace_created": "a créé l'espace de travail « {title} »",
+        "workspace_renamed": "a renommé l'espace de travail en « {title} »",
+        "workspace_archived": "a archivé l'espace de travail",
+        "workspace_unarchived": "a désarchivé l'espace de travail",
+        "workspace_deleted": "a placé l'espace de travail dans la corbeille",
+        "workspace_restored": "a restauré l'espace de travail depuis la corbeille",
+        "project_created": "a créé le projet « {name} »",
+        "project_renamed": "a renommé le projet en « {name} »",
+        "project_archived": "a archivé le projet",
+        "project_unarchived": "a désarchivé le projet",
+        "project_deleted": "a supprimé le projet",
+        "member_added": "a rejoint en tant que {role}",
+        "member_removed": "a retiré un membre",
+        "member_left": "est parti",
+        "member_role_changed": "a changé le rôle d'un membre en {role}",
+        "member_cap_changed": "a modifié le plafond de crédits d'un membre",
+        "invitation_created": "a invité {email} en tant que {role}",
+        "invitation_revoked": "a révoqué l'invitation de {email}",
+        "invitation_resent": "a renvoyé l'invitation à {email}",
+        "share_created": "a créé un lien public",
+        "share_revoked": "a révoqué un lien public",
+        "ownership_transferred": "est devenu le propriétaire",
+        "response_created": "a généré une réponse",
+        "response_regenerated": "a régénéré une réponse",
+        "response_edited": "a modifié une réponse",
+        "annotation_comment": "a ajouté un commentaire",
+        "annotation_ask": "a posé une question à Klecx",
+        "document_uploaded": "a ajouté le document « {name} »",
+        "note_created": "a enregistré une note Klecx",
+        "note_archived": "a archivé une note Klecx",
+        "note_restored": "a restauré une note Klecx",
+        "note_deleted": "a supprimé une note Klecx",
+        "other": "a effectué une modification"
+      }
     },
     "toasts": {
       "activityLoadFailed": "Impossible de charger le journal d'activité",
@@ -2258,7 +2317,7 @@
       "copyFailed": "Impossible de copier le lien",
       "capUpdateFailed": "Impossible de mettre à jour le plafond de crédits",
       "capUnlimited": "Plafond de crédits du collaborateur : illimité",
-      "capSet": "Plafond de crédits du collaborateur : {count} crédits/mois",
+      "capSet": "{count, plural, one {Plafond de crédits du collaborateur : # crédit/mois} other {Plafond de crédits du collaborateur : # crédits/mois}}",
       "capInvalid": "Saisissez un nombre entier supérieur ou égal à 0",
       "roleUpdated": "Rôle du membre mis à jour",
       "roleUpdateFailed": "Impossible de mettre à jour le rôle du membre",

@@ -34,7 +34,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { formatNumber } from "@/utils/format";
+
 import { authClient } from "@/lib/auth-client";
 import { clearAllClientCaches } from "@/components/providers/query-provider";
 import { Button } from "@/components/ui/button";
@@ -715,7 +715,7 @@ export function Sidebar({
                 <Link
                   href="/settings"
                   aria-label={t("creditsBalance", {
-                    count: formatNumber(user.creditBalance),
+                    count: user.creditBalance,
                   })}
                   onClick={onNavigate}
                   className="bg-surface-2 text-accent hover:bg-surface-3 focus-visible:ring-ring mx-auto flex h-9 w-9 items-center justify-center rounded-lg focus-visible:ring-2 focus-visible:outline-none"
@@ -730,7 +730,7 @@ export function Sidebar({
                   </p>
                   <p className="text-muted">
                     {t("creditsBalance", {
-                      count: formatNumber(user.creditBalance),
+                      count: user.creditBalance,
                     })}
                   </p>
                 </div>
@@ -750,7 +750,7 @@ export function Sidebar({
                   <span className="text-subtle mx-1.5">·</span>
                   <span className="text-muted">
                     {t("creditsBalance", {
-                      count: formatNumber(user.creditBalance),
+                      count: user.creditBalance,
                     })}
                   </span>
                 </div>

@@ -167,7 +167,16 @@ export function formatNotificationPresentation(
         icon: <CreditCard className="h-4 w-4 text-accent" />,
       };
     case "NEW_SIGN_IN": {
-      const device = text(p.device) ?? t("fallback.device");
+      const browser = text(p.browser);
+      const os = text(p.os);
+      const device =
+        text(p.customDevice) ??
+        (browser || os
+          ? t("fallback.deviceOn", {
+              browser: browser ?? t("fallback.browser"),
+              os: os ?? t("fallback.os"),
+            })
+          : (text(p.device) ?? t("fallback.device")));
       const location = text(p.location);
       return {
         title: title(item.type),

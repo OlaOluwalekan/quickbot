@@ -2,6 +2,7 @@ import AuthCard from "@/components/auth/AuthCard";
 import AuthWrapper from "@/components/auth/AuthWrapper";
 import RegisterForm from "@/components/auth/RegisterForm";
 import { useTranslations } from "next-intl";
+import { PLANS } from "@/server/billing/plans";
 
 const RegisterPage = () => {
   const t = useTranslations("Auth");
@@ -10,7 +11,7 @@ const RegisterPage = () => {
     <AuthWrapper>
       <AuthCard
         page={t("registerTitle")}
-        headerText={t("registerSubtitle")}
+        headerText={t("registerSubtitle", { credits: PLANS.FREE.credits })}
         backText={t("alreadyHaveAccount")}
         backLink="login"
       >

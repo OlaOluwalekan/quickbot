@@ -51,7 +51,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { toast } from "sonner";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import {
   getApiErrorMessage,
   LocalizedError,
@@ -253,6 +253,7 @@ export function ShareAndPeopleDialog({
   const tLimits = useTranslations("MemberLimits");
   const tShare = useTranslations("Share");
   const tRoot = useTranslations();
+  const format = useFormatter();
   const roleLabel = (role: string) =>
     role in ROLE_RANK
       ? tMembers(`roles.${role as "VIEWER" | "COMMENTER" | "EDITOR" | "ADMIN"}`)
@@ -686,6 +687,26 @@ export function ShareAndPeopleDialog({
     } catch (err: unknown) {
       toast.error(getApiErrorMessage(err, tRoot, tShare("toasts.roleUpdateFailed")));
     }
+  };
+
+  /** One sentence per logged action, in the person's language. */
+  const describeActivity = (act: ActivityItem): string => {
+    const meta = act.meta ?? {};
+    const str = (v: unknown) => (typeof v === "string" ? v : "");
+    const roleOf = (v: unknown) => {
+      const role = str(v);
+      return role && tMembers.has(`roles.${role}`) ? tMembers(`roles.${role}`) : role;
+    };
+    let key = act.action.replace(/\./g, "_");
+    if (key === "annotation_created") key = meta.kind === "ASK" ? "annotation_ask" : "annotation_comment";
+    if (key === "member_removed" && meta.selfLeave === true) key = "member_left";
+    if (!tShare.has(`activity.actions.${key}`)) key = "other";
+    return tShare(`activity.actions.${key}`, {
+      title: str(meta.title),
+      name: str(meta.name),
+      email: str(meta.email),
+      role: roleOf(meta.newRole ?? meta.role),
+    });
   };
 
   const handleRemoveMember = async (targetUserId: string, isSelf = false) => {
@@ -1584,7 +1605,7 @@ export function ShareAndPeopleDialog({
                             </div>
                             <p className="text-subtle text-[11px]">
                               {tShare("invite.expires", {
-                                date: new Date(inv.expiresAt).toLocaleDateString(),
+                                date: format.dateTime(new Date(inv.expiresAt), { dateStyle: "medium" }),
                               })}
                             </p>
                           </div>
@@ -1809,7 +1830,7 @@ export function ShareAndPeopleDialog({
                                 }
                                 className="text-[10px] uppercase"
                               >
-                                {link.status}
+                                {tShare(`public.status.${link.status}`)}
                               </Badge>
                               <Badge
                                 variant="outline"
@@ -1839,7 +1860,7 @@ export function ShareAndPeopleDialog({
                                 <span className="inline-flex items-center gap-1">
                                   <Clock className="h-3 w-3" />
                                   {tShare("public.expiresOn", {
-                                    date: new Date(link.expiresAt).toLocaleDateString(),
+                                    date: format.dateTime(new Date(link.expiresAt), { dateStyle: "medium" }),
                                   })}
                                 </span>
                               ) : (
@@ -1900,7 +1921,7 @@ export function ShareAndPeopleDialog({
                             {act.actor.name || act.actor.username || tShare("activity.collaborator")}
                           </span>
                           <span className="text-[11px] text-subtle shrink-0">
-                            {new Date(act.createdAt).toLocaleString(undefined, {
+                            {format.dateTime(new Date(act.createdAt), {
                               month: "short",
                               day: "numeric",
                               hour: "2-digit",
@@ -1909,14 +1930,7 @@ export function ShareAndPeopleDialog({
                           </span>
                         </div>
                         <p className="text-muted text-xs">
-                          <span className="font-medium text-fg">
-                            {act.action}
-                          </span>
-                          {act.meta && Object.keys(act.meta).length > 0 && (
-                            <span className="text-subtle ml-1 font-mono text-[11px]">
-                              {JSON.stringify(act.meta)}
-                            </span>
-                          )}
+                          {describeActivity(act)}
                         </p>
                       </div>
                     </div>

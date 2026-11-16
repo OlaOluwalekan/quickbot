@@ -3,7 +3,7 @@
 import type { GenerationSSEHandlers } from "@/lib/api/sse";
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import Link from "next/link";
 import {
   AlertCircle,
@@ -143,6 +143,7 @@ export function Composer({
   const tResponse = useTranslations("Response");
   const tErrors = useTranslations();
   const tPlans = useTranslations();
+  const format = useFormatter();
   const router = useRouter();
   const queryClient = React.useContext(QueryClientContext);
   const targetWorkspaceIdRef = React.useRef<string | null>(null);
@@ -1308,7 +1309,7 @@ export function Composer({
               id="composer-char-count"
               className="text-[11px] font-mono text-muted"
             >
-              {prompt.length.toLocaleString()} / {MAX_PROMPT_LENGTH.toLocaleString()}
+              {t("charCount", { current: format.number(prompt.length), max: format.number(MAX_PROMPT_LENGTH) })}
             </span>
           )}
 

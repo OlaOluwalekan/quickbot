@@ -9,7 +9,6 @@ import type {
   SidebarProjectItem,
   SidebarWorkspaceItem,
 } from "@/components/layout/types";
-import enMessages from "../messages/en.json";
 
 const mockPush = jest.fn();
 const mockRefresh = jest.fn();
@@ -43,25 +42,10 @@ jest.mock("next-themes", () => ({
 }));
 
 jest.mock("next-intl", () => ({
-  useTranslations: (namespace: string) => {
-    return (key: string, values?: Record<string, unknown>) => {
-      const ns =
-        (enMessages as unknown as Record<string, Record<string, string>>)[
-          namespace
-        ] || {};
-      let template = ns[key] || key;
-      if (values) {
-        Object.entries(values).forEach(([k, v]) => {
-          template = template.replace(`{${k}}`, String(v));
-        });
-      }
-      return template;
-    };
-  },
+  useTranslations: (namespace?: string) =>
+    jest.requireActual("../test-utils/next-intl").createTranslator(namespace),
   useLocale: () => "en",
-  useFormatter: () => ({
-    dateTime: (date: Date) => date.toISOString().slice(0, 10),
-  }),
+  useFormatter: () => jest.requireActual("../test-utils/next-intl").createFormatter(),
 }));
 
 beforeAll(() => {

@@ -4,7 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Users, AlertCircle, CheckCircle2, ArrowRight, Clock, Shield } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { getApiErrorMessage } from "@/lib/api/error-message";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -39,6 +39,7 @@ export function InviteLanding({ token, invitationId }: InviteLandingProps) {
   const router = useRouter();
   const tInvite = useTranslations("Invite");
   const tRoot = useTranslations();
+  const format = useFormatter();
   const lookup = token
     ? { key: "token", value: token }
     : { key: "id", value: invitationId ?? "" };
@@ -205,7 +206,7 @@ export function InviteLanding({ token, invitationId }: InviteLandingProps) {
               <span className="flex items-center gap-1.5">
                 <Clock className="h-3.5 w-3.5" /> {tInvite("expires")}
               </span>
-              <span>{new Date(inviteInfo.expiresAt).toLocaleDateString()}</span>
+              <span>{format.dateTime(new Date(inviteInfo.expiresAt), { dateStyle: "medium" })}</span>
             </div>
           )}
         </div>

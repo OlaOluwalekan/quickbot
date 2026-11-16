@@ -118,7 +118,7 @@ export function MarketingPricingTable({
                   {/* Credit Metric */}
                   <div className="p-3 rounded-xl border border-border/80 bg-surface-2 text-xs space-y-1">
                     <div className="font-semibold text-fg flex items-center justify-between">
-                      <span>{t("creditsCount", { count: plan.credits.toLocaleString() })}</span>
+                      <span>{t("creditsCount", { count: plan.credits })}</span>
                       <span className="text-[10px] text-fg-subtle">{t("creditsRenewed")}</span>
                     </div>
                     <div className="text-[11px] text-fg-muted">

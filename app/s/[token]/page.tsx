@@ -19,7 +19,7 @@ import { limit, resolveClientIp } from "@/server/http/rate-limit";
 import { env } from "@/server/env";
 import { ApiError } from "@/server/http/errors";
 import { Markdown } from "@/components/markdown";
-import { getTranslations } from "next-intl/server";
+import { getFormatter, getTranslations } from "next-intl/server";
 import { Button } from "@/components/ui/button";
 
 export const dynamic = "force-dynamic";
@@ -55,6 +55,7 @@ export default async function PublicSharePage({
 }) {
   const { token } = await params;
   const t = await getTranslations("PublicShare");
+  const format = await getFormatter();
   const tDocs = await getTranslations("Documents");
 
   // Same validated IP resolution as the API route (only trusts proxy headers when TRUST_PROXY=true)
@@ -130,7 +131,7 @@ export default async function PublicSharePage({
             )}
             <span>
               {t("sharedOn", {
-                date: new Date(payload.createdAt).toLocaleDateString(undefined, {
+                date: format.dateTime(new Date(payload.createdAt), {
                   year: "numeric",
                   month: "short",
                   day: "numeric",

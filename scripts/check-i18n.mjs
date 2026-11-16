@@ -219,6 +219,21 @@ if (!encodingFailed) {
   logSuccess("Encoding sanity check passed: no corrupted characters found.");
 }
 
+// Check 6: counted nouns use ICU plurals ("{count} credits" reads "1 credits")
+let pluralFailed = false;
+for (const loc of locales) {
+  for (const [key, value] of Object.entries(flat[loc])) {
+    if (typeof value !== "string") continue;
+    if (/\{count\}\s+\p{L}/u.test(value) && !/\{count,\s*plural/.test(value)) {
+      logError(`'${loc}' key '${key}' puts a word after {count} without a plural form: use {count, plural, one {…} other {…}}.`);
+      pluralFailed = true;
+    }
+  }
+}
+if (!pluralFailed) {
+  logSuccess("Counted nouns use ICU plural forms.");
+}
+
 // Check 5: Help Content Parity
 let helpFailed = false;
 const enHelpDir = path.join(helpDir, "en");

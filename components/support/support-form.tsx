@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { getApiErrorMessage } from "@/lib/api/error-message";
 import { Mail, Clock, ShieldCheck, CheckCircle2, AlertCircle, Send, Info } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -9,11 +9,11 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { authClient } from "@/lib/auth-client";
 
-const formatCharCount = (curr: number, max: number) => `${curr} / ${max.toLocaleString()}`;
 
 export function SupportForm() {
   const t = useTranslations("Support");
   const tRoot = useTranslations();
+  const format = useFormatter();
   const { data: session } = authClient.useSession();
 
   const [name, setName] = React.useState("");
@@ -223,7 +223,7 @@ export function SupportForm() {
               {t("messageLabel")} <span className="text-danger">*</span>
             </label>
             <span className="text-[11px] font-mono text-fg-subtle">
-              {formatCharCount(message.length, 5000)}
+              {t("charCount", { current: format.number(message.length), max: format.number(5000) })}
             </span>
           </div>
           <textarea

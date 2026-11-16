@@ -33,6 +33,9 @@ export interface SessionItem {
   deviceLabel: string;
   os: string;
   browser: string;
+  customLabel?: string | null;
+  browserName?: string | null;
+  osName?: string | null;
   country: string | null;
   ip: string | null;
   createdAt: string;
@@ -168,7 +171,12 @@ export function SessionsList() {
     }
   };
 
-  const formatDeviceInfo = (browser: string, os: string) => `${browser} • ${os}`;
+  const browserOf = (s: SessionItem) => s.browserName ?? t("unknownBrowser");
+  const osOf = (s: SessionItem) => s.osName ?? t("unknownOs");
+  const deviceLabelOf = (s: SessionItem) =>
+    s.customLabel ?? t("deviceOn", { browser: browserOf(s), os: osOf(s) });
+  const formatDeviceInfo = (s: SessionItem) =>
+    t("deviceInfo", { browser: browserOf(s), os: osOf(s) });
 
   const otherSessionsCount = sessions.filter((s) => !s.current).length;
 
@@ -249,7 +257,7 @@ export function SessionsList() {
                   <div className="flex flex-col gap-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm font-semibold text-fg truncate">
-                        {session.deviceLabel}
+                        {deviceLabelOf(session)}
                       </span>
                       {isCurrent && (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-success/15 text-success border border-success/30">
@@ -263,7 +271,7 @@ export function SessionsList() {
                     </div>
 
                     <div className="flex items-center gap-3 text-xs text-muted flex-wrap">
-                      <span>{formatDeviceInfo(session.browser, session.os)}</span>
+                      <span>{formatDeviceInfo(session)}</span>
                       {session.country && (
                         <span className="inline-flex items-center gap-1">
                           <Globe className="w-3 h-3" />

@@ -215,6 +215,10 @@ function resolveDefaultEmailMapping(
         template: "new-sign-in",
         data: {
           time: (payload.time as string) || new Date().toUTCString(),
+          timeIso: payload.timeIso as string | undefined,
+          browser: payload.browser as string | null | undefined,
+          os: payload.os as string | null | undefined,
+          customDevice: payload.customDevice as string | null | undefined,
           device: payload.device as string | undefined,
           ipAddress: payload.ipAddress as string | undefined,
           location: payload.location as string | undefined,

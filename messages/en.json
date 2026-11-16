@@ -31,7 +31,12 @@
     "editResponsePlaceholder": "Edit response content...",
     "nothingToPreview": "Nothing to preview.",
     "workspaceSingular": "Workspace",
-    "allRightsReserved": "All rights reserved."
+    "allRightsReserved": "All rights reserved.",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "confirm": "Confirm",
+    "copyToClipboard": "Copy to clipboard",
+    "copiedShort": "Copied"
   },
   "Header": {
     "features": "Features",
@@ -93,7 +98,7 @@
     "noAccount": "Don't have an account?",
     "createAccountLink": "Create one",
     "registerTitle": "Create your account",
-    "registerSubtitle": "Start with 10,000 free tokens on Klecx",
+    "registerSubtitle": "Start free with {credits, plural, one {# credit} other {# credits}} every month",
     "registerButton": "Create Account",
     "registering": "Creating account...",
     "alreadyHaveAccount": "Already have an account?",
@@ -219,7 +224,7 @@
     "generatedImageAlt": "AI generated image by Klecx",
     "settings": "Settings",
     "logout": "Sign Out",
-    "tokensRemaining": "{count} tokens left",
+    "tokensRemaining": "{count, plural, one {# token left} other {# tokens left}}",
     "outOfTokens": "You have run out of tokens. Please top up your balance.",
     "promptRequired": "Please enter a prompt first.",
     "streamError": "Failed to generate response. Please try again.",
@@ -244,7 +249,8 @@
     "webSearchOff": "Web search is off",
     "changeInSettings": "Change in Settings",
     "capGenerate": "generate responses",
-    "imageWithAttachments": "Image generation can't be combined with file or image attachments."
+    "imageWithAttachments": "Image generation can't be combined with file or image attachments.",
+    "charCount": "{current} / {max}"
   },
   "Settings": {
     "ai": {
@@ -321,7 +327,11 @@
       "passwordPlaceholder": "Enter your password",
       "cancel": "Cancel",
       "verifying": "Verifying...",
-      "confirmAndSignOut": "Confirm & Sign out"
+      "confirmAndSignOut": "Confirm & Sign out",
+      "unknownBrowser": "Unknown browser",
+      "unknownOs": "Unknown system",
+      "deviceOn": "{browser} on {os}",
+      "deviceInfo": "{browser} • {os}"
     }
   },
   "Email": {
@@ -360,7 +370,13 @@
       "greeting": "Hi,",
       "body": "A new sign-in to your Klecx account was detected on {time} from {device} ({ipAddress}, {location}).",
       "button": "Review Account Activity",
-      "disclaimer": "If this was you, no action is required. If you did not sign in at this time, please change your password immediately."
+      "disclaimer": "If this was you, no action is required. If you did not sign in at this time, please change your password immediately.",
+      "deviceOn": "{browser} on {os}",
+      "unknownBrowser": "an unknown browser",
+      "unknownOs": "an unknown system",
+      "unknownDevice": "an unknown device",
+      "unknownIp": "unknown IP",
+      "unknownLocation": "unknown location"
     },
     "passwordChanged": {
       "subject": "Security Alert: Your Klecx password was changed",
@@ -507,7 +523,7 @@
     "share": "Share",
     "delete": "Delete",
     "creditsPlan": "{plan} Plan",
-    "creditsBalance": "{count} credits",
+    "creditsBalance": "{count, plural, one {# credit} other {# credits}}",
     "usageLink": "Usage",
     "settings": "Settings",
     "help": "Help & Documentation",
@@ -905,7 +921,7 @@
         "cap20pct": "20% of balance"
       },
       "priceFormat": "${price}",
-      "creditsCount": "{count} Credits"
+      "creditsCount": "{count, plural, one {# Credit} other {# Credits}}"
     },
     "faq": {
       "badge": "Clear Answers",
@@ -1079,7 +1095,7 @@
     },
     "allCategories": "All Categories",
     "readTime": "read",
-    "articlesFound": "{count} articles found",
+    "articlesFound": "{count, plural, one {# article found} other {# articles found}}",
     "noResultsTitle": "No articles found",
     "noResultsDesc": "Try adjusting your search terms or browse all categories above.",
     "backToHelp": "Back to Help Center",
@@ -1655,7 +1671,10 @@
       "workspace": "a workspace",
       "yourWorkspace": "your workspace",
       "role": "a collaborator",
-      "device": "a new device"
+      "device": "a new device",
+      "deviceOn": "{browser} on {os}",
+      "browser": "an unknown browser",
+      "os": "an unknown system"
     },
     "items": {
       "INVITE_RECEIVED": {
@@ -1684,7 +1703,7 @@
       "CREDITS_LOW": {
         "title": "Credits running low (80% used)",
         "description": "You have few credits left this period.",
-        "descriptionCount": "You have {count} credits left this period."
+        "descriptionCount": "{count, plural, one {You have # credit left this period.} other {You have # credits left this period.}}"
       },
       "CREDITS_EXHAUSTED": {
         "title": "Out of credits (100% used)",
@@ -1711,7 +1730,7 @@
         "title": "Queued questions answered",
         "description": "Your queued questions were answered.",
         "descriptionOne": "1 queued question was answered.",
-        "descriptionCount": "{count} queued questions were answered."
+        "descriptionCount": "{count, plural, one {# queued question was answered.} other {# queued questions were answered.}}"
       },
       "OWNERSHIP_TRANSFER_REQUESTED": {
         "title": "Ownership transfer request",
@@ -1751,9 +1770,9 @@
     },
     "bell": {
       "label": "Notifications",
-      "labelUnread": "Notifications ({count} unread)",
+      "labelUnread": "{count, plural, one {Notifications (# unread)} other {Notifications (# unread)}}",
       "title": "Notifications",
-      "newCount": "{count} new",
+      "newCount": "{count, plural, one {# new} other {# new}}",
       "markAllReadTitle": "Mark all as read",
       "markAllRead": "Mark all read",
       "settings": "Notification settings",
@@ -1775,7 +1794,7 @@
       "inAppFor": "{label}: in-app notifications",
       "emailFor": "{label}: email notifications",
       "recentTitle": "Recent notifications",
-      "unreadCount": "{count} unread",
+      "unreadCount": "{count, plural, one {# unread} other {# unread}}",
       "recentDescription": "Your recent account and workspace activity alerts.",
       "filter": "Show notifications",
       "filterAll": "All",
@@ -1837,7 +1856,7 @@
     "levelWithQuote": "Level {level}: «{quote}»",
     "resize": "Resize column",
     "allAnnotations": "All annotations",
-    "moreSpines": "{count} more levels",
+    "moreSpines": "{count, plural, one {# more level} other {# more levels}}",
     "hiddenLevels": "Hidden levels",
     "loading": "Loading thread…",
     "notAvailable": "This thread is no longer available.",
@@ -1916,7 +1935,7 @@
       "save": "Save",
       "editLabel": "Edit question",
       "removeLabel": "Remove question",
-      "estimatedCredits": "~{count} credits",
+      "estimatedCredits": "{count, plural, one {~# credit} other {~# credits}}",
       "askAll": "Ask all ({count})",
       "removedSuccess": "Question removed from queue",
       "removeFailed": "Failed to remove question",
@@ -1979,7 +1998,7 @@
       "unreadable": "This file couldn't be read. It may be damaged or password-protected.",
       "empty": "No text was found in this file.",
       "timeout": "This file took too long to process. Try a smaller file.",
-      "limit": "This workspace already has {count} documents, which is the limit. Delete one to add another."
+      "limit": "This workspace already has {count, plural, one {# document} other {# documents}}, which is the limit. Delete one to add another."
     },
     "copy": "Copy",
     "cancelDrop": "Cancel",
@@ -2183,7 +2202,7 @@
       "button": "Invite",
       "disclaimer": "Sends a 7-day, single-use invitation link. Counts toward the owner's plan member limit.",
       "pendingHeading": "Pending Invitations",
-      "pendingCount": "{count} pending",
+      "pendingCount": "{count, plural, one {# pending} other {# pending}}",
       "noPending": "No pending invitations.",
       "expires": "Expires {date}",
       "resend": "Resend",
@@ -2227,7 +2246,7 @@
       "readyToShare": "Ready to share",
       "copy": "Copy",
       "activeHeading": "Public Share Links",
-      "activeCount": "{count} active",
+      "activeCount": "{count, plural, one {# active} other {# active}}",
       "noLinks": "No public links created yet.",
       "singleResponseBadge": "Single response",
       "workspaceBadge": "Workspace",
@@ -2236,12 +2255,52 @@
       "viewsCount": "{count, plural, one {# view} other {# views}}",
       "expiresOn": "Expires {date}",
       "neverExpires": "Never expires",
-      "authorShown": "Author shown"
+      "authorShown": "Author shown",
+      "status": {
+        "ACTIVE": "Active",
+        "REVOKED": "Revoked",
+        "EXPIRED": "Expired"
+      }
     },
     "activity": {
       "empty": "No activity recorded yet.",
       "collaborator": "Collaborator",
-      "user": "User"
+      "user": "User",
+      "actions": {
+        "workspace_created": "created the workspace “{title}”",
+        "workspace_renamed": "renamed the workspace to “{title}”",
+        "workspace_archived": "archived the workspace",
+        "workspace_unarchived": "took the workspace out of the archive",
+        "workspace_deleted": "moved the workspace to the trash",
+        "workspace_restored": "restored the workspace from the trash",
+        "project_created": "created the project “{name}”",
+        "project_renamed": "renamed the project to “{name}”",
+        "project_archived": "archived the project",
+        "project_unarchived": "took the project out of the archive",
+        "project_deleted": "deleted the project",
+        "member_added": "joined as {role}",
+        "member_removed": "removed a member",
+        "member_left": "left",
+        "member_role_changed": "changed a member's role to {role}",
+        "member_cap_changed": "changed a member's credit cap",
+        "invitation_created": "invited {email} as {role}",
+        "invitation_revoked": "revoked the invitation for {email}",
+        "invitation_resent": "resent the invitation to {email}",
+        "share_created": "created a public link",
+        "share_revoked": "revoked a public link",
+        "ownership_transferred": "became the owner",
+        "response_created": "generated a response",
+        "response_regenerated": "regenerated a response",
+        "response_edited": "edited a response",
+        "annotation_comment": "added a comment",
+        "annotation_ask": "asked Klecx a question",
+        "document_uploaded": "added the document “{name}”",
+        "note_created": "recorded a Klecx note",
+        "note_archived": "archived a Klecx note",
+        "note_restored": "restored a Klecx note",
+        "note_deleted": "deleted a Klecx note",
+        "other": "made a change"
+      }
     },
     "toasts": {
       "activityLoadFailed": "Failed to load activity log",
@@ -2258,7 +2317,7 @@
       "copyFailed": "Couldn't copy the link",
       "capUpdateFailed": "Couldn't update the credit cap",
       "capUnlimited": "Collaborator credit cap set to unlimited",
-      "capSet": "Collaborator credit cap set to {count} credits/month",
+      "capSet": "{count, plural, one {Collaborator credit cap set to # credit/month} other {Collaborator credit cap set to # credits/month}}",
       "capInvalid": "Please enter a whole number of 0 or more",
       "roleUpdated": "Member role updated",
       "roleUpdateFailed": "Couldn't update the member's role",

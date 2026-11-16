@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import Logo from "@/components/logo/Logo";
 import { QuickFixBlock, ReviewChips } from "@/components/annotations/quick-fix";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -153,6 +153,7 @@ export function ThreadColumn({
   className,
 }: ThreadColumnProps) {
   const t = useTranslations("Threads");
+  const format = useFormatter();
 
   const [annotation, setAnnotation] = React.useState<AnnotationDetail | null>(null);
   const [chain, setChain] = React.useState<AnnotationDetail[]>([]);
@@ -564,7 +565,7 @@ export function ThreadColumn({
           </div>
           {msg.createdAt && (
             <time className="text-[10px] text-muted" dateTime={msg.createdAt}>
-              {new Date(msg.createdAt).toLocaleTimeString([], {
+              {format.dateTime(new Date(msg.createdAt), {
                 hour: "2-digit",
                 minute: "2-digit",
               })}

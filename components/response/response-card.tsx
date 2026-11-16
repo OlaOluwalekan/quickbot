@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import {
   ChevronLeft,
   ChevronRight,
@@ -192,6 +192,7 @@ export function ResponseCard({
   const tExportFormats = useTranslations("Documents.downloadFormats");
   const tExportCaps = useTranslations("Documents.caps");
   const tReview = useTranslations("Review");
+  const format = useFormatter();
   const [isEditing, setIsEditing] = React.useState(false);
   const [reviewOpen, setReviewOpen] = React.useState(false);
   const [isPromptExpanded, setIsPromptExpanded] = React.useState(false);
@@ -685,7 +686,7 @@ export function ResponseCard({
                   </TooltipTrigger>
                   <TooltipContent>
                     {t("addedOn", {
-                      date: response.createdAt ? new Date(response.createdAt).toLocaleDateString() : "",
+                      date: response.createdAt ? format.dateTime(new Date(response.createdAt), { dateStyle: "medium" }) : "",
                     })}
                   </TooltipContent>
                 </Tooltip>

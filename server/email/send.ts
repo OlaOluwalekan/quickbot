@@ -126,7 +126,7 @@ export async function renderEmail<T extends EmailTemplateName>(
   data: EmailTemplateMap[T],
   opts?: { locale?: string }
 ): Promise<EmailTemplateResult> {
-  const { t } = await getEmailTranslator(opts?.locale);
+  const { t, locale } = await getEmailTranslator(opts?.locale);
 
   switch (template) {
     case "verify-email":
@@ -146,7 +146,7 @@ export async function renderEmail<T extends EmailTemplateName>(
     case "invitation":
       return renderInvitation(data as EmailTemplateMap["invitation"], t, to);
     case "new-sign-in":
-      return renderNewSignIn(data as EmailTemplateMap["new-sign-in"], t, to);
+      return renderNewSignIn(data as EmailTemplateMap["new-sign-in"], t, to, locale);
     case "password-changed":
       return renderPasswordChanged(
         data as EmailTemplateMap["password-changed"],

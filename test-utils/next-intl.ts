@@ -41,13 +41,29 @@ export function createTranslator(namespace?: string) {
   return t;
 }
 
+/** Real `Intl` formatting in English, like next-intl's `useFormatter()`. */
+export function createFormatter() {
+  return {
+    dateTime: (date: Date | number, options?: Intl.DateTimeFormatOptions) =>
+      new Intl.DateTimeFormat("en", options).format(date),
+    number: (n: number, options?: Intl.NumberFormatOptions) =>
+      new Intl.NumberFormat("en", options).format(n),
+    relativeTime: (date: Date | number, now: Date | number = Date.now()) => {
+      const diff = Math.round((Number(date) - Number(now)) / 1000);
+      const abs = Math.abs(diff);
+      const rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+      if (abs < 60) return rtf.format(diff, "second");
+      if (abs < 3600) return rtf.format(Math.round(diff / 60), "minute");
+      if (abs < 86400) return rtf.format(Math.round(diff / 3600), "hour");
+      return rtf.format(Math.round(diff / 86400), "day");
+    },
+  };
+}
+
 export const nextIntlMock = {
   useTranslations: (namespace?: string) => createTranslator(namespace),
   useLocale: () => "en",
-  useFormatter: () => ({
-    dateTime: (date: Date) => date.toISOString().slice(0, 10),
-    relativeTime: (date: Date) => date.toISOString(),
-    number: (n: number) => String(n),
-  }),
+  useFormatter: () => createFormatter(),
+  useNow: () => new Date(),
   NextIntlClientProvider: ({ children }: { children: unknown }) => children,
 };

@@ -17,6 +17,7 @@ jest.mock("next/navigation", () => ({
 }));
 
 jest.mock("next-intl", () => ({
+  useFormatter: () => jest.requireActual("../test-utils/next-intl").createFormatter(),
   useTranslations: (namespace?: string) => {
     return (key: string, values?: Record<string, any>) => {
       let resolved: any;

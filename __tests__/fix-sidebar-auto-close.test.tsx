@@ -64,9 +64,7 @@ jest.mock("next-intl", () => ({
     };
   },
   useLocale: () => "en",
-  useFormatter: () => ({
-    dateTime: (date: Date) => date.toISOString().slice(0, 10),
-  }),
+  useFormatter: () => jest.requireActual("../test-utils/next-intl").createFormatter(),
 }));
 
 beforeAll(() => {

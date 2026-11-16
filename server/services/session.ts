@@ -8,6 +8,8 @@ import type { Actor } from "@/server/auth/session";
 import {
   parseDeviceMetadata,
   maskIp,
+  UNKNOWN_BROWSER,
+  UNKNOWN_OS,
 } from "./device";
 
 export * from "./device";
@@ -18,6 +20,14 @@ export interface FormattedSession {
   deviceLabel: string;
   os: string;
   browser: string;
+  /**
+   * For the UI, which builds the label in the person's language:
+   * the device's own name (set by the person, or a phone's model), else null;
+   * browser and OS names, null when unknown.
+   */
+  customLabel: string | null;
+  browserName: string | null;
+  osName: string | null;
   country: string | null;
   ip: string | null;
   createdAt: Date;
@@ -47,10 +57,18 @@ export async function listUserSessions(
       s.deviceLabel,
       s.client
     );
+    const generic = parseDeviceMetadata(s.userAgent, null, s.client);
+    const label = s.deviceLabel || parsed.deviceLabel;
+    // "Chrome on macOS" is generated in English: let the UI rebuild it.
+    const isGeneratedDesktopLabel =
+      label === `${generic.browser} on ${generic.os}`;
     return {
       id: s.id,
       current: s.id === currentSessionId,
-      deviceLabel: s.deviceLabel || parsed.deviceLabel,
+      deviceLabel: label,
+      customLabel: isGeneratedDesktopLabel ? null : label,
+      browserName: generic.browser === UNKNOWN_BROWSER ? null : generic.browser,
+      osName: generic.os === UNKNOWN_OS ? null : generic.os,
       os: parsed.os,
       browser: parsed.browser,
       country: s.country,

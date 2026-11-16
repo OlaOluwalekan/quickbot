@@ -32,31 +32,20 @@ export interface ConfirmDialogProps {
   onConfirm: () => void | Promise<void>;
 }
 
-function formatConfirmPrompt(text: string, template?: string): string {
-  if (template) return template.replace("{text}", text);
-  return `Type ${text} to confirm:`;
-}
-
 export function ConfirmDialog({
   open,
   onOpenChange,
   title,
   description,
-  confirmLabel = "Confirm",
-  cancelLabel = "Cancel",
+  confirmLabel,
+  cancelLabel,
   variant = "destructive",
   confirmText,
   confirmPlaceholder,
   loading = false,
   onConfirm,
 }: ConfirmDialogProps) {
-  let promptTemplate: string | undefined;
-  try {
-    const t = useTranslations("Common");
-    promptTemplate = t("confirmPrompt");
-  } catch {
-    // fallback outside Intl provider
-  }
+  const t = useTranslations("Common");
 
   const [typed, setTyped] = React.useState("");
   const inputId = React.useId();
@@ -90,7 +79,7 @@ export function ConfirmDialog({
           {confirmText && (
             <div className="space-y-2 pt-1">
               <Label htmlFor={inputId} className="text-xs text-muted">
-                {formatConfirmPrompt(confirmText, promptTemplate)}
+                {t("confirmPrompt", { text: confirmText })}
               </Label>
               <Input
                 id={inputId}
@@ -109,7 +98,7 @@ export function ConfirmDialog({
               disabled={loading}
               onClick={() => handleOpenChange(false)}
             >
-              {cancelLabel}
+              {cancelLabel ?? t("cancel")}
             </Button>
             <Button
               type="submit"
@@ -117,7 +106,7 @@ export function ConfirmDialog({
               disabled={!isMatch || loading}
             >
               {loading && <Spinner size="sm" className="mr-1" />}
-              {confirmLabel}
+              {confirmLabel ?? t("confirm")}
             </Button>
           </DialogFooter>
         </form>
