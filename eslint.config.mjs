@@ -56,7 +56,7 @@ const eslintConfig = [
         {
           // setError("…"), setSubmitError("…"), setMessage("…")
           selector:
-            "CallExpression[callee.name=/^set[A-Z]\\w*(Error|Message)$/] > Literal.arguments:first-child[value=/[A-Za-z]{2}/]",
+            "CallExpression[callee.name=/^set\\w*(Error|Message)$/] > Literal.arguments:first-child[value=/[A-Za-z]{2}/]",
           message: "User-visible text must come from next-intl (messages/*.json).",
         },
         {

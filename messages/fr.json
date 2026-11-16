@@ -418,7 +418,8 @@
       "greetingWithName": "Bonjour {name},",
       "body": "Merci d'avoir contacté l'assistance Klecx. Nous avons bien reçu votre demande concernant \"{topic}\" (Ticket #{ticketId}).",
       "quoteNotice": "Votre message :",
-      "responseTimeNotice": "Notre équipe traite chaque demande dans un délai de ≤ 3 jours ouvrés."
+      "responseTimeNotice": "Notre équipe traite chaque demande dans un délai de ≤ 3 jours ouvrés.",
+      "screenshotsAttached": "{count, plural, one {# capture d'écran jointe} other {# captures d'écran jointes}}"
     },
     "layout": {
       "copyUrlNotice": "Si le bouton ci-dessus ne fonctionne pas, copiez et collez ce lien dans votre navigateur Web :",
@@ -1160,7 +1161,28 @@
     "visitHelpCenter": "Accéder au Centre d'Aide",
     "website": "Site web",
     "charCount": "{current} / {max}",
-    "submitFailed": "Impossible d'envoyer votre demande d'assistance. Veuillez réessayer."
+    "submitFailed": "Impossible d'envoyer votre demande d'assistance. Veuillez réessayer.",
+    "emailAndMessageRequired": "Veuillez saisir votre adresse e-mail et un message.",
+    "messageTooShort": "Votre message doit contenir au moins 10 caractères.",
+    "errorReferencePrefill": "Référence de l'erreur : {digest}",
+    "screenshots": {
+      "label": "Captures d'écran (facultatif)",
+      "add": "Ajouter des captures",
+      "dropHint": "Déposez des images ici ou collez-les avec Ctrl+V / ⌘+V.",
+      "formats": "PNG, JPEG ou WebP, {maxMb} Mo maximum chacune.",
+      "counter": "{count} / {max}",
+      "privacy": "Les captures peuvent contenir des informations personnelles. Recadrez ce que vous ne voulez pas partager.",
+      "remove": "Retirer {name}",
+      "previewAlt": "Capture {index} : {name}",
+      "preparing": "Préparation des captures…",
+      "attached": "{count, plural, one {# capture jointe} other {# captures jointes}}",
+      "errors": {
+        "tooLarge": "« {name} » dépasse {maxMb} Mo.",
+        "type": "« {name} » : seules les images PNG, JPEG ou WebP peuvent être jointes.",
+        "tooMany": "Vous pouvez joindre au maximum {max} captures.",
+        "totalTooLarge": "Ces captures sont trop lourdes ensemble. Retirez-en une ou utilisez des images plus petites."
+      }
+    }
   },
   "Status": {
     "title": "État du Système",
@@ -1325,7 +1347,13 @@
       "internal": "Un problème est survenu de notre côté. Veuillez réessayer.",
       "network_error": "Connexion perdue. Vérifiez votre connexion internet et réessayez.",
       "network": "Connexion perdue. Vérifiez votre connexion internet et réessayez.",
-      "connection": "La connexion s'est fermée avant la fin de la réponse. Veuillez réessayer."
+      "connection": "La connexion s'est fermée avant la fin de la réponse. Veuillez réessayer.",
+      "too_many_screenshots": "Vous pouvez joindre au maximum 5 captures d'écran.",
+      "screenshot_too_large": "Une capture d'écran dépasse 2 Mo ou est vide.",
+      "screenshots_too_large": "Les captures d'écran sont trop lourdes ensemble. Retirez-en une ou utilisez des images plus petites.",
+      "screenshot_type_unsupported": "Les captures d'écran doivent être des images PNG, JPEG ou WebP.",
+      "screenshot_unreadable": "Une capture d'écran n'a pas pu être lue. Enregistrez-la à nouveau en PNG.",
+      "screenshot_dimensions_too_large": "Une capture d'écran est trop grande : 4096 × 4096 pixels au maximum."
     }
   },
   "Gates": {

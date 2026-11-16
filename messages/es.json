@@ -418,7 +418,8 @@
       "greetingWithName": "Hola {name},",
       "body": "Gracias por contactar al soporte de Klecx. Hemos recibido su solicitud sobre \"{topic}\" (Ticket #{ticketId}).",
       "quoteNotice": "Su mensaje:",
-      "responseTimeNotice": "Nuestro equipo de soporte revisa los tickets en un plazo de ≤ 3 días hábiles."
+      "responseTimeNotice": "Nuestro equipo de soporte revisa los tickets en un plazo de ≤ 3 días hábiles.",
+      "screenshotsAttached": "{count, plural, one {# captura de pantalla adjunta} other {# capturas de pantalla adjuntas}}"
     },
     "layout": {
       "copyUrlNotice": "Si el botón de arriba no funciona, copie y pegue este enlace en su navegador web:",
@@ -1160,7 +1161,28 @@
     "visitHelpCenter": "Visitar Centro de Ayuda",
     "website": "Sitio web",
     "charCount": "{current} / {max}",
-    "submitFailed": "No se pudo enviar tu solicitud de soporte. Inténtalo de nuevo."
+    "submitFailed": "No se pudo enviar tu solicitud de soporte. Inténtalo de nuevo.",
+    "emailAndMessageRequired": "Introduce tu dirección de correo y un mensaje.",
+    "messageTooShort": "Tu mensaje debe tener al menos 10 caracteres.",
+    "errorReferencePrefill": "Referencia del error: {digest}",
+    "screenshots": {
+      "label": "Capturas de pantalla (opcional)",
+      "add": "Añadir capturas",
+      "dropHint": "Suelta imágenes aquí o pégalas con Ctrl+V / ⌘+V.",
+      "formats": "PNG, JPEG o WebP, hasta {maxMb} MB cada una.",
+      "counter": "{count} / {max}",
+      "privacy": "Las capturas pueden contener información personal. Recorta lo que no quieras compartir.",
+      "remove": "Quitar {name}",
+      "previewAlt": "Captura {index}: {name}",
+      "preparing": "Preparando capturas…",
+      "attached": "{count, plural, one {# captura adjunta} other {# capturas adjuntas}}",
+      "errors": {
+        "tooLarge": "«{name}» pesa más de {maxMb} MB.",
+        "type": "«{name}»: solo se pueden adjuntar imágenes PNG, JPEG o WebP.",
+        "tooMany": "Puedes adjuntar como máximo {max} capturas.",
+        "totalTooLarge": "Estas capturas pesan demasiado en conjunto. Quita una o usa imágenes más pequeñas."
+      }
+    }
   },
   "Status": {
     "title": "Estado del Sistema",
@@ -1325,7 +1347,13 @@
       "internal": "Algo salió mal por nuestra parte. Inténtalo de nuevo.",
       "network_error": "Se perdió la conexión. Revisa tu conexión a internet e inténtalo de nuevo.",
       "network": "Se perdió la conexión. Revisa tu conexión a internet e inténtalo de nuevo.",
-      "connection": "La conexión se cerró antes de terminar la respuesta. Inténtalo de nuevo."
+      "connection": "La conexión se cerró antes de terminar la respuesta. Inténtalo de nuevo.",
+      "too_many_screenshots": "Puedes adjuntar como máximo 5 capturas de pantalla.",
+      "screenshot_too_large": "Una captura de pantalla pesa más de 2 MB o está vacía.",
+      "screenshots_too_large": "Las capturas de pantalla pesan demasiado en conjunto. Quita una o usa imágenes más pequeñas.",
+      "screenshot_type_unsupported": "Las capturas de pantalla deben ser imágenes PNG, JPEG o WebP.",
+      "screenshot_unreadable": "No se pudo leer una captura de pantalla. Vuelve a guardarla como PNG.",
+      "screenshot_dimensions_too_large": "Una captura de pantalla es demasiado grande: como máximo 4096 × 4096 píxeles."
     }
   },
   "Gates": {
