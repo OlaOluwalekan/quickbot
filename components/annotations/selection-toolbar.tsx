@@ -62,6 +62,11 @@ export interface SelectionToolbarProps {
   }) => void;
 }
 
+/** Space below a touch selection for its drag handles (about 24 px). */
+const TOUCH_HANDLE_CLEARANCE = 32;
+/** Bottom strip Android Chrome uses for its own bars while text is selected. */
+const TOUCH_BOTTOM_RESERVED = 96;
+
 const formatCommentShortcut = (mac: boolean) => (mac ? "⌥⌘M" : "Ctrl+Alt+M");
 const formatAskShortcut = (mac: boolean) => (mac ? "⌥⌘A" : "Ctrl+Alt+A");
 const formatQueueShortcut = (mac: boolean) => (mac ? "⌘↵" : "Ctrl+↵");
@@ -130,9 +135,15 @@ export function SelectionToolbar({
     }
   }, []);
 
+  // On touch screens the buttons float next to the selection, like with a
+  // mouse; only the Comment / Ask forms use the bottom sheet (room for the
+  // keyboard). The bottom of the screen is where Android Chrome shows its own
+  // bars for a selection, so a sheet there was hidden behind them.
+  const isSheet = isCoarsePointer && mode !== "idle";
+
   // Update position via Floating UI
   const updatePosition = React.useCallback(() => {
-    if (!activeRange || !popoverRef.current || isCoarsePointer) return;
+    if (!activeRange || !popoverRef.current || isSheet) return;
 
     const virtualEl = {
       getBoundingClientRect: () => {
@@ -153,23 +164,53 @@ export function SelectionToolbar({
       },
     };
 
-    computePosition(virtualEl, popoverRef.current, {
-      placement: "top",
-      middleware: [
-        offset(8),
-        flip({ fallbackPlacements: ["bottom", "top"] }),
-        shift({ padding: 8 }),
-      ],
-    }).then(({ x, y }) => {
+    computePosition(
+      virtualEl,
+      popoverRef.current,
+      isCoarsePointer
+        ? {
+            // Chrome on Android puts its Copy / Share menu above the
+            // selection, so go below it, clear of the selection handles, and
+            // keep away from the bottom edge where its search bar appears.
+            placement: "bottom",
+            strategy: "fixed",
+            middleware: [
+              offset(TOUCH_HANDLE_CLEARANCE),
+              flip({
+                fallbackPlacements: ["top"],
+                padding: { top: 8, bottom: TOUCH_BOTTOM_RESERVED },
+              }),
+              shift({ padding: 8 }),
+            ],
+          }
+        : {
+            placement: "top",
+            strategy: "fixed",
+            middleware: [
+              offset(8),
+              flip({ fallbackPlacements: ["bottom", "top"] }),
+              shift({ padding: 8 }),
+            ],
+          }
+    ).then(({ x, y }) => {
       if (popoverRef.current) {
         popoverRef.current.style.left = `${Math.round(x)}px`;
         popoverRef.current.style.top = `${Math.round(y)}px`;
       }
     });
-  }, [activeRange, isCoarsePointer]);
+  }, [activeRange, isCoarsePointer, isSheet]);
+
+  // The sheet is placed by its classes: drop the coordinates set while the
+  // buttons were floating.
+  React.useLayoutEffect(() => {
+    if (isSheet && popoverRef.current) {
+      popoverRef.current.style.left = "";
+      popoverRef.current.style.top = "";
+    }
+  }, [isSheet]);
 
   React.useEffect(() => {
-    if (isVisible && !isCoarsePointer) {
+    if (isVisible && !isSheet) {
       updatePosition();
       window.addEventListener("scroll", updatePosition, true);
       window.addEventListener("resize", updatePosition);
@@ -178,7 +219,7 @@ export function SelectionToolbar({
         window.removeEventListener("resize", updatePosition);
       };
     }
-  }, [isVisible, updatePosition, isCoarsePointer]);
+  }, [isVisible, updatePosition, isSheet]);
 
   // Selection change listener with debounce
   React.useEffect(() => {
@@ -559,7 +600,7 @@ export function SelectionToolbar({
         data-testid="selection-toolbar"
         className={cn(
           "z-50 bg-surface border border-border shadow-md transition-all duration-150",
-          isCoarsePointer
+          isSheet
             ? "fixed inset-x-0 bottom-0 rounded-t-2xl p-3 pb-[max(12px,env(safe-area-inset-bottom))]"
             : "fixed rounded-xl p-1.5"
         )}

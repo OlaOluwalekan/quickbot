@@ -617,6 +617,78 @@ export function AnnotationLayer({
     }, 150);
   };
 
+  // The annotations under a point, highest display priority first.
+  const annotationsAt = (clientX: number, clientY: number) => {
+    const matches: { annot: AnnotationItem; range: Range; rectIndex: number }[] = [];
+    const caret = getPointCaret(document, clientX, clientY);
+    if (caret) {
+      for (const item of activeRangeItemsRef.current) {
+        if (!isPointInRange(item.range, caret.node, caret.offset)) continue;
+        const rectIndex = hitLineRect(item.range, clientX, clientY);
+        if (rectIndex === null) continue;
+        matches.push({ annot: item.annot, range: item.range, rectIndex });
+      }
+    }
+    matches.sort(
+      (a, b) =>
+        (DISPLAY_PRIORITY[displayKind(b.annot)] ?? 0) -
+        (DISPLAY_PRIORITY[displayKind(a.annot)] ?? 0)
+    );
+    return matches;
+  };
+
+  const openPreviewAt = (
+    matches: ReturnType<typeof annotationsAt>,
+    clientX: number
+  ) => {
+    const topMatch = matches[0]!;
+    const line =
+      topMatch.rectIndex >= 0
+        ? rangeLineRects(topMatch.range)[topMatch.rectIndex]
+        : undefined;
+    focusCardRef.current = false;
+    setActivePreview({
+      annotation: topMatch.annot,
+      range: topMatch.range,
+      allMatching: matches.map((m) => m.annot),
+      anchor: {
+        type: "line",
+        rectIndex: line ? topMatch.rectIndex : -1,
+        offsetX: line ? clientX - line.left : 0,
+      },
+    });
+    setHoverHighlight(topMatch.range);
+  };
+
+  // Touch has no hover: a tap on a marked passage opens its card. Only a
+  // plain tap: not one that ends a text selection or lands on a link or a
+  // button inside the text.
+  const lastPointerTypeRef = React.useRef<string>("");
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    lastPointerTypeRef.current = e.pointerType;
+  };
+  const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (lastPointerTypeRef.current !== "touch") return;
+    const target = e.target as Element | null;
+    if (target?.closest?.("a, button, input, textarea, select, [data-annot-ignore]")) {
+      return;
+    }
+    const sel = window.getSelection();
+    if (sel && !sel.isCollapsed) return;
+
+    const matches = annotationsAt(e.clientX, e.clientY);
+    if (matches.length === 0) return;
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
+    if (dismissTimerRef.current) {
+      clearTimeout(dismissTimerRef.current);
+      dismissTimerRef.current = null;
+    }
+    openPreviewAt(matches, e.clientX);
+  };
+
   // 3. Hover detection (pointermove, 250ms debounce, throttled via requestAnimationFrame)
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     // Hovering is for a mouse or pen; touch uses the gutter dots.
@@ -632,25 +704,9 @@ export function AnnotationLayer({
       const rootEl = rootRef.current;
       if (!rootEl) return;
 
-      const caret = getPointCaret(document, clientX, clientY);
-
-      const matches: { annot: AnnotationItem; range: Range; rectIndex: number }[] = [];
-      if (caret) {
-        for (const item of activeRangeItemsRef.current) {
-          if (!isPointInRange(item.range, caret.node, caret.offset)) continue;
-          const rectIndex = hitLineRect(item.range, clientX, clientY);
-          if (rectIndex === null) continue;
-          matches.push({ annot: item.annot, range: item.range, rectIndex });
-        }
-      }
+      const matches = annotationsAt(clientX, clientY);
 
       if (matches.length > 0) {
-        matches.sort(
-          (a, b) =>
-            (DISPLAY_PRIORITY[displayKind(b.annot)] ?? 0) -
-            (DISPLAY_PRIORITY[displayKind(a.annot)] ?? 0)
-        );
-        const topMatch = matches[0]!;
         const hoverKey = matches.map((m) => m.annot.id).join("|");
 
         if (dismissTimerRef.current) {
@@ -668,22 +724,7 @@ export function AnnotationLayer({
 
         hoverTimerRef.current = setTimeout(() => {
           hoverTimerRef.current = null;
-          const line =
-            topMatch.rectIndex >= 0
-              ? rangeLineRects(topMatch.range)[topMatch.rectIndex]
-              : undefined;
-          focusCardRef.current = false;
-          setActivePreview({
-            annotation: topMatch.annot,
-            range: topMatch.range,
-            allMatching: matches.map((m) => m.annot),
-            anchor: {
-              type: "line",
-              rectIndex: line ? topMatch.rectIndex : -1,
-              offsetX: line ? clientX - line.left : 0,
-            },
-          });
-          setHoverHighlight(topMatch.range);
+          openPreviewAt(matches, clientX);
         }, 250);
       } else {
         pendingHoverKeyRef.current = null;
@@ -860,6 +901,8 @@ export function AnnotationLayer({
       className={cn("relative group/annot", className)}
       onPointerMove={handlePointerMove}
       onPointerLeave={handlePointerLeave}
+      onPointerDown={handlePointerDown}
+      onClick={handleClick}
     >
       {/* Children content (Markdown body) */}
       {children}
