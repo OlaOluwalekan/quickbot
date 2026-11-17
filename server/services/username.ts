@@ -8,6 +8,7 @@ import {
   normalizeUsername,
 } from "@/lib/username";
 import { Prisma } from "@/server/db/generated/client";
+import { refreshUserSessionCache } from "@/server/auth/refresh-user-sessions";
 
 export async function checkUsernameAvailability(
   rawUsername: string,
@@ -119,6 +120,10 @@ export async function claimUsername(
       },
     });
 
+    // Sessions keep a copy of the user: update it, or the app keeps asking
+    // the person to claim a username until they sign in again.
+    await refreshUserSessionCache(userId);
+
     return {
       username: claimed.username,
       displayUsername: claimed.display_username,
@@ -167,6 +172,7 @@ export async function resetUsernameLimit(
     SET username_change_count = 0
     WHERE id = ${targetUserId};
   `;
+  await refreshUserSessionCache(targetUserId);
 
   await db.auditLog.create({
     data: {
