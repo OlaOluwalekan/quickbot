@@ -780,14 +780,163 @@
       "responseSnippet3": "ahead of your primary and read nodes.",
       "askPassage": "Ask about this passage",
       "sideQuestion": "Side Question: What is the failover lag between primary and replica?",
-      "mockPath": "klecx/workspaces/ws_arch_01",
+      "mockPath": "klecx/workspaces/{slug}",
       "mockProject1": "Database Architecture",
       "mockProject2": "Product Roadmap 2027",
       "mockWorkspace1": "Postgres Pooling vs Replicas",
       "mockWorkspace2": "Redis Event Invalidation",
       "mockWorkspace3": "Prisma Indexing Audit",
       "mockConfig": "pool_mode = transaction | max_client_conn = 10000 | default_pool_size = 50",
-      "modelBadge": "Standard Reasoning"
+      "modelBadge": "Standard Reasoning",
+      "scenes": {
+        "software": {
+          "label": "Software",
+          "activeProject": "Database Architecture",
+          "otherProjects": [
+            "Product Roadmap 2027",
+            "Mobile API Gateway"
+          ],
+          "workspaces": [
+            "Postgres Pooling vs Replicas",
+            "Redis Event Invalidation",
+            "Prisma Indexing Audit"
+          ],
+          "prompt": "How should we structure connection pooling versus read replicas for a 10,000 req/sec Node.js API with PostgreSQL?",
+          "thought": "Thought for 1.8s: evaluated PgBouncer transaction mode, latency, and read replica synchronization",
+          "versionInfo": "Version 2 of 2",
+          "responseBefore": "At 10,000 req/sec, connection pooling must be separated from your application processes. Deploy",
+          "responseHighlight": "PgBouncer in transaction pooling mode",
+          "responseAfter": "ahead of your primary and read nodes to keep connection overhead minimal.",
+          "artifact": "pool_mode = transaction | max_client_conn = 10000 | default_pool_size = 50",
+          "sideQuestion": "Side Question: What is the failover lag between primary and replica?"
+        },
+        "finance": {
+          "label": "Finance",
+          "activeProject": "Household Budget 2027",
+          "otherProjects": [
+            "Emergency Fund Allocation",
+            "Tax Deduction Strategy"
+          ],
+          "workspaces": [
+            "50/30/20 & Card Payoff",
+            "High-Yield Savings Audit",
+            "Retirement Contribution Plan"
+          ],
+          "prompt": "How should we split a $4,200 monthly income into needs, wants, and savings while paying off a $6,000 credit card?",
+          "thought": "Thought for 2.1s: modeled 50/30/20 split, interest amortisation, and 7-month payoff schedule",
+          "versionInfo": "Version 2 of 2",
+          "responseBefore": "Allocate $2,100 to needs and $1,260 to flexible living, directing the full $840 surplus into the",
+          "responseHighlight": "avalanche method targeting the highest APR balance",
+          "responseAfter": "to clear the card in under 8 months while avoiding excess interest charges.",
+          "artifact": [
+            "Needs (50%) | Housing, groceries & utilities | $2,100 / mo",
+            "Wants (30%) | Dining, leisure & subscriptions | $1,260 / mo",
+            "Savings & Debt (20%) | Card avalanche payoff ($6k) | $840 / mo"
+          ],
+          "sideQuestion": "Side Question: Should we use the debt avalanche or snowball method for motivation?"
+        },
+        "construction": {
+          "label": "Construction",
+          "activeProject": "Duplex Build — Phase 1",
+          "otherProjects": [
+            "Site Survey & Zoning Approvals",
+            "Subcontractor Bid Comparison"
+          ],
+          "workspaces": [
+            "120 m² Slab & 6-Week Plan",
+            "Foundation Drainage Specs",
+            "Structural Timber Estimate"
+          ],
+          "prompt": "Estimate materials, critical inspections, and a 6-week schedule for pouring a 120 m² concrete slab foundation.",
+          "thought": "Thought for 1.9s: calculated 18 m³ concrete volume, rebar layout spacing, and curing timetable",
+          "versionInfo": "Version 2 of 2",
+          "responseBefore": "Grade the sub-base and verify rebar grid clearance before pouring. Enforce a strict",
+          "responseHighlight": "curing time of 7 days before framing",
+          "responseAfter": "to allow the slab to reach required load-bearing compressive strength.",
+          "artifact": [
+            "Excavation & Prep | Weeks 1–2 | Trenching, vapor barrier, compaction test",
+            "Pour & 7-Day Cure | Week 3 | 120 m² slab poured; 7-day cure before load",
+            "Framing & Inspections | Weeks 4–6 | Wall framing, truss placement, sign-off"
+          ],
+          "sideQuestion": "Side Question: Can we safely accelerate concrete curing in cold weather?"
+        },
+        "hobby": {
+          "label": "Hobby",
+          "activeProject": "Sourdough Journal",
+          "otherProjects": [
+            "Fermentation Temperature Log",
+            "Heritage Grain Loaf Records"
+          ],
+          "workspaces": [
+            "Dense Crumb & Starter Health",
+            "Cold Retardation Timing",
+            "Crust Blistering Experiments"
+          ],
+          "prompt": "Why is my sourdough loaf turning out dense with gummy pockets, and how should I fix my starter?",
+          "thought": "Thought for 1.6s: diagnosed starter acidity imbalance, feeding frequency, and dough proofing window",
+          "versionInfo": "Version 2 of 2",
+          "responseBefore": "A dense crumb typically points to an acidic starter past its peak vigour. To restore rise,",
+          "responseHighlight": "feed at 1:5:5 twice a day",
+          "responseAfter": "with unbleached bread flour until it reliably triples within 5 hours at warm room temperature.",
+          "artifact": [
+            "Discard down to 20g active starter before feeding",
+            "Feed at 1:5:5 ratio (20g starter, 100g flour, 100g water) twice daily",
+            "Rest at 24°C until domed and tripled in volume before mixing dough"
+          ],
+          "sideQuestion": "Side Question: Does flour type or rye addition change the optimal feeding ratio?"
+        },
+        "education": {
+          "label": "Education",
+          "activeProject": "Biology Exam Prep",
+          "otherProjects": [
+            "Organic Chemistry Notes",
+            "Genetics Lab Summary"
+          ],
+          "workspaces": [
+            "2-Week Cell Biology Plan",
+            "Enzyme Kinetics Flashcards",
+            "Photosynthesis vs Respiration"
+          ],
+          "prompt": "Make a 2-week revision plan for cell biology, covering membranes, bioenergetics, and cell division.",
+          "thought": "Thought for 1.7s: prioritized high-weight topics, daily question blocks, and memory decay curves",
+          "versionInfo": "Version 2 of 2",
+          "responseBefore": "Structure the 14 days into progressive concept cycles. Base your core retention on",
+          "responseHighlight": "active recall with spaced repetition",
+          "responseAfter": "by drawing membrane pathways and testing key enzyme functions without notes.",
+          "artifact": [
+            "Days 1–4: Active recall on cell membranes and channel transport",
+            "Days 5–9: Diagram breakdown for Krebs cycle and ATP synthase",
+            "Days 10–14: Spaced repetition mock exam on mitosis vs meiosis checkpoints"
+          ],
+          "sideQuestion": "Side Question: How many active recall flashcards per day is realistic without burnout?"
+        },
+        "smallBusiness": {
+          "label": "Small Business",
+          "activeProject": "Café Launch",
+          "otherProjects": [
+            "Supplier Wholesale Terms",
+            "Barista Training Checklist"
+          ],
+          "workspaces": [
+            "30-Day Launch & Outreach",
+            "Opening Inventory Order",
+            "Point of Sale Setup"
+          ],
+          "prompt": "Draft a 30-day launch plan and first-month community marketing schedule for an independent neighbourhood café.",
+          "thought": "Thought for 2.0s: mapped permit deadlines, equipment calibration, soft open dates, and neighbourhood outreach",
+          "versionInfo": "Version 2 of 2",
+          "responseBefore": "Focus initial weeks on operations and staffing. In the final week, organise",
+          "responseHighlight": "a soft-launch week for neighbours",
+          "responseAfter": "with complimentary tastings to build word of mouth before opening to the general public.",
+          "artifact": [
+            "Week 1: Lock in coffee roaster wholesale pricing and complete menu recipes",
+            "Week 2: Host 3-day soft-launch preview for nearby residents and shop owners",
+            "Week 3: Public grand opening paired with neighbourhood loyalty cards"
+          ],
+          "sideQuestion": "Side Question: How should we price the opening menu to balance margins and trial?"
+        }
+      },
+      "scenesTablistLabel": "Preview scenes across fields"
     },
     "features": {
       "badge": "Architected for Builders",
