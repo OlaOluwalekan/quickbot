@@ -6,6 +6,7 @@ import { getAccountByUserId } from "@/server/services/credits";
 import { listProjects } from "@/server/services/project";
 import { listWorkspaces } from "@/server/services/workspace";
 import { getUserAvatar } from "@/server/services/avatar";
+import { getShellIdentity } from "@/server/services/user-profile";
 import { parseSidebarCookie, SIDEBAR_COOKIE_NAME } from "@/lib/stores/ui";
 import { AppShell } from "@/components/layout/app-shell";
 import type {
@@ -28,7 +29,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     cookieStore.get(SIDEBAR_COOKIE_NAME)?.value,
   );
 
-  const [creditAccount, projectsPage, workspacesPage, avatarData] = await Promise.all([
+  const [creditAccount, projectsPage, workspacesPage, avatarData, identity] = await Promise.all([
     getAccountByUserId(actor.userId).catch(() => null),
     listProjects(actor, { limit: 50 }).catch(() => ({
       items: [],
@@ -39,20 +40,24 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       nextCursor: null,
     })),
     getUserAvatar(actor.userId).catch(() => null),
+    // The session's copy of the user can be stale: read what people change
+    // (name, username) from the database.
+    getShellIdentity(actor.userId).catch(() => null),
   ]);
+
+  const usernameClaimedAt =
+    identity !== null ? identity.usernameClaimedAt : actor.usernameClaimedAt ?? null;
 
   const user: AppShellUser = {
     id: actor.userId,
-    name: actor.name ?? "",
+    name: identity?.name ?? actor.name ?? "",
     email: actor.email,
     image: avatarData?.avatarUrl ?? actor.image ?? null,
     planName: "Free",
     creditBalance:
       (creditAccount?.planBalance ?? 0) + (creditAccount?.topupBalance ?? 0),
-    username: actor.username ?? null,
-    usernameClaimedAt: actor.usernameClaimedAt
-      ? actor.usernameClaimedAt.toISOString()
-      : null,
+    username: identity ? identity.username : actor.username ?? null,
+    usernameClaimedAt: usernameClaimedAt ? usernameClaimedAt.toISOString() : null,
   };
 
   const initialProjects: SidebarProjectItem[] = projectsPage.items.map((p) => ({
