@@ -22,7 +22,9 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import {
+  HERO_ROTATION_MS,
   HERO_SCENES,
   HERO_SCENE_DEFINITIONS,
   type HeroSceneKey,
@@ -37,134 +39,92 @@ const SCENE_ICONS = {
   Store,
 } as const;
 
+/** Table artifacts are stored as one message string per row, cells separated by "|". */
+const TABLE_CELL_SEPARATOR = "|";
+
+const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
+
+function subscribeReducedMotion(onChange: () => void) {
+  if (typeof window === "undefined" || !window.matchMedia) return () => {};
+  const mq = window.matchMedia(REDUCED_MOTION_QUERY);
+  mq.addEventListener?.("change", onChange);
+  return () => mq.removeEventListener?.("change", onChange);
+}
+
+function getReducedMotion() {
+  return typeof window !== "undefined" && !!window.matchMedia
+    ? window.matchMedia(REDUCED_MOTION_QUERY).matches
+    : false;
+}
+
+function subscribeVisibility(onChange: () => void) {
+  document.addEventListener("visibilitychange", onChange);
+  return () => document.removeEventListener("visibilitychange", onChange);
+}
+
+/** Server and first client render assume "motion allowed, tab visible" (no hydration mismatch). */
+function usePrefersReducedMotion() {
+  return React.useSyncExternalStore(
+    subscribeReducedMotion,
+    getReducedMotion,
+    () => false
+  );
+}
+
+function useTabHidden() {
+  return React.useSyncExternalStore(
+    subscribeVisibility,
+    () => document.visibilityState === "hidden",
+    () => false
+  );
+}
+
 export function MarketingHero() {
   const t = useTranslations("Marketing.hero");
 
-  const [activeScene, setActiveScene] = React.useState<HeroSceneKey>("software");
-  const [isFading, setIsFading] = React.useState(false);
+  const [activeScene, setActiveScene] = React.useState<HeroSceneKey>(
+    HERO_SCENES[0]
+  );
   const [isHovered, setIsHovered] = React.useState(false);
   const [isFocused, setIsFocused] = React.useState(false);
-  const [isTabHidden, setIsTabHidden] = React.useState(false);
-  const [prefersReducedMotion, setPrefersReducedMotion] = React.useState(() => {
-    if (typeof window !== "undefined" && window.matchMedia) {
-      return Boolean(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
-    }
-    return false;
-  });
+  const prefersReducedMotion = usePrefersReducedMotion();
+  const isTabHidden = useTabHidden();
+  const tabRefs = React.useRef<
+    Partial<Record<HeroSceneKey, HTMLButtonElement | null>>
+  >({});
 
-  // Detect prefers-reduced-motion and tab visibility changes
+  // Auto-rotation; paused on hover, focus within the hero preview, a hidden tab, or reduced motion.
+  // Keyed on `activeScene`, so a manual pick restarts the full interval.
   React.useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (prefersReducedMotion || isHovered || isFocused || isTabHidden) return;
+    const id = setInterval(() => {
+      setActiveScene((current) => {
+        const next = (HERO_SCENES.indexOf(current) + 1) % HERO_SCENES.length;
+        return HERO_SCENES[next] ?? HERO_SCENES[0];
+      });
+    }, HERO_ROTATION_MS);
+    return () => clearInterval(id);
+  }, [activeScene, prefersReducedMotion, isHovered, isFocused, isTabHidden]);
 
-    if (window.matchMedia) {
-      const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-
-      const motionHandler = (e: MediaQueryListEvent) => {
-        setPrefersReducedMotion(Boolean(e.matches));
-      };
-
-      if (mediaQuery.addEventListener) {
-        mediaQuery.addEventListener("change", motionHandler);
-      } else if ("addListener" in mediaQuery) {
-        // Fallback for older browsers/jsdom
-        (mediaQuery as unknown as { addListener: (cb: (e: MediaQueryListEvent) => void) => void }).addListener(motionHandler);
-      }
-    }
-
-    const handleVisibilityChange = () => {
-      if (typeof document !== "undefined") {
-        setIsTabHidden(document.visibilityState === "hidden");
-      }
-    };
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, []);
-
-  // Smooth cross-fade transition when changing scene
-  const handleSelectScene = React.useCallback(
-    (nextScene: HeroSceneKey) => {
-      if (nextScene === activeScene) return;
-      if (prefersReducedMotion) {
-        setActiveScene(nextScene);
-        return;
-      }
-      setIsFading(true);
-      setTimeout(() => {
-        setActiveScene(nextScene);
-        setIsFading(false);
-      }, 150);
-    },
-    [activeScene, prefersReducedMotion]
-  );
-
-  // Auto-rotation every 7 seconds, paused on hover, focus, hidden tab, or reduced motion
-  React.useEffect(() => {
-    if (prefersReducedMotion || isHovered || isFocused || isTabHidden) {
-      return;
-    }
-
-    const interval = setInterval(() => {
-      const currentIndex = HERO_SCENES.indexOf(activeScene);
-      const nextIndex = (currentIndex + 1) % HERO_SCENES.length;
-      const nextScene = HERO_SCENES[nextIndex];
-      if (nextScene) {
-        handleSelectScene(nextScene);
-      }
-    }, 7000);
-
-    return () => clearInterval(interval);
-  }, [
-    activeScene,
-    prefersReducedMotion,
-    isHovered,
-    isFocused,
-    isTabHidden,
-    handleSelectScene,
-  ]);
+  // WAI-ARIA tabs: arrows / Home / End move between chips (roving tabindex).
+  const handleTabKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+    const index = HERO_SCENES.indexOf(activeScene);
+    let next: number | null = null;
+    if (e.key === "ArrowRight" || e.key === "ArrowDown")
+      next = (index + 1) % HERO_SCENES.length;
+    else if (e.key === "ArrowLeft" || e.key === "ArrowUp")
+      next = (index - 1 + HERO_SCENES.length) % HERO_SCENES.length;
+    else if (e.key === "Home") next = 0;
+    else if (e.key === "End") next = HERO_SCENES.length - 1;
+    if (next === null) return;
+    e.preventDefault();
+    const scene = HERO_SCENES[next];
+    if (!scene) return;
+    setActiveScene(scene);
+    tabRefs.current[scene]?.focus();
+  };
 
   const currentDef = HERO_SCENE_DEFINITIONS[activeScene];
-
-  const getRaw = React.useCallback(
-    (key: string) => {
-      if (typeof t.raw === "function") {
-        try {
-          return t.raw(key);
-        } catch {
-          return undefined;
-        }
-      }
-      return undefined;
-    },
-    [t]
-  );
-
-  // Retrieve localized scene data
-  const rawOtherProjects = getRaw(`scenes.${activeScene}.otherProjects`);
-  const otherProjects: string[] = Array.isArray(rawOtherProjects)
-    ? rawOtherProjects
-    : ["Project 2", "Project 3"];
-
-  const rawWorkspaces = getRaw(`scenes.${activeScene}.workspaces`);
-  const workspaces: string[] = Array.isArray(rawWorkspaces)
-    ? rawWorkspaces
-    : ["Workspace 1", "Workspace 2", "Workspace 3"];
-
-  const rawArtifact = getRaw(`scenes.${activeScene}.artifact`);
-
-  const tableRows = React.useMemo(() => {
-    if (currentDef.artifactType !== "table" || !Array.isArray(rawArtifact)) return [];
-    return (rawArtifact as string[]).map((rowStr) =>
-      rowStr.split("|").map((c) => c.trim())
-    );
-  }, [currentDef.artifactType, rawArtifact]);
-
-  const checklistItems = React.useMemo(() => {
-    if (currentDef.artifactType !== "checklist" || !Array.isArray(rawArtifact)) return [];
-    return rawArtifact as string[];
-  }, [currentDef.artifactType, rawArtifact]);
 
   return (
     <section className="relative overflow-hidden pt-12 pb-16 md:pt-20 md:pb-24">
@@ -214,235 +174,293 @@ export function MarketingHero() {
           </Button>
         </div>
 
-        {/* Scene Selection Chips (Tablist) */}
+        {/* Chips + preview: hovering or focusing anywhere in here pauses the rotation */}
         <div
-          role="tablist"
-          aria-label={t("scenesTablistLabel")}
-          className="mx-auto mt-12 mb-4 flex flex-wrap items-center justify-center gap-2"
-        >
-          {HERO_SCENES.map((sceneKey) => {
-            const def = HERO_SCENE_DEFINITIONS[sceneKey];
-            const IconComponent = SCENE_ICONS[def.iconName];
-            const isSelected = activeScene === sceneKey;
-
-            return (
-              <button
-                key={sceneKey}
-                role="tab"
-                type="button"
-                id={`hero-scene-tab-${sceneKey}`}
-                aria-selected={isSelected}
-                aria-controls="hero-scene-preview"
-                onClick={() => handleSelectScene(sceneKey)}
-                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
-                  isSelected
-                    ? "bg-accent text-accent-fg shadow-xs ring-1 ring-accent"
-                    : "border-border/80 bg-surface text-fg-muted hover:text-fg hover:bg-surface-2 border"
-                }`}
-              >
-                <IconComponent className="h-3.5 w-3.5 shrink-0" />
-                <span>{t(`scenes.${sceneKey}.label`)}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Realistic Product UI Preview */}
-        <div
-          id="hero-scene-preview"
-          role="tabpanel"
-          aria-labelledby={`hero-scene-tab-${activeScene}`}
-          aria-live="off"
+          data-testid="hero-scenes"
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
           onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
-          className="relative mx-auto max-w-4xl text-left"
+          onBlur={(e) => {
+            if (!e.currentTarget.contains(e.relatedTarget as Node | null))
+              setIsFocused(false);
+          }}
         >
-          <div className="border-border bg-surface overflow-hidden rounded-2xl border shadow-md transition-all duration-300">
-            {/* Window Chrome / Title Bar */}
-            <div className="border-border/80 bg-surface-2/80 text-fg-muted flex items-center justify-between border-b px-4 py-2.5 text-xs select-none">
-              <div className="flex items-center gap-2">
-                <div className="flex gap-1.5">
-                  <div className="bg-danger/60 h-2.5 w-2.5 rounded-full" />
-                  <div className="bg-warning/60 h-2.5 w-2.5 rounded-full" />
-                  <div className="bg-success/60 h-2.5 w-2.5 rounded-full" />
-                </div>
-                <span className="text-fg-subtle ml-2 font-mono text-[11px]">
-                  {t("mockPath", { slug: currentDef.slug })}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge
-                  variant="outline"
-                  className="border-border/80 bg-surface font-mono text-[10px]"
+          {/* Scene Selection Chips (Tablist) */}
+          <div
+            role="tablist"
+            aria-label={t("scenesTablistLabel")}
+            className="mx-auto mt-12 mb-4 flex flex-wrap items-center justify-center gap-2"
+          >
+            {HERO_SCENES.map((sceneKey) => {
+              const def = HERO_SCENE_DEFINITIONS[sceneKey];
+              const IconComponent = SCENE_ICONS[def.iconName];
+              const isSelected = activeScene === sceneKey;
+
+              return (
+                <button
+                  key={sceneKey}
+                  ref={(el) => {
+                    tabRefs.current[sceneKey] = el;
+                  }}
+                  role="tab"
+                  type="button"
+                  id={`hero-scene-tab-${sceneKey}`}
+                  aria-selected={isSelected}
+                  aria-controls={`hero-scene-panel-${sceneKey}`}
+                  tabIndex={isSelected ? 0 : -1}
+                  onClick={() => setActiveScene(sceneKey)}
+                  onKeyDown={handleTabKeyDown}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+                    isSelected
+                      ? "bg-accent text-accent-fg ring-accent shadow-xs ring-1"
+                      : "border-border/80 bg-surface text-fg-muted hover:text-fg hover:bg-surface-2 border"
+                  )}
                 >
-                  {t("modelBadge")}
-                </Badge>
-              </div>
-            </div>
+                  <IconComponent
+                    className="h-3.5 w-3.5 shrink-0"
+                    aria-hidden="true"
+                  />
+                  <span>{t(`scenes.${sceneKey}.label`)}</span>
+                </button>
+              );
+            })}
+          </div>
 
-            {/* Simulated Workspace Shell */}
-            <div
-              className={`grid min-h-[460px] grid-cols-1 transition-opacity duration-300 md:grid-cols-12 ${
-                isFading ? "opacity-0" : "opacity-100"
-              }`}
-            >
-              {/* Left Projects & Workspaces Rail */}
-              <div className="border-border bg-surface-2/40 hidden space-y-4 border-r p-3 text-xs md:col-span-4 md:block">
-                <div>
-                  <div className="text-fg-subtle flex items-center justify-between px-2 py-1 text-[11px] font-semibold tracking-wider uppercase">
-                    <span>{t("projectsLabel")}</span>
-                    <FolderKanban className="h-3 w-3" />
+          {/* Realistic Product UI Preview */}
+          <div className="relative mx-auto max-w-4xl text-left">
+            <div className="border-border bg-surface overflow-hidden rounded-2xl border shadow-md">
+              {/* Window Chrome / Title Bar */}
+              <div className="border-border/80 bg-surface-2/80 text-fg-muted flex items-center justify-between border-b px-4 py-2.5 text-xs select-none">
+                <div className="flex min-w-0 items-center gap-2">
+                  <div className="flex shrink-0 gap-1.5">
+                    <div className="bg-danger/60 h-2.5 w-2.5 rounded-full" />
+                    <div className="bg-warning/60 h-2.5 w-2.5 rounded-full" />
+                    <div className="bg-success/60 h-2.5 w-2.5 rounded-full" />
                   </div>
-                  <div className="mt-1 space-y-0.5">
-                    <div className="bg-accent/10 text-accent flex items-center gap-2 rounded-md px-2 py-1.5 font-medium">
-                      <FolderKanban className="h-3.5 w-3.5 shrink-0" />
-                      <span className="truncate">
-                        {t(`scenes.${activeScene}.activeProject`)}
-                      </span>
-                    </div>
-                    {otherProjects.map((proj, idx) => (
-                      <div
-                        key={idx}
-                        className="text-fg-muted hover:bg-surface-2 flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors"
-                      >
-                        <FolderKanban className="h-3.5 w-3.5 shrink-0" />
-                        <span className="truncate">{proj}</span>
-                      </div>
-                    ))}
-                  </div>
+                  <span className="text-fg-subtle ml-2 truncate font-mono text-[11px]">
+                    {t("mockPath", { slug: currentDef.slug })}
+                  </span>
                 </div>
-
-                <div>
-                  <div className="text-fg-subtle px-2 py-1 text-[11px] font-semibold tracking-wider uppercase">
-                    {t("workspacesInProject")}
-                  </div>
-                  <div className="mt-1 space-y-0.5">
-                    <div className="bg-surface border-border/60 text-fg flex items-center justify-between rounded-md border px-2 py-1.5 font-medium shadow-2xs">
-                      <span className="truncate">{workspaces[0]}</span>
-                      <span className="text-accent text-[10px]">
-                        {t("active")}
-                      </span>
-                    </div>
-                    {workspaces.slice(1).map((ws, idx) => (
-                      <div
-                        key={idx}
-                        className="text-fg-muted hover:bg-surface-2 flex items-center justify-between rounded-md px-2 py-1.5 transition-colors"
-                      >
-                        <span className="truncate">{ws}</span>
-                      </div>
-                    ))}
-                  </div>
+                <div className="flex items-center gap-2">
+                  <Badge
+                    variant="outline"
+                    className="border-border/80 bg-surface shrink-0 font-mono text-[10px] whitespace-nowrap"
+                  >
+                    {t("modelBadge")}
+                  </Badge>
                 </div>
               </div>
 
-              {/* Main Workspace Stream Area */}
-              <div className="bg-bg col-span-1 flex flex-col justify-between space-y-4 p-4 sm:p-5 md:col-span-8">
-                {/* User Prompt */}
-                <div className="flex justify-end">
-                  <div className="bg-surface-2 border-border text-fg max-w-[90%] rounded-2xl rounded-tr-xs border px-3.5 py-2.5 text-xs leading-relaxed shadow-2xs">
-                    {t(`scenes.${activeScene}.prompt`)}
-                  </div>
-                </div>
-
-                {/* Response Card */}
-                <div className="border-border bg-surface space-y-3 rounded-xl border p-4 shadow-2xs">
-                  {/* Thinking Panel Pill */}
-                  <div className="border-accent/20 bg-accent-soft/40 text-accent flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-[11px] font-medium">
-                    <Brain className="h-3.5 w-3.5 animate-pulse" />
-                    <span>{t(`scenes.${activeScene}.thought`)}</span>
-                  </div>
-
-                  {/* Versions Badge */}
-                  <div className="border-border/60 flex items-center justify-between border-b pb-2 text-xs">
-                    <div className="text-fg-muted flex items-center gap-1.5 font-mono text-[11px]">
-                      <History className="text-accent h-3.5 w-3.5" />
-                      <span>{t(`scenes.${activeScene}.versionInfo`)}</span>
-                      <span className="text-fg-subtle">
-                        {t("regeneratedNote")}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Response Body with Highlight Callout */}
-                  <div className="text-fg space-y-2 text-xs leading-relaxed">
-                    <p>
-                      {t(`scenes.${activeScene}.responseBefore`)}{" "}
-                      <span className="bg-accent/20 text-fg border-accent rounded border-b px-1 py-0.5 font-medium">
-                        {t(`scenes.${activeScene}.responseHighlight`)}
-                      </span>{" "}
-                      {t(`scenes.${activeScene}.responseAfter`)}
-                    </p>
-
-                    {/* Interactive Annotation Popover Simulation */}
-                    <div className="border-accent/40 bg-accent text-accent-fg inline-flex items-center gap-2 rounded-md border px-2.5 py-1 text-[11px] font-medium shadow-sm">
-                      <MessageSquarePlus className="h-3 w-3" />
-                      <span>{t("askPassage")}</span>
-                      <ChevronRight className="h-3 w-3 opacity-70" />
-                    </div>
-
-                    {/* Dynamic Artifact by Scene Type */}
-                    {currentDef.artifactType === "code" && (
-                      <div className="border-border bg-surface-2 text-fg-muted overflow-x-auto rounded-lg border p-2.5 font-mono text-[11px]">
-                        <code>{String(rawArtifact)}</code>
-                      </div>
-                    )}
-
-                    {currentDef.artifactType === "table" && tableRows.length > 0 && (
-                      <div className="border-border bg-surface-2 text-fg-muted overflow-hidden rounded-lg border text-[11px]">
-                        <table className="w-full border-collapse">
-                          <tbody>
-                            {tableRows.map((cols, rIdx) => (
-                              <tr
-                                key={rIdx}
-                                className={rIdx !== 0 ? "border-border/60 border-t" : ""}
-                              >
-                                {cols.map((col, cIdx) => (
-                                  <td
-                                    key={cIdx}
-                                    className={`px-2.5 py-1.5 ${
-                                      cIdx === 0
-                                        ? "font-medium text-fg"
-                                        : "text-fg-muted"
-                                    }`}
-                                  >
-                                    {col}
-                                  </td>
-                                ))}
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-
-                    {currentDef.artifactType === "checklist" && checklistItems.length > 0 && (
-                      <div className="border-border bg-surface-2 space-y-1.5 rounded-lg border p-2.5 text-[11px]">
-                        {checklistItems.map((item, idx) => (
-                          <div key={idx} className="flex items-start gap-2">
-                            <CheckCircle2 className="text-accent mt-0.5 h-3.5 w-3.5 shrink-0" />
-                            <span className="text-fg-muted">{item}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Sub-question branch preview */}
-                <div className="border-accent/30 space-y-1 border-l-2 pl-4">
-                  <div className="text-fg-muted flex items-center gap-1 text-[11px] font-medium">
-                    <CornerDownRight className="text-accent h-3 w-3" />
-                    <span>{t(`scenes.${activeScene}.sideQuestion`)}</span>
-                  </div>
-                </div>
+              {/*
+                Every scene is rendered in the same grid cell, so the preview is always as tall as
+                the tallest scene (no layout shift on rotation) and scenes cross-fade in 300 ms.
+                Inactive scenes are aria-hidden + inert.
+              */}
+              <div className="grid">
+                {HERO_SCENES.map((sceneKey) => (
+                  <HeroScene
+                    key={sceneKey}
+                    sceneKey={sceneKey}
+                    active={sceneKey === activeScene}
+                  />
+                ))}
               </div>
             </div>
           </div>
         </div>
       </div>
     </section>
+  );
+}
+
+function HeroScene({
+  sceneKey,
+  active,
+}: {
+  sceneKey: HeroSceneKey;
+  active: boolean;
+}) {
+  const t = useTranslations("Marketing.hero");
+  const def = HERO_SCENE_DEFINITIONS[sceneKey];
+
+  const otherProjects = t.raw(`scenes.${sceneKey}.otherProjects`) as string[];
+  const [activeWorkspace, ...otherWorkspaces] = t.raw(
+    `scenes.${sceneKey}.workspaces`
+  ) as string[];
+  const artifact = t.raw(`scenes.${sceneKey}.artifact`) as string | string[];
+  const artifactLines = Array.isArray(artifact) ? artifact : [artifact];
+
+  return (
+    <div
+      id={`hero-scene-panel-${sceneKey}`}
+      role="tabpanel"
+      aria-labelledby={`hero-scene-tab-${sceneKey}`}
+      aria-live="off"
+      aria-hidden={!active}
+      inert={!active}
+      data-scene={sceneKey}
+      className={cn(
+        "col-start-1 row-start-1 grid grid-cols-1 transition-opacity duration-300 motion-reduce:transition-none md:grid-cols-12",
+        active ? "opacity-100" : "pointer-events-none opacity-0"
+      )}
+    >
+      {/* Left Projects & Workspaces Rail */}
+      <div className="border-border bg-surface-2/40 hidden space-y-4 border-r p-3 text-xs md:col-span-4 md:block">
+        <div>
+          <div className="text-fg-subtle flex items-center justify-between px-2 py-1 text-[11px] font-semibold tracking-wider uppercase">
+            <span>{t("projectsLabel")}</span>
+            <FolderKanban className="h-3 w-3" />
+          </div>
+          <div className="mt-1 space-y-0.5">
+            <div className="bg-accent/10 text-accent flex items-center gap-2 rounded-md px-2 py-1.5 font-medium">
+              <FolderKanban className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">
+                {t(`scenes.${sceneKey}.activeProject`)}
+              </span>
+            </div>
+            {otherProjects.map((proj) => (
+              <div
+                key={proj}
+                className="text-fg-muted flex items-center gap-2 rounded-md px-2 py-1.5"
+              >
+                <FolderKanban className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">{proj}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <div className="text-fg-subtle px-2 py-1 text-[11px] font-semibold tracking-wider uppercase">
+            {t("workspacesInProject")}
+          </div>
+          <div className="mt-1 space-y-0.5">
+            <div className="bg-surface border-border/60 text-fg flex items-center justify-between rounded-md border px-2 py-1.5 font-medium shadow-2xs">
+              <span className="truncate">{activeWorkspace}</span>
+              <span className="text-accent text-[10px]">{t("active")}</span>
+            </div>
+            {otherWorkspaces.map((ws) => (
+              <div
+                key={ws}
+                className="text-fg-muted flex items-center justify-between rounded-md px-2 py-1.5"
+              >
+                <span className="truncate">{ws}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Main Workspace Stream Area */}
+      <div className="bg-bg col-span-1 flex flex-col justify-between space-y-4 p-4 sm:p-5 md:col-span-8">
+        {/* User Prompt */}
+        <div className="flex justify-end">
+          <div className="bg-surface-2 border-border text-fg max-w-[90%] rounded-2xl rounded-tr-xs border px-3.5 py-2.5 text-xs leading-relaxed shadow-2xs">
+            {t(`scenes.${sceneKey}.prompt`)}
+          </div>
+        </div>
+
+        {/* Response Card */}
+        <div className="border-border bg-surface space-y-3 rounded-xl border p-4 shadow-2xs">
+          {/* Thinking Panel Pill */}
+          <div className="border-accent/20 bg-accent-soft/40 text-accent flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-[11px] font-medium">
+            <Brain className="h-3.5 w-3.5 shrink-0 motion-safe:animate-pulse" />
+            <span>{t(`scenes.${sceneKey}.thought`)}</span>
+          </div>
+
+          {/* Versions Badge */}
+          <div className="border-border/60 flex items-center justify-between border-b pb-2 text-xs">
+            <div className="text-fg-muted flex flex-wrap items-center gap-1.5 font-mono text-[11px]">
+              <History className="text-accent h-3.5 w-3.5" />
+              <span>{t(`scenes.${sceneKey}.versionInfo`)}</span>
+              <span className="text-fg-subtle">{t("regeneratedNote")}</span>
+            </div>
+          </div>
+
+          {/* Response Body with Highlight Callout */}
+          <div className="text-fg space-y-2 text-xs leading-relaxed">
+            <p>
+              {t(`scenes.${sceneKey}.responseBefore`)}{" "}
+              <span className="bg-accent/20 text-fg border-accent rounded border-b px-1 py-0.5 font-medium">
+                {t(`scenes.${sceneKey}.responseHighlight`)}
+              </span>{" "}
+              {t(`scenes.${sceneKey}.responseAfter`)}
+            </p>
+
+            {/* Interactive Annotation Popover Simulation */}
+            <div className="border-accent/40 bg-accent text-accent-fg inline-flex items-center gap-2 rounded-md border px-2.5 py-1 text-[11px] font-medium shadow-sm">
+              <MessageSquarePlus className="h-3 w-3" />
+              <span>{t("askPassage")}</span>
+              <ChevronRight className="h-3 w-3 opacity-70" />
+            </div>
+
+            {/* Artifact by scene type */}
+            {def.artifactType === "code" && (
+              <div className="border-border bg-surface-2 text-fg-muted overflow-x-auto rounded-lg border p-2.5 font-mono text-[11px]">
+                <code>{artifactLines.join("\n")}</code>
+              </div>
+            )}
+
+            {def.artifactType === "table" && (
+              <div className="border-border bg-surface-2 text-fg-muted overflow-x-auto rounded-lg border text-[11px]">
+                <table className="w-full border-collapse">
+                  <tbody>
+                    {artifactLines.map((row, rIdx) => (
+                      <tr
+                        key={row}
+                        className={
+                          rIdx !== 0 ? "border-border/60 border-t" : ""
+                        }
+                      >
+                        {row.split(TABLE_CELL_SEPARATOR).map((col, cIdx) => (
+                          <td
+                            key={cIdx}
+                            className={cn(
+                              "px-2.5 py-1.5",
+                              cIdx === 0
+                                ? "text-fg font-medium"
+                                : "text-fg-muted"
+                            )}
+                          >
+                            {col.trim()}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {def.artifactType === "checklist" && (
+              <ul className="border-border bg-surface-2 space-y-1.5 rounded-lg border p-2.5 text-[11px]">
+                {artifactLines.map((item) => (
+                  <li key={item} className="flex items-start gap-2">
+                    <CheckCircle2 className="text-accent mt-0.5 h-3.5 w-3.5 shrink-0" />
+                    <span className="text-fg-muted">{item}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {def.artifactType === "quote" && (
+              <blockquote className="border-accent/40 text-fg-muted border-l-2 pl-3 text-[11px] italic">
+                {artifactLines.join(" ")}
+              </blockquote>
+            )}
+          </div>
+        </div>
+
+        {/* Sub-question branch preview */}
+        <div className="border-accent/30 space-y-1 border-l-2 pl-4">
+          <div className="text-fg-muted flex items-center gap-1 text-[11px] font-medium">
+            <CornerDownRight className="text-accent h-3 w-3" />
+            <span>{t(`scenes.${sceneKey}.sideQuestion`)}</span>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 

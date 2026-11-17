@@ -1,14 +1,19 @@
 import React from "react";
-import { render, screen, fireEvent, act } from "@testing-library/react";
+import { render, screen, fireEvent, act, within } from "@testing-library/react";
 import { MarketingHero } from "@/components/marketing/hero";
-import { HERO_SCENES, HERO_SCENE_DEFINITIONS } from "@/lib/marketing/hero-scenes";
+import {
+  HERO_SCENES,
+  HERO_SCENE_DEFINITIONS,
+} from "@/lib/marketing/hero-scenes";
 import enMessages from "@/messages/en.json";
 import esMessages from "@/messages/es.json";
 import frMessages from "@/messages/fr.json";
 
 function getNestedValue(obj: any, path: string): any {
   if (!obj || !path) return undefined;
-  return path.split(".").reduce((acc, part) => (acc ? acc[part] : undefined), obj);
+  return path
+    .split(".")
+    .reduce((acc, part) => (acc ? acc[part] : undefined), obj);
 }
 
 let currentMessages: any = enMessages;
@@ -43,6 +48,9 @@ jest.mock("next-intl", () => ({
   },
   useLocale: () => "en",
 }));
+
+/** The visible scene (inactive scenes are aria-hidden, so getByRole skips them). */
+const panel = () => within(screen.getByRole("tabpanel"));
 
 describe("Step F5.3 — Dynamic landing hero across fields", () => {
   let originalMatchMedia: typeof window.matchMedia;
@@ -81,10 +89,12 @@ describe("Step F5.3 — Dynamic landing hero across fields", () => {
 
     // Initial selected tab is software
     expect(tabs[0]).toHaveAttribute("aria-selected", "true");
-    expect(screen.getByText("Database Architecture")).toBeInTheDocument();
-    expect(screen.getByText(/klecx\/workspaces\/ws_arch_01/i)).toBeInTheDocument();
+    expect(panel().getByText("Database Architecture")).toBeInTheDocument();
     expect(
-      screen.getByText(/pool_mode = transaction \| max_client_conn = 10000/i)
+      screen.getByText(/klecx\/workspaces\/ws_arch_01/i)
+    ).toBeInTheDocument();
+    expect(
+      panel().getByText(/pool_mode = transaction \| max_client_conn = 10000/i)
     ).toBeInTheDocument();
   });
 
@@ -92,7 +102,7 @@ describe("Step F5.3 — Dynamic landing hero across fields", () => {
     render(<MarketingHero />);
 
     // Initially at software
-    expect(screen.getByText("Database Architecture")).toBeInTheDocument();
+    expect(panel().getByText("Database Architecture")).toBeInTheDocument();
 
     // Advance 7 seconds
     act(() => {
@@ -104,9 +114,11 @@ describe("Step F5.3 — Dynamic landing hero across fields", () => {
     });
 
     // Second scene: finance
-    expect(screen.getByText("Household Budget 2027")).toBeInTheDocument();
-    expect(screen.getByText(/klecx\/workspaces\/ws_fin_02/i)).toBeInTheDocument();
-    expect(screen.getByText(/Needs \(50%\)/i)).toBeInTheDocument();
+    expect(panel().getByText("Household Budget 2027")).toBeInTheDocument();
+    expect(
+      screen.getByText(/klecx\/workspaces\/ws_fin_02/i)
+    ).toBeInTheDocument();
+    expect(panel().getByText(/Needs \(50%\)/i)).toBeInTheDocument();
 
     // Advance another 7 seconds
     act(() => {
@@ -117,15 +129,17 @@ describe("Step F5.3 — Dynamic landing hero across fields", () => {
     });
 
     // Third scene: construction
-    expect(screen.getByText("Duplex Build — Phase 1")).toBeInTheDocument();
-    expect(screen.getByText(/klecx\/workspaces\/ws_bld_03/i)).toBeInTheDocument();
+    expect(panel().getByText("Duplex Build — Phase 1")).toBeInTheDocument();
+    expect(
+      screen.getByText(/klecx\/workspaces\/ws_bld_03/i)
+    ).toBeInTheDocument();
   });
 
   it("pauses auto-rotation on mouse hover and resumes when mouse leaves", () => {
     render(<MarketingHero />);
 
-    const previewPanel = screen.getByRole("tabpanel");
-    expect(screen.getByText("Database Architecture")).toBeInTheDocument();
+    const previewPanel = screen.getByTestId("hero-scenes");
+    expect(panel().getByText("Database Architecture")).toBeInTheDocument();
 
     // Hover over preview
     fireEvent.mouseEnter(previewPanel);
@@ -139,7 +153,7 @@ describe("Step F5.3 — Dynamic landing hero across fields", () => {
     });
 
     // Should NOT have changed scene
-    expect(screen.getByText("Database Architecture")).toBeInTheDocument();
+    expect(panel().getByText("Database Architecture")).toBeInTheDocument();
 
     // Mouse leaves
     fireEvent.mouseLeave(previewPanel);
@@ -153,14 +167,14 @@ describe("Step F5.3 — Dynamic landing hero across fields", () => {
     });
 
     // Should have advanced to finance
-    expect(screen.getByText("Household Budget 2027")).toBeInTheDocument();
+    expect(panel().getByText("Household Budget 2027")).toBeInTheDocument();
   });
 
   it("pauses auto-rotation on focus and resumes on blur", () => {
     render(<MarketingHero />);
 
-    const previewPanel = screen.getByRole("tabpanel");
-    expect(screen.getByText("Database Architecture")).toBeInTheDocument();
+    const previewPanel = screen.getByTestId("hero-scenes");
+    expect(panel().getByText("Database Architecture")).toBeInTheDocument();
 
     // Focus inside preview
     fireEvent.focus(previewPanel);
@@ -174,7 +188,7 @@ describe("Step F5.3 — Dynamic landing hero across fields", () => {
     });
 
     // Scene should not change
-    expect(screen.getByText("Database Architecture")).toBeInTheDocument();
+    expect(panel().getByText("Database Architecture")).toBeInTheDocument();
 
     // Blur focus
     fireEvent.blur(previewPanel);
@@ -186,7 +200,7 @@ describe("Step F5.3 — Dynamic landing hero across fields", () => {
       jest.advanceTimersByTime(300);
     });
 
-    expect(screen.getByText("Household Budget 2027")).toBeInTheDocument();
+    expect(panel().getByText("Household Budget 2027")).toBeInTheDocument();
   });
 
   it("does not auto-rotate when prefers-reduced-motion is enabled", () => {
@@ -203,7 +217,7 @@ describe("Step F5.3 — Dynamic landing hero across fields", () => {
 
     render(<MarketingHero />);
 
-    expect(screen.getByText("Database Architecture")).toBeInTheDocument();
+    expect(panel().getByText("Database Architecture")).toBeInTheDocument();
 
     // Advance 30 seconds
     act(() => {
@@ -211,7 +225,7 @@ describe("Step F5.3 — Dynamic landing hero across fields", () => {
     });
 
     // Still on software scene
-    expect(screen.getByText("Database Architecture")).toBeInTheDocument();
+    expect(panel().getByText("Database Architecture")).toBeInTheDocument();
   });
 
   it("allows switching scenes directly by clicking on scene tab chips", () => {
@@ -224,9 +238,11 @@ describe("Step F5.3 — Dynamic landing hero across fields", () => {
       jest.advanceTimersByTime(300);
     });
 
-    expect(screen.getByText("Biology Exam Prep")).toBeInTheDocument();
-    expect(screen.getByText(/klecx\/workspaces\/ws_bio_05/i)).toBeInTheDocument();
-    expect(screen.getByText(/Days 1–4:/i)).toBeInTheDocument();
+    expect(panel().getByText("Biology Exam Prep")).toBeInTheDocument();
+    expect(
+      screen.getByText(/klecx\/workspaces\/ws_bio_05/i)
+    ).toBeInTheDocument();
+    expect(panel().getByText(/Days 1–4:/i)).toBeInTheDocument();
     expect(educationTab).toHaveAttribute("aria-selected", "true");
   });
 
@@ -245,7 +261,9 @@ describe("Step F5.3 — Dynamic landing hero across fields", () => {
       });
 
       expect(
-        screen.getByText(esMessages.Marketing.hero.scenes[sceneKey].activeProject)
+        panel().getByText(
+          esMessages.Marketing.hero.scenes[sceneKey].activeProject
+        )
       ).toBeInTheDocument();
       expect(
         screen.getByText(new RegExp(`klecx/workspaces/${def.slug}`, "i"))
@@ -270,7 +288,9 @@ describe("Step F5.3 — Dynamic landing hero across fields", () => {
       });
 
       expect(
-        screen.getByText(frMessages.Marketing.hero.scenes[sceneKey].activeProject)
+        panel().getByText(
+          frMessages.Marketing.hero.scenes[sceneKey].activeProject
+        )
       ).toBeInTheDocument();
       expect(
         screen.getByText(new RegExp(`klecx/workspaces/${def.slug}`, "i"))
@@ -278,5 +298,64 @@ describe("Step F5.3 — Dynamic landing hero across fields", () => {
     }
 
     unmount();
+  });
+
+  it("pauses while a scene chip has keyboard focus", () => {
+    render(<MarketingHero />);
+    fireEvent.focus(screen.getAllByRole("tab")[0]!);
+    act(() => {
+      jest.advanceTimersByTime(21000);
+    });
+    expect(panel().getByText("Database Architecture")).toBeInTheDocument();
+  });
+
+  it("moves between scenes with the arrow keys (roving tabindex)", () => {
+    render(<MarketingHero />);
+    const tabs = screen.getAllByRole("tab");
+    expect(tabs[0]).toHaveAttribute("tabindex", "0");
+    expect(tabs[1]).toHaveAttribute("tabindex", "-1");
+
+    fireEvent.keyDown(tabs[0]!, { key: "ArrowRight" });
+    expect(tabs[1]).toHaveAttribute("aria-selected", "true");
+    expect(tabs[1]).toHaveFocus();
+    expect(panel().getByText("Household Budget 2027")).toBeInTheDocument();
+
+    fireEvent.keyDown(tabs[1]!, { key: "End" });
+    expect(tabs[5]).toHaveAttribute("aria-selected", "true");
+    fireEvent.keyDown(tabs[5]!, { key: "ArrowRight" });
+    expect(tabs[0]).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("does not rotate while the browser tab is hidden", () => {
+    const spy = jest
+      .spyOn(document, "visibilityState", "get")
+      .mockReturnValue("hidden");
+    render(<MarketingHero />);
+    act(() => {
+      jest.advanceTimersByTime(21000);
+    });
+    expect(panel().getByText("Database Architecture")).toBeInTheDocument();
+    spy.mockReturnValue("visible");
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    act(() => {
+      jest.advanceTimersByTime(7000);
+    });
+    expect(panel().getByText("Household Budget 2027")).toBeInTheDocument();
+    spy.mockRestore();
+  });
+
+  it("renders every scene in the same grid cell so rotation causes no layout shift", () => {
+    const { container } = render(<MarketingHero />);
+    const panels = container.querySelectorAll('[role="tabpanel"]');
+    expect(panels).toHaveLength(HERO_SCENES.length);
+    const parents = new Set(Array.from(panels).map((p) => p.parentElement));
+    expect(parents.size).toBe(1);
+    panels.forEach((p) => expect(p.className).toContain("row-start-1"));
+    // only the active scene is exposed to assistive tech and focusable
+    expect(
+      Array.from(panels).filter((p) => p.getAttribute("aria-hidden") !== "true")
+    ).toHaveLength(1);
   });
 });
