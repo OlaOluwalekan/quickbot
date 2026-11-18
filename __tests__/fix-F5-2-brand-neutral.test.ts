@@ -10,17 +10,17 @@ import path from "node:path";
  *
  * Explicit allow-list covers only:
  * - Standard OAuth provider button labels (e.g. "Google")
- * - Privacy sub-processor statutory disclosure (Legal.privacy.processorsBody)
+ * - Privacy sub-processor statutory disclosure (Legal.privacy.processors, F5.5)
  */
 describe("Step F5.2 — Third-party brand neutrality", () => {
   const brandRegex = /gemini|google(?!\s+sign|\s+account)|openai|anthropic|claude|gpt/i;
 
   // Auth.google: the "Continue with Google" OAuth button label.
-  // Legal.privacy.processorsBody: the privacy policy's sub-processor list.
+  // Legal.privacy.processors.*: the privacy policy's named sub-processor list (F5.5).
   const ALLOWED_MESSAGE_KEYS = new Set([
     "Auth.google",
-    "Legal.privacy.processorsBody",
   ]);
+  const ALLOWED_PREFIXES = ["Legal.privacy.processors."];
 
   it("has no third-party brand names in messages/*.json (outside explicit allow-list)", () => {
     const messagesDir = path.resolve(process.cwd(), "messages");
@@ -39,7 +39,10 @@ describe("Step F5.2 — Third-party brand neutrality", () => {
           if (value && typeof value === "object") {
             traverse(value as Record<string, unknown>, fullKey);
           } else if (typeof value === "string") {
-            if (ALLOWED_MESSAGE_KEYS.has(fullKey)) {
+            if (
+              ALLOWED_MESSAGE_KEYS.has(fullKey) ||
+              ALLOWED_PREFIXES.some((p) => fullKey.startsWith(p))
+            ) {
               continue;
             }
             if (brandRegex.test(value)) {

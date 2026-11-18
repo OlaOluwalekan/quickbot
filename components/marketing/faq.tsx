@@ -78,6 +78,15 @@ export function MarketingFAQ() {
                       : key === "refund" && !billingEnabled
                       ? t("items.refund.aLaunchingSoon")
                       : t(`items.${key}.a`)}
+                    {key === "refund" && billingEnabled && (
+                      <>
+                        {" "}
+                        {/* Plain <a>: the Terms anchor is on a server-rendered page (F5.5). */}
+                        <a href="/terms#subscriptions" className="text-accent hover:underline">
+                          {t("refundTermsLink")}
+                        </a>
+                      </>
+                    )}
                   </div>
                 )}
               </div>

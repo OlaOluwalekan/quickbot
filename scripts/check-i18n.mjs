@@ -50,7 +50,14 @@ function flatten(obj, prefix = "") {
   const res = {};
   for (const [k, v] of Object.entries(obj)) {
     const full = prefix ? `${prefix}.${k}` : k;
-    if (v && typeof v === "object" && !Array.isArray(v)) {
+    if (Array.isArray(v) && v.some((item) => item && typeof item === "object")) {
+      // Arrays of objects (e.g. legal `sections`): check every field of every
+      // item, so key parity, placeholders and untranslated text cover them too.
+      v.forEach((item, i) => {
+        if (item && typeof item === "object") Object.assign(res, flatten(item, `${full}.${i}`));
+        else res[`${full}.${i}`] = item;
+      });
+    } else if (v && typeof v === "object" && !Array.isArray(v)) {
       Object.assign(res, flatten(v, full));
     } else {
       res[full] = v;
