@@ -1,23 +1,17 @@
 import * as React from "react";
 import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
+import { publicPageMetadata } from "@/lib/seo/metadata";
 import { getArticles, toMeta } from "@/lib/help/articles";
 import { HelpCenterView } from "@/components/help/help-center-view";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("Help");
-  return {
+  return publicPageMetadata({
+    path: "/help",
     title: t("metaTitle"),
     description: t("metaDescription"),
-    alternates: {
-      canonical: "/help",
-    },
-    openGraph: {
-      title: `${t("metaTitle")} · Klecx`,
-      description: t("metaDescription"),
-      url: "/help",
-    },
-  };
+  });
 }
 
 export default async function HelpPage() {

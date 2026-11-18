@@ -1,15 +1,26 @@
 import { ImageResponse } from "next/og";
+import { getTranslations } from "next-intl/server";
 import { BRAND, markDataUri } from "@/lib/brand/mark";
+import { getSiteConfig } from "@/server/config/site";
 
 export const runtime = "nodejs";
-export const alt = "Klecx — AI Workspace";
-export const size = {
-  width: 1200,
-  height: 630,
-};
+export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
+/** The image's alt text follows the request locale (a static `alt` export can't). */
+export async function generateImageMetadata() {
+  const [t, site] = [await getTranslations("Metadata"), getSiteConfig()];
+  return [{ id: "default", alt: t("ogImageAlt", { appName: site.appName }), size, contentType }];
+}
+
 export default async function Image() {
+  const t = await getTranslations("Metadata.og");
+  const title = t("title");
+  const tagline = t("tagline");
+  const chipReasoning = t("chipReasoning");
+  const chipVersions = t("chipVersions");
+  const chipPrivate = t("chipPrivate");
+
   return new ImageResponse(
     (
       <div
@@ -58,7 +69,6 @@ export default async function Image() {
             }}
           >
             <span>Kl</span>
-            { }
             <img
               src={markDataUri({ color: BRAND.accentDark })}
               width={86}
@@ -80,7 +90,7 @@ export default async function Image() {
             marginBottom: "16px",
           }}
         >
-          Workspaces, not threads.
+          {title}
         </div>
 
         <div
@@ -92,7 +102,7 @@ export default async function Image() {
             lineHeight: 1.4,
           }}
         >
-          Organize AI research into projects, preserve response versions, and reason over passages with zero lost context.
+          {tagline}
         </div>
 
         <div
@@ -110,11 +120,11 @@ export default async function Image() {
             fontWeight: 600,
           }}
         >
-          <span>Multi-turn reasoning</span>
+          <span>{chipReasoning}</span>
           <span>·</span>
-          <span>Version history</span>
+          <span>{chipVersions}</span>
           <span>·</span>
-          <span>100% Private</span>
+          <span>{chipPrivate}</span>
         </div>
       </div>
     ),

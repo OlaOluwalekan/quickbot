@@ -6,6 +6,8 @@ export interface HelpArticleMeta {
   keywords: string[];
   readMinutes: number;
   isFallback: boolean;
+  /** Front matter `updated` (YYYY-MM-DD): bump it when the article changes. */
+  updated?: string;
 }
 
 export interface HelpArticle extends HelpArticleMeta {

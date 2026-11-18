@@ -1,45 +1,48 @@
 import * as React from "react";
+import { createTranslator } from "use-intl/core";
 import { PLANS } from "@/server/billing/plans";
 import { getSiteConfig } from "@/server/config/site";
-import enMessages from "@/messages/en.json";
+import { messagesFor, resolveLocaleCode } from "@/i18n/messages";
+import { FAQ_KEYS, faqAnswerKey } from "@/lib/marketing/faq";
 
-function resolveMessageKey(keyPath: string): string {
-  const parts = keyPath.split(".");
-  let cur: unknown = enMessages;
-  for (const p of parts) {
-    if (cur && typeof cur === "object" && p in (cur as Record<string, unknown>)) {
-      cur = (cur as Record<string, unknown>)[p];
-    } else {
-      return keyPath;
-    }
-  }
-  return typeof cur === "string" ? cur : keyPath;
+/**
+ * Structured data for the marketing pages, in the page's language. Callers
+ * pass the request locale (`await getLocale()`); text comes from that
+ * locale's messages, with English for keys a beta locale lacks.
+ */
+type JsonLdProps = { locale: string; siteUrl?: string };
+
+function translator(locale: string) {
+  return createTranslator({
+    locale: resolveLocaleCode(locale),
+    messages: messagesFor(locale),
+  }) as unknown as (key: string, values?: Record<string, unknown>) => string;
 }
 
 export function JsonLd({ data }: { data: Record<string, unknown> }) {
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+      // `<` is escaped so message text can never close the script tag.
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(data).replace(/</g, "\\u003c") }}
     />
   );
 }
 
-export function OrganizationJsonLd({ siteUrl }: { siteUrl?: string }) {
+export function OrganizationJsonLd({ locale, siteUrl }: JsonLdProps) {
   const site = getSiteConfig();
-  const resolvedSiteUrl = siteUrl || site.appUrl;
-  const sameAs = [site.social.github, site.social.x].filter(
-    (v): v is string => Boolean(v)
-  );
-  const addressLocality =
-    site.company.address.split(",")[0]?.trim() || site.company.address;
+  const base = (siteUrl || site.appUrl).replace(/\/$/, "");
+  // Only the social profiles that are configured (F0.2).
+  const sameAs = [site.social.github, site.social.x].filter((v): v is string => Boolean(v));
+  const addressLocality = site.company.address.split(",")[0]?.trim() || site.company.address;
 
   const data: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "Organization",
     name: site.company.legalName,
     url: site.company.website,
-    logo: `${resolvedSiteUrl}/icon.svg`,
+    logo: `${base}/icon/512`,
+    inLanguage: resolveLocaleCode(locale),
     address: {
       "@type": "PostalAddress",
       addressLocality,
@@ -55,21 +58,22 @@ export function OrganizationJsonLd({ siteUrl }: { siteUrl?: string }) {
   return <JsonLd data={data} />;
 }
 
-export function WebSiteJsonLd({ siteUrl }: { siteUrl?: string }) {
+export function WebSiteJsonLd({ locale, siteUrl }: JsonLdProps) {
   const site = getSiteConfig();
-  const resolvedSiteUrl = siteUrl || site.appUrl;
+  const base = (siteUrl || site.appUrl).replace(/\/$/, "");
+  const t = translator(locale);
   const data = {
     "@context": "https://schema.org",
     "@type": "WebSite",
     name: site.appName,
-    url: resolvedSiteUrl,
-    description:
-      "Collaborative AI workspace for research, writing, and knowledge organization.",
+    url: base,
+    inLanguage: resolveLocaleCode(locale),
+    description: t("Metadata.root.description"),
     potentialAction: {
       "@type": "SearchAction",
       target: {
         "@type": "EntryPoint",
-        urlTemplate: `${resolvedSiteUrl}/help?q={search_term_string}`,
+        urlTemplate: `${base}/help?q={search_term_string}`,
       },
       "query-input": "required name=search_term_string",
     },
@@ -77,53 +81,54 @@ export function WebSiteJsonLd({ siteUrl }: { siteUrl?: string }) {
   return <JsonLd data={data} />;
 }
 
-export function SoftwareApplicationJsonLd({ siteUrl }: { siteUrl?: string }) {
+export function SoftwareApplicationJsonLd({ locale, siteUrl }: JsonLdProps) {
   const site = getSiteConfig();
-  const resolvedSiteUrl = siteUrl || site.appUrl;
-  const offers = Object.values(PLANS).map((plan) => ({
-    "@type": "Offer",
-    name: `${resolveMessageKey(plan.name)} Plan`,
-    price: plan.priceMonthly,
-    priceCurrency: "USD",
-    category: "Subscription",
-    description: resolveMessageKey(plan.tagline),
-    url: `${resolvedSiteUrl}/pricing`,
-  }));
+  const base = (siteUrl || site.appUrl).replace(/\/$/, "");
+  const t = translator(locale);
 
-  const data = {
+  const data: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     name: site.appName,
     applicationCategory: "ProductivityApplication",
     operatingSystem: "Web",
+    inLanguage: resolveLocaleCode(locale),
     publisher: {
       "@type": "Organization",
       name: site.company.legalName,
       url: site.company.website,
     },
-    offers,
-    description:
-      "Collaborative AI workspace for research, writing, and knowledge organization with response versioning and passage-level reasoning.",
+    description: t("Metadata.root.description"),
   };
+  // Paid plans are offered only once billing is live (rule 9); Free always is.
+  data.offers = Object.values(PLANS)
+    .filter((plan) => site.billingEnabled || plan.priceMonthly === 0)
+    .map((plan) => ({
+      "@type": "Offer",
+      name: t(plan.name),
+      price: plan.priceMonthly,
+      priceCurrency: "USD",
+      category: "Subscription",
+      description: t(plan.tagline),
+      url: `${base}/pricing`,
+    }));
   return <JsonLd data={data} />;
 }
 
-export function PricingFaqJsonLd() {
+/** The FAQ on the pricing page, question for question (Google requires a match). */
+export function PricingFaqJsonLd({ locale }: { locale: string }) {
   const { billingEnabled } = getSiteConfig();
-  // Same answers as the FAQ on the page: billing answers only once billing is live (rule 9).
-  const faqItems = Object.values(enMessages.Marketing.faq.items).map((faq) => ({
-    q: faq.q,
-    a: !billingEnabled && "aLaunchingSoon" in faq ? faq.aLaunchingSoon : faq.a,
-  }));
+  const t = translator(locale);
   const data = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
-    mainEntity: faqItems.map((faq) => ({
+    inLanguage: resolveLocaleCode(locale),
+    mainEntity: FAQ_KEYS.map((key) => ({
       "@type": "Question",
-      name: faq.q,
+      name: t(`Marketing.faq.items.${key}.q`),
       acceptedAnswer: {
         "@type": "Answer",
-        text: faq.a,
+        text: t(`Marketing.faq.${faqAnswerKey(key, billingEnabled)}`),
       },
     })),
   };

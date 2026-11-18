@@ -6,7 +6,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("Metadata");
   const tChat = await getTranslations("Chat");
   return {
-    title: `${tChat("newChat")} | Klecx`,
+    title: tChat("newChat"),
     description: t("description"),
   };
 }

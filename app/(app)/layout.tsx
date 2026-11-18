@@ -15,12 +15,19 @@ import type {
   SidebarWorkspaceItem,
 } from "@/components/layout/types";
 
-export const metadata: Metadata = {
-  robots: {
-    index: false,
-    follow: false,
-  },
-};
+import { getTranslations } from "next-intl/server";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("Metadata.app");
+  return {
+    title: t("title"),
+    description: t("description"),
+    robots: {
+      index: false,
+      follow: false,
+    },
+  };
+}
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const actor = await requireActor();

@@ -9,13 +9,17 @@ import { SessionsList } from "@/components/settings/SessionsList";
 import Link from "next/link";
 import { ArrowLeft, Shield } from "lucide-react";
 
-export const metadata: Metadata = {
-  title: "Sessions & Devices — Settings",
-  robots: {
-    index: false,
-    follow: false,
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("Metadata.settings");
+  return {
+    title: t("sessionsTitle"),
+    description: t("sessionsDescription"),
+    robots: {
+      index: false,
+      follow: false,
+    },
+  };
+}
 
 export default async function SessionsPage() {
   await requireActor();

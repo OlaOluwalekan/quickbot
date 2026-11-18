@@ -1,7 +1,8 @@
 import * as React from "react";
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
+import { publicPageMetadata } from "@/lib/seo/metadata";
 import { ArrowLeft, Clock, Tag, MessageSquare, Info } from "lucide-react";
 import { getArticle } from "@/lib/help/articles";
 import { Markdown } from "@/components/markdown";
@@ -19,21 +20,13 @@ export async function generateMetadata({ params }: HelpArticlePageProps): Promis
   const article = getArticle(locale, slug);
   const t = await getTranslations("Help");
 
-  if (!article) return { title: t("articleNotFoundTitle") };
+  if (!article) return { title: t("articleNotFoundTitle"), robots: { index: false } };
 
-  const pageTitle = `${article.title} ${t("articleTitleSuffix")}`;
-  return {
-    title: pageTitle,
+  return publicPageMetadata({
+    path: `/help/${slug}`,
+    title: `${article.title} ${t("articleTitleSuffix")}`,
     description: article.description,
-    alternates: {
-      canonical: `/help/${slug}`,
-    },
-    openGraph: {
-      title: `${pageTitle} · Klecx`,
-      description: article.description,
-      url: `/help/${slug}`,
-    },
-  };
+  });
 }
 
 export default async function HelpArticlePage({ params }: HelpArticlePageProps) {

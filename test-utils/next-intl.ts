@@ -67,3 +67,49 @@ export const nextIntlMock = {
   useNow: () => new Date(),
   NextIntlClientProvider: ({ children }: { children: unknown }) => children,
 };
+
+/**
+ * A mock of `@/i18n/navigation` for component tests that mock `next-intl`
+ * (the real helpers need a `NextIntlClientProvider`). It forwards to
+ * `next/link` and `next/navigation`, resolved lazily so a test's own
+ * `jest.mock("next/navigation")` still applies.
+ *
+ *   jest.mock("@/i18n/navigation", () => jest.requireActual("../test-utils/next-intl").navigationMock);
+ */
+/* eslint-disable @typescript-eslint/no-require-imports -- `require` (not requireActual) so each test's own mock of next/navigation applies */
+export const navigationMock = {
+  __esModule: true,
+  get Link() {
+    return jest.requireActual("next/link").default;
+  },
+  usePathname: () => require("next/navigation").usePathname(),
+  useRouter: () => require("next/navigation").useRouter(),
+  redirect: (href: string) => require("next/navigation").redirect(href),
+  getPathname: ({ href }: { href: string }) => href,
+};
+/* eslint-enable @typescript-eslint/no-require-imports */
+
+/**
+ * A mock of `next-intl/server` for route/metadata tests: `getLocale()` returns
+ * `currentLocale()` and `getTranslations()` reads that locale's real messages
+ * (English filling gaps, like the app).
+ *
+ *   let locale = "en";
+ *   jest.mock("next-intl/server", () =>
+ *     jest.requireActual("../test-utils/next-intl").serverIntlMock(() => locale));
+ */
+export function serverIntlMock(currentLocale: () => string) {
+  const { createTranslator: create } = jest.requireActual("use-intl/core");
+  const { messagesFor } = jest.requireActual("../i18n/messages");
+  const translations = async (arg?: string | { locale?: string; namespace?: string }) => {
+    const opts = typeof arg === "string" ? { namespace: arg } : (arg ?? {});
+    const locale = opts.locale ?? currentLocale();
+    return create({ locale, messages: messagesFor(locale), namespace: opts.namespace });
+  };
+  return {
+    __esModule: true,
+    getLocale: async () => currentLocale(),
+    getTranslations: translations,
+    getMessages: async () => messagesFor(currentLocale()),
+  };
+}

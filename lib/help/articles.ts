@@ -15,16 +15,18 @@ import {
   toMeta,
 } from "./shared";
 
+import { LOCALE_CODES, DEFAULT_LOCALE, type LocaleCode } from "@/i18n/locales";
+
 export * from "./shared";
 
-export const SUPPORTED_LOCALES = ["en", "fr", "es"] as const;
-export type HelpLocale = (typeof SUPPORTED_LOCALES)[number];
+export const SUPPORTED_LOCALES = LOCALE_CODES;
+export type HelpLocale = LocaleCode;
 
 export function toHelpLocale(locale?: string): HelpLocale {
   if (locale && (SUPPORTED_LOCALES as readonly string[]).includes(locale)) {
     return locale as HelpLocale;
   }
-  return "en";
+  return DEFAULT_LOCALE;
 }
 
 /**
@@ -221,6 +223,7 @@ export function getArticles(locale?: string): HelpArticle[] {
         keywords: Array.isArray(data.keywords) ? data.keywords : [],
         readMinutes: computeReadMinutes(content),
         isFallback,
+        ...(typeof data.updated === "string" ? { updated: data.updated } : {}),
         content,
       });
     }

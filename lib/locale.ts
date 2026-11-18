@@ -1,5 +1,7 @@
-export const UI_LOCALES = ["en", "es", "fr"] as const;
-export type UiLocale = (typeof UI_LOCALES)[number];
+import { LOCALE_CODES, DEFAULT_LOCALE, type LocaleCode } from "@/i18n/locales";
+
+export const UI_LOCALES = LOCALE_CODES;
+export type UiLocale = LocaleCode;
 
 export const AI_LANGUAGES = [
   "en",

@@ -10,6 +10,7 @@ import { OfflineBanner } from "@/components/offline/offline-banner";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import { getSiteConfig } from "@/server/config/site";
+import { getLocaleDefinition, getAlternateOgLocales } from "@/i18n/locales";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -26,55 +27,48 @@ const jetbrainsMono = JetBrains_Mono({
 const siteUrl = getSiteConfig().appUrl;
 
 export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale();
+  const localeDef = getLocaleDefinition(locale);
   const t = await getTranslations("Metadata");
   const site = getSiteConfig();
   const xHandle = site.social.x
     ? new URL(site.social.x).pathname.split("/").filter(Boolean)[0]
     : undefined;
+
+  const defaultTitle = t("root.title");
+  const titleTemplate = t("root.titleTemplate");
+  const description = t("root.description");
+  const applicationName = t("root.applicationName");
+  const keywordsString = t("root.keywords");
+  const keywords = keywordsString.split(",").map((k) => k.trim());
+
   return {
     metadataBase: new URL(siteUrl),
     title: {
-      default: "Klecx — Workspaces, not threads",
-      template: "%s · Klecx",
+      default: defaultTitle,
+      template: titleTemplate,
     },
-    description:
-      "Collaborative AI workspace for research, writing, and knowledge organization. Keep response versions, annotate passages, and organize work into projects.",
-    applicationName: "Klecx",
-    authors: [{ name: "Klecx Team" }],
-    keywords: [
-      "AI workspace",
-      "collaborative AI",
-      "prompt engineering",
-      "response versions",
-      "passage reasoning",
-      "AI research",
-    ],
+    description,
+    applicationName,
+    authors: [{ name: site.appName }],
+    keywords,
     manifest: "/manifest.webmanifest",
     // Icons come from the file conventions: app/favicon.ico, app/icon.tsx and
     // app/apple-icon.tsx, all drawn from lib/brand/mark.ts (F5.10).
     openGraph: {
       type: "website",
-      locale: "en_US",
+      locale: localeDef.ogLocale,
+      alternateLocale: getAlternateOgLocales(locale),
       url: siteUrl,
-      siteName: "Klecx",
-      title: "Klecx — Workspaces, not threads",
-      description:
-        "Collaborative AI workspace for research, writing, and knowledge organization. Keep response versions, annotate passages, and organize work into projects.",
-      images: [
-        {
-          url: "/opengraph-image",
-          width: 1200,
-          height: 630,
-          alt: t("ogImageAlt", { appName: site.appName }),
-        },
-      ],
+      siteName: site.appName,
+      title: defaultTitle,
+      description,
+      // Images: app/opengraph-image.tsx and app/twitter-image.tsx (localized).
     },
     twitter: {
       card: "summary_large_image",
-      title: "Klecx — Workspaces, not threads",
-      description:
-        "Collaborative AI workspace for research, writing, and knowledge organization.",
-      images: ["/twitter-image"],
+      title: defaultTitle,
+      description,
       ...(xHandle ? { creator: `@${xHandle}` } : {}),
     },
   };

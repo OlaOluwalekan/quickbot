@@ -12,43 +12,36 @@ jest.mock("better-auth/client/plugins", () => ({
 }));
 
 jest.mock("next-intl/plugin", () => () => (config: any) => config);
+jest.mock("next-intl/server", () =>
+  jest.requireActual("../test-utils/next-intl").serverIntlMock(() => "en")
+);
 
 import sitemap from "@/app/sitemap";
 import robots from "@/app/robots";
-import { metadata as appLayoutMetadata } from "@/app/(app)/layout";
-import { metadata as settingsMetadata } from "@/app/settings/page";
+import { generateMetadata as appLayoutMetadata } from "@/app/(app)/layout";
+import { generateMetadata as settingsMetadata } from "@/app/settings/page";
 import { PLANS } from "@/server/billing/plans";
 import enMessages from "@/messages/en.json";
-import { MARK_PATH } from "@/lib/brand/mark";
 
 describe("Step 4.2 — SEO and Security Headers", () => {
   describe("Favicon and Brand Icon Assets", () => {
-    // F5.10: app icons are generated from lib/brand/mark.ts (app/icon.tsx,
-    // app/apple-icon.tsx); public/icon.svg is written by scripts/generate-brand-icons.mjs.
-    test("public SVG icon exists with the styled 'e' mark from lib/brand/mark.ts", () => {
-      const publicIconPath = path.join(process.cwd(), "public", "icon.svg");
-      expect(fs.existsSync(publicIconPath)).toBe(true);
-      const svgContent = fs.readFileSync(publicIconPath, "utf8");
-      expect(svgContent).toContain(MARK_PATH);
-    });
-
     test("favicon.ico, generated app icon and apple icon exist", () => {
       expect(fs.existsSync(path.join(process.cwd(), "app", "favicon.ico"))).toBe(true);
       expect(fs.existsSync(path.join(process.cwd(), "app", "icon.tsx"))).toBe(true);
       expect(fs.existsSync(path.join(process.cwd(), "app", "apple-icon.tsx"))).toBe(true);
-      expect(fs.existsSync(path.join(process.cwd(), "public", "apple-touch-icon.png"))).toBe(true);
     });
 
-    test("web manifest contains proper app details and brand icons", () => {
-      const manifestPath = path.join(process.cwd(), "public", "manifest.webmanifest");
+    test("web manifest contains proper app details and brand icons", async () => {
+      const manifestPath = path.join(process.cwd(), "app", "manifest.ts");
       expect(fs.existsSync(manifestPath)).toBe(true);
 
-      const m = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+      const manifestModule = await import("@/app/manifest");
+      const m = await manifestModule.default();
       expect(m.name).toContain("Klecx");
       expect(m.short_name).toBe("Klecx");
       expect(m.display).toBe("standalone");
-      expect(m.icons?.some((i: any) => i.src === "/icon.svg")).toBe(true);
-      expect(m.icons?.some((i: any) => i.src === "/apple-touch-icon.png")).toBe(true);
+      // The generated icons (app/icon.tsx, app/apple-icon.tsx), not static copies.
+      expect(m.icons?.map((i) => i.src)).toEqual(["/icon/192", "/icon/512", "/apple-icon"]);
     });
   });
 
@@ -127,15 +120,15 @@ describe("Step 4.2 — SEO and Security Headers", () => {
   });
 
   describe("Private Area Robots Metadata", () => {
-    test("app layout explicitly disallows indexing and following", () => {
-      expect(appLayoutMetadata.robots).toEqual({
+    test("app layout explicitly disallows indexing and following", async () => {
+      expect((await appLayoutMetadata()).robots).toEqual({
         index: false,
         follow: false,
       });
     });
 
-    test("settings page explicitly disallows indexing and following", () => {
-      expect(settingsMetadata.robots).toEqual({
+    test("settings page explicitly disallows indexing and following", async () => {
+      expect((await settingsMetadata()).robots).toEqual({
         index: false,
         follow: false,
       });

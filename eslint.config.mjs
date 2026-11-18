@@ -172,6 +172,33 @@ const eslintConfig = [
       ],
     },
   },
+  {
+    files: [
+      "components/marketing/**/*.{ts,tsx}",
+      "components/help/**/*.{ts,tsx}",
+      "components/legal/**/*.{ts,tsx}",
+      "app/(marketing)/**/*.{ts,tsx}",
+    ],
+    // F5.9: locale-aware navigation, so per-language URLs (Step 10.7) need no rewrite.
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "next/link",
+              message: "Please import Link from '@/i18n/navigation' instead of 'next/link'.",
+            },
+            {
+              name: "next/navigation",
+              importNames: ["useRouter", "usePathname", "redirect"],
+              message: "Please import navigation helpers from '@/i18n/navigation'.",
+            },
+          ],
+        },
+      ],
+    },
+  },
 ];
 
 export default eslintConfig;

@@ -6,20 +6,19 @@ import {
   WebSiteJsonLd,
   SoftwareApplicationJsonLd,
 } from "@/components/seo/json-ld";
-import { getSiteConfig } from "@/server/config/site";
+import { getLocale } from "next-intl/server";
 
-const siteUrl = getSiteConfig().appUrl;
-
-export default function MarketingLayout({
+export default async function MarketingLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const locale = await getLocale();
   return (
     <div className="flex min-h-screen w-full flex-col bg-bg text-fg">
-      <OrganizationJsonLd siteUrl={siteUrl} />
-      <WebSiteJsonLd siteUrl={siteUrl} />
-      <SoftwareApplicationJsonLd siteUrl={siteUrl} />
+      <OrganizationJsonLd locale={locale} />
+      <WebSiteJsonLd locale={locale} />
+      <SoftwareApplicationJsonLd locale={locale} />
       <MarketingHeader />
       <main className="flex-1">{children}</main>
       <MarketingFooter />

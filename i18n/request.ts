@@ -3,10 +3,26 @@ import { cookies, headers } from "next/headers";
 import { defaultLocale, Locale, LOCALE_COOKIE, locales } from "./config";
 import { getActor } from "@/server/auth/session";
 import { db } from "@/server/db/client";
+import { IntlErrorCode, type IntlError } from "next-intl";
+// English fills any key a (beta) locale lacks.
+import { messagesFor } from "./messages";
 
 function isValidLocale(val: string | undefined): val is Locale {
   return Boolean(val && locales.includes(val as Locale));
 }
+
+/** A key missing even in English shows the key, and is logged once in dev. */
+const fallbackOptions = {
+  getMessageFallback: ({ namespace, key }: { namespace?: string; key: string }) =>
+    namespace ? `${namespace}.${key}` : key,
+  onError: (error: IntlError) => {
+    if (error.code === IntlErrorCode.MISSING_MESSAGE) {
+      if (process.env.NODE_ENV === "development") console.warn(error.message);
+      return;
+    }
+    console.error(error);
+  },
+};
 
 export default getRequestConfig(async () => {
   let locale: Locale = defaultLocale;
@@ -25,7 +41,8 @@ export default getRequestConfig(async () => {
       if (pref?.uiLocale && isValidLocale(pref.uiLocale)) {
         return {
           locale: pref.uiLocale,
-          messages: (await import(`../messages/${pref.uiLocale}.json`)).default,
+          messages: messagesFor(pref.uiLocale),
+          ...fallbackOptions,
         };
       }
     }
@@ -55,6 +72,7 @@ export default getRequestConfig(async () => {
 
   return {
     locale,
-    messages: (await import(`../messages/${locale}.json`)).default,
+    messages: messagesFor(locale),
+    ...fallbackOptions,
   };
 });

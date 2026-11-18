@@ -16,13 +16,17 @@ import { EmptyState } from "@/components/ui/empty-state";
 import Logo from "@/components/logo/Logo";
 import AppName from "@/components/logo/AppName";
 
-export const metadata: Metadata = {
-  title: "Page Not Found · Klecx",
-  robots: {
-    index: false,
-    follow: false,
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("Metadata.notFound");
+  return {
+    title: t("title"),
+    description: t("description"),
+    robots: {
+      index: false,
+      follow: false,
+    },
+  };
+}
 
 function formatCopyright(year: number, suffix: string) {
   return `© ${year} Klecx. ${suffix}`;

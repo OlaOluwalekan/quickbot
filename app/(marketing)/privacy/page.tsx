@@ -1,23 +1,17 @@
 import * as React from "react";
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
+import { publicPageMetadata } from "@/lib/seo/metadata";
 import { Shield } from "lucide-react";
 import { LegalDocument, legalValues } from "@/components/legal/legal-document";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("Legal");
-  return {
-    title: `${t("privacy.title")} · Klecx`,
+  return publicPageMetadata({
+    path: "/privacy",
+    title: t("privacy.title"),
     description: t("privacy.subtitle", legalValues()),
-    alternates: {
-      canonical: "/privacy",
-    },
-    openGraph: {
-      title: `${t("privacy.title")} · Klecx`,
-      description: t("privacy.subtitle", legalValues()),
-      url: "/privacy",
-    },
-  };
+  });
 }
 
 export default async function PrivacyPage() {

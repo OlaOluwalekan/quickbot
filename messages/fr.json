@@ -2,7 +2,74 @@
   "Metadata": {
     "title": "Klecx | Votre espace de travail et studio de collaboration basés sur l’IA",
     "description": "Obtenez des réponses IA en temps réel, générez des visuels de qualité studio et accélérez votre flux de travail avec Klecx.",
-    "ogImageAlt": "Aperçu de l'espace de travail {appName}"
+    "ogImageAlt": "Aperçu de l'espace de travail {appName}",
+    "root": {
+      "title": "Klecx — Espaces de travail, pas des fils",
+      "titleTemplate": "%s · Klecx",
+      "description": "Espace de travail IA collaboratif pour la recherche, la rédaction et l'organisation des connaissances. Conservez les versions des réponses et annotez les passages.",
+      "applicationName": "Klecx",
+      "keywords": "espace de travail IA, IA collaborative, ingénierie de prompts, versions de réponse, raisonnement par passage"
+    },
+    "og": {
+      "title": "Espaces de travail, pas des fils.",
+      "tagline": "Organisez la recherche IA en projets, préservez les versions des réponses et raisonnez sur les passages sans perte de contexte.",
+      "chipReasoning": "Raisonnement multi-tours",
+      "chipVersions": "Historique des versions",
+      "chipPrivate": "100 % Privé"
+    },
+    "manifest": {
+      "name": "Klecx — Espace de travail IA",
+      "shortName": "Klecx",
+      "description": "Espace de travail IA collaboratif pour la recherche, la rédaction et l'organisation des connaissances."
+    },
+    "auth": {
+      "loginTitle": "Connexion",
+      "loginDescription": "Connectez-vous à votre espace de travail Klecx.",
+      "registerTitle": "Commencer",
+      "registerDescription": "Créez votre compte Klecx et commencez à organiser votre recherche IA.",
+      "registeredTitle": "Inscription en attente",
+      "registeredDescription": "Vérifiez votre adresse e-mail pour finaliser l'inscription.",
+      "forgotPasswordTitle": "Mot de passe oublié",
+      "forgotPasswordDescription": "Réinitialisez le mot de passe de votre compte Klecx.",
+      "resetPasswordTitle": "Réinitialiser le mot de passe",
+      "resetPasswordDescription": "Définissez un nouveau mot de passe sécurisé pour votre compte Klecx.",
+      "verifyEmailTitle": "Vérifier l'e-mail",
+      "verifyEmailDescription": "Vérifiez votre adresse e-mail pour votre compte Klecx."
+    },
+    "settings": {
+      "title": "Paramètres",
+      "description": "Gérez votre profil, vos préférences et la sécurité de votre compte.",
+      "sessionsTitle": "Sessions et appareils — Paramètres",
+      "sessionsDescription": "Consultez et gérez vos sessions de navigateur et appareils actifs."
+    },
+    "app": {
+      "title": "Espace de travail",
+      "description": "Espace de travail et canevas de projets IA collaboratif."
+    },
+    "project": {
+      "title": "Projet",
+      "description": "Aperçu du projet et espaces de travail."
+    },
+    "notFound": {
+      "title": "Page non trouvée",
+      "description": "La page que vous recherchez n'existe pas ou a été déplacée."
+    },
+    "share": {
+      "title": "Partagé sur Klecx",
+      "description": "Affichage partagé en lecture seule sur Klecx."
+    },
+    "offline": {
+      "title": "Hors ligne",
+      "description": "Vous êtes actuellement hors ligne. Vérifiez votre connexion Internet."
+    },
+    "maintenance": {
+      "title": "En maintenance planifiée",
+      "description": "Klecx fait temporairement l'objet d'une maintenance planifiée."
+    },
+    "invite": {
+      "title": "Invitation au projet",
+      "description": "Rejoignez et collaborez sur ce projet dans Klecx."
+    }
   },
   "Common": {
     "appName": "Klecx",
@@ -1683,10 +1750,10 @@
     "readMinutes": "{count, plural, one {# min de lecture} other {# min de lecture}}",
     "filteredBy": "Filtré par : {category}",
     "notTranslated": "Cet article n'a pas encore été traduit dans votre langue et s'affiche en anglais.",
-    "metaTitle": "Centre d'aide et documentation · Klecx",
+    "metaTitle": "Centre d'aide et documentation",
     "metaDescription": "Guides, documentation et tutoriels consultables pour utiliser les espaces de travail et modèles d'IA Klecx.",
-    "articleTitleSuffix": "· Centre d'aide Klecx",
-    "articleNotFoundTitle": "Article introuvable · Aide Klecx"
+    "articleTitleSuffix": "· Centre d'aide",
+    "articleNotFoundTitle": "Article introuvable"
   },
   "Support": {
     "title": "Contacter le Support",

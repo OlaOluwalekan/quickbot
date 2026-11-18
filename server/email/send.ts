@@ -4,9 +4,8 @@ import { Resend } from "resend";
 // outside React and is unaffected by tests that mock "next-intl".
 import { createTranslator } from "use-intl/core";
 import { env } from "@/server/env";
-import enMessages from "@/messages/en.json";
-import esMessages from "@/messages/es.json";
-import frMessages from "@/messages/fr.json";
+import { messagesFor, resolveLocaleCode } from "@/i18n/messages";
+import type { LocaleCode } from "@/i18n/locales";
 import {
   EmailTemplateMap,
   EmailTemplateName,
@@ -41,13 +40,7 @@ export type {
   EmailTemplateResult,
 } from "./templates/types";
 
-const messagesMap = {
-  en: enMessages,
-  es: esMessages,
-  fr: frMessages,
-} as const;
-
-export type SupportedLocale = keyof typeof messagesMap;
+export type SupportedLocale = LocaleCode;
 
 
 
@@ -58,11 +51,7 @@ export type SupportedLocale = keyof typeof messagesMap;
 export async function getEmailTranslator(
   locale?: string
 ): Promise<{ t: EmailTranslator; locale: SupportedLocale }> {
-  const normLocale = (
-    locale && ["en", "es", "fr"].includes(locale.toLowerCase().slice(0, 2))
-      ? locale.toLowerCase().slice(0, 2)
-      : "en"
-  ) as SupportedLocale;
+  const normLocale: SupportedLocale = resolveLocaleCode(locale);
 
   try {
     const { getTranslations } = await import("next-intl/server");
@@ -80,7 +69,7 @@ export async function getEmailTranslator(
     // standalone translator, so ICU plurals and formatting still work.
     const translator = createTranslator({
       locale: normLocale,
-      messages: messagesMap[normLocale] as Record<string, unknown>,
+      messages: messagesFor(normLocale),
       namespace: "Email",
       onError: () => {},
       getMessageFallback: ({ key }) => key,

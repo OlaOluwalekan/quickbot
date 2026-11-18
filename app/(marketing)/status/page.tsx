@@ -2,6 +2,7 @@ import * as React from "react";
 import type { Metadata } from "next";
 import { unstable_cache } from "next/cache";
 import { getFormatter, getTranslations } from "next-intl/server";
+import { publicPageMetadata } from "@/lib/seo/metadata";
 import {
   CheckCircle2,
   AlertTriangle,
@@ -25,18 +26,11 @@ const getReadiness = unstable_cache(() => checkSystemReadiness(), ["system-readi
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("Status");
-  return {
+  return publicPageMetadata({
+    path: "/status",
     title: t("title"),
     description: t("subtitle"),
-    alternates: {
-      canonical: "/status",
-    },
-    openGraph: {
-      title: t("title"),
-      description: t("subtitle"),
-      url: "/status",
-    },
-  };
+  });
 }
 
 export default async function StatusPage() {
