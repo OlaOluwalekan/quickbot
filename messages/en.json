@@ -815,9 +815,9 @@
           "responseHighlight": "avalanche method targeting the highest APR balance",
           "responseAfter": "to clear the card in under 8 months while avoiding excess interest charges.",
           "artifact": [
-            "Needs (50%) | Housing, groceries & utilities | $2,100 / mo",
-            "Wants (30%) | Dining, leisure & subscriptions | $1,260 / mo",
-            "Savings & Debt (20%) | Card avalanche payoff ($6k) | $840 / mo"
+            ["Needs (50%)", "Housing, groceries & utilities", "$2,100 / mo"],
+            ["Wants (30%)", "Dining, leisure & subscriptions", "$1,260 / mo"],
+            ["Savings & Debt (20%)", "Card avalanche payoff ($6k)", "$840 / mo"]
           ],
           "sideQuestion": "Side Question: Should we use the debt avalanche or snowball method for motivation?"
         },
@@ -840,9 +840,9 @@
           "responseHighlight": "curing time of 7 days before framing",
           "responseAfter": "to allow the slab to reach required load-bearing compressive strength.",
           "artifact": [
-            "Excavation & Prep | Weeks 1–2 | Trenching, vapor barrier, compaction test",
-            "Pour & 7-Day Cure | Week 3 | 120 m² slab poured; 7-day cure before load",
-            "Framing & Inspections | Weeks 4–6 | Wall framing, truss placement, sign-off"
+            ["Excavation & Prep", "Weeks 1–2", "Trenching, vapor barrier, compaction test"],
+            ["Pour & 7-Day Cure", "Week 3", "120 m² slab poured; 7-day cure before load"],
+            ["Framing & Inspections", "Weeks 4–6", "Wall framing, truss placement, sign-off"]
           ],
           "sideQuestion": "Side Question: Can we safely accelerate concrete curing in cold weather?"
         },

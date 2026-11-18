@@ -815,9 +815,9 @@
           "responseHighlight": "método de avalancha enfocado en la tasa más alta",
           "responseAfter": "para saldar la tarjeta en menos de 8 meses evitando cargos excesivos por intereses.",
           "artifact": [
-            "Necesidades (50%) | Vivienda, alimentos y servicios | $2.100 / mes",
-            "Deseos (30%) | Cenas, ocio y suscripciones | $1.260 / mes",
-            "Ahorro y Deuda (20%) | Pago de tarjeta por avalancha ($6k) | $840 / mes"
+            ["Necesidades (50%)", "Vivienda, alimentos y servicios", "$2.100 / mes"],
+            ["Deseos (30%)", "Cenas, ocio y suscripciones", "$1.260 / mes"],
+            ["Ahorro y Deuda (20%)", "Pago de tarjeta por avalancha ($6k)", "$840 / mes"]
           ],
           "sideQuestion": "Pregunta secundaria: ¿Deberíamos usar avalancha o bola de nieve para mantener la motivación?"
         },
@@ -840,9 +840,9 @@
           "responseHighlight": "tiempo de curado de 7 días antes de la estructura",
           "responseAfter": "para que la losa alcance la resistencia a compresión requerida antes de recibir cargas.",
           "artifact": [
-            "Excavación y base | Semanas 1–2 | Zanjas, barrera de vapor, prueba de compactación",
-            "Vaciado y curado | Semana 3 | Losa de 120 m² vertida; curado de 7 días sin carga",
-            "Estructura e inspecciones | Semanas 4–6 | Muros de carga, cerchas y aprobación final"
+            ["Excavación y base", "Semanas 1–2", "Zanjas, barrera de vapor, prueba de compactación"],
+            ["Vaciado y curado", "Semana 3", "Losa de 120 m² vertida; curado de 7 días sin carga"],
+            ["Estructura e inspecciones", "Semanas 4–6", "Muros de carga, cerchas y aprobación final"]
           ],
           "sideQuestion": "Pregunta secundaria: ¿Se puede acelerar de forma segura el curado de concreto en clima frío?"
         },

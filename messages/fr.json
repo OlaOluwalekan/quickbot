@@ -815,9 +815,9 @@
           "responseHighlight": "méthode de l'avalanche ciblant le taux le plus élevé",
           "responseAfter": "pour solder la carte en moins de 8 mois tout en évitant l'accumulation de frais financiers.",
           "artifact": [
-            "Besoins (50 %) | Logement, courses et charges | 2 100 $ / mois",
-            "Envies (30 %) | Sorties, loisirs et abonnements | 1 260 $ / mois",
-            "Épargne et Dettes (20 %) | Remboursement avalanche carte (6k) | 840 $ / mois"
+            ["Besoins (50 %)", "Logement, courses et charges", "2 100 $ / mois"],
+            ["Envies (30 %)", "Sorties, loisirs et abonnements", "1 260 $ / mois"],
+            ["Épargne et Dettes (20 %)", "Remboursement avalanche carte (6k)", "840 $ / mois"]
           ],
           "sideQuestion": "Question secondaire : Vaut-il mieux privilégier la méthode avalanche ou boule de neige pour la motivation ?"
         },
@@ -840,9 +840,9 @@
           "responseHighlight": "temps de cure strict de 7 jours avant la charpente",
           "responseAfter": "afin que la dalle atteigne sa résistance à la compression avant d'accueillir les charges structurales.",
           "artifact": [
-            "Terrassement et prépa | Semaines 1–2 | Tranchées, pare-vapeur et test de compactage",
-            "Coulage et cure 7 jours | Semaine 3 | Dalle 120 m² coulée ; cure de 7 jours sous bâche",
-            "Charpente et contrôles | Semaines 4–6 | Murs porteurs, fermettes et validation technique"
+            ["Terrassement et prépa", "Semaines 1–2", "Tranchées, pare-vapeur et test de compactage"],
+            ["Coulage et cure 7 jours", "Semaine 3", "Dalle 120 m² coulée ; cure de 7 jours sous bâche"],
+            ["Charpente et contrôles", "Semaines 4–6", "Murs porteurs, fermettes et validation technique"]
           ],
           "sideQuestion": "Question secondaire : Peut-on accélérer la cure du béton par temps froid sans compromettre sa résistance ?"
         },

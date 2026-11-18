@@ -94,22 +94,19 @@ for (const key of frKeys) {
   }
 }
 
-// Compare array lengths where value is an array
-for (const key of enKeys) {
-  const enVal = flat.en[key];
-  const esVal = flat.es[key];
-  const frVal = flat.fr[key];
-
-  if (Array.isArray(enVal)) {
-    if (!Array.isArray(esVal) || esVal.length !== enVal.length) {
-      logError(`Array length mismatch for ${key} in 'es' (expected ${enVal.length}, got ${Array.isArray(esVal) ? esVal.length : typeof esVal})`);
-      parityFailed = true;
-    }
-    if (!Array.isArray(frVal) || frVal.length !== enVal.length) {
-      logError(`Array length mismatch for ${key} in 'fr' (expected ${enVal.length}, got ${Array.isArray(frVal) ? frVal.length : typeof frVal})`);
-      parityFailed = true;
-    }
+// Compare array lengths where value is an array (recursively: e.g. table rows of cells)
+function compareArrays(key, enVal, otherVal, loc) {
+  if (!Array.isArray(enVal)) return;
+  if (!Array.isArray(otherVal) || otherVal.length !== enVal.length) {
+    logError(`Array length mismatch for ${key} in '${loc}' (expected ${enVal.length}, got ${Array.isArray(otherVal) ? otherVal.length : typeof otherVal})`);
+    parityFailed = true;
+    return;
   }
+  enVal.forEach((item, idx) => compareArrays(`${key}[${idx}]`, item, otherVal[idx], loc));
+}
+for (const key of enKeys) {
+  compareArrays(key, flat.en[key], flat.es[key], "es");
+  compareArrays(key, flat.en[key], flat.fr[key], "fr");
 }
 
 if (!parityFailed) {
@@ -185,16 +182,16 @@ for (const key of enKeys) {
     }
   };
 
-  if (Array.isArray(enVal)) {
-    enVal.forEach((item, idx) => {
-      const arrKey = `${key}[${idx}]`;
-      checkValue(arrKey, item, flat.es[key]?.[idx], "es");
-      checkValue(arrKey, item, flat.fr[key]?.[idx], "fr");
-    });
-  } else {
-    checkValue(key, enVal, esVal, "es");
-    checkValue(key, enVal, frVal, "fr");
-  }
+  // Walk nested arrays (e.g. table rows of cells); allow-list entries use the indexed path, e.g. key[0][1].
+  const walk = (k, enItem, esItem, frItem) => {
+    if (Array.isArray(enItem)) {
+      enItem.forEach((item, idx) => walk(`${k}[${idx}]`, item, esItem?.[idx], frItem?.[idx]));
+      return;
+    }
+    checkValue(k, enItem, esItem, "es");
+    checkValue(k, enItem, frItem, "fr");
+  };
+  walk(key, enVal, esVal, frVal);
 }
 if (!untranslatedFailed) {
   logSuccess("No untranslated copies (>20 chars) in es/fr.");

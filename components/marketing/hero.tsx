@@ -39,9 +39,6 @@ const SCENE_ICONS = {
   Store,
 } as const;
 
-/** Table artifacts are stored as one message string per row, cells separated by "|". */
-const TABLE_CELL_SEPARATOR = "|";
-
 const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
 
 function subscribeReducedMotion(onChange: () => void) {
@@ -288,8 +285,15 @@ function HeroScene({
   const [activeWorkspace, ...otherWorkspaces] = t.raw(
     `scenes.${sceneKey}.workspaces`
   ) as string[];
-  const artifact = t.raw(`scenes.${sceneKey}.artifact`) as string | string[];
-  const artifactLines = Array.isArray(artifact) ? artifact : [artifact];
+  // code / quote: a string; checklist: string[]; table: string[][] (rows of cells).
+  const artifact = t.raw(`scenes.${sceneKey}.artifact`) as
+    string | string[] | string[][];
+  const artifactLines = (
+    Array.isArray(artifact) ? artifact : [artifact]
+  ).filter((line): line is string => typeof line === "string");
+  const tableRows = Array.isArray(artifact)
+    ? artifact.filter((row): row is string[] => Array.isArray(row))
+    : [];
 
   return (
     <div
@@ -406,14 +410,14 @@ function HeroScene({
               <div className="border-border bg-surface-2 text-fg-muted overflow-x-auto rounded-lg border text-[11px]">
                 <table className="w-full border-collapse">
                   <tbody>
-                    {artifactLines.map((row, rIdx) => (
+                    {tableRows.map((row, rIdx) => (
                       <tr
-                        key={row}
+                        key={rIdx}
                         className={
                           rIdx !== 0 ? "border-border/60 border-t" : ""
                         }
                       >
-                        {row.split(TABLE_CELL_SEPARATOR).map((col, cIdx) => (
+                        {row.map((col, cIdx) => (
                           <td
                             key={cIdx}
                             className={cn(
@@ -423,7 +427,7 @@ function HeroScene({
                                 : "text-fg-muted"
                             )}
                           >
-                            {col.trim()}
+                            {col}
                           </td>
                         ))}
                       </tr>
