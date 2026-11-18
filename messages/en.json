@@ -2008,7 +2008,8 @@
     "owner_out_of_credits": "The workspace owner is out of credits",
     "member_credit_cap": "You've used the monthly limit of {cap} credits the workspace owner set for you",
     "daily_voice_limit": "Daily voice input limit reached for your plan",
-    "unsupported_browser": "Voice input isn't supported in this browser"
+    "unsupported_browser": "Voice input isn't supported in this browser",
+    "view_only_project": "You have view-only access to this project"
   },
   "Models": {
     "text-economy": {

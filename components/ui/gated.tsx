@@ -62,6 +62,8 @@ function gateMessage(
       return t("daily_voice_limit");
     case "unsupported_browser":
       return t("unsupported_browser");
+    case "view_only_project":
+      return t("view_only_project");
   }
 }
 

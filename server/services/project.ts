@@ -4,6 +4,8 @@ import type { Actor } from "@/server/auth/session";
 import { Errors } from "@/server/http/errors";
 import { toPage } from "@/server/http/pagination";
 import {
+  projectAccessFromRow,
+  projectMemberAccessSelect,
   requireProject,
 } from "@/server/authz/access";
 import {
@@ -71,10 +73,24 @@ export async function listProjects(
           members: true,
         },
       },
+      // Only the caller's own membership, to compute their rights per row.
+      members: { where: { userId: actor.userId }, select: projectMemberAccessSelect },
     },
   });
 
-  return toPage(rows, limit);
+  // Each row carries the caller's role and capabilities, so pickers can grey
+  // out projects they can only view (e.g. "New workspace" from an Ask). The
+  // server still checks on every write.
+  const items = rows.map(({ members, ...row }) => {
+    const access = projectAccessFromRow({ ...row, members }, actor.userId);
+    return {
+      ...row,
+      role: access?.role ?? null,
+      capabilities: access ? [...access.capabilities] : [],
+    };
+  });
+
+  return toPage(items, limit);
 }
 
 export async function createProject(actor: Actor, input: CreateProjectInput) {

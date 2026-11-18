@@ -2008,7 +2008,8 @@
     "owner_out_of_credits": "Le propriétaire de l'espace de travail n'a plus de crédits",
     "member_credit_cap": "Vous avez utilisé la limite mensuelle de {cap} crédits que le propriétaire de l'espace de travail vous a fixée",
     "daily_voice_limit": "Limite quotidienne de saisie vocale atteinte pour votre forfait",
-    "unsupported_browser": "La saisie vocale n'est pas prise en charge sur ce navigateur"
+    "unsupported_browser": "La saisie vocale n'est pas prise en charge sur ce navigateur",
+    "view_only_project": "Vous n'avez qu'un accès en lecture à ce projet"
   },
   "Models": {
     "text-economy": {

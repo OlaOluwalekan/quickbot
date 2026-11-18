@@ -2008,7 +2008,8 @@
     "owner_out_of_credits": "El propietario del espacio de trabajo se ha quedado sin créditos",
     "member_credit_cap": "Has usado el límite mensual de {cap} créditos que el propietario del espacio de trabajo te asignó",
     "daily_voice_limit": "Se ha alcanzado el límite diario de entrada de voz para tu plan",
-    "unsupported_browser": "La entrada de voz no es compatible con este navegador"
+    "unsupported_browser": "La entrada de voz no es compatible con este navegador",
+    "view_only_project": "Solo tienes acceso de lectura a este proyecto"
   },
   "Models": {
     "text-economy": {

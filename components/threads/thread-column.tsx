@@ -39,6 +39,7 @@ import {
 import { ThreadBreadcrumb, type BreadcrumbItem } from "./breadcrumb";
 import { api, ApiClientError } from "@/lib/api/client";
 import { Gated } from "@/components/ui/gated";
+import { createInProjectGateReason } from "@/lib/entitlements/shared";
 import { streamAskAnswer, useAskStreamStore } from "@/lib/stores/ask-stream";
 import { useThreadStackStore } from "@/lib/stores/thread-stack";
 import type { CitationDto } from "@/lib/api/sse";
@@ -165,7 +166,7 @@ export function ThreadColumn({
   const [localPromotions, setLocalPromotions] = React.useState<PromotionItem[]>([]);
   const [pickerMsgId, setPickerMsgId] = React.useState<string | null>(null);
   const [projectsList, setProjectsList] = React.useState<
-    Array<{ id: string; name: string }> | null
+    Array<{ id: string; name: string; capabilities?: string[] }> | null
   >(null);
   const [isLoadingProjects, setIsLoadingProjects] = React.useState(false);
 
@@ -406,9 +407,9 @@ export function ThreadColumn({
     if (projectsList !== null || isLoadingProjects) return;
     setIsLoadingProjects(true);
     try {
-      const res = await api<{ items?: Array<{ id: string; name: string }> }>(
-        "/api/v1/projects?limit=50"
-      );
+      const res = await api<{
+        items?: Array<{ id: string; name: string; capabilities?: string[] }>;
+      }>("/api/v1/projects?limit=50");
       setProjectsList(Array.isArray(res?.items) ? res.items : []);
     } catch {
       setProjectsList([]);
@@ -742,17 +743,25 @@ export function ThreadColumn({
                                 </span>
                               )}
                               {(projectsList ?? []).map((proj) => (
-                                <button
+                                // Every project is listed; the ones the person can only
+                                // view are greyed out (the server refuses them anyway).
+                                <Gated
                                   key={proj.id}
-                                  type="button"
-                                  data-testid={`promote-project-${proj.id}`}
-                                  onClick={() =>
-                                    void handlePromote(msgId, "NEW_WORKSPACE", proj.id)
-                                  }
-                                  className="text-left rounded px-2 py-1 hover:bg-surface text-foreground truncate cursor-pointer"
+                                  reason={createInProjectGateReason(proj.capabilities)}
+                                  className="flex w-full"
+                                  side="right"
                                 >
-                                  {proj.name}
-                                </button>
+                                  <button
+                                    type="button"
+                                    data-testid={`promote-project-${proj.id}`}
+                                    onClick={() =>
+                                      void handlePromote(msgId, "NEW_WORKSPACE", proj.id)
+                                    }
+                                    className="w-full text-left rounded px-2 py-1 hover:bg-surface text-foreground truncate cursor-pointer"
+                                  >
+                                    {proj.name}
+                                  </button>
+                                </Gated>
                               ))}
                             </div>
                           </div>
