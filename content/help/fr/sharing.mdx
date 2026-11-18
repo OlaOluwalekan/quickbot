@@ -1,32 +1,33 @@
 ---
-title: "Partager des espaces de travail"
+title: "Partager"
 category: "collaboration-sharing"
-description: "Comment générer des liens de partage publics, gérer la confidentialité et révoquer un accès partagé."
-keywords: ["partager", "lien public", "confidentialité", "révoquer", "lecture seule"]
-sourceVersion: 1
+description: "Créez des liens publics vers un espace de travail ou une seule réponse, choisissez ce que voient les visiteurs et révoquez les liens."
+keywords: ["partager", "lien public", "confidentialité", "révoquer", "lecture seule", "expiration"]
+sourceVersion: 2
 ---
 
-# Partager des espaces de travail
+# Partager
 
-Klecx vous permet de partager des analyses d'IA pertinentes, des explications de code et des synthèses avec vos collègues, clients ou avec le public via des liens sécurisés en lecture seule.
+Un lien public permet à n'importe qui de lire un espace de travail ou une seule réponse sans compte. Pour travailler ensemble dans un espace, invitez plutôt des personnes (voir [Collaboration et rôles](/help/collaboration-roles)).
 
-## Créer un lien de partage
+## Créer un lien public
 
-1. Ouvrez l'espace de travail que vous souhaitez partager.
-2. Cliquez sur le bouton **Partager** situé dans la barre de navigation supérieure.
-3. Choisissez vos options de partage :
-   - **Lien public en lecture seule** : Toute personne disposant du lien peut consulter la conversation.
-   - **Instantané ou direct** : Choisissez si les visiteurs voient la conversation telle qu'elle existe aujourd'hui (instantané) ou s'ils suivent les futures réponses en direct.
-4. Cliquez sur **Créer le lien** et copiez l'URL générée (`/s/:token`).
+1. Ouvrez l'espace de travail et cliquez sur **Partager** dans la barre supérieure, ou sur **Partager** sous une réponse.
+2. Ouvrez l'onglet **Lien public** et choisissez :
+   - **Portée du partage** : **Tout l'espace de travail** ou **Cette réponse uniquement**.
+   - **Version à afficher** : **Modifiée si disponible** ou **Sortie originale de l'IA**.
+   - **Expiration** : aucune, 7 jours ou 30 jours.
+   - **Afficher mon nom sur la page publique**, si vous voulez que les visiteurs voient qui a partagé.
+3. Cliquez sur **Créer un lien public**. Le lien est copié dans votre presse-papier. Il n'est affiché qu'une fois : gardez-le en lieu sûr.
 
-## Informations de sécurité importantes
+Créer des liens publics demande le rôle d'Administrateur ou plus.
 
-- **Accès par URL** : Les liens de partage publics sont accessibles à quiconque possède l'adresse exacte. Évitez de copier des identifiants confidentiels ou des secrets propriétaires dans les conversations avant de les partager.
-- **Indexation par les moteurs de recherche** : Toutes les routes de partage public (`/s/*`) transmettent explicitement des en-têtes de robots `noindex, nofollow` afin d'empêcher les moteurs de recherche d'indexer vos échanges partagés.
+## Ce que voient les visiteurs
 
-## Révoquer un lien de partage
+- Les messages et les réponses choisis, tels qu'ils sont **maintenant** : les modifications et nouvelles réponses ultérieures d'un espace partagé apparaissent aussi sur la page publique.
+- **Jamais inclus** : les commentaires, les questions annexes, les notes Klecx, les membres et l'historique des modifications. Pour les documents, seul le texte est affiché ; le fichier d'origine ne peut pas être téléchargé depuis un lien public.
+- Les pages publiques ne sont pas indexées par les moteurs de recherche, mais toute personne qui a le lien peut l'ouvrir. Ne partagez pas un contenu qui doit rester privé.
 
-Vous conservez le contrôle total sur vos contenus partagés. À tout moment :
-1. Ouvrez de nouveau la boîte de dialogue **Partager**.
-2. Cliquez sur **Révoquer le lien**.
-3. L'URL cesse immédiatement de délivrer le contenu et affiche un avis d'expiration à tout nouveau visiteur.
+## Révoquer un lien
+
+Ouvrez **Partager → Lien public** et cliquez sur **Révoquer** à côté du lien. Il cesse de fonctionner immédiatement. Les liens révoqués et expirés affichent une page « introuvable », comme un lien qui n'a jamais existé.

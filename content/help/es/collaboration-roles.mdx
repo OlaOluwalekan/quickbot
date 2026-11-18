@@ -1,32 +1,46 @@
 ---
 title: "Colaboración y roles"
 category: "collaboration-sharing"
-description: "Comprenda los permisos de equipo: roles de Propietario, Administrador, Editor, Comentarista y Lector."
-keywords: ["roles", "colaboración", "permisos", "equipo", "invitaciones", "administrador"]
-sourceVersion: 1
+description: "Invita a personas, entiende los roles y permisos, y quién paga qué en un espacio compartido."
+keywords: ["roles", "colaboración", "permisos", "equipo", "invitar", "administrador", "propietario", "transferencia"]
+sourceVersion: 2
 ---
 
 # Colaboración y roles
 
-Al trabajar en equipo en Proyectos o Espacios de trabajo, Klecx ofrece control de acceso basado en roles (RBAC) para garantizar que cada miembro disponga de los permisos necesarios sin riesgo de modificaciones accidentales.
+Puedes invitar a personas a un espacio de trabajo o a un proyecto entero y elegir qué puede hacer cada una.
 
-## Desglose de roles
+## Roles
 
-| Rol | Puede ver | Puede comentar | Puede solicitar (generar) | Puede gestionar miembros | Titular de facturación |
-|---|:---:|:---:|:---:|:---:|:---:|
-| **Lector** | ✅ | ❌ | ❌ | ❌ | ❌ |
-| **Comentarista** | ✅ | ✅ | ❌ | ❌ | ❌ |
-| **Editor** | ✅ | ✅ | ✅ | ❌ | ❌ |
-| **Administrador** | ✅ | ✅ | ✅ | ✅ | ❌ |
-| **Propietario** | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Acción | Lector | Comentarista | Editor | Administrador | Propietario |
+|---|:-:|:-:|:-:|:-:|:-:|
+| Leer el espacio, sus documentos y los comentarios compartidos | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Comentar, responder y @mencionar a personas | ⚙️ no | ⚙️ sí | ⚙️ sí | ✅ | ✅ |
+| Preguntar a Klecx sobre pasajes, lanzar la cola, guardar notas de Klecx, pedir revisiones | ⚙️ no | ⚙️ no | ⚙️ sí | ✅ | ✅ |
+| Enviar mensajes y regenerar respuestas | ❌ | ❌ | ✅ | ✅ | ✅ |
+| Editar respuestas y documentos, subir archivos, descargar | ❌ | ❌ | ✅ | ✅ | ✅ |
+| Cambiar el nombre, archivar y crear enlaces públicos | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Invitar a personas y gestionar miembros | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Transferir la propiedad, eliminar el espacio | ❌ | ❌ | ❌ | ❌ | ✅ |
 
-## Cómo se facturan los créditos durante la colaboración en equipo
+⚙️ indica un interruptor por miembro: en **Compartir → Personas**, el propietario o un administrador puede activar o desactivar **Puede comentar** y **Puede preguntar a Klecx** para cada Lector, Comentarista y Editor. "Sí" y "no" son los valores predeterminados de cada rol.
 
-Para evitar sorpresas con modelos de facturación por asiento, **todas las generaciones dentro de un espacio de trabajo consumen el saldo de créditos del Propietario**. Los colaboradores invitados (Editores y Administradores) no necesitan adquirir paquetes de créditos por separado para colaborar en el proyecto.
+## Proyectos y espacios de trabajo
 
-## Invitar a miembros del equipo
+Un rol dado en un proyecto se aplica a todos los espacios de ese proyecto. Un espacio puede dar a alguien más derechos que el proyecto, pero nunca menos: para reducir el acceso de alguien, cámbialo en el proyecto.
 
-1. Abra la configuración del proyecto o espacio de trabajo.
-2. Introduzca el correo electrónico de su colaborador.
-3. Seleccione su rol inicial.
-4. Recibirá un correo de invitación con un enlace seguro para unirse a su espacio de trabajo.
+## Quién paga
+
+Todo lo que hace Klecx en un espacio de trabajo (respuestas, preguntas al margen, revisiones, búsquedas web) usa los créditos del **propietario del espacio**. Los colaboradores no necesitan créditos propios, salvo para la entrada de voz, que usa los créditos de quien habla. En **Compartir → Personas**, el propietario puede fijar un límite mensual de créditos para cada miembro.
+
+## Invitar a personas
+
+1. Abre **Compartir** e introduce una dirección de correo o un `@usuario`.
+2. Elige un rol y haz clic en **Invitar**.
+3. La persona recibe un enlace de invitación de un solo uso, válido durante 7 días. Puedes reenviar o revocar las invitaciones pendientes en la pestaña **Invitaciones**.
+
+El número de personas que puedes invitar a un espacio o proyecto depende de tu plan: {{plan.FREE.members}} en Free, {{plan.LITE.members}} en Lite, {{plan.STANDARD.members}} en Standard y {{plan.PRO.members}} en Pro. Si un propietario supera el límite (por ejemplo, tras un cambio de plan), tiene 14 días para resolverlo; después, los miembros añadidos más recientemente pasan a solo lectura hasta que vuelva a haber sitio. No se elimina nada.
+
+## Transferir la propiedad
+
+El propietario puede pedir a otro miembro que se haga cargo de un espacio o proyecto. El nuevo propietario debe aceptar, porque a partir de entonces sus créditos pagarán el trabajo, y la transferencia debe caber en el límite de miembros de su plan.

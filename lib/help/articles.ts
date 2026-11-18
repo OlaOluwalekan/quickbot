@@ -1,6 +1,9 @@
 import fs from "fs";
 import path from "path";
 import { getSiteConfig } from "@/server/config/site";
+import { PLANS, getDailyCapForPlan, type PlanKey } from "@/server/billing/plans";
+import { GROUNDING_SURCHARGE_CREDITS, MODEL_CATALOG } from "@/lib/ai/model-catalog";
+import { MAX_WORKSPACE_DOCUMENTS } from "@/lib/documents/workspace-document-types";
 import {
   HelpArticle,
   HelpArticleMeta,
@@ -24,8 +27,56 @@ export function toHelpLocale(locale?: string): HelpLocale {
   return "en";
 }
 
-export function replaceHelpTokens(raw: string): string {
+/**
+ * Product numbers for help articles, read from the plan and model sources so
+ * the articles can't drift from the app (F5.7). Written as `{{plan.LITE.credits}}`,
+ * `{{credits.fast}}` etc.; numbers and prices are formatted for the article's locale.
+ */
+export function productTokens(locale: string = "en"): Record<string, string> {
+  const num = (n: number) => new Intl.NumberFormat(locale).format(n);
+  const usd = (n: number) =>
+    new Intl.NumberFormat(locale, { style: "currency", currency: "USD" }).format(n);
+  const tokens: Record<string, string> = {
+    "{{credits.fast}}": num(MODEL_CATALOG["text-economy"].typicalCredits),
+    "{{credits.standard}}": num(MODEL_CATALOG["text-standard"].typicalCredits),
+    "{{credits.image}}": num(MODEL_CATALOG["image-standard"].typicalCredits),
+    "{{credits.search}}": num(GROUNDING_SURCHARGE_CREDITS),
+    "{{documents.max}}": num(MAX_WORKSPACE_DOCUMENTS),
+  };
+  for (const key of Object.keys(PLANS) as PlanKey[]) {
+    const plan = PLANS[key];
+    const p = `{{plan.${key}.`;
+    tokens[`${p}price}}`] = usd(plan.priceMonthly);
+    tokens[`${p}priceYearly}}`] = usd(plan.priceYearly);
+    tokens[`${p}credits}}`] = num(plan.credits);
+    tokens[`${p}dailyCap}}`] = num(getDailyCapForPlan(key));
+    tokens[`${p}concurrent}}`] = num(plan.maxConcurrent);
+    tokens[`${p}members}}`] = num(plan.limits.members);
+    tokens[`${p}attachments}}`] = num(plan.limits.attachmentsPerWorkspace);
+    tokens[`${p}maxFileMB}}`] = num(plan.limits.maxFileMB);
+    tokens[`${p}searchesPerDay}}`] = num(plan.limits.searchesPerDay);
+    tokens[`${p}voiceMinutesPerDay}}`] = num(Math.round(plan.limits.voiceSecondsPerDay / 60));
+  }
+  return tokens;
+}
+
+/**
+ * Sections that depend on whether billing is live (rule 9): `{{#billing}}…{{/billing}}`
+ * is kept only when BILLING_ENABLED is on, `{{^billing}}…{{/billing}}` only when it's off.
+ */
+export function applyBillingSections(raw: string, billingEnabled: boolean): string {
+  return raw
+    .replace(/\{\{#billing\}\}\r?\n?([\s\S]*?)\{\{\/billing\}\}\r?\n?/g, (_, body: string) =>
+      billingEnabled ? body : ""
+    )
+    .replace(/\{\{\^billing\}\}\r?\n?([\s\S]*?)\{\{\/billing\}\}\r?\n?/g, (_, body: string) =>
+      billingEnabled ? "" : body
+    );
+}
+
+export function replaceHelpTokens(raw: string, locale: string = "en"): string {
   const site = getSiteConfig();
+  raw = applyBillingSections(raw, site.billingEnabled);
   const replacements: Record<string, string> = {
     "%%SUPPORT_EMAIL%%": site.emails.support,
     "{{supportEmail}}": site.emails.support,
@@ -41,6 +92,7 @@ export function replaceHelpTokens(raw: string): string {
     "{{companyLegalName}}": site.company.legalName,
     "%%COMPANY_ADDRESS%%": site.company.address,
     "{{companyAddress}}": site.company.address,
+    ...productTokens(locale),
   };
 
   let out = raw;
@@ -159,7 +211,7 @@ export function getArticles(locale?: string): HelpArticle[] {
 
       const fileContents = fs.readFileSync(filePath, "utf8");
       const { data, content: rawBody } = parseFrontmatter(fileContents);
-      const content = replaceHelpTokens(rawBody);
+      const content = replaceHelpTokens(rawBody, isFallback ? "en" : targetLocale);
 
       articles.push({
         slug,

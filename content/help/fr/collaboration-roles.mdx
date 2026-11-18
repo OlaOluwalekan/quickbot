@@ -1,32 +1,46 @@
 ---
 title: "Collaboration et rôles"
 category: "collaboration-sharing"
-description: "Comprenez les autorisations d'équipe : rôles Propriétaire, Administrateur, Éditeur, Commentateur et Lecteur."
-keywords: ["rôles", "collaboration", "autorisations", "équipe", "invitations", "administrateur"]
-sourceVersion: 1
+description: "Invitez des personnes, comprenez les rôles et autorisations, et qui paie quoi dans un espace partagé."
+keywords: ["rôles", "collaboration", "autorisations", "équipe", "inviter", "administrateur", "propriétaire", "transfert"]
+sourceVersion: 2
 ---
 
 # Collaboration et rôles
 
-Lorsque vous travaillez en équipe dans des Projets ou des Espaces de travail, Klecx offre un contrôle d'accès basé sur les rôles (RBAC) pour s'assurer que chaque membre dispose exactement des autorisations requises sans risquer de modifications indésirables.
+Vous pouvez inviter des personnes dans un espace de travail ou dans un projet entier, et choisir ce que chacune peut faire.
 
-## Tableau des rôles
+## Rôles
 
-| Rôle | Peut consulter | Peut commenter | Peut générer (prompter) | Peut gérer les membres | Titulaire facturation |
-|---|:---:|:---:|:---:|:---:|:---:|
-| **Lecteur** | ✅ | ❌ | ❌ | ❌ | ❌ |
-| **Commentateur** | ✅ | ✅ | ❌ | ❌ | ❌ |
-| **Éditeur** | ✅ | ✅ | ✅ | ❌ | ❌ |
-| **Administrateur** | ✅ | ✅ | ✅ | ✅ | ❌ |
-| **Propriétaire** | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Action | Lecteur | Commentateur | Éditeur | Administrateur | Propriétaire |
+|---|:-:|:-:|:-:|:-:|:-:|
+| Lire l'espace, ses documents et les commentaires partagés | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Commenter, répondre et @mentionner des personnes | ⚙️ non | ⚙️ oui | ⚙️ oui | ✅ | ✅ |
+| Interroger Klecx sur des passages, lancer la file, enregistrer des notes Klecx, demander des révisions | ⚙️ non | ⚙️ non | ⚙️ oui | ✅ | ✅ |
+| Envoyer des messages et régénérer des réponses | ❌ | ❌ | ✅ | ✅ | ✅ |
+| Modifier réponses et documents, importer des fichiers, télécharger | ❌ | ❌ | ✅ | ✅ | ✅ |
+| Renommer, archiver et créer des liens publics | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Inviter des personnes et gérer les membres | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Transférer la propriété, supprimer l'espace | ❌ | ❌ | ❌ | ❌ | ✅ |
 
-## Comment les crédits sont facturés en équipe
+⚙️ indique un réglage par membre : dans **Partager → Personnes**, le propriétaire ou un administrateur peut activer ou désactiver **Peut commenter** et **Peut demander à Klecx** pour chaque Lecteur, Commentateur et Éditeur. « Oui » et « non » sont les valeurs par défaut de chaque rôle.
 
-Pour éviter les mauvaises surprises liées à une facturation complexe par utilisateur, **toutes les générations effectuées dans un espace de travail consomment le solde de crédits du Propriétaire**. Les collaborateurs invités (Éditeurs et Administrateurs) n'ont pas besoin d'acheter de crédits distincts pour travailler sur le projet.
+## Projets et espaces de travail
 
-## Inviter des membres d'équipe
+Un rôle donné dans un projet s'applique à tous les espaces de ce projet. Un espace peut donner à quelqu'un plus de droits que le projet, mais jamais moins : pour réduire l'accès d'une personne, modifiez-le dans le projet.
 
-1. Ouvrez les paramètres du projet ou de l'espace de travail.
-2. Saisissez l'adresse e-mail de votre collaborateur.
-3. Sélectionnez son rôle initial.
-4. Il recevra un e-mail d'invitation contenant un lien sécurisé pour rejoindre votre espace.
+## Qui paie
+
+Tout ce que fait Klecx dans un espace de travail (réponses, questions annexes, révisions, recherches web) utilise les crédits du **propriétaire de l'espace**. Les collaborateurs n'ont pas besoin de crédits, sauf pour la saisie vocale, qui utilise les crédits de la personne qui parle. Dans **Partager → Personnes**, le propriétaire peut fixer un plafond mensuel de crédits pour chaque membre.
+
+## Inviter des personnes
+
+1. Ouvrez **Partager** et saisissez une adresse e-mail ou un `@nomdutilisateur`.
+2. Choisissez un rôle et cliquez sur **Inviter**.
+3. La personne reçoit un lien d'invitation à usage unique, valable 7 jours. Vous pouvez renvoyer ou révoquer les invitations en attente dans l'onglet **Invitations**.
+
+Le nombre de personnes que vous pouvez inviter dans un espace ou un projet dépend de votre forfait : {{plan.FREE.members}} avec Free, {{plan.LITE.members}} avec Lite, {{plan.STANDARD.members}} avec Standard et {{plan.PRO.members}} avec Pro. Si un propriétaire dépasse la limite (par exemple après un changement de forfait), il a 14 jours pour régulariser ; ensuite, les membres ajoutés le plus récemment passent en lecture seule jusqu'à ce qu'il y ait de nouveau de la place. Rien n'est supprimé.
+
+## Transférer la propriété
+
+Le propriétaire peut demander à un autre membre de reprendre un espace ou un projet. Le nouveau propriétaire doit accepter, car ses crédits paieront le travail à partir de ce moment, et le transfert doit respecter la limite de membres de son forfait.

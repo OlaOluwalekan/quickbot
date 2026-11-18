@@ -1,24 +1,48 @@
 ---
 title: "Resaltar y preguntar"
 category: "features-workflows"
-description: "Cómo seleccionar frases específicas en cualquier respuesta para formular preguntas de seguimiento precisas."
-keywords: ["resaltar", "preguntar", "seguimiento", "cita", "contexto", "selección"]
-sourceVersion: 1
+description: "Comenta cualquier pasaje o pregunta a Klecx sobre él, en el mismo sitio, sin perder el hilo de la conversación."
+keywords: ["resaltar", "comentar", "preguntar", "pregunta al margen", "cola", "mención", "notas de klecx", "anotación"]
+sourceVersion: 2
 ---
 
 # Resaltar y preguntar
 
-En informes de investigación extensos o explicaciones de código detalladas, formular una pregunta de seguimiento a menudo exige citar un párrafo específico. Klecx optimiza este proceso con **Resaltar y preguntar**.
+Selecciona cualquier pasaje de una respuesta para comentarlo o preguntar sobre él. Funciona en las respuestas principales, en las respuestas a preguntas al margen de cualquier nivel y en los documentos del espacio de trabajo y los generados.
 
-## Cómo funciona
+## Comentar o preguntar
 
-1. **Seleccione cualquier texto**: En cualquier tarjeta de respuesta generada, use el ratón o trackpad para resaltar una frase, oración o fila de tabla.
-2. **Menú contextual flotante**: Aparecerá un menú de acción flotante junto a su selección con la opción **"Preguntar sobre esto"**.
-3. **Cita automática de contexto**: Al hacer clic en el botón, el extracto seleccionado se inserta automáticamente en su compositor como una cita en bloque, lo que le permite hacer preguntas como:
-   - *"¿Puede explicar esta parte en términos más sencillos?"*
-   - *"Proporcione una implementación en TypeScript para este paso."*
-   - *"¿Existen casos límite con respecto a esta recomendación?"*
+Al seleccionar texto aparece una pequeña barra de herramientas con dos acciones:
 
-## Anclaje de texto robusto
+- **Comentar** (`Ctrl` + `Alt` + `M`, o `⌥` + `⌘` + `M` en Mac): deja una nota sobre el pasaje para ti o tu equipo. Los miembros pueden responder a un comentario. No interviene la IA.
+- **Preguntar** (`Ctrl` + `Alt` + `A`, o `⌥` + `⌘` + `A` en Mac): pregunta a Klecx sobre el pasaje.
+  - **Preguntar ahora**: la respuesta empieza enseguida en una columna junto a la conversación.
+  - **Añadir a la cola**: guarda la pregunta y sigue leyendo. Abre **Preguntas** en el compositor para ver tu cola y elige **Preguntar todo** para responder todas las preguntas de una vez.
 
-Klecx utiliza internamente el estándar **TextQuoteSelector** de la W3C. Incluso si las respuestas se vuelven a formatear o procesar, sus puntos de anclaje seleccionados se mantienen referenciados de forma fidedigna en el historial de la conversación.
+En una pantalla táctil, selecciona el texto con una pulsación larga y usa la misma barra.
+
+Cuando Klecx responde una pregunta al margen, lee solo el texto que contiene tu selección, el hilo de esa pregunta y tus notas de Klecx, no todo el espacio de trabajo. Así las respuestas son precisas y su coste, bajo.
+
+## Columnas y preguntas anidadas
+
+Cada pregunta al margen se abre como una columna junto a la conversación principal. Puedes seleccionar texto en una respuesta y volver a preguntar, tan a fondo como quieras. Cuando las columnas ya no caben, los niveles más antiguos se pliegan en franjas estrechas al lado.
+
+- **Atrás** (`Esc`) cierra la columna actual.
+- **Conversación principal** las cierra todas.
+- La ruta en la parte superior de cada columna muestra dónde estás; haz clic en cualquier nivel para volver a él.
+
+Un punto en el margen marca los pasajes con comentarios o preguntas. Pasa el cursor sobre él para verlos y elige **Ver**. **Todas las anotaciones**, en la barra superior, muestra todos los comentarios y preguntas del espacio.
+
+## Menciones y notas de Klecx
+
+- Escribe `@` y un nombre para mencionar a un miembro. Recibe una notificación, y el comentario pasa a ser visible para todo el espacio de trabajo para que pueda leerlo.
+- Escribe `@klecx` para que Klecx recuerde una corrección, por ejemplo *"@klecx usamos PostgreSQL, no MongoDB"*. Klecx no responde en ese momento; tiene en cuenta la nota en todas las respuestas posteriores de este espacio. Gestiona las notas desde **Notas de Klecx** en la cabecera del espacio.
+
+## Conservar una buena respuesta
+
+Una respuesta a una pregunta al margen se puede promover:
+
+- **Añadir a la línea temporal** la añade a la conversación principal, con un enlace a la pregunta de la que viene.
+- **Nuevo espacio de trabajo** crea un espacio nuevo a partir de ella, en el proyecto que elijas o independiente.
+
+El texto que estás editando debe guardarse antes de poder comentarlo o preguntar sobre él.
