@@ -330,8 +330,12 @@ describe("F2.7 — Promotion & provenance UI", () => {
       if (url.startsWith("/api/v1/projects")) {
         return {
           items: [
-            { id: "proj_same", name: "Same Project" },
-            { id: "proj_other", name: "Other Project" },
+            { id: "proj_same", name: "Same Project", capabilities: ["workspace.read"] },
+            {
+              id: "proj_other",
+              name: "Other Project",
+              capabilities: ["workspace.read", "workspace.generate"],
+            },
           ],
         };
       }
@@ -365,6 +369,10 @@ describe("F2.7 — Promotion & provenance UI", () => {
     fireEvent.click(wsBtn);
 
     const otherProjBtn = await screen.findByTestId("promote-project-proj_other");
+    // F3.x: every project is listed; the view-only one is greyed out with a reason.
+    const viewOnlyBtn = screen.getByTestId("promote-project-proj_same");
+    expect(screen.getByTestId("gated-view_only_project")).toContainElement(viewOnlyBtn);
+    expect(otherProjBtn.closest('[data-testid^="gated-"]')).toBeNull();
     fireEvent.click(otherProjBtn);
 
     await waitFor(() => {

@@ -57,13 +57,7 @@ export async function resolveWorkspaceRole(
       archivedAt: true,
       members: {
         where: { userId },
-        select: {
-          role: true,
-          canComment: true,
-          canAsk: true,
-          suspendedAt: true,
-          suspendedReason: true,
-        },
+        select: projectMemberAccessSelect,
       },
       project: {
         select: {
@@ -208,7 +202,37 @@ export async function resolveProjectRole(
   });
 
   if (!project) return null;
+  return projectAccessFromRow(project, userId);
+}
 
+/** The caller's membership fields `projectAccessFromRow` needs. */
+export const projectMemberAccessSelect = {
+  role: true,
+  canComment: true,
+  canAsk: true,
+  suspendedAt: true,
+  suspendedReason: true,
+} as const;
+
+/**
+ * Role and capabilities on a project from an already loaded row (its
+ * `members` filtered to `userId`). Shared by `resolveProjectRole` and lists
+ * that show per-project rights, so both always agree.
+ */
+export function projectAccessFromRow(
+  project: {
+    id: string;
+    ownerId: string;
+    archivedAt: Date | null;
+    members?: {
+      role: string;
+      canComment: boolean | null;
+      canAsk: boolean | null;
+      suspendedAt: Date | null;
+    }[];
+  },
+  userId: string
+): ResolvedProjectAccess | null {
   const summary = {
     id: project.id,
     ownerId: project.ownerId,

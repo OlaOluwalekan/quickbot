@@ -51,7 +51,9 @@ export type GateReason =
   /** The member used up the monthly credit limit the workspace owner set for them. */
   | { code: "member_credit_cap"; cap: number }
   | { code: "daily_voice_limit" }
-  | { code: "unsupported_browser" };
+  | { code: "unsupported_browser" }
+  /** The person is a viewer of the project, so they can't add workspaces to it. */
+  | { code: "view_only_project" };
 
 /**
  * Gate for actions that spend credits in a workspace. The owner pays
@@ -193,4 +195,14 @@ export function exportFormatGateReason(args: {
   const plan =
     PLAN_ORDER.find((p) => PLANS[p].limits.exportFormats.includes(format)) ?? "PRO";
   return isOwner ? { code: "requires_plan", plan } : { code: "owner_plan", plan };
+}
+
+/**
+ * Gate for creating a workspace inside a project the person belongs to
+ * (`capabilities` comes from the server, per project in `GET /api/v1/projects`).
+ */
+export function createInProjectGateReason(
+  capabilities: readonly string[] | undefined
+): GateReason | null {
+  return capabilities?.includes("workspace.generate") ? null : { code: "view_only_project" };
 }
