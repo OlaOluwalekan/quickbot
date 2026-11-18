@@ -30,6 +30,7 @@ export const envSchema = z
     COMPANY_WEBSITE: emptyToUndefined(z.string().url().optional()),
     SOCIAL_X_URL: emptyToUndefined(z.string().url().optional()),
     SOCIAL_GITHUB_URL: emptyToUndefined(z.string().url().optional()),
+    STATUS_PAGE_URL: emptyToUndefined(z.string().url().optional()),
     BILLING_ENABLED: z
       .enum(["true", "false"])
       .default("false")
@@ -182,6 +183,7 @@ export function validateEnv(input: Record<string, unknown> = process.env) {
     COMPANY_WEBSITE: input.COMPANY_WEBSITE || undefined,
     SOCIAL_X_URL: input.SOCIAL_X_URL || undefined,
     SOCIAL_GITHUB_URL: input.SOCIAL_GITHUB_URL || undefined,
+    STATUS_PAGE_URL: input.STATUS_PAGE_URL || undefined,
     BILLING_ENABLED:
       input.BILLING_ENABLED === undefined || input.BILLING_ENABLED === ""
         ? undefined

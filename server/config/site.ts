@@ -23,6 +23,8 @@ export interface SiteConfig {
     x?: string;
     github?: string;
   };
+  /** Public status/incident page (`STATUS_PAGE_URL`), linked from /status when set. */
+  statusPageUrl?: string;
 }
 
 let testOverride: Partial<SiteConfig> | null = null;
@@ -58,6 +60,7 @@ export function getSiteConfig(): SiteConfig {
       ...(env.SOCIAL_X_URL ? { x: env.SOCIAL_X_URL } : {}),
       ...(env.SOCIAL_GITHUB_URL ? { github: env.SOCIAL_GITHUB_URL } : {}),
     },
+    ...(env.STATUS_PAGE_URL ? { statusPageUrl: env.STATUS_PAGE_URL } : {}),
   };
   if (!testOverride) {
     return base;

@@ -134,3 +134,23 @@ Known gap: the credit hold before an answer covers the base cost only (decided 2
 | C | Switch, stateful mode | The provider keeps the conversation; smaller requests, but user content is stored with the provider (privacy policy update needed) and Klecx's own history becomes a second copy. |
 
 **If nothing is decided:** stays at A until after launch, then B.
+
+---
+
+## 6. Faster support on higher plans
+
+- **Found:** 2026-11-18, review of F5.4.
+- **Where:** `server/billing/plans.ts` (`features`), `messages/*.json` (`Plans.*.features`).
+
+**The situation.** The Standard plan used to list "Priority customer support" and the F5.4 draft changed it to "Faster email support" on Standard and Pro. Nothing in the app or the support process treats paid plans differently: every request lands in the same queue with the same "within 3 business days" answer (`Marketing.aboutPage.supportText`).
+
+**Today.** No plan lists a support line (rule 9: copy must be true).
+
+**Options.**
+
+| | Option | Effect |
+|---|---|---|
+| A | No support line (today) | True; all plans get the same support. |
+| B | "Faster email support" on Standard and Pro | Needs a real commitment (e.g. answer within 1 business day) and a way to see the plan on each ticket (`SupportTicket` → owner's plan, sort or flag in the inbox). Then add the line back with the target time. |
+
+**If nothing is decided:** stays at A.

@@ -1,19 +1,38 @@
 import * as React from "react";
 import type { Metadata } from "next";
-import { getTranslations } from "next-intl/server";
-import { CheckCircle2, Activity, ExternalLink, ShieldCheck, Cpu, Key, Database, Cloud, Mail } from "lucide-react";
+import { unstable_cache } from "next/cache";
+import { getFormatter, getTranslations } from "next-intl/server";
+import {
+  CheckCircle2,
+  AlertTriangle,
+  Activity,
+  ExternalLink,
+  Cpu,
+  Key,
+  Database,
+  Cloud,
+  Mail,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { checkSystemReadiness } from "@/server/services/system-status";
+import { getSiteConfig } from "@/server/config/site";
+
+// The page renders per request (the locale comes from a cookie), so the
+// probes are cached instead: at most one database/Redis check a minute.
+const getReadiness = unstable_cache(() => checkSystemReadiness(), ["system-readiness"], {
+  revalidate: 60,
+});
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("Status");
   return {
-    title: `${t("title")} · System Status`,
+    title: t("title"),
     description: t("subtitle"),
     alternates: {
       canonical: "/status",
     },
     openGraph: {
-      title: `${t("title")} · System Status`,
+      title: t("title"),
       description: t("subtitle"),
       url: "/status",
     },
@@ -22,132 +41,175 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function StatusPage() {
   const t = await getTranslations("Status");
+  const readiness = await getReadiness();
+  const isAllOperational = readiness.status === "operational";
+  const externalStatusUrl = getSiteConfig().statusPageUrl;
+  const format = await getFormatter();
+
+  // UTC, so the time means the same thing whoever reads the cached page.
+  const formattedTime = format.dateTime(new Date(readiness.timestamp), {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "UTC",
+    timeZoneName: "short",
+  });
 
   const services = [
     {
-      id: "ai",
+      id: "ai" as const,
       name: t("services.ai.name"),
       desc: t("services.ai.desc"),
       icon: Cpu,
-      status: "operational",
+      status: readiness.services.ai,
     },
     {
-      id: "auth",
+      id: "auth" as const,
       name: t("services.auth.name"),
       desc: t("services.auth.desc"),
       icon: Key,
-      status: "operational",
+      status: readiness.services.auth,
     },
     {
-      id: "db",
+      id: "db" as const,
       name: t("services.db.name"),
       desc: t("services.db.desc"),
       icon: Database,
-      status: "operational",
+      status: readiness.services.db,
     },
     {
-      id: "storage",
+      id: "storage" as const,
       name: t("services.storage.name"),
       desc: t("services.storage.desc"),
       icon: Cloud,
-      status: "operational",
+      status: readiness.services.storage,
     },
     {
-      id: "email",
+      id: "email" as const,
       name: t("services.email.name"),
       desc: t("services.email.desc"),
       icon: Mail,
-      status: "operational",
+      status: readiness.services.email,
     },
   ];
 
   return (
     <div className="py-12 md:py-16">
-      <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 space-y-10">
+      <div className="mx-auto max-w-4xl space-y-10 px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="space-y-3">
           <div className="inline-flex items-center gap-2 rounded-full bg-accent/10 px-3 py-1 text-xs font-medium text-accent">
             <Activity className="h-3.5 w-3.5" />
             <span>{t("title")}</span>
           </div>
-          <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-fg">
+          <h1 className="text-3xl font-extrabold tracking-tight text-fg sm:text-5xl">
             {t("title")}
           </h1>
-          <p className="text-base text-fg-muted max-w-2xl leading-relaxed">
+          <p className="max-w-2xl text-base leading-relaxed text-fg-muted">
             {t("subtitle")}
           </p>
         </div>
 
         {/* Global Operational Status Banner */}
-        <div className="rounded-3xl border border-success/30 bg-success/5 p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-sm">
+        <div
+          className={`flex flex-col items-center justify-between gap-6 rounded-3xl border p-6 shadow-xs sm:flex-row sm:p-8 ${
+            isAllOperational
+              ? "border-success/30 bg-success/5"
+              : "border-warning/30 bg-warning/5"
+          }`}
+        >
           <div className="flex items-center gap-4 text-center sm:text-left">
-            <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-success/20 text-success">
-              <CheckCircle2 className="h-6 w-6" />
-              <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-success"></span>
-              </span>
+            <div
+              className={`relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${
+                isAllOperational
+                  ? "bg-success/20 text-success"
+                  : "bg-warning/20 text-warning"
+              }`}
+            >
+              {isAllOperational ? (
+                <CheckCircle2 className="h-6 w-6" />
+              ) : (
+                <AlertTriangle className="h-6 w-6" />
+              )}
+              {isAllOperational && (
+                <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75"></span>
+                  <span className="relative inline-flex h-3 w-3 rounded-full bg-success"></span>
+                </span>
+              )}
             </div>
             <div>
-              <h2 className="text-lg sm:text-xl font-bold text-fg">{t("allOperational")}</h2>
-              <p className="text-xs text-fg-muted pt-0.5">{t("uptimeNotice")}</p>
+              <h2 className="text-lg font-bold text-fg sm:text-xl">
+                {isAllOperational ? t("allOperational") : t("someDegraded")}
+              </h2>
+              <p className="pt-0.5 text-xs text-fg-muted">{t("uptimeNotice")}</p>
             </div>
           </div>
 
-          <Button asChild variant="outline" size="sm" className="shrink-0 text-xs rounded-xl">
-            <a
-              href="https://betteruptime.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2"
+          {externalStatusUrl && (
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="shrink-0 rounded-xl text-xs"
             >
-              <span>{t("viewMonitor")}</span>
-              <ExternalLink className="h-3.5 w-3.5" />
-            </a>
-          </Button>
+              <a
+                href={externalStatusUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2"
+              >
+                <span>{t("viewMonitor")}</span>
+                <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+            </Button>
+          )}
         </div>
 
         {/* Core Services Breakdown */}
         <div className="space-y-4">
-          <div className="flex items-center justify-between text-xs text-fg-subtle border-b border-border pb-3">
-            <span className="font-semibold uppercase tracking-wider text-fg">{t("servicesHeading")}</span>
-            <span className="font-mono">{t("lastChecked")}</span>
+          <div className="flex items-center justify-between border-b border-border pb-3 text-xs text-fg-subtle">
+            <span className="font-semibold uppercase tracking-wider text-fg">
+              {t("servicesHeading")}
+            </span>
+            <span className="font-mono">{t("lastChecked", { time: formattedTime })}</span>
           </div>
 
           <div className="space-y-3">
             {services.map((s) => {
               const Icon = s.icon;
+              const isServiceOp = s.status === "operational";
               return (
                 <div
                   key={s.id}
-                  className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 sm:p-5 rounded-2xl border border-border/70 bg-surface gap-3 shadow-2xs"
+                  className="flex flex-col items-start justify-between gap-3 rounded-2xl border border-border/70 bg-surface p-4 shadow-2xs sm:flex-row sm:items-center sm:p-5"
                 >
-                  <div className="flex items-start sm:items-center gap-3.5">
+                  <div className="flex items-start gap-3.5 sm:items-center">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface-2 text-accent">
                       <Icon className="h-5 w-5" />
                     </div>
                     <div>
                       <h3 className="text-sm font-bold text-fg">{s.name}</h3>
-                      <p className="text-xs text-fg-muted leading-relaxed">{s.desc}</p>
+                      <p className="text-xs leading-relaxed text-fg-muted">{s.desc}</p>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
-                    <span className="flex h-2 w-2 rounded-full bg-success"></span>
-                    <span className="text-xs font-semibold text-success">{t("operational")}</span>
+                  <div className="flex shrink-0 items-center gap-2 self-end sm:self-center">
+                    <span
+                      className={`flex h-2 w-2 rounded-full ${
+                        isServiceOp ? "bg-success" : "bg-warning"
+                      }`}
+                    ></span>
+                    <span
+                      className={`text-xs font-semibold ${
+                        isServiceOp ? "text-success" : "text-warning"
+                      }`}
+                    >
+                      {isServiceOp ? t("operational") : t("degraded")}
+                    </span>
                   </div>
                 </div>
               );
             })}
-          </div>
-        </div>
-
-        {/* Incident History */}
-        <div className="space-y-3 pt-4">
-          <h3 className="text-sm font-semibold uppercase tracking-wider text-fg">{t("incidentHeading")}</h3>
-          <div className="rounded-2xl border border-border/70 bg-surface p-6 text-xs text-fg-muted text-center sm:text-left flex items-center gap-3">
-            <ShieldCheck className="h-5 w-5 text-success shrink-0" />
-            <span>{t("noIncidents")}</span>
           </div>
         </div>
       </div>

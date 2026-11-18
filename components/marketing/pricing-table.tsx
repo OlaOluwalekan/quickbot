@@ -8,6 +8,8 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PLANS, PlanKey } from "@/server/billing/plans";
+import { useSiteConfig } from "@/components/providers/site-config-provider";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 export function MarketingPricingTable({
   isTeaser: _isTeaser = false,
@@ -16,6 +18,7 @@ export function MarketingPricingTable({
 }) {
   const t = useTranslations("Marketing.pricing");
   const tPlans = useTranslations();
+  const { billingEnabled } = useSiteConfig();
   const [billingCycle, setBillingCycle] = React.useState<"month" | "year">("month");
 
   const planKeys: PlanKey[] = ["FREE", "LITE", "STANDARD", "PRO"];
@@ -68,6 +71,13 @@ export function MarketingPricingTable({
             </div>
           </div>
         </div>
+
+        {/* Billing Disabled Notice */}
+        {!billingEnabled && (
+          <div className="mb-8 rounded-xl border border-accent/20 bg-accent-soft/40 p-4 text-center text-xs text-fg sm:text-sm">
+            {t("paidPlansNotice")}
+          </div>
+        )}
 
         {/* Pricing Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
@@ -146,22 +156,40 @@ export function MarketingPricingTable({
 
                 {/* Action CTA */}
                 <div className="pt-6 mt-6 border-t border-border/60">
-                  <Button
-                    asChild
-                    variant={isPopular ? "default" : "outline"}
-                    className={cn(
-                      "w-full text-xs font-semibold h-9",
-                      isPopular
-                        ? "bg-accent text-accent-fg hover:bg-accent-hover shadow-2xs"
-                        : "border-border text-fg hover:bg-surface-2"
-                    )}
-                  >
-                    <Link href={plan.id === "FREE" ? "/auth/register" : `/auth/register?plan=${plan.id.toLowerCase()}`}>
-                      {plan.id === "FREE"
-                        ? t("startFree")
-                        : t("subscribeTo", { name: tPlans(plan.name) })}
-                    </Link>
-                  </Button>
+                  {plan.id !== "FREE" && !billingEnabled ? (
+                    // A disabled button gets no pointer events, so the tooltip sits on a focusable wrapper.
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span tabIndex={0} className="block w-full cursor-not-allowed rounded-md">
+                          <Button
+                            disabled
+                            variant="outline"
+                            className="pointer-events-none w-full text-xs font-semibold h-9 border-border text-fg-muted"
+                          >
+                            {t("comingSoon")}
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>{t("paidPlansTooltip")}</TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <Button
+                      asChild
+                      variant={isPopular ? "default" : "outline"}
+                      className={cn(
+                        "w-full text-xs font-semibold h-9",
+                        isPopular
+                          ? "bg-accent text-accent-fg hover:bg-accent-hover shadow-2xs"
+                          : "border-border text-fg hover:bg-surface-2"
+                      )}
+                    >
+                      <Link href={plan.id === "FREE" ? "/auth/register" : `/auth/register?plan=${plan.id.toLowerCase()}`}>
+                        {plan.id === "FREE"
+                          ? t("startFree")
+                          : t("subscribeTo", { name: tPlans(plan.name) })}
+                      </Link>
+                    </Button>
+                  )}
                 </div>
               </div>
             );

@@ -108,7 +108,7 @@ describe("Marketing Pages & Components", () => {
       expect(screen.getByText("3,500 Credits")).toBeInTheDocument();
 
       expect(
-        screen.getByText(/Monthly plan credits do not roll over to maintain transparent unit costs/i)
+        screen.getByText(/unused credits don't carry over/i)
       ).toBeInTheDocument();
     });
   });

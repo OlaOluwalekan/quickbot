@@ -109,7 +109,12 @@ export function SoftwareApplicationJsonLd({ siteUrl }: { siteUrl?: string }) {
 }
 
 export function PricingFaqJsonLd() {
-  const faqItems = Object.values(enMessages.Marketing.faq.items);
+  const { billingEnabled } = getSiteConfig();
+  // Same answers as the FAQ on the page: billing answers only once billing is live (rule 9).
+  const faqItems = Object.values(enMessages.Marketing.faq.items).map((faq) => ({
+    q: faq.q,
+    a: !billingEnabled && "aLaunchingSoon" in faq ? faq.aLaunchingSoon : faq.a,
+  }));
   const data = {
     "@context": "https://schema.org",
     "@type": "FAQPage",

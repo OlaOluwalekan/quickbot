@@ -8,6 +8,7 @@ import {
   History,
   Share2,
   FileDown,
+  FileText,
   CheckCircle2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -98,6 +99,8 @@ export function MarketingFeatureList() {
         t("workspaces.bullet1"),
         t("workspaces.bullet2"),
         t("workspaces.bullet3"),
+        t("workspaces.bullet4"),
+        t("workspaces.bullet5"),
       ],
       icon: FolderKanban,
       previewContent: (
@@ -199,6 +202,32 @@ export function MarketingFeatureList() {
           <div className="text-[11px] text-fg-muted space-y-1">
             <div>{t("share.readOnly")}</div>
             <div>{t("share.revocable")}</div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: "documents-review",
+      badge: t("documents.badge"),
+      title: t("documents.title"),
+      description: t("documents.description"),
+      bullets: [
+        t("documents.bullet1"),
+        t("documents.bullet2"),
+        t("documents.bullet3"),
+      ],
+      icon: FileText,
+      previewContent: (
+        <div className="p-4 rounded-xl border border-border bg-surface shadow-2xs text-xs space-y-3">
+          <div className="flex items-center justify-between pb-2 border-b border-border/60">
+            <span className="font-semibold text-fg">{t("documents.previewDoc")}</span>
+            <span className="text-[10px] text-accent font-medium px-2 py-0.5 rounded bg-accent/10">
+              {t("documents.previewStatus")}
+            </span>
+          </div>
+          <div className="p-2.5 rounded-lg bg-surface-2 space-y-1.5 text-[11px]">
+            <div className="text-fg-muted font-medium">{t("documents.previewSuggestionLabel")}</div>
+            <p className="text-xs text-fg leading-relaxed">{t("documents.previewSuggestionText")}</p>
           </div>
         </div>
       ),
