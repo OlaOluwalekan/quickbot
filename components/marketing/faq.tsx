@@ -4,6 +4,7 @@ import * as React from "react";
 import { useTranslations } from "next-intl";
 import { ChevronDown, HelpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useSiteConfig } from "@/components/providers/site-config-provider";
 
 const FAQ_KEYS = [
   "creditDef",
@@ -12,10 +13,14 @@ const FAQ_KEYS = [
   "refund",
   "models",
   "privacy",
+  "free",
+  "collaboration",
+  "search",
 ] as const;
 
 export function MarketingFAQ() {
   const t = useTranslations("Marketing.faq");
+  const { billingEnabled } = useSiteConfig();
   const [openIndex, setOpenIndex] = React.useState<number | null>(0);
 
   const toggle = (idx: number) => {
@@ -68,7 +73,11 @@ export function MarketingFAQ() {
 
                 {isOpen && (
                   <div className="px-4 pb-5 sm:px-5 sm:pb-5 text-xs sm:text-sm text-fg-muted leading-relaxed border-t border-border/50 pt-3">
-                    {t(`items.${key}.a`)}
+                    {key === "cancel" && !billingEnabled
+                      ? t("items.cancel.aLaunchingSoon")
+                      : key === "refund" && !billingEnabled
+                      ? t("items.refund.aLaunchingSoon")
+                      : t(`items.${key}.a`)}
                   </div>
                 )}
               </div>

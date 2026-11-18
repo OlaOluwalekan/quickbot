@@ -815,9 +815,21 @@
           "responseHighlight": "avalanche method targeting the highest APR balance",
           "responseAfter": "to clear the card in under 8 months while avoiding excess interest charges.",
           "artifact": [
-            ["Needs (50%)", "Housing, groceries & utilities", "$2,100 / mo"],
-            ["Wants (30%)", "Dining, leisure & subscriptions", "$1,260 / mo"],
-            ["Savings & Debt (20%)", "Card avalanche payoff ($6k)", "$840 / mo"]
+            [
+              "Needs (50%)",
+              "Housing, groceries & utilities",
+              "$2,100 / mo"
+            ],
+            [
+              "Wants (30%)",
+              "Dining, leisure & subscriptions",
+              "$1,260 / mo"
+            ],
+            [
+              "Savings & Debt (20%)",
+              "Card avalanche payoff ($6k)",
+              "$840 / mo"
+            ]
           ],
           "sideQuestion": "Side Question: Should we use the debt avalanche or snowball method for motivation?"
         },
@@ -840,9 +852,21 @@
           "responseHighlight": "curing time of 7 days before framing",
           "responseAfter": "to allow the slab to reach required load-bearing compressive strength.",
           "artifact": [
-            ["Excavation & Prep", "Weeks 1–2", "Trenching, vapor barrier, compaction test"],
-            ["Pour & 7-Day Cure", "Week 3", "120 m² slab poured; 7-day cure before load"],
-            ["Framing & Inspections", "Weeks 4–6", "Wall framing, truss placement, sign-off"]
+            [
+              "Excavation & Prep",
+              "Weeks 1–2",
+              "Trenching, vapor barrier, compaction test"
+            ],
+            [
+              "Pour & 7-Day Cure",
+              "Week 3",
+              "120 m² slab poured; 7-day cure before load"
+            ],
+            [
+              "Framing & Inspections",
+              "Weeks 4–6",
+              "Wall framing, truss placement, sign-off"
+            ]
           ],
           "sideQuestion": "Side Question: Can we safely accelerate concrete curing in cold weather?"
         },
@@ -942,14 +966,16 @@
         "previewItem2": "02-redis-cache-invalidation",
         "previewItem2Time": "Updated yesterday",
         "previewItem3": "03-kubernetes-ingress-benchmark",
-        "previewItem3Time": "Updated 3d ago"
+        "previewItem3Time": "Updated 3d ago",
+        "bullet4": "Voice input: speak your prompt to transcribe and send with one click",
+        "bullet5": "Live web search: ground answers with real-time web citations"
       },
       "passage": {
         "badge": "Exploration",
         "title": "Ask questions about any passage without thread derailment",
-        "description": "Highlight any sentence or paragraph in an answer to ask clarifying questions, leave inline comments, or draft replies. Side explorations stay neatly tucked away until you choose to promote them into your main workspace.",
-        "bullet1": "Select any text segment in a response to pop open inline tools",
-        "bullet2": "Ask follow-up questions without confusing the main context window",
+        "description": "Highlight any sentence or paragraph in an answer to leave comments or ask side questions (ask now or queue for later). Supports nested side questions, @mentions, @klecx notes, and one-click promotion into the main workspace.",
+        "bullet1": "Comment and Ask: leave inline notes or ask follow-ups immediately or in queue",
+        "bullet2": "Nested side questions, @mentions, and @klecx notes keep exploration organized",
         "bullet3": "Promote key discoveries into new responses with one click",
         "previewQuote": "When tuning PgBouncer, ensure the pool size matches the CPU core count on your primary database node.",
         "previewLabel": "Passage Question:",
@@ -961,11 +987,11 @@
         "title": "Versions and edits that preserve every attempt",
         "description": "Never lose a great draft because a subsequent regeneration went in the wrong direction. Klecx tracks every generation attempt as an immutable version with complete side-by-side history.",
         "bullet1": "Regenerate freely — previous drafts remain intact and switchable",
-        "bullet2": "Edit prompts or edit AI outputs with full branching history",
+        "bullet2": "Edit answers without losing the original; regenerate without losing earlier versions",
         "bullet3": "Switch between v1, v2, v3 instantly to review alternative perspectives",
         "previewTitle": "Response Versions",
         "v1Label": "v1 (Quick)",
-        "v2Label": "v2 (Standard Reasoning)",
+        "v2Label": "v2 (Think harder)",
         "activeInfo": "Active: version 2 of 2 · Standard Reasoning · 7 credits"
       },
       "share": {
@@ -974,19 +1000,31 @@
         "description": "Share an entire workspace or a single answer with a clean, read-only link that anyone can open without creating an account. When working with teams, invite members with clear roles while usage is billed directly to the owner.",
         "bullet1": "Public read-only links that require no account for readers",
         "bullet2": "Revoke public links at any moment with immediate effect",
-        "bullet3": "Invite team members with Owner, Editor, or Viewer roles",
+        "bullet3": "Viewer, Commenter, Editor or Admin roles, with per-member comment and ask permissions",
         "liveBadge": "Live",
         "readOnly": "• Access: Read-only (no account needed)",
-        "revocable": "• Revocable: Instantly from topbar"
+        "revocable": "• Revocable: Instantly from the Share dialog"
       },
       "export": {
         "badge": "Flexibility",
         "title": "Document exports and separated language settings",
         "description": "Export your work directly to clean Markdown, styled PDF, or Microsoft Word. You can also set your interface language independently from the language you want your AI to reply in.",
-        "bullet1": "Export single responses or whole workspaces to Markdown, PDF, and Word",
+        "bullet1": "Export single responses or whole workspaces to Markdown (PDF and Word on paid plans)",
         "bullet2": "Set interface locale (English, Spanish, French) with one click",
         "bullet3": "Set AI output language independently so conversations stay natural",
         "previewTitle": "Export Document"
+      },
+      "documents": {
+        "badge": "Documents",
+        "title": "Document review, inline suggestions, and side-panel editing",
+        "description": "Add files to a workspace, ask Klecx to review them, and accept fixes in one click. Generated documents open in an interactive side panel for seamless side-by-side editing.",
+        "bullet1": "Attach PDF, Word, text, and markdown files for in-depth AI review",
+        "bullet2": "Review suggested edits with visual diffs and accept fixes in one click",
+        "bullet3": "Generated documents open in an interactive side panel for editing",
+        "previewDoc": "quarterly-report-draft.docx",
+        "previewStatus": "Review ready · 3 suggestions",
+        "previewSuggestionLabel": "Suggested clarity edit in Section 2:",
+        "previewSuggestionText": "Consolidate Q3 customer retention metrics into a bullet list for faster stakeholder review."
       }
     },
     "pricing": {
@@ -1057,7 +1095,11 @@
         "cap20pct": "20% of balance"
       },
       "priceFormat": "${price}",
-      "creditsCount": "{count, plural, one {# Credit} other {# Credits}}"
+      "creditsCount": "{count, plural, one {# Credit} other {# Credits}}",
+      "comingSoon": "Coming soon",
+      "paidPlansNoticeTitle": "Notice",
+      "paidPlansNotice": "Paid plans are launching soon. You can explore all core capabilities on our Free plan today with 100 credits per month.",
+      "paidPlansTooltip": "Paid plan subscriptions will be enabled shortly."
     },
     "faq": {
       "badge": "Clear Answers",
@@ -1066,27 +1108,41 @@
       "items": {
         "creditDef": {
           "q": "What is a credit and how does it work?",
-          "a": "Credits represent units of computational work. A standard conversational prompt and response typically consumes around 7 credits. Image generation requires approximately 35 credits, and web-grounded search adds a small surcharge (+3 credits). We charge based on what provider models cost to run, with zero markup tricks."
+          "a": "Credits represent real computational cost: ≈ 2 credits for a typical message with the Fast model, ≈ 7 with the Standard model, and ≈ 35 per image. When Klecx searches the web, each search adds 3 credits."
         },
         "rollover": {
           "q": "Do unused credits roll over to the next month?",
-          "a": "No. Monthly plan credits expire and reset at the beginning of each billing cycle to maintain sustainable, transparent unit economics. If you ever purchase optional credit top-up packs in the future, those remain valid for 12 months."
+          "a": "No. Plan credits reset at the start of each billing period and unused credits don't carry over."
         },
         "cancel": {
-          "q": "Can I cancel my subscription inside the app?",
-          "a": "Yes. You can cancel at any time directly in your Account Settings with a single click. There are no retention labyrinths or phone calls required. Upon cancellation, your plan remains active until the end of your current paid billing period."
+          "q": "Can I cancel my subscription anytime?",
+          "a": "Yes — Settings → Billing → Cancel. Your plan stays active until the end of the paid period.",
+          "aLaunchingSoon": "Paid plans are launching soon. When they do, you'll be able to cancel anytime from Settings, and your plan will stay active until the end of the period you paid for."
         },
         "refund": {
           "q": "What is your refund policy?",
-          "a": "If you are unsatisfied with your subscription within the first 14 days of purchase and have used less than 20% of your monthly credit allowance, contact support for a prompt refund. Unused portions of that cycle's credit grant are reversed."
+          "a": "Cancel anytime and keep your plan until the end of the period. New subscribers get a full refund within 14 days of their first payment if they've used less than 20% of its credits. Forgot to cancel? Renewals are refunded within 7 days if you haven't used any credits since. Duplicate charges and billing errors are always refunded.",
+          "aLaunchingSoon": "Paid plans and subscriptions are launching soon. When billing launches, all plans include clear cancellation and refund terms."
         },
         "models": {
           "q": "Which AI models power Klecx?",
-          "a": "Klecx is an independent workspace built on third-party AI models. You pick a tier for each message: Fast & Efficient for everyday questions, Standard Reasoning for complex work, and Image Studio for images. The composer shows each tier's credit cost before you send."
+          "a": "Klecx is an independent workspace built on third-party AI models. Each model option shows its typical credit cost before you send."
         },
         "privacy": {
           "q": "Is my conversation data kept private?",
-          "a": "Yes. Your prompts, responses, notes, and workspace files are private by default. All data is encrypted in transit and at rest. We do not sell your personal data or use your private conversations to train public models."
+          "a": "Your workspaces are private by default and only visible to people you invite. We don't sell personal data. Prompts are sent to our AI model provider only to generate your answers, under terms that don't allow them to train on your data."
+        },
+        "free": {
+          "q": "Can I use Klecx for free?",
+          "a": "Yes. Every account starts with 100 free credits per month, access to our Fast model, and web search included. Team collaboration and higher daily limits are available on paid plans."
+        },
+        "collaboration": {
+          "q": "Who pays when collaborators use a workspace?",
+          "a": "The workspace owner's credits are used for generations within that workspace. Owners control what each invited member can do (commenting, asking side questions, or prompting)."
+        },
+        "search": {
+          "q": "Does Klecx search the web?",
+          "a": "Yes. Klecx searches the web when your prompt requires up-to-date facts or citations. Web search can also be toggled off anytime in Settings."
         }
       }
     },
@@ -1099,7 +1155,7 @@
     },
     "pricingPage": {
       "heading": "Simple, honest pricing.",
-      "subheading": "No hidden usage caps or artificial throttling. Pick the credit capacity that fits your research, engineering, or team volume."
+      "subheading": "Simple plans with clear limits. Every plan shows its credits, daily cap and features up front."
     },
     "featuresPage": {
       "badge": "Core Capabilities",
@@ -1127,7 +1183,7 @@
       "disclosureBadge": "Mandatory Architecture Disclosure",
       "disclosureText": "Klecx is an independent workspace built on third-party AI models. We don't own those models. We provide a specialized, developer-grade workspace client that unlocks stateful multi-turn reasoning, passage annotations, version tracking, and document exports.",
       "privateTitle": "Private by Default",
-      "privateText": "Your workspaces, prompts, notes, and uploaded attachments are strictly private. All data is encrypted in transit and at rest. We never sell your personal information or use your conversations to train public foundation models.",
+      "privateText": "Your workspaces are private by default and only visible to people you invite. We don't sell personal data. Prompts are sent to our AI model provider only to generate your answers, under terms that don't allow them to train on your data.",
       "noFakeTitle": "No Fake Marketing",
       "noFakeText": "We do not display fabricated customer logos, fake user counters, or deceitful “unlimited” badges. Every price and credit metric corresponds directly to what our infrastructure and AI providers cost to run.",
       "supportTitle": "Support & Contact",
@@ -1322,14 +1378,14 @@
   "Status": {
     "title": "System Status",
     "subtitle": "Real-time health and operational status of Klecx services and infrastructure.",
-    "allOperational": "All Systems Fully Operational",
-    "uptimeNotice": "Our services maintain an uptime target of ≥ 99.9%. You can also monitor external uptime alerts on our third-party status page.",
+    "allOperational": "All Systems Operational",
+    "uptimeNotice": "Real-time service health verified automatically across database, AI endpoints, and file storage.",
     "viewMonitor": "External Uptime Monitor",
     "servicesHeading": "Core Services",
     "operational": "Operational",
     "degraded": "Degraded Performance",
     "outage": "Service Outage",
-    "lastChecked": "Last checked: Live",
+    "lastChecked": "Last checked: {time}",
     "services": {
       "ai": {
         "name": "AI generation",
@@ -1353,7 +1409,8 @@
       }
     },
     "incidentHeading": "Recent Incidents",
-    "noIncidents": "No incidents or outages reported in the past 90 days."
+    "noIncidents": "All core services are performing normally with zero active service interruptions.",
+    "someDegraded": "Service Disruption Detected"
   },
   "Errors": {
     "notFound": {
@@ -2280,7 +2337,8 @@
         "credits": "100 credits / month (no rollover)",
         "dailyCap": "Daily spend cap of 30 credits",
         "concurrency": "1 concurrent generation turn",
-        "models": "Economy model access",
+        "models": "Fast model access",
+        "search": "Web search included",
         "attachments": "3 attachments per workspace (5 MB max)",
         "exports": "Markdown document export",
         "sharing": "Read-only workspace & response sharing"
@@ -2291,12 +2349,14 @@
       "tagline": "For individual builders and researchers working daily.",
       "features": {
         "credits": "800 credits / month (no rollover)",
-        "dailyCap": "Daily spend cap: 25% of monthly balance",
+        "dailyCap": "Daily cap: 200 credits (25% of balance)",
         "concurrency": "2 concurrent generation turns",
-        "models": "Economy & Standard text models",
+        "models": "Fast & Standard text models",
         "images": "Native AI image generation",
-        "search": "Web-search grounding support",
+        "search": "Web search with source citations",
         "attachments": "10 attachments per workspace (15 MB max)",
+        "documents": "Document review & side-by-side editing",
+        "voice": "Voice input & audio transcription",
         "collaborators": "Up to 2 workspace collaborators",
         "exports": "Markdown, PDF & Word exports"
       }
@@ -2307,15 +2367,17 @@
       "tagline": "Our recommended plan for power users and small teams.",
       "features": {
         "credits": "1,800 credits / month (no rollover)",
-        "dailyCap": "Daily spend cap: 25% of monthly balance",
+        "dailyCap": "Daily cap: 450 credits (25% of balance)",
         "concurrency": "3 concurrent generation turns",
-        "models": "Economy & Standard text models",
+        "models": "Fast & Standard text models",
         "images": "Native AI image generation",
-        "search": "Web-search grounding support",
+        "search": "Web search with source citations",
         "attachments": "25 attachments per workspace (25 MB max)",
+        "documents": "Document review & side-by-side editing",
+        "voice": "Voice input & audio transcription",
         "collaborators": "Up to 5 workspace collaborators",
         "exports": "Full export suite (MD, PDF, DOCX)",
-        "support": "Priority customer support"
+        "support": "Faster email support"
       }
     },
     "PRO": {
@@ -2323,15 +2385,17 @@
       "tagline": "Maximum throughput, highest limits, and team collaboration.",
       "features": {
         "credits": "3,500 credits / month (no rollover)",
-        "dailyCap": "Daily spend cap: 20% of monthly balance",
+        "dailyCap": "Daily cap: 700 credits (20% of balance)",
         "concurrency": "5 concurrent generation turns",
-        "models": "All models including future advanced tiers",
+        "models": "All text models & priority capacity",
         "images": "Native AI image generation",
-        "search": "Web-search grounding support",
+        "search": "Web search with source citations",
         "attachments": "50 attachments per workspace (50 MB max)",
+        "documents": "Document review & side-by-side editing",
+        "voice": "Voice input & audio transcription",
         "collaborators": "Up to 15 workspace collaborators",
         "exports": "Full export suite (MD, PDF, DOCX)",
-        "audit": "Activity audit trail & role management"
+        "support": "Faster email support"
       }
     }
   },

@@ -815,9 +815,21 @@
           "responseHighlight": "método de avalancha enfocado en la tasa más alta",
           "responseAfter": "para saldar la tarjeta en menos de 8 meses evitando cargos excesivos por intereses.",
           "artifact": [
-            ["Necesidades (50%)", "Vivienda, alimentos y servicios", "$2.100 / mes"],
-            ["Deseos (30%)", "Cenas, ocio y suscripciones", "$1.260 / mes"],
-            ["Ahorro y Deuda (20%)", "Pago de tarjeta por avalancha ($6k)", "$840 / mes"]
+            [
+              "Necesidades (50%)",
+              "Vivienda, alimentos y servicios",
+              "$2.100 / mes"
+            ],
+            [
+              "Deseos (30%)",
+              "Cenas, ocio y suscripciones",
+              "$1.260 / mes"
+            ],
+            [
+              "Ahorro y Deuda (20%)",
+              "Pago de tarjeta por avalancha ($6k)",
+              "$840 / mes"
+            ]
           ],
           "sideQuestion": "Pregunta secundaria: ¿Deberíamos usar avalancha o bola de nieve para mantener la motivación?"
         },
@@ -840,9 +852,21 @@
           "responseHighlight": "tiempo de curado de 7 días antes de la estructura",
           "responseAfter": "para que la losa alcance la resistencia a compresión requerida antes de recibir cargas.",
           "artifact": [
-            ["Excavación y base", "Semanas 1–2", "Zanjas, barrera de vapor, prueba de compactación"],
-            ["Vaciado y curado", "Semana 3", "Losa de 120 m² vertida; curado de 7 días sin carga"],
-            ["Estructura e inspecciones", "Semanas 4–6", "Muros de carga, cerchas y aprobación final"]
+            [
+              "Excavación y base",
+              "Semanas 1–2",
+              "Zanjas, barrera de vapor, prueba de compactación"
+            ],
+            [
+              "Vaciado y curado",
+              "Semana 3",
+              "Losa de 120 m² vertida; curado de 7 días sin carga"
+            ],
+            [
+              "Estructura e inspecciones",
+              "Semanas 4–6",
+              "Muros de carga, cerchas y aprobación final"
+            ]
           ],
           "sideQuestion": "Pregunta secundaria: ¿Se puede acelerar de forma segura el curado de concreto en clima frío?"
         },
@@ -942,15 +966,17 @@
         "previewItem2": "02-invalidacion-cache-redis",
         "previewItem2Time": "Actualizado ayer",
         "previewItem3": "03-benchmark-ingress-kubernetes",
-        "previewItem3Time": "Actualizado hace 3d"
+        "previewItem3Time": "Actualizado hace 3d",
+        "bullet4": "Entrada de voz: graba notas de voz, transcribe en un clic y envía",
+        "bullet5": "Búsqueda web en vivo: fundamenta respuestas con citas web en tiempo real"
       },
       "passage": {
         "badge": "Exploración",
         "title": "Haz preguntas sobre cualquier pasaje sin desviar el hilo",
-        "description": "Resalta cualquier oración o párrafo de una respuesta para pedir aclaraciones, añadir comentarios o redactar réplicas. Las exploraciones secundarias permanecen ordenadas hasta que decides incorporarlas a tu espacio principal.",
-        "bullet1": "Selecciona cualquier texto para abrir herramientas contextuales",
-        "bullet2": "Haz preguntas de seguimiento sin saturar la ventana de contexto principal",
-        "bullet3": "Promueve hallazgos clave a nuevas respuestas con un solo clic",
+        "description": "Selecciona cualquier frase o párrafo de una respuesta para añadir comentarios o hacer preguntas secundarias (en el momento o en cola). Admite preguntas anidadas, menciones @, notas @klecx y promoción directa al espacio principal.",
+        "bullet1": "Comentar y Preguntar: deja notas contextuales o pregunta en el momento o en cola",
+        "bullet2": "Preguntas secundarias anidadas, menciones @ y notas @klecx sin desviar el flujo principal",
+        "bullet3": "Promociona descubrimientos clave a nuevas respuestas con un solo clic",
         "previewQuote": "Al ajustar PgBouncer, asegúrate de que el tamaño del grupo coincida con la cantidad de núcleos de CPU de tu base de datos principal.",
         "previewLabel": "Pregunta sobre el pasaje:",
         "previewQuestion": "¿Por qué hacer coincidir el tamaño del grupo con los núcleos de CPU en lugar de la memoria?",
@@ -961,11 +987,11 @@
         "title": "Versiones y ediciones que preservan cada intento",
         "description": "Nunca pierdas un buen borrador porque una regeneración posterior no fue como esperabas. Klecx registra cada intento como una versión inmutable con historial completo.",
         "bullet1": "Regenera con libertad: los borradores previos se mantienen intactos y seleccionables",
-        "bullet2": "Edita instrucciones o respuestas con historial completo de ramificaciones",
+        "bullet2": "Edita respuestas sin perder el original; regenera sin perder versiones previas",
         "bullet3": "Cambia entre v1, v2 y v3 al instante para revisar distintas perspectivas",
         "previewTitle": "Versiones de respuesta",
         "v1Label": "v1 (Rápida)",
-        "v2Label": "v2 (Razonamiento Estándar)",
+        "v2Label": "v2 (Pensar a fondo)",
         "activeInfo": "Activa: versión 2 de 2 · Razonamiento Estándar · 7 créditos"
       },
       "share": {
@@ -974,19 +1000,31 @@
         "description": "Comparte un espacio entero o una respuesta individual con un enlace de solo lectura que cualquiera puede abrir sin registrarse. Al colaborar en equipo, invita a miembros con roles definidos mientras el consumo se factura al propietario.",
         "bullet1": "Enlaces públicos de solo lectura sin necesidad de cuenta para lectores",
         "bullet2": "Revoca enlaces públicos en cualquier momento con efecto inmediato",
-        "bullet3": "Invita a miembros con roles de Propietario, Editor o Visualizador",
+        "bullet3": "Roles de Lector, Comentarista, Editor o Administrador, con permisos detallados de comentario y preguntas",
         "liveBadge": "Activo",
         "readOnly": "• Acceso: Solo lectura (sin cuenta)",
-        "revocable": "• Revocable: Al instante desde la barra superior"
+        "revocable": "• Revocable: Al instante desde el diálogo de Compartir"
       },
       "export": {
         "badge": "Flexibilidad",
         "title": "Exportación de documentos e idiomas independientes",
         "description": "Exporta tu trabajo a Markdown limpio, PDF formateado o Microsoft Word. Además, puedes configurar el idioma de la interfaz de forma independiente al idioma de respuesta de la IA.",
-        "bullet1": "Exporta respuestas o espacios completos a Markdown, PDF y Word",
+        "bullet1": "Exporta respuestas o espacios completos a Markdown (PDF y Word en planes de pago)",
         "bullet2": "Cambia el idioma de la interfaz (inglés, español, francés) con un clic",
         "bullet3": "Define el idioma de la IA por separado para que responda con naturalidad",
         "previewTitle": "Exportar documento"
+      },
+      "documents": {
+        "badge": "Documentos",
+        "title": "Revisión de documentos, sugerencias integradas y edición en panel lateral",
+        "description": "Añade archivos a un espacio, pide a Klecx que los revise y acepta correcciones con un solo clic. Los documentos generados se abren en un panel lateral para editar lado a lado.",
+        "bullet1": "Adjunta archivos PDF, Word, texto y markdown para revisiones detalladas con IA",
+        "bullet2": "Revisa sugerencias con diferencias visuales y acepta cambios en un clic",
+        "bullet3": "Los documentos generados se abren en un panel lateral interactivo para edición",
+        "previewDoc": "borrador-informe-trimestral.docx",
+        "previewStatus": "Revisión lista · 3 sugerencias",
+        "previewSuggestionLabel": "Sugerencia de claridad en la Sección 2:",
+        "previewSuggestionText": "Consolidar las métricas de retención del tercer trimestre en una lista para facilitar la lectura."
       }
     },
     "pricing": {
@@ -1057,7 +1095,11 @@
         "cap20pct": "20% del saldo"
       },
       "priceFormat": "${price}",
-      "creditsCount": "{count, plural, one {# crédito} other {# créditos}}"
+      "creditsCount": "{count, plural, one {# crédito} other {# créditos}}",
+      "comingSoon": "Próximamente",
+      "paidPlansNoticeTitle": "Aviso",
+      "paidPlansNotice": "Los planes de pago estarán disponibles próximamente. Puedes explorar todas las funciones esenciales hoy mismo con el plan Gratuito de 100 créditos mensuales.",
+      "paidPlansTooltip": "Las suscripciones a planes de pago se activarán próximamente."
     },
     "faq": {
       "badge": "Respuestas claras",
@@ -1066,27 +1108,41 @@
       "items": {
         "creditDef": {
           "q": "¿Qué es un crédito y cómo funciona?",
-          "a": "Los créditos representan unidades de trabajo computacional. Un turno de conversación estándar consume alrededor de 7 créditos. La generación de imágenes requiere unos 35 créditos y la búsqueda fundamentada añade un pequeño recargo (+3 créditos). Cobramos según el costo de los modelos sin comisiones ocultas."
+          "a": "Los créditos representan el coste computacional real: ≈ 2 créditos por un mensaje típico con el modelo Rápido, ≈ 7 con el modelo Estándar y ≈ 35 por imagen. Cuando Klecx busca en la web, cada búsqueda añade 3 créditos."
         },
         "rollover": {
-          "q": "¿Se acumulan los créditos no utilizados para el mes siguiente?",
-          "a": "No. Los créditos del plan mensual se reinician al comienzo de cada ciclo para mantener costos transparentes y sostenibles. Si compras paquetes adicionales de créditos en el futuro, esos tienen una validez de 12 meses."
+          "q": "¿Los créditos no utilizados se acumulan para el mes siguiente?",
+          "a": "No. Los créditos del plan se restablecen al inicio de cada periodo de facturación y los créditos no utilizados no se acumulan."
         },
         "cancel": {
-          "q": "¿Puedo cancelar mi suscripción dentro de la aplicación?",
-          "a": "Sí. Puedes cancelar en cualquier momento directamente en los Ajustes de tu cuenta con un solo clic, sin laberintos de retención ni llamadas. Tu suscripción permanece activa hasta el final de tu período ya pagado."
+          "q": "¿Puedo cancelar mi suscripción en cualquier momento?",
+          "a": "Sí — Ajustes → Facturación → Cancelar. Tu plan se mantiene activo hasta el final del periodo pagado.",
+          "aLaunchingSoon": "Los planes de pago estarán disponibles próximamente. Cuando se lancen, podrás cancelar en cualquier momento desde Ajustes y tu plan seguirá activo hasta el fin del periodo pagado."
         },
         "refund": {
-          "q": "¿Cuál es la política de reembolsos?",
-          "a": "Si no estás satisfecho con tu suscripción durante los primeros 14 días y has usado menos del 20% de tu asignación mensual de créditos, contacta a soporte para un reembolso puntual."
+          "q": "¿Cuál es su política de reembolsos?",
+          "a": "Cancela en cualquier momento y conserva tu plan hasta el final del periodo. Los nuevos suscriptores reciben un reembolso total dentro de los primeros 14 días si han consumido menos del 20% de los créditos. ¿Olvidaste cancelar? Las renovaciones se reembolsan en un plazo de 7 días si no has usado créditos desde la renovación. Los cobros duplicados y errores de facturación siempre se reembolsan.",
+          "aLaunchingSoon": "Los planes de pago y suscripciones se lanzarán próximamente. Cuando la facturación esté activa, todos los planes incluirán condiciones claras de cancelación y reembolso."
         },
         "models": {
           "q": "¿Qué modelos de IA impulsan Klecx?",
-          "a": "Klecx es un espacio de trabajo independiente basado en modelos de IA de terceros. Eliges un nivel para cada mensaje: Rápido y Eficiente para preguntas cotidianas, Razonamiento Estándar para trabajos complejos y Estudio de Imágenes para imágenes. El compositor muestra el costo en créditos de cada nivel antes de enviar."
+          "a": "Klecx es un espacio de trabajo independiente basado en modelos de IA de terceros. Cada opción de modelo muestra su coste habitual en créditos antes de enviar."
         },
         "privacy": {
-          "q": "¿Se mantienen privados mis datos de conversación?",
-          "a": "Sí. Tus espacios, instrucciones, notas y archivos adjuntos son estrictamente privados. Toda la información viaja y se almacena encriptada. No vendemos tus datos personales ni usamos tus conversaciones para entrenar modelos públicos."
+          "q": "¿Mis datos y conversaciones son privados?",
+          "a": "Tus espacios de trabajo son privados por defecto y solo visibles para las personas que invites. No vendemos datos personales. Las instrucciones se envían a nuestro proveedor de modelos de IA únicamente para generar tus respuestas, bajo términos contractuales que no le permiten entrenar con tus datos."
+        },
+        "free": {
+          "q": "¿Puedo usar Klecx gratis?",
+          "a": "Sí. Cada cuenta comienza con 100 créditos mensuales gratuitos, acceso a nuestro modelo Rápido y búsqueda web incluida. La colaboración en equipo y límites diarios mayores están disponibles en los planes de pago."
+        },
+        "collaboration": {
+          "q": "¿Quién asume el coste cuando colaboran en un espacio?",
+          "a": "Los créditos del propietario del espacio de trabajo se emplean para las generaciones en dicho espacio. Los propietarios controlan los permisos de cada colaborador (comentar, hacer preguntas secundarias o enviar instrucciones)."
+        },
+        "search": {
+          "q": "¿Klecx busca en la web?",
+          "a": "Sí. Klecx busca en la web cuando tu consulta requiere datos o fuentes actualizadas. La búsqueda web también se puede desactivar en cualquier momento en Ajustes."
         }
       }
     },
@@ -1099,7 +1155,7 @@
     },
     "pricingPage": {
       "heading": "Precios sencillos y transparentes.",
-      "subheading": "Sin límites ocultos ni restricciones arbitrarias. Elige la capacidad que se ajuste a tu volumen de trabajo, investigación o equipo."
+      "subheading": "Planes transparentes con límites claros. Cada plan muestra sus créditos, límite diario y funciones desde el inicio."
     },
     "featuresPage": {
       "badge": "Capacidades clave",
@@ -1127,7 +1183,7 @@
       "disclosureBadge": "Divulgación obligatoria de arquitectura",
       "disclosureText": "Klecx es un espacio de trabajo independiente basado en modelos de IA de terceros. No somos propietarios de dichos modelos. Proporcionamos un cliente de espacio de trabajo especializado de nivel para desarrolladores que permite razonamiento estructurado de varios turnos, anotaciones de pasajes, seguimiento de versiones y exportaciones de documentos.",
       "privateTitle": "Privado por defecto",
-      "privateText": "Tus espacios, mensajes, notas y adjuntos son privados. Todo viaja y se almacena cifrado. Jamás vendemos tu información ni usamos tus datos para entrenar modelos públicos.",
+      "privateText": "Tus espacios de trabajo son privados por defecto y solo visibles para las personas que invites. No vendemos datos personales. Las instrucciones se envían a nuestro proveedor de modelos de IA únicamente para generar tus respuestas, bajo términos contractuales que no le permiten entrenar con tus datos.",
       "noFakeTitle": "Sin publicidad engañosa",
       "noFakeText": "No mostramos logotipos ficticios de clientes, contadores inventados ni etiquetas engañosas de “ilimitado”. Cada tarifa corresponde a lo que realmente cuesta ejecutar la infraestructura y la IA.",
       "supportTitle": "Soporte y contacto",
@@ -1322,14 +1378,14 @@
   "Status": {
     "title": "Estado del Sistema",
     "subtitle": "Estado operativo en tiempo real de los servicios e infraestructura de Klecx.",
-    "allOperational": "Todos los Sistemas Operativos",
-    "uptimeNotice": "Garantizamos una disponibilidad de ≥ 99.9%. Puede revisar el monitor externo.",
+    "allOperational": "Todos los sistemas operativos",
+    "uptimeNotice": "Estado del servicio verificado automáticamente en base de datos, extremos de IA y almacenamiento.",
     "viewMonitor": "Monitor Externo de Disponibilidad",
     "servicesHeading": "Servicios Principales",
     "operational": "Operativo",
     "degraded": "Rendimiento Degradado",
     "outage": "Interrupción de Servicio",
-    "lastChecked": "Última comprobación: En vivo",
+    "lastChecked": "Última comprobación: {time}",
     "services": {
       "ai": {
         "name": "Generación de IA",
@@ -1353,7 +1409,8 @@
       }
     },
     "incidentHeading": "Incidentes Recientes",
-    "noIncidents": "No se han reportado incidentes en los últimos 90 días."
+    "noIncidents": "Todos los servicios principales funcionan con normalidad sin interrupciones activas.",
+    "someDegraded": "Interrupción de servicio detectada"
   },
   "Errors": {
     "notFound": {
@@ -2277,28 +2334,31 @@
       "name": "Gratis",
       "tagline": "Explore el espacio de trabajo con capacidades esenciales.",
       "features": {
-        "credits": "100 créditos / mes (sin acumulado)",
-        "dailyCap": "Límite diario de 30 créditos",
+        "credits": "100 créditos / mes (sin acumulación)",
+        "dailyCap": "Límite de gasto diario de 30 créditos",
         "concurrency": "1 turno de generación concurrente",
-        "models": "Acceso al modelo económico",
-        "attachments": "3 archivos adjuntos por espacio (5 MB máx)",
+        "models": "Acceso al modelo Rápido",
+        "search": "Búsqueda web incluida",
+        "attachments": "3 adjuntos por espacio (5 MB máx.)",
         "exports": "Exportación de documentos en Markdown",
-        "sharing": "Uso compartido de lectura de espacios y respuestas"
+        "sharing": "Espacios compartidos de solo lectura"
       }
     },
     "LITE": {
       "name": "Lite",
       "tagline": "Para creadores e investigadores individuales de uso diario.",
       "features": {
-        "credits": "800 créditos / mes (sin acumulado)",
-        "dailyCap": "Límite diario: 25% del balance mensual",
+        "credits": "800 créditos / mes (sin acumulación)",
+        "dailyCap": "Límite diario: 200 créditos (25% del saldo)",
         "concurrency": "2 turnos de generación concurrentes",
-        "models": "Modelos de texto económico y estándar",
-        "images": "Generación nativa de imágenes por IA",
-        "search": "Soporte de búsqueda web contextualizada",
-        "attachments": "10 archivos adjuntos por espacio (15 MB máx)",
-        "collaborators": "Hasta 2 colaboradores de espacio",
-        "exports": "Exportaciones a Markdown, PDF y Word"
+        "models": "Modelos de texto Rápido y Estándar",
+        "images": "Generación nativa de imágenes con IA",
+        "search": "Búsqueda web con citas de fuentes",
+        "attachments": "10 adjuntos por espacio (15 MB máx.)",
+        "documents": "Revisión de documentos y edición lateral",
+        "voice": "Entrada de voz y transcripción de audio",
+        "collaborators": "Hasta 2 colaboradores por espacio",
+        "exports": "Exportaciones en Markdown, PDF y Word"
       }
     },
     "STANDARD": {
@@ -2306,32 +2366,36 @@
       "badge": "Más popular",
       "tagline": "Nuestro plan recomendado para usuarios avanzados y equipos.",
       "features": {
-        "credits": "1.800 créditos / mes (sin acumulado)",
-        "dailyCap": "Límite diario: 25% del balance mensual",
+        "credits": "1.800 créditos / mes (sin acumulación)",
+        "dailyCap": "Límite diario: 450 créditos (25% del saldo)",
         "concurrency": "3 turnos de generación concurrentes",
-        "models": "Modelos de texto económico y estándar",
-        "images": "Generación nativa de imágenes por IA",
-        "search": "Soporte de búsqueda web contextualizada",
-        "attachments": "25 archivos adjuntos por espacio (25 MB máx)",
-        "collaborators": "Hasta 5 colaboradores de espacio",
-        "exports": "Suite completa de exportación (MD, PDF, DOCX)",
-        "support": "Atención prioritaria al cliente"
+        "models": "Modelos de texto Rápido y Estándar",
+        "images": "Generación nativa de imágenes con IA",
+        "search": "Búsqueda web con citas de fuentes",
+        "attachments": "25 adjuntos por espacio (25 MB máx.)",
+        "documents": "Revisión de documentos y edición lateral",
+        "voice": "Entrada de voz y transcripción de audio",
+        "collaborators": "Hasta 5 colaboradores por espacio",
+        "exports": "Paquete completo de exportación (MD, PDF, DOCX)",
+        "support": "Soporte prioritario por correo electrónico"
       }
     },
     "PRO": {
       "name": "Pro",
       "tagline": "Rendimiento máximo, límites superiores y colaboración en equipo.",
       "features": {
-        "credits": "3.500 créditos / mes (sin acumulado)",
-        "dailyCap": "Límite diario: 20% del balance mensual",
+        "credits": "3.500 créditos / mes (sin acumulación)",
+        "dailyCap": "Límite diario: 700 créditos (20% del saldo)",
         "concurrency": "5 turnos de generación concurrentes",
-        "models": "Todos los modelos incluidos niveles avanzados futuros",
-        "images": "Generación nativa de imágenes por IA",
-        "search": "Soporte de búsqueda web contextualizada",
-        "attachments": "50 archivos adjuntos por espacio (50 MB máx)",
-        "collaborators": "Hasta 15 colaboradores de espacio",
-        "exports": "Suite completa de exportación (MD, PDF, DOCX)",
-        "audit": "Registro de actividad y gestión de roles"
+        "models": "Todos los modelos de texto y capacidad prioritaria",
+        "images": "Generación nativa de imágenes con IA",
+        "search": "Búsqueda web con citas de fuentes",
+        "attachments": "50 adjuntos por espacio (50 MB máx.)",
+        "documents": "Revisión de documentos y edición lateral",
+        "voice": "Entrada de voz y transcripción de audio",
+        "collaborators": "Hasta 15 colaboradores por espacio",
+        "exports": "Paquete completo de exportación (MD, PDF, DOCX)",
+        "support": "Soporte prioritario por correo electrónico"
       }
     }
   },
