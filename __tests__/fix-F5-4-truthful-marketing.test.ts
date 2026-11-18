@@ -108,13 +108,13 @@ describe("F5.4 — FAQ claims", () => {
 
   it("the FAQ's structured data hides billing answers while billing is off", () => {
     setSiteConfigForTesting({ billingEnabled: false });
-    const off = JSON.stringify((PricingFaqJsonLd() as React.ReactElement<{ data: unknown }>).props.data);
+    const off = JSON.stringify((PricingFaqJsonLd({ locale: "en" }) as React.ReactElement<{ data: unknown }>).props.data);
     expect(off).toContain(en.Marketing.faq.items.cancel.aLaunchingSoon);
     expect(off).toContain(en.Marketing.faq.items.refund.aLaunchingSoon);
     expect(off).not.toContain(en.Marketing.faq.items.cancel.a);
 
     setSiteConfigForTesting({ billingEnabled: true });
-    const on = JSON.stringify((PricingFaqJsonLd() as React.ReactElement<{ data: unknown }>).props.data);
+    const on = JSON.stringify((PricingFaqJsonLd({ locale: "en" }) as React.ReactElement<{ data: unknown }>).props.data);
     expect(on).toContain(en.Marketing.faq.items.cancel.a);
   });
 });

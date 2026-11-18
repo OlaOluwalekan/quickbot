@@ -5,18 +5,8 @@ import { useTranslations } from "next-intl";
 import { ChevronDown, HelpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSiteConfig } from "@/components/providers/site-config-provider";
+import { FAQ_KEYS, faqAnswerKey } from "@/lib/marketing/faq";
 
-const FAQ_KEYS = [
-  "creditDef",
-  "rollover",
-  "cancel",
-  "refund",
-  "models",
-  "privacy",
-  "free",
-  "collaboration",
-  "search",
-] as const;
 
 export function MarketingFAQ() {
   const t = useTranslations("Marketing.faq");
@@ -73,11 +63,7 @@ export function MarketingFAQ() {
 
                 {isOpen && (
                   <div className="px-4 pb-5 sm:px-5 sm:pb-5 text-xs sm:text-sm text-fg-muted leading-relaxed border-t border-border/50 pt-3">
-                    {key === "cancel" && !billingEnabled
-                      ? t("items.cancel.aLaunchingSoon")
-                      : key === "refund" && !billingEnabled
-                      ? t("items.refund.aLaunchingSoon")
-                      : t(`items.${key}.a`)}
+                    {t(faqAnswerKey(key, billingEnabled))}
                     {key === "refund" && billingEnabled && (
                       <>
                         {" "}

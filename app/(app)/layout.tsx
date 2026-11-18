@@ -17,13 +17,6 @@ import type {
 
 import { getTranslations } from "next-intl/server";
 
-export const metadata: Metadata = {
-  robots: {
-    index: false,
-    follow: false,
-  },
-};
-
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("Metadata.app");
   return {

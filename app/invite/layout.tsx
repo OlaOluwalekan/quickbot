@@ -5,7 +5,7 @@ import { getTranslations } from "next-intl/server";
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("Metadata.invite");
   return {
-    title: `${t("title")} · Klecx`,
+    title: t("title"),
     description: t("description"),
     robots: {
       index: false,

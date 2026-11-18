@@ -10,10 +10,6 @@
       "applicationName": "Klecx",
       "keywords": "espace de travail IA, IA collaborative, ingénierie de prompts, versions de réponse, raisonnement par passage"
     },
-    "landing": {
-      "title": "Espaces de travail, pas des fils",
-      "description": "Organisez le travail d'IA en projets, conservez les versions de chaque réponse et posez des questions sur n'importe quel passage sans perdre le fil."
-    },
     "og": {
       "title": "Espaces de travail, pas des fils.",
       "tagline": "Organisez la recherche IA en projets, préservez les versions des réponses et raisonnez sur les passages sans perte de contexte.",
@@ -1754,10 +1750,10 @@
     "readMinutes": "{count, plural, one {# min de lecture} other {# min de lecture}}",
     "filteredBy": "Filtré par : {category}",
     "notTranslated": "Cet article n'a pas encore été traduit dans votre langue et s'affiche en anglais.",
-    "metaTitle": "Centre d'aide et documentation · Klecx",
+    "metaTitle": "Centre d'aide et documentation",
     "metaDescription": "Guides, documentation et tutoriels consultables pour utiliser les espaces de travail et modèles d'IA Klecx.",
-    "articleTitleSuffix": "· Centre d'aide Klecx",
-    "articleNotFoundTitle": "Article introuvable · Aide Klecx"
+    "articleTitleSuffix": "· Centre d'aide",
+    "articleNotFoundTitle": "Article introuvable"
   },
   "Support": {
     "title": "Contacter le Support",

@@ -7,7 +7,7 @@ import { ResetPasswordForm } from "@/components/auth/ResetPasswordForm";
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("Metadata.auth");
   return {
-    title: `${t("resetPasswordTitle")} · Klecx`,
+    title: t("resetPasswordTitle"),
     description: t("resetPasswordDescription"),
     robots: {
       index: false,

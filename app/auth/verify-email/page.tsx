@@ -7,7 +7,7 @@ import VerificationForm from "@/components/auth/VerificationForm";
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("Metadata.auth");
   return {
-    title: `${t("verifyEmailTitle")} · Klecx`,
+    title: t("verifyEmailTitle"),
     description: t("verifyEmailDescription"),
     robots: {
       index: false,

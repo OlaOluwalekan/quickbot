@@ -10,10 +10,6 @@
       "applicationName": "Klecx",
       "keywords": "AI workspace, collaborative AI, prompt engineering, response versions, passage reasoning, AI research"
     },
-    "landing": {
-      "title": "Workspaces, not threads",
-      "description": "Organize AI work into projects, keep every answer's versions, and ask questions about any passage without losing your train of thought."
-    },
     "og": {
       "title": "Workspaces, not threads.",
       "tagline": "Organize AI research into projects, preserve response versions, and reason over passages with zero lost context.",
@@ -1754,10 +1750,10 @@
     "readMinutes": "{count, plural, one {# min read} other {# min read}}",
     "filteredBy": "Filtered by: {category}",
     "notTranslated": "This article has not been translated into your language yet and is displayed in English.",
-    "metaTitle": "Help Center & Documentation · Klecx",
+    "metaTitle": "Help Center & Documentation",
     "metaDescription": "Searchable guides, documentation, and tutorials for using Klecx workspaces and AI models.",
-    "articleTitleSuffix": "· Klecx Help Center",
-    "articleNotFoundTitle": "Article Not Found · Klecx Help"
+    "articleTitleSuffix": "· Help Center",
+    "articleNotFoundTitle": "Article Not Found"
   },
   "Support": {
     "title": "Contact Support",

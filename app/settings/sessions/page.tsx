@@ -12,7 +12,7 @@ import { ArrowLeft, Shield } from "lucide-react";
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("Metadata.settings");
   return {
-    title: `${t("sessionsTitle")} · Klecx`,
+    title: t("sessionsTitle"),
     description: t("sessionsDescription"),
     robots: {
       index: false,

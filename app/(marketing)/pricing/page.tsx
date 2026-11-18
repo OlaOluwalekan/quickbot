@@ -1,29 +1,24 @@
 import * as React from "react";
 import type { Metadata } from "next";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
+import { publicPageMetadata } from "@/lib/seo/metadata";
 import { PricingView } from "@/components/marketing/pricing-view";
 import { PricingFaqJsonLd } from "@/components/seo/json-ld";
-import { buildAlternates } from "@/lib/seo/alternates";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("Marketing.pricingPage");
-  const title = `${t("heading")} · Klecx`;
-  return {
-    title,
+  return publicPageMetadata({
+    path: "/pricing",
+    title: t("heading"),
     description: t("subheading"),
-    alternates: buildAlternates("/pricing"),
-    openGraph: {
-      title,
-      description: t("subheading"),
-      url: "/pricing",
-    },
-  };
+  });
 }
 
-export default function PricingPage() {
+export default async function PricingPage() {
+  const locale = await getLocale();
   return (
     <>
-      <PricingFaqJsonLd />
+      <PricingFaqJsonLd locale={locale} />
       <PricingView />
     </>
   );

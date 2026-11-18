@@ -176,15 +176,10 @@ const eslintConfig = [
     files: [
       "components/marketing/**/*.{ts,tsx}",
       "components/help/**/*.{ts,tsx}",
+      "components/legal/**/*.{ts,tsx}",
       "app/(marketing)/**/*.{ts,tsx}",
     ],
-    ignores: [
-      "app/(marketing)/terms/**",
-      "app/(marketing)/privacy/**",
-      "app/(marketing)/acceptable-use/**",
-      "app/(marketing)/cookies/**",
-      "components/legal/**",
-    ],
+    // F5.9: locale-aware navigation, so per-language URLs (Step 10.7) need no rewrite.
     rules: {
       "no-restricted-imports": [
         "error",

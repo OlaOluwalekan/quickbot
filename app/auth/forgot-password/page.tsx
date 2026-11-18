@@ -7,7 +7,7 @@ import { ForgotPasswordForm } from "@/components/auth/ForgotPasswordForm";
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("Metadata.auth");
   return {
-    title: `${t("forgotPasswordTitle")} · Klecx`,
+    title: t("forgotPasswordTitle"),
     description: t("forgotPasswordDescription"),
     robots: {
       index: false,

@@ -10,10 +10,6 @@
       "applicationName": "Klecx",
       "keywords": "espacio de trabajo IA, IA colaborativa, ingeniería de instrucciones, versiones de respuesta, razonamiento de pasajes"
     },
-    "landing": {
-      "title": "Espacios de trabajo, no hilos",
-      "description": "Organice el trabajo de IA en proyectos, conserve las versiones de cada respuesta y haga preguntas sobre cualquier pasaje sin perder el hilo de pensamiento."
-    },
     "og": {
       "title": "Espacios de trabajo, no hilos.",
       "tagline": "Organice la investigación de IA en proyectos, conserve versiones de respuestas y razone sobre pasajes sin perder contexto.",
@@ -1754,10 +1750,10 @@
     "readMinutes": "{count, plural, one {# min de lectura} other {# min de lectura}}",
     "filteredBy": "Filtrado por: {category}",
     "notTranslated": "Este artículo aún no ha sido traducido a su idioma y se muestra en inglés.",
-    "metaTitle": "Centro de ayuda y documentación · Klecx",
+    "metaTitle": "Centro de ayuda y documentación",
     "metaDescription": "Guías, documentación y tutoriales con búsqueda para usar los espacios de trabajo y modelos de IA de Klecx.",
-    "articleTitleSuffix": "· Centro de ayuda de Klecx",
-    "articleNotFoundTitle": "Artículo no encontrado · Ayuda de Klecx"
+    "articleTitleSuffix": "· Centro de ayuda",
+    "articleNotFoundTitle": "Artículo no encontrado"
   },
   "Support": {
     "title": "Contactar Soporte",

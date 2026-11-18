@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("Metadata.project");
   return {
-    title: `${t("title")} · Klecx`,
+    title: t("title"),
     description: t("description"),
     robots: {
       index: false,

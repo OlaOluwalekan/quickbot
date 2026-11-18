@@ -26,10 +26,11 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("Metadata.share");
-  const title = `${t("title")} · Klecx`;
+  const title = t("title");
   const description = t("description");
   return {
-    title,
+    // "Shared on Klecx" already names the app: no title template.
+    title: { absolute: title },
     description,
     robots: {
       index: false,

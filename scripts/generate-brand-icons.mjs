@@ -1,13 +1,11 @@
 #!/usr/bin/env node
 /**
- * Regenerates the static brand icons from lib/brand/mark.ts (F5.10):
+ * Regenerates the one static brand icon from lib/brand/mark.ts (F5.10):
  *   app/favicon.ico            16, 32 and 48 px (browsers still request /favicon.ico)
- *   public/icon.svg            manifest icon (any size)
- *   public/icon-512.png        manifest icon
- *   public/apple-touch-icon.png  manifest icon (180 px)
  *
- * app/icon.tsx and app/apple-icon.tsx are generated at request time from the
- * same source and need no script. Run after changing the mark, then commit:
+ * Every other icon (app/icon.tsx: /icon/32, /icon/192, /icon/512, and
+ * app/apple-icon.tsx) is generated at request time from the same source and
+ * needs no script; app/manifest.ts points at those routes. Run after changing the mark, then commit:
  *
  *   node scripts/generate-brand-icons.mjs
  *
@@ -58,9 +56,6 @@ for (const size of [16, 32, 48]) icoImages.push({ size, png: await pngOf(size) }
 
 const outputs = {
   "app/favicon.ico": buildIco(icoImages),
-  "public/icon.svg": Buffer.from(markSvg(APP_ICON) + "\n"),
-  "public/icon-512.png": await pngOf(512),
-  "public/apple-touch-icon.png": await pngOf(180),
 };
 for (const [file, data] of Object.entries(outputs)) {
   fs.writeFileSync(path.join(root, file), data);

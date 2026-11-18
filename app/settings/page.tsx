@@ -18,17 +18,10 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { Laptop, Bell, ChevronRight } from "lucide-react";
 
-export const metadata: Metadata = {
-  robots: {
-    index: false,
-    follow: false,
-  },
-};
-
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("Metadata.settings");
   return {
-    title: `${t("title")} · Klecx`,
+    title: t("title"),
     description: t("description"),
     robots: {
       index: false,

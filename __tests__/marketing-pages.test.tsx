@@ -28,6 +28,10 @@ jest.mock("next/navigation", () => ({
 }));
 
 // Mock next-themes
+jest.mock("next-intl/server", () =>
+  jest.requireActual("../test-utils/next-intl").serverIntlMock(() => "en")
+);
+
 jest.mock("next-themes", () => ({
   useTheme: () => ({
     resolvedTheme: "light",
@@ -144,8 +148,8 @@ describe("Marketing Pages & Components", () => {
   });
 
   describe("Pricing Page (/pricing)", () => {
-    it("renders pricing page with plan comparison table", () => {
-      render(<PricingPage />);
+    it("renders pricing page with plan comparison table", async () => {
+      render(await PricingPage());
 
       expect(screen.getByRole("heading", { level: 1, name: /simple, honest pricing/i })).toBeInTheDocument();
       expect(screen.getByText("Detailed Plan Comparison")).toBeInTheDocument();

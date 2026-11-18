@@ -8,9 +8,7 @@ import {
   type CitationSegment,
 } from "@/server/ai/citations";
 import { runWebSearch } from "@/server/ai/tools/web-search";
-import enMessages from "@/messages/en.json";
-import esMessages from "@/messages/es.json";
-import frMessages from "@/messages/fr.json";
+import { messagesFor } from "@/i18n/messages";
 
 /** Most web searches one generation (main answer or Ask answer) may run. */
 export const MAX_SEARCHES_PER_GENERATION = 3;
@@ -82,8 +80,6 @@ export async function resolveWebSearchAccess(
   return { allowed: !reachedDailyCap, reachedDailyCap, locale };
 }
 
-const MESSAGES = { en: enMessages, es: esMessages, fr: frMessages } as const;
-
 /**
  * Notice written into the thinking panel (it is saved with the thought
  * summary, so it is rendered in the actor's UI language on the server).
@@ -93,10 +89,8 @@ export function webSearchNotice(
   key: "searchedWeb" | "searchLimitReached",
   values: { query?: string } = {}
 ): string {
-  const lang = (locale ?? "en").slice(0, 2).toLowerCase();
-  const messages = MESSAGES[lang as keyof typeof MESSAGES] ?? MESSAGES.en;
-  const pattern = messages.Response[key] ?? enMessages.Response[key];
-  return pattern.replace("{query}", values.query ?? "");
+  const messages = messagesFor(locale) as { Response: Record<typeof key, string> };
+  return messages.Response[key].replace("{query}", values.query ?? "");
 }
 
 export interface WebSearchCitation {

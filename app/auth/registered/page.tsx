@@ -6,7 +6,7 @@ import Registered from "@/components/auth/Registered";
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("Metadata.auth");
   return {
-    title: `${t("registeredTitle")} · Klecx`,
+    title: t("registeredTitle"),
     description: t("registeredDescription"),
     robots: {
       index: false,

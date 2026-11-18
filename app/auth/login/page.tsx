@@ -9,7 +9,7 @@ import { useTranslations } from "next-intl";
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("Metadata.auth");
   return {
-    title: `${t("loginTitle")} · Klecx`,
+    title: t("loginTitle"),
     description: t("loginDescription"),
     robots: {
       index: false,

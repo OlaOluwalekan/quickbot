@@ -106,10 +106,10 @@ describe("F5.10 — brand mark", () => {
     }
   });
 
-  it("the manifest's public icons match the mark (run scripts/generate-brand-icons.mjs after changing it)", async () => {
-    expect(read("public/icon.svg").toString().trim()).toBe(markSvg(APP_ICON));
-    await samePixels(read("public/icon-512.png"), await pngOf(512));
-    await samePixels(read("public/apple-touch-icon.png"), await pngOf(180));
+  it("no static copies of the icons are left in public/ (the manifest uses the generated routes)", () => {
+    for (const f of ["public/icon.svg", "public/icon-512.png", "public/apple-touch-icon.png"]) {
+      expect(fs.existsSync(path.join(process.cwd(), f))).toBe(false);
+    }
   });
 
   it("no file in the repo carries a different version of the path", () => {

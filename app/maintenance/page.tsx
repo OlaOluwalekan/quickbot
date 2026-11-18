@@ -12,7 +12,7 @@ import { getSiteConfig } from "@/server/config/site";
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("Metadata.maintenance");
   return {
-    title: `${t("title")} · Klecx`,
+    title: t("title"),
     description: t("description"),
     robots: {
       index: false,

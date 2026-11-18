@@ -27,7 +27,7 @@ const jetbrainsMono = JetBrains_Mono({
 const siteUrl = getSiteConfig().appUrl;
 
 export async function generateMetadata(): Promise<Metadata> {
-  const locale = await getLocale().catch(() => "en");
+  const locale = await getLocale();
   const localeDef = getLocaleDefinition(locale);
   const t = await getTranslations("Metadata");
   const site = getSiteConfig();
@@ -35,15 +35,11 @@ export async function generateMetadata(): Promise<Metadata> {
     ? new URL(site.social.x).pathname.split("/").filter(Boolean)[0]
     : undefined;
 
-  const defaultTitle = t ? t("root.title") : "Klecx — Workspaces, not threads";
-  const titleTemplate = t ? t("root.titleTemplate") : "%s · Klecx";
-  const description = t
-    ? t("root.description")
-    : "Collaborative AI workspace for research, writing, and knowledge organization. Keep response versions, annotate passages, and organize work into projects.";
-  const applicationName = t ? t("root.applicationName") : site.appName;
-  const keywordsString = t
-    ? t("root.keywords")
-    : "AI workspace, collaborative AI, prompt engineering, response versions, passage reasoning, AI research";
+  const defaultTitle = t("root.title");
+  const titleTemplate = t("root.titleTemplate");
+  const description = t("root.description");
+  const applicationName = t("root.applicationName");
+  const keywordsString = t("root.keywords");
   const keywords = keywordsString.split(",").map((k) => k.trim());
 
   return {
@@ -54,33 +50,25 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     description,
     applicationName,
-    authors: [{ name: "Klecx Team" }],
+    authors: [{ name: site.appName }],
     keywords,
     manifest: "/manifest.webmanifest",
     // Icons come from the file conventions: app/favicon.ico, app/icon.tsx and
     // app/apple-icon.tsx, all drawn from lib/brand/mark.ts (F5.10).
     openGraph: {
       type: "website",
-      locale: localeDef?.ogLocale || "en_US",
+      locale: localeDef.ogLocale,
       alternateLocale: getAlternateOgLocales(locale),
       url: siteUrl,
       siteName: site.appName,
       title: defaultTitle,
       description,
-      images: [
-        {
-          url: "/opengraph-image",
-          width: 1200,
-          height: 630,
-          alt: t("ogImageAlt", { appName: site.appName }),
-        },
-      ],
+      // Images: app/opengraph-image.tsx and app/twitter-image.tsx (localized).
     },
     twitter: {
       card: "summary_large_image",
       title: defaultTitle,
       description,
-      images: ["/twitter-image"],
       ...(xHandle ? { creator: `@${xHandle}` } : {}),
     },
   };

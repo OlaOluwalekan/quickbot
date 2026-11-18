@@ -11,7 +11,7 @@ import AppName from "@/components/logo/AppName";
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("Metadata.offline");
   return {
-    title: `${t("title")} · Klecx`,
+    title: t("title"),
     description: t("description"),
     robots: {
       index: false,

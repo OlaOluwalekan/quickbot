@@ -1,6 +1,7 @@
 import * as React from "react";
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
+import { publicPageMetadata } from "@/lib/seo/metadata";
 import {
   MarketingHero,
   MarketingFeatureList,
@@ -8,22 +9,16 @@ import {
   MarketingFAQ,
   MarketingCTA,
 } from "@/components/marketing";
-import { buildAlternates } from "@/lib/seo/alternates";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const tMeta = await getTranslations("Metadata.landing");
+  const tMeta = await getTranslations("Metadata.root");
   const t = await getTranslations("Landing");
-  const title = tMeta("title");
-  return {
-    title,
+  return publicPageMetadata({
+    path: "/",
+    title: tMeta("title"),
+    absoluteTitle: true,
     description: t("heroDescription"),
-    alternates: buildAlternates("/"),
-    openGraph: {
-      title: `${title} · Klecx`,
-      description: t("heroDescription"),
-      url: "/",
-    },
-  };
+  });
 }
 
 export default function MarketingLandingPage() {

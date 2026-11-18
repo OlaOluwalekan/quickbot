@@ -22,10 +22,25 @@ import esMessages from "@/messages/es.json";
 import frMessages from "@/messages/fr.json";
 import { getSiteConfig, setSiteConfigForTesting } from "@/server/config/site";
 import React from "react";
+import fs from "node:fs";
+import path from "node:path";
+import { execSync } from "node:child_process";
+import { JsonLd } from "@/components/seo/json-ld";
+import { FAQ_KEYS, faqAnswerKey } from "@/lib/marketing/faq";
+import { publicPageMetadata } from "@/lib/seo/metadata";
+import { getHelpSlugs } from "@/lib/help/articles";
+import { PLANS } from "@/server/billing/plans";
+import { BRAND } from "@/lib/brand/mark";
+
+let requestLocale = "en";
+jest.mock("server-only", () => ({}));
+jest.mock("next-intl/server", () =>
+  jest.requireActual("../test-utils/next-intl").serverIntlMock(() => requestLocale)
+);
 
 describe("Step F5.9 — SEO files localized", () => {
   beforeEach(() => {
-    delete process.env.NEXT_LOCALE;
+    requestLocale = "en";
     delete process.env.MARKETING_LOCALE_URLS;
     setSiteConfigForTesting({ billingEnabled: true });
   });
@@ -129,112 +144,148 @@ describe("Step F5.9 — SEO files localized", () => {
 
     it("manifest.ts generates valid manifest with localized metadata and brand colors", async () => {
       const m = await manifest();
-      expect(m.name).toContain("Klecx");
+      expect(m.name).toBe(enMessages.Metadata.manifest.name);
       expect(m.short_name).toBe("Klecx");
       expect(m.display).toBe("standalone");
-      expect(m.theme_color).toMatch(/^#[0-9a-fA-F]{6}$/);
+      expect(m.theme_color).toBe(BRAND.accentDark);
       expect(m.background_color).toMatch(/^#[0-9a-fA-F]{6}$/);
-      expect(m.icons?.length).toBeGreaterThan(0);
+      expect(m.lang).toBe("en");
+      expect(m.icons?.map((i) => i.src)).toEqual(["/icon/192", "/icon/512", "/apple-icon"]);
     });
 
-    it("manifest.ts generates localized manifest when NEXT_LOCALE=fr", async () => {
-      process.env.NEXT_LOCALE = "fr";
+    it("manifest.ts follows the request locale (fr)", async () => {
+      requestLocale = "fr";
       const m = await manifest();
       expect(m.name).toBe(frMessages.Metadata.manifest.name);
       expect(m.description).toBe(frMessages.Metadata.manifest.description);
       expect(m.lang).toBe("fr");
     });
 
-    it("sitemap.ts returns all marketing entries with help article timestamps", () => {
+    it("one manifest: no static copies left in public/", () => {
+      for (const f of ["manifest.webmanifest", "site.webmanifest"]) {
+        expect(fs.existsSync(path.join(process.cwd(), "public", f))).toBe(false);
+      }
+    });
+
+    it("sitemap.ts lists every page and help article, with real dates only", () => {
       const siteUrl = getSiteConfig().appUrl.replace(/\/$/, "");
       const sm = sitemap();
-      expect(sm.length).toBeGreaterThan(STATIC_MARKETING_ROUTES.length);
       const pricingEntry = sm.find((e) => e.url === `${siteUrl}/pricing`);
-      expect(pricingEntry).toBeDefined();
       expect(pricingEntry?.changeFrequency).toBe("weekly");
       expect(pricingEntry?.priority).toBe(0.9);
+      expect(pricingEntry?.lastModified).toBeUndefined();
+      expect(sm.find((e) => e.url === `${siteUrl}/terms`)?.lastModified).toBe(enMessages.Legal.updatedAt);
+      const help = sm.filter((e) => e.url.includes("/help/"));
+      expect(help.map((e) => e.url.split("/help/")[1]).sort()).toEqual(getHelpSlugs().sort());
+      for (const e of help) expect(e.lastModified).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     });
   });
 
   describe("4. JSON-LD Localization & FAQ Parity", () => {
+    const data = (el: React.ReactElement) => (el as React.ReactElement<{ data: any }>).props.data;
+
     it("OrganizationJsonLd includes inLanguage and site company info", () => {
-      const el = OrganizationJsonLd({ locale: "en" }) as React.ReactElement<{
-        data: Record<string, unknown>;
-      }>;
-      const data = el.props.data;
-      expect(data["@type"]).toBe("Organization");
-      expect(data.inLanguage).toBe("en");
-      expect(data.name).toBe("Vyraxity");
+      const d = data(OrganizationJsonLd({ locale: "en" }));
+      expect(d["@type"]).toBe("Organization");
+      expect(d.inLanguage).toBe("en");
+      expect(d.name).toBe("Vyraxity");
+      expect(d.logo).toMatch(/\/icon\/512$/);
     });
 
-    it("WebSiteJsonLd includes inLanguage and localized description", () => {
-      const enEl = WebSiteJsonLd({ locale: "en" }) as React.ReactElement<{
-        data: Record<string, unknown>;
-      }>;
-      expect(enEl.props.data.inLanguage).toBe("en");
-      expect(enEl.props.data.description).toBe(enMessages.Metadata.root.description);
-
-      const esEl = WebSiteJsonLd({ locale: "es" }) as React.ReactElement<{
-        data: Record<string, unknown>;
-      }>;
-      expect(esEl.props.data.inLanguage).toBe("es");
-      expect(esEl.props.data.description).toBe(esMessages.Metadata.root.description);
+    it("WebSiteJsonLd describes the site in the page's language", () => {
+      expect(data(WebSiteJsonLd({ locale: "en" })).description).toBe(enMessages.Metadata.root.description);
+      const es = data(WebSiteJsonLd({ locale: "es" }));
+      expect(es.inLanguage).toBe("es");
+      expect(es.description).toBe(esMessages.Metadata.root.description);
     });
 
-    it("SoftwareApplicationJsonLd includes inLanguage and localized offers", () => {
-      const enEl = SoftwareApplicationJsonLd({ locale: "en" }) as React.ReactElement<{
-        data: { inLanguage: string; offers: Array<{ name: string; description: string }> };
-      }>;
-      expect(enEl.props.data.inLanguage).toBe("en");
-      expect(enEl.props.data.offers[0]?.name).toBe("Free Plan");
-
-      const esEl = SoftwareApplicationJsonLd({ locale: "es" }) as React.ReactElement<{
-        data: { inLanguage: string; offers: Array<{ name: string; description: string }> };
-      }>;
-      expect(esEl.props.data.inLanguage).toBe("es");
-      expect(esEl.props.data.offers[0]?.name).toBe("Gratis Plan");
+    it("SoftwareApplicationJsonLd names offers with the translated plan names", () => {
+      const en = data(SoftwareApplicationJsonLd({ locale: "en" }));
+      expect(en.offers.map((o: { name: string }) => o.name)).toEqual(
+        Object.values(PLANS).map((p) => p.name.split(".").reduce((m: any, k) => m[k], enMessages))
+      );
+      const es = data(SoftwareApplicationJsonLd({ locale: "es" }));
+      expect(es.inLanguage).toBe("es");
+      expect(es.offers[0].name).toBe(esMessages.Plans.FREE.name);
     });
 
-    it("PricingFaqJsonLd matches active locale messages for questions and answers", () => {
-      const enFaq = (PricingFaqJsonLd({ locale: "en" }) as React.ReactElement<{
-        data: { inLanguage: string; mainEntity: Array<{ name: string; acceptedAnswer: { text: string } }> };
-      }>).props.data;
-      expect(enFaq.inLanguage).toBe("en");
-      expect(enFaq.mainEntity[0]?.name).toBe(enMessages.Marketing.faq.items.creditDef.q);
-      expect(enFaq.mainEntity[0]?.acceptedAnswer.text).toBe(enMessages.Marketing.faq.items.creditDef.a);
-
-      const frFaq = (PricingFaqJsonLd({ locale: "fr" }) as React.ReactElement<{
-        data: { inLanguage: string; mainEntity: Array<{ name: string; acceptedAnswer: { text: string } }> };
-      }>).props.data;
-      expect(frFaq.inLanguage).toBe("fr");
-      expect(frFaq.mainEntity[0]?.name).toBe(frMessages.Marketing.faq.items.creditDef.q);
-      expect(frFaq.mainEntity[0]?.acceptedAnswer.text).toBe(frMessages.Marketing.faq.items.creditDef.a);
-    });
-
-    it("PricingFaqJsonLd respects billingEnabled toggle", () => {
+    it("SoftwareApplicationJsonLd offers only the Free plan while billing is off", () => {
       setSiteConfigForTesting({ billingEnabled: false });
-      const offData = (PricingFaqJsonLd({ locale: "en" }) as React.ReactElement<{
-        data: unknown;
-      }>).props.data;
-      const offStr = JSON.stringify(offData);
-      expect(offStr).toContain(enMessages.Marketing.faq.items.cancel.aLaunchingSoon);
-      expect(offStr).not.toContain(enMessages.Marketing.faq.items.cancel.a);
-
-      setSiteConfigForTesting({ billingEnabled: true });
-      const onData = (PricingFaqJsonLd({ locale: "en" }) as React.ReactElement<{
-        data: unknown;
-      }>).props.data;
-      const onStr = JSON.stringify(onData);
-      expect(onStr).toContain(enMessages.Marketing.faq.items.cancel.a);
+      const d = data(SoftwareApplicationJsonLd({ locale: "en" }));
+      expect(d.offers).toHaveLength(1);
+      expect(d.offers[0].price).toBe(0);
     });
 
-    it("PricingFaqJsonLd responds to NEXT_LOCALE environment fallback", () => {
-      process.env.NEXT_LOCALE = "es";
-      const esFaq = (PricingFaqJsonLd() as React.ReactElement<{
-        data: { inLanguage: string; mainEntity: Array<{ name: string }> };
-      }>).props.data;
-      expect(esFaq.inLanguage).toBe("es");
-      expect(esFaq.mainEntity[0]?.name).toBe(esMessages.Marketing.faq.items.creditDef.q);
+    it("PricingFaqJsonLd equals the visible FAQ, in each locale and billing state", () => {
+      for (const billingEnabled of [true, false]) {
+        setSiteConfigForTesting({ billingEnabled });
+        for (const [locale, messages] of Object.entries({ en: enMessages, es: esMessages, fr: frMessages })) {
+          const faq = messages.Marketing.faq as unknown as Record<string, any>;
+          const d = data(PricingFaqJsonLd({ locale }));
+          expect(d.inLanguage).toBe(locale);
+          expect(d.mainEntity).toEqual(
+            FAQ_KEYS.map((key) => ({
+              "@type": "Question",
+              name: faq.items[key].q,
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: faqAnswerKey(key, billingEnabled).split(".").reduce((m, k) => m[k], faq),
+              },
+            }))
+          );
+        }
+      }
+    });
+
+    it("the visible FAQ renders exactly FAQ_KEYS (the list JSON-LD reads)", () => {
+      const src = fs.readFileSync(path.join(process.cwd(), "components/marketing/faq.tsx"), "utf8");
+      expect(src).toContain("FAQ_KEYS.map(");
+      expect(src).toContain("faqAnswerKey(key, billingEnabled)");
+    });
+
+    it("JSON-LD can't be closed early by message text", () => {
+      const el = JsonLd({ data: { x: "</script><script>alert(1)</script>" } }) as React.ReactElement<{
+        dangerouslySetInnerHTML: { __html: string };
+      }>;
+      expect(el.props.dangerouslySetInnerHTML.__html).not.toContain("</script>");
+    });
+  });
+
+  describe("5. Page metadata", () => {
+    it("public pages carry the request locale in Open Graph, with alternates", async () => {
+      requestLocale = "fr";
+      const md = await publicPageMetadata({ path: "/pricing", title: "Tarifs", description: "d" });
+      expect(md.title).toBe("Tarifs");
+      expect(md.alternates).toEqual({ canonical: "/pricing" });
+      expect(md.openGraph).toEqual(
+        expect.objectContaining({ locale: "fr_FR", alternateLocale: ["en_US", "es_ES"], title: "Tarifs · Klecx" })
+      );
+    });
+
+    it("every marketing page builds its metadata with publicPageMetadata (buildAlternates)", () => {
+      const dir = path.join(process.cwd(), "app", "(marketing)");
+      const pages: string[] = [];
+      const walk = (d: string) => {
+        for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+          if (e.isDirectory()) walk(path.join(d, e.name));
+          else if (e.name === "page.tsx") pages.push(path.join(d, e.name));
+        }
+      };
+      walk(dir);
+      expect(pages.length).toBeGreaterThanOrEqual(12);
+      for (const p of pages) {
+        expect({ p, ok: fs.readFileSync(p, "utf8").includes("publicPageMetadata(") }).toEqual({ p, ok: true });
+      }
+    });
+
+    it("page titles don't repeat the app name the root template adds", () => {
+      const offenders = execSync(`grep -rlE '(·|\\|) Klecx\`' app || true`, { encoding: "utf8" }).trim();
+      expect(offenders).toBe("");
+      for (const m of [enMessages, esMessages, frMessages]) {
+        expect(m.Help.metaTitle).not.toMatch(/Klecx/);
+        expect(m.Help.articleTitleSuffix).not.toMatch(/Klecx/);
+        expect(m.Status.title).not.toMatch(/Klecx/);
+      }
     });
   });
 });

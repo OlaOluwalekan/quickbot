@@ -223,6 +223,7 @@ export function getArticles(locale?: string): HelpArticle[] {
         keywords: Array.isArray(data.keywords) ? data.keywords : [],
         readMinutes: computeReadMinutes(content),
         isFallback,
+        ...(typeof data.updated === "string" ? { updated: data.updated } : {}),
         content,
       });
     }

@@ -1,24 +1,18 @@
 import * as React from "react";
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
+import { publicPageMetadata } from "@/lib/seo/metadata";
 import { Cookie } from "lucide-react";
 import { STORAGE_ITEMS } from "@/lib/legal/cookies";
 import { LegalDocument, legalValues } from "@/components/legal/legal-document";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("Legal");
-  return {
-    title: `${t("cookies.title")} · Klecx`,
+  return publicPageMetadata({
+    path: "/cookies",
+    title: t("cookies.title"),
     description: t("cookies.subtitle", legalValues()),
-    alternates: {
-      canonical: "/cookies",
-    },
-    openGraph: {
-      title: `${t("cookies.title")} · Klecx`,
-      description: t("cookies.subtitle", legalValues()),
-      url: "/cookies",
-    },
-  };
+  });
 }
 
 export default async function CookiesPage() {

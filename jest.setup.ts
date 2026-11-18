@@ -150,3 +150,7 @@ jest.mock('next/cache', () => ({
   revalidatePath: jest.fn(),
   revalidateTag: jest.fn(),
 }))
+
+// Component tests mock `next-intl` without a provider; the real locale-aware
+// navigation helpers need one, so forward them to next/link and next/navigation.
+jest.mock('./i18n/navigation', () => jest.requireActual('./test-utils/next-intl').navigationMock)

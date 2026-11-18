@@ -255,8 +255,8 @@ describe("Step F0.2 — Site configuration: emails, company identity, links from
 
       const { container, rerender } = render(
         <>
-          <OrganizationJsonLd siteUrl="https://klecx.com" />
-          <SoftwareApplicationJsonLd siteUrl="https://klecx.com" />
+          <OrganizationJsonLd locale="en" siteUrl="https://klecx.com" />
+          <SoftwareApplicationJsonLd locale="en" siteUrl="https://klecx.com" />
         </>
       );
 
@@ -289,7 +289,7 @@ describe("Step F0.2 — Site configuration: emails, company identity, links from
           github: "https://github.com/vyraxity",
         },
       });
-      rerender(<OrganizationJsonLd siteUrl="https://klecx.com" />);
+      rerender(<OrganizationJsonLd locale="en" siteUrl="https://klecx.com" />);
       const orgJsonWithSocial = JSON.parse(
         container.querySelector('script[type="application/ld+json"]')!.innerHTML
       );

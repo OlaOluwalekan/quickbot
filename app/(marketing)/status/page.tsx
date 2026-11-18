@@ -2,6 +2,7 @@ import * as React from "react";
 import type { Metadata } from "next";
 import { unstable_cache } from "next/cache";
 import { getFormatter, getTranslations } from "next-intl/server";
+import { publicPageMetadata } from "@/lib/seo/metadata";
 import {
   CheckCircle2,
   AlertTriangle,
@@ -16,7 +17,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { checkSystemReadiness } from "@/server/services/system-status";
 import { getSiteConfig } from "@/server/config/site";
-import { buildAlternates } from "@/lib/seo/alternates";
 
 // The page renders per request (the locale comes from a cookie), so the
 // probes are cached instead: at most one database/Redis check a minute.
@@ -26,16 +26,11 @@ const getReadiness = unstable_cache(() => checkSystemReadiness(), ["system-readi
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("Status");
-  return {
+  return publicPageMetadata({
+    path: "/status",
     title: t("title"),
     description: t("subtitle"),
-    alternates: buildAlternates("/status"),
-    openGraph: {
-      title: t("title"),
-      description: t("subtitle"),
-      url: "/status",
-    },
-  };
+  });
 }
 
 export default async function StatusPage() {

@@ -9,7 +9,7 @@ import { PLANS } from "@/server/billing/plans";
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("Metadata.auth");
   return {
-    title: `${t("registerTitle")} · Klecx`,
+    title: t("registerTitle"),
     description: t("registerDescription"),
     robots: {
       index: false,
