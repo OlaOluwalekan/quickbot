@@ -1,35 +1,43 @@
 ---
-title: "Solución de problemas y preguntas frecuentes"
+title: "Solución de problemas"
 category: "troubleshooting"
-description: "Resoluciones para incidencias comunes: interrupciones de generación, errores de créditos y conectividad."
-keywords: ["solución de problemas", "errores", "reintentar", "soporte", "preguntas frecuentes", "conexión"]
-sourceVersion: 1
+description: "Qué hacer cuando una respuesta falla, se acaban los créditos, se alcanza un límite o no llega un correo."
+keywords: ["solución de problemas", "errores", "reintentar", "créditos", "límite", "soporte", "micrófono"]
+sourceVersion: 2
 ---
 
-# Solución de problemas y preguntas frecuentes
+# Solución de problemas
 
-Si experimenta una incidencia inesperada al usar Klecx, esta guía detalla las preguntas más habituales y los pasos de diagnóstico.
+## Una respuesta falla o se detiene
 
-## La generación se detiene o "Pensando" parece bloqueado
+Si una respuesta se detiene o muestra un error:
 
-Si una generación muestra un indicador parpadeante pero no transmite tokens tras 15 segundos:
-1. **Desconexión de red**: Compruebe su conexión a Internet. Los eventos enviados por el servidor (SSE) requieren una conexión de transmisión continua.
-2. **Haga clic en Reintentar**: Si una generación falla o se interrumpe, aparecerá un aviso de **Reintentar**. Al pulsar en **Reintentar** se genera una nueva clave de idempotencia para no cobrar créditos por duplicado.
-3. **Incidencia del modelo**: Revise nuestro panel de estado público en [/status](/status) para verificar si la generación de IA o la infraestructura secundaria presentan una latencia elevada.
+1. **Comprueba tu conexión.** Las respuestas se escriben en directo; si se corta la conexión, se interrumpen.
+2. **Haz clic en Reintentar.** Si la respuesta falló antes de escribir texto, no se cobró nada; si se detuvo a medias, solo se cobró el texto escrito.
+3. **Consulta la [página de estado](/status)** si los errores se repiten.
 
-## Aviso de "Créditos insuficientes"
+## "Sin créditos" o el límite diario
 
-Si recibe una notificación 402 de Créditos insuficientes:
-- Su instrucción requiere más créditos de los disponibles actualmente en su saldo.
-- Cambie a un modelo Económico (**Rápido y Eficiente**) para reducir el gasto de créditos, o mejore su plan en [/pricing](/pricing).
+- **Sin créditos**: cambia a **Rápido y Eficiente** para usar menos créditos por mensaje.
+- **Límite diario alcanzado**: el tope diario se reinicia a medianoche UTC. Consulta [Créditos y planes](/help/credits-and-plans).
+- **En el espacio de otra persona**: los créditos del propietario pagan las respuestas. El aviso indica si el propietario se ha quedado sin créditos o si has alcanzado el límite mensual que el propietario fijó para ti; pregunta al propietario.
 
-## Enlace de restablecimiento de contraseña no recibido
+## "Se alcanzó el límite diario de búsquedas web"
 
-Si solicitó un correo electrónico de recuperación de contraseña y no lo ha recibido:
-1. Revise sus carpetas de correo no deseado (spam) y promociones.
-2. Asegúrese de haber introducido exactamente el correo electrónico utilizado al registrar la cuenta.
-3. Tenga en cuenta que las solicitudes de restablecimiento de contraseña están limitadas a 3 intentos por hora para proteger las cuentas frente a abusos automatizados.
+Klecx respondió sin buscar porque ya usaste tu número diario de búsquedas en los espacios de este propietario. Las respuestas siguen funcionando; podrás buscar de nuevo al día siguiente. Consulta [Entrada de voz y búsqueda web](/help/voice-and-web-search).
+
+## La entrada de voz no funciona
+
+- Permite el micrófono para este sitio en la configuración de tu navegador y recarga la página.
+- Si el botón del micrófono aparece en gris, tu navegador no puede grabar audio aquí; prueba con una versión actualizada de Chrome, Edge, Firefox o Safari.
+- Las grabaciones se detienen a los 2 minutos, y cada plan tiene un número diario de minutos.
+
+## No llega el correo para restablecer la contraseña
+
+1. Revisa las carpetas de spam y promociones.
+2. Asegúrate de haber escrito la dirección de correo de tu cuenta.
+3. Los correos para restablecer la contraseña están limitados a 3 solicitudes por hora; espera antes de volver a intentarlo.
 
 ## Contactar con soporte
 
-Si la incidencia continúa, envíe un ticket a través de [/support](/support) o escriba a nuestro equipo de ingeniería directamente a `%%SUPPORT_EMAIL%%`. Respondemos en un plazo máximo de 3 días laborables.
+Si el problema continúa, usa el [formulario de soporte](/support) (puedes adjuntar capturas de pantalla) o escribe a %%SUPPORT_EMAIL%%. Respondemos en un plazo de 3 días hábiles.

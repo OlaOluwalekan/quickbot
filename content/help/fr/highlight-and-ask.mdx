@@ -1,24 +1,48 @@
 ---
 title: "Surligner et demander"
 category: "features-workflows"
-description: "Comment sélectionner des passages précis dans une réponse pour poser des questions de suivi ciblées."
-keywords: ["surligner", "demander", "suivi", "citation", "contexte", "sélection"]
-sourceVersion: 1
+description: "Commentez un passage ou interrogez Klecx à son sujet, sur place, sans perdre le fil de la conversation."
+keywords: ["surligner", "commenter", "demander", "question annexe", "file", "mention", "notes klecx", "annotation"]
+sourceVersion: 2
 ---
 
 # Surligner et demander
 
-Dans les rapports d'analyse volumineux ou les explications techniques détaillées, poser une question de suivi nécessite fréquemment de citer un paragraphe précis. Klecx simplifie ce processus grâce à la fonctionnalité **Surligner et demander**.
+Sélectionnez un passage dans une réponse pour le commenter ou poser une question à son sujet. Cela fonctionne sur les réponses principales, sur les réponses aux questions annexes à tous les niveaux, ainsi que sur les documents de l'espace de travail et les documents générés.
 
-## Comment ça fonctionne
+## Commenter ou demander
 
-1. **Sélectionnez un texte** : Dans n'importe quelle carte de réponse, mettez en surbrillance une phrase, un paragraphe ou une ligne de tableau avec votre souris ou pavé tactile.
-2. **Infobulle contextuelle** : Un menu d'action flottant s'affiche à côté de votre sélection avec l'option **« Poser une question là-dessus »**.
-3. **Citation automatique du contexte** : Cliquer sur ce bouton insère automatiquement l'extrait sélectionné sous forme de bloc de citation dans votre compositeur, vous permettant de formuler des questions telles que :
-   - *« Pouvez-vous expliquer cette partie plus simplement ? »*
-   - *« Fournissez une implémentation TypeScript pour cette étape. »*
-   - *« Existe-t-il des cas particuliers pour cette recommandation ? »*
+Quand vous sélectionnez du texte, une petite barre d'outils apparaît avec deux actions :
 
-## Ancrage de texte robuste
+- **Commenter** (`Ctrl` + `Alt` + `M`, ou `⌥` + `⌘` + `M` sur Mac) : laissez une note sur le passage pour vous ou votre équipe. Les membres peuvent répondre à un commentaire. L'IA n'intervient pas.
+- **Demander** (`Ctrl` + `Alt` + `A`, ou `⌥` + `⌘` + `A` sur Mac) : posez une question à Klecx sur le passage.
+  - **Demander maintenant** : la réponse commence tout de suite dans une colonne à côté de la conversation.
+  - **Ajouter à la file** : enregistrez la question et continuez votre lecture. Ouvrez **Questions** dans le compositeur pour voir votre file, puis choisissez **Tout demander** pour répondre à toutes les questions en une fois.
 
-Klecx exploite le standard **TextQuoteSelector** du W3C en arrière-plan. Même lorsque les réponses sont recalculées ou remises en forme, vos points d'ancrage surlignés restent fidèlement référencés dans l'historique de la conversation.
+Sur un écran tactile, sélectionnez le texte par un appui long et utilisez la même barre.
+
+Quand Klecx répond à une question annexe, il lit seulement le texte qui contient votre sélection, le fil de cette question et vos notes Klecx, pas tout l'espace de travail. Les réponses restent ainsi ciblées et leur coût faible.
+
+## Colonnes et questions imbriquées
+
+Chaque question annexe s'ouvre dans une colonne à côté de la conversation principale. Vous pouvez sélectionner du texte dans une réponse et redemander, aussi loin que vous voulez. Quand les colonnes ne tiennent plus, les niveaux les plus anciens se replient en bandes étroites sur le côté.
+
+- **Retour** (`Échap`) ferme la colonne actuelle.
+- **Conversation principale** les ferme toutes.
+- Le chemin en haut de chaque colonne indique où vous êtes ; cliquez sur un niveau pour y revenir.
+
+Un point dans la marge signale les passages qui ont des commentaires ou des questions. Survolez-le pour les voir et choisissez **Voir**. **Toutes les annotations**, dans la barre supérieure, liste tous les commentaires et questions de l'espace.
+
+## Mentions et notes Klecx
+
+- Tapez `@` et un nom pour mentionner un membre. Il reçoit une notification, et le commentaire devient visible par tout l'espace de travail pour qu'il puisse le lire.
+- Tapez `@klecx` pour que Klecx retienne une correction, par exemple *« @klecx nous utilisons PostgreSQL, pas MongoDB »*. Klecx ne répond pas tout de suite ; il tient compte de la note dans toutes les réponses suivantes de cet espace. Gérez les notes depuis **Notes Klecx** dans l'en-tête de l'espace.
+
+## Garder une bonne réponse
+
+Une réponse à une question annexe peut être promue :
+
+- **Ajouter à la chronologie** l'ajoute à la conversation principale, avec un lien vers la question d'origine.
+- **Nouvel espace de travail** crée un nouvel espace à partir d'elle, dans le projet de votre choix ou hors projet.
+
+Le texte que vous modifiez doit être enregistré avant de pouvoir le commenter ou poser une question dessus.

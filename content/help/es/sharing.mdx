@@ -1,32 +1,33 @@
 ---
-title: "Compartir espacios de trabajo"
+title: "Compartir"
 category: "collaboration-sharing"
-description: "Cómo generar enlaces públicos para compartir, gestionar la privacidad y revocar el acceso compartido."
-keywords: ["compartir", "enlace público", "privacidad", "revocar", "solo lectura"]
-sourceVersion: 1
+description: "Crea enlaces públicos a un espacio de trabajo o a una sola respuesta, elige qué ven los visitantes y revoca enlaces."
+keywords: ["compartir", "enlace público", "privacidad", "revocar", "solo lectura", "caducidad"]
+sourceVersion: 2
 ---
 
-# Compartir espacios de trabajo
+# Compartir
 
-Klecx le permite compartir análisis valiosos de IA, explicaciones de código y documentación con compañeros de equipo, clientes o de forma pública mediante enlaces seguros de solo lectura.
+Un enlace público permite a cualquiera leer un espacio de trabajo o una sola respuesta sin cuenta. Para trabajar juntos en un espacio, invita a personas (consulta [Colaboración y roles](/help/collaboration-roles)).
 
-## Crear un enlace para compartir
+## Crear un enlace público
 
-1. Abra el espacio de trabajo que desea compartir.
-2. Haga clic en el botón **Compartir** situado en la barra de navegación superior.
-3. Elija sus permisos para compartir:
-   - **Enlace público de solo lectura**: Cualquier persona que tenga el enlace puede consultar la conversación.
-   - **Instantánea frente a En vivo**: Elija si los visitantes ven la conversación tal como existe hoy (instantánea) o si ven las futuras respuestas en tiempo real.
-4. Haga clic en **Crear enlace** y copie la URL generada (`/s/:token`).
+1. Abre el espacio de trabajo y haz clic en **Compartir** en la barra superior, o en **Compartir** en una respuesta.
+2. Abre la pestaña **Enlace público** y elige:
+   - **Alcance**: **Espacio de trabajo completo** o **Solo esta respuesta**.
+   - **Versión que se muestra**: **Editada si está disponible** o **Salida original de IA**.
+   - **Caducidad**: sin caducidad, 7 días o 30 días.
+   - **Mostrar mi nombre en la página pública**, si quieres que los visitantes vean quién lo compartió.
+3. Haz clic en **Crear enlace público**. El enlace se copia en tu portapapeles. Solo se muestra una vez, así que guárdalo en un lugar seguro.
 
-## Información importante de seguridad
+Crear enlaces públicos requiere el rol de Administrador o superior.
 
-- **Acceso mediante URL**: Los enlaces compartidos públicos son accesibles para cualquier persona que posea la URL exacta. Evite incluir credenciales confidenciales o secretos corporativos en las conversaciones antes de compartirlas.
-- **Indexación en motores de búsqueda**: Todas las rutas públicas de compartición (`/s/*`) transmiten de forma explícita encabezados de robots `noindex, nofollow` para evitar que los motores de búsqueda indexen sus conversaciones compartidas.
+## Qué ven los visitantes
 
-## Revocar un enlace para compartir
+- Los mensajes y las respuestas que elegiste, tal como están **ahora**: las ediciones posteriores y las respuestas nuevas de un espacio compartido también aparecen en la página pública.
+- **Nunca se incluyen**: comentarios, preguntas al margen, notas de Klecx, miembros ni el historial de ediciones. De los documentos solo se muestra el texto; el archivo original no se puede descargar desde un enlace público.
+- Los buscadores no indexan las páginas públicas, pero cualquiera que tenga el enlace puede abrirlo. No compartas contenido que necesites mantener privado.
 
-Usted mantiene el control total sobre su contenido compartido. En cualquier momento:
-1. Vuelva a abrir el cuadro de diálogo **Compartir**.
-2. Haga clic en **Revocar enlace**.
-3. La URL dejará de mostrar contenido inmediatamente y mostrará un aviso de expiración a los visitantes posteriores.
+## Revocar un enlace
+
+Abre **Compartir → Enlace público** y haz clic en **Revocar** junto al enlace. Deja de funcionar al instante. Los enlaces revocados y caducados muestran una página de "no encontrado", igual que un enlace que nunca existió.

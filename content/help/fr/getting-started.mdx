@@ -1,34 +1,37 @@
 ---
-title: "Premiers pas avec Klecx"
+title: "Bien démarrer avec Klecx"
 category: "getting-started"
-description: "Découvrez comment créer votre premier espace de travail, poser des questions et tirer le meilleur parti des modèles d'IA dans Klecx."
-keywords: ["premiers pas", "bases", "démarrage rapide", "compositeur", "espace de travail"]
-sourceVersion: 1
+description: "Créez votre premier espace de travail, choisissez un modèle et prenez vos repères dans Klecx."
+keywords: ["démarrage", "bases", "prise en main", "compositeur", "espace de travail", "modèle"]
+sourceVersion: 2
 ---
 
-# Premiers pas avec Klecx
+# Bien démarrer avec Klecx
 
-Bienvenue sur **Klecx**, un espace de travail rapide, privé et flexible conçu pour collaborer avec des modèles d'IA modernes. Que vous rédigiez des documents, analysiez des données, fassiez des recherches sur des sujets complexes ou exploriez des idées créatives, Klecx offre un environnement épuré et sans distraction.
+Klecx est un espace pour travailler avec l'IA sur vos recherches, plans, textes et projets du quotidien. Chaque sujet a son propre espace de travail, et chaque réponse reste là où vous pouvez la relire, la modifier, l'interroger et la partager.
 
-## 1. Créer votre premier espace de travail
+## 1. Votre premier espace de travail
 
-Lorsque vous vous connectez à Klecx, vous arrivez sur la **page d'accueil des espaces de travail** (`/workspaces`). Vous pouvez immédiatement commencer à écrire dans le compositeur situé au bas de l'écran.
+Une fois connecté, vous arrivez sur la page d'accueil. Écrivez dans le compositeur ce sur quoi vous voulez travailler et appuyez sur `Entrée` (`Maj` + `Entrée` ajoute une nouvelle ligne). Klecx crée un espace de travail et l'ouvre.
 
-- **Saisie de prompt** : Saisissez n'importe quelle question, requête de code ou tâche de rédaction dans le compositeur.
-- **Sélecteur de modèle** : Basculez entre Économique (**Rapide et Efficace**) pour des itérations rapides ou Standard (**Raisonnement Standard**) pour des analyses approfondies et des tâches nuancées.
-- **Envoi** : Appuyez sur `Enter` (ou `Cmd` + `Enter` / `Ctrl` + `Enter`) pour démarrer votre conversation.
+Dans le compositeur, vous pouvez :
 
-Votre prompt est conservé de manière fluide pendant que l'application effectue la transition vers l'URL dédiée de votre espace de travail (`/workspaces/:id`).
+- **Choisir un modèle** : **Rapide et Efficace** (≈ {{credits.fast}} crédits pour un message type) pour les questions du quotidien, ou **Raisonnement Standard** (≈ {{credits.standard}} crédits) pour les recherches complexes et le travail en plusieurs étapes. Chaque option affiche son coût habituel avant l'envoi. Raisonnement Standard est disponible à partir du forfait Lite.
+- **Créer des images** : passez le compositeur en **Créer une image** (≈ {{credits.image}} crédits par image, à partir du forfait Lite).
+- **Joindre des fichiers** : ajoutez des images, des PDF et des documents à un message. Vous pouvez aussi ajouter un document à l'espace de travail lui-même (voir [Documents de l'espace de travail](/help/documents)).
+- **Utiliser votre voix** : enregistrez un message au lieu de le taper (voir [Saisie vocale et recherche web](/help/voice-and-web-search)).
 
-## 2. Naviguer dans la conversation
+Klecx fait des recherches sur le web de lui-même quand une question demande des informations récentes. Vous pouvez désactiver cela dans **Paramètres → Préférences de l'IA**.
 
-Chaque réponse d'IA dans Klecx est présentée sous la forme d'une carte de réponse interactive :
+## 2. Travailler avec les réponses
 
-- **Panneau de réflexion** : Si le modèle développe un raisonnement pour une requête complexe, vous pouvez consulter son accordéon réductible de résumé de réflexion en direct.
-- **Copie et actions** : Copiez le markdown ou le rendu généré en un seul clic à l'aide du bouton du presse-papiers.
-- **Régénération et gestion des versions** : Demandez des versions alternatives ou des perspectives de modèles différentes sans perdre les réponses précédentes.
-- **Modifications sur place** : Modifiez directement vos prompts ou vos réponses pour explorer de nouvelles branches et affiner les résultats.
+Chaque réponse s'affiche sous forme de carte sous votre message :
 
-## 3. S'organiser avec les projets
+- **Raisonnement** : quand le modèle réfléchit avant de répondre, vous pouvez ouvrir un court résumé de son raisonnement.
+- **Copier, Modifier, Régénérer** : copiez le texte, corrigez la réponse vous-même ou demandez une nouvelle version. Les versions précédentes sont conservées (voir [Régénérer ou modifier](/help/regenerate-vs-edit)).
+- **Commenter et Demander** : sélectionnez un passage pour laisser un commentaire ou poser une question annexe à son sujet (voir [Surligner et demander](/help/highlight-and-ask)).
+- **Exporter et Partager** : téléchargez une réponse, ou créez un lien public vers elle.
 
-Au fur et à mesure que vos espaces de travail se multiplient, regroupez-les dans des **Projets** afin de maintenir organisés vos travaux clients, expériences de code et recherches personnelles. Utilisez la barre latérale pour basculer entre vos espaces de travail, épingler des favoris ou effectuer des recherches dans l'ensemble de vos conversations.
+## 3. Organiser votre travail
+
+La barre latérale liste vos projets et vos espaces de travail. Regroupez les espaces liés dans un **projet** : chaque projet a sa propre page avec tous ses espaces, et les personnes invitées dans un projet peuvent travailler dans chacun de ses espaces (voir [Espaces de travail et projets](/help/workspaces-vs-projects)). Utilisez **Rechercher** (`Ctrl` + `K`, ou `⌘` + `K` sur Mac) pour accéder à n'importe quel espace.

@@ -1,31 +1,31 @@
 ---
 title: "Regenerate vs Edit"
 category: "features-workflows"
-description: "Learn the difference between regenerating a fresh AI response and editing an existing one."
-keywords: ["regenerate", "edit", "versions", "branching", "response card"]
-version: 1
+description: "When to ask for a new version of an answer and when to correct it yourself."
+keywords: ["regenerate", "edit", "versions", "original", "response card"]
+version: 2
 ---
 
 # Regenerate vs Edit
 
-When an AI response isn't quite right or when you want to explore an alternative phrasing, Klecx offers two distinct workflows: **Regeneration** and **Inline Editing**.
+When an answer isn't quite right, you can ask Klecx for a new version (**Regenerate**) or correct it yourself (**Edit**). Neither one deletes anything.
 
-## 1. Regenerating a Response
+## 1. Regenerating an Answer
 
-Clicking the **Regenerate** button at the footer of any response card requests a completely new generation from the AI model while retaining the original prompt and context.
+**Regenerate**, at the bottom of an answer, asks for a new answer to the same prompt. It uses credits like a new message.
 
-- **Non-destructive Versioning**: Klecx never discards your previous outputs. When you regenerate, a version indicator appears (e.g., `2 / 2`).
-- **Version Navigation**: Use the `Prev` and `Next` buttons (or keyboard arrow keys `←` and `→`) to switch between versions seamlessly.
-- **Model Switching**: You can choose a different model (such as switching from Economy to Standard) when regenerating to compare responses side-by-side.
+- **Every version is kept**: a counter such as `2 / 2` shows which version you are reading.
+- **Switching versions**: use the arrows next to the counter, or the `←` and `→` keys when the counter is focused.
+- The new version is written with the **Fast & Efficient** model.
 
-## 2. Editing an Existing Response
+## 2. Editing an Answer
 
-Sometimes the AI gets 95% of an answer right, but needs a slight correction or customized code snippet. Rather than spending credits on a full regeneration, click **Edit Response**.
+If an answer is almost right, click **Edit** and correct it yourself. Editing uses no credits.
 
-- **Inline Markdown Editor**: Modify the text directly with real-time preview.
-- **Audit History**: Edited responses show an "Edited" badge so team members know adjustments were made.
-- **View Original**: You can toggle between your custom edits and the AI's original raw text at any time.
+- **Editor and preview**: change the text in the editor and check the result in the preview.
+- **Edited badge**: edited answers are marked, so others know the text was changed.
+- **View original**: switch between your edited text and the original answer at any time, or choose **Revert to original**.
 
-## 3. Editing Previous Prompts
+Exports and public links can show either the edited text or the original (see [Exporting](/help/exporting) and [Sharing](/help/sharing)).
 
-If you want to change what you asked earlier in the thread, you can edit your original prompt. Klecx branches the conversation from that point, allowing you to explore alternate conversation paths without losing the previous branch.
+Prompts can't be edited after they are sent. To ask something differently, send a new message, or start a new workspace from a side question.

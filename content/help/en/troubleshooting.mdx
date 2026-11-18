@@ -1,35 +1,43 @@
 ---
-title: "Troubleshooting & FAQs"
+title: "Troubleshooting"
 category: "troubleshooting"
-description: "Resolutions for common issues: generation halts, credit errors, and connectivity."
-keywords: ["troubleshooting", "errors", "retry", "support", "faq", "connection"]
-version: 1
+description: "What to do when an answer fails, credits run out, a limit is reached or an email doesn't arrive."
+keywords: ["troubleshooting", "errors", "try again", "credits", "limit", "support", "microphone"]
+version: 2
 ---
 
-# Troubleshooting & FAQs
+# Troubleshooting
 
-If you run into an unexpected issue while using Klecx, this guide covers the most frequent questions and diagnostic steps.
+## An Answer Fails or Stops
 
-## Generation Halts or "Thinking" Appears Stuck
+If an answer stops or shows an error:
 
-If a generation shows a pulsing indicator but doesn't stream tokens after 15 seconds:
-1. **Network Disconnection**: Check your internet connection. Server-sent events (SSE) require an uninterrupted streaming connection.
-2. **Click Retry**: If a generation fails or drops, an inline **Retry** banner will appear. Clicking **Retry** generates a fresh idempotency key so you are never charged double credits.
-3. **Model Outage**: Check our public status dashboard at [/status](/status) to see if AI generation or downstream infrastructure is experiencing elevated latency.
+1. **Check your connection.** Answers are written live; a dropped connection interrupts them.
+2. **Click Try again.** If the answer failed before any text was written, nothing was charged; if it stopped part-way, only the written text was charged.
+3. **Check the [status page](/status)** if errors keep happening.
 
-## "Insufficient Credits" Banner
+## "Out of Credits" or the Daily Limit
 
-If you receive a 402 Insufficient Credits notice:
-- Your workspace prompt requires more credits than your current balance holds.
-- Switch to an Economy model (**Fast & Efficient**) to reduce credit requirements, or upgrade your plan in [/pricing](/pricing).
+- **Out of credits**: switch to **Fast & Efficient** to use fewer credits per message.
+- **Daily limit reached**: the daily cap resets at midnight UTC. See [Credits & Plans](/help/credits-and-plans).
+- **In someone else's workspace**: the owner's credits pay for answers. The message tells you whether the owner is out of credits or you have reached the monthly limit the owner set for you; ask the owner.
 
-## Reset Password Link Not Received
+## "Web Search Limit Reached for Today"
 
-If you requested a password recovery email but have not received it:
-1. Check your spam and promotions folder.
-2. Ensure you entered the exact email address used during account creation.
-3. Note that password reset requests are rate-limited to 3 attempts per hour to protect accounts against automated abuse.
+Klecx answered without searching because your daily number of searches in this owner's workspaces is used up. Answers still work; searching is available again the next day. See [Voice input and web search](/help/voice-and-web-search).
+
+## Voice Input Doesn't Work
+
+- Allow the microphone for this site in your browser's settings, then reload the page.
+- If the microphone button is greyed out, your browser can't record audio here; try an up-to-date Chrome, Edge, Firefox or Safari.
+- Recordings stop after 2 minutes, and each plan has a daily number of minutes.
+
+## Password Reset Email Not Received
+
+1. Check your spam and promotions folders.
+2. Make sure you entered the email address of your account.
+3. Reset emails are limited to 3 requests per hour; wait before trying again.
 
 ## Contacting Support
 
-If your problem persists, submit a ticket via [/support](/support) or email our engineering team directly at `%%SUPPORT_EMAIL%%`. We respond within ≤ 3 business days.
+If the problem continues, use the [support form](/support) (you can attach screenshots) or write to %%SUPPORT_EMAIL%%. We respond within 3 business days.

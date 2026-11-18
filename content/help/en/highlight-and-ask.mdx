@@ -1,24 +1,48 @@
 ---
 title: "Highlight & Ask"
 category: "features-workflows"
-description: "How to select specific phrases in any response to ask focused follow-up questions."
-keywords: ["highlight", "ask", "follow-up", "quote", "context", "selection"]
-version: 1
+description: "Comment on any passage or ask Klecx about it, in place, without losing your place in the conversation."
+keywords: ["highlight", "comment", "ask", "side question", "queue", "mention", "klecx notes", "annotation"]
+version: 2
 ---
 
 # Highlight & Ask
 
-In long research reports or detailed code explanations, asking a follow-up question often requires quoting a specific paragraph. Klecx streamlines this with **Highlight & Ask**.
+Select any passage in an answer to comment on it or ask about it. This works on main answers, on answers to side questions at any depth, and on workspace and generated documents.
 
-## How It Works
+## Comment or Ask
 
-1. **Select Any Text**: In any rendered response card, use your mouse or trackpad to highlight a phrase, sentence, or table row.
-2. **Context Tooltip**: A floating action menu appears next to your selection with the option **"Ask about this"**.
-3. **Automatic Context Quoting**: Clicking the button automatically pins the highlighted excerpt into your composer as a blockquote, allowing you to ask questions like:
-   - *"Can you explain this part in simpler terms?"*
-   - *"Provide a TypeScript implementation for this step."*
-   - *"Are there any edge cases with this recommendation?"*
+When you select text, a small toolbar appears with two actions:
 
-## Robust Text Anchoring
+- **Comment** (`Ctrl` + `Alt` + `M`, or `⌥` + `⌘` + `M` on Mac): leave a note on the passage for yourself or your team. Members can reply to a comment. No AI is involved.
+- **Ask** (`Ctrl` + `Alt` + `A`, or `⌥` + `⌘` + `A` on Mac): ask Klecx a question about the passage.
+  - **Ask now**: the answer starts right away in a column next to the conversation.
+  - **Add to queue**: save the question and keep reading. Open **Questions** in the composer to see your queue, then choose **Ask all** to answer every queued question in one go.
 
-Klecx uses the W3C **TextQuoteSelector** standard behind the scenes. Even if responses are re-rendered or formatted, your highlighted anchor points remain accurately referenced in the conversation log.
+On a touch screen, select the text with a long press and use the same toolbar.
+
+When Klecx answers a side question, it reads only the text that contains your selection, the side question's own thread and your Klecx notes, not the whole workspace. That keeps answers focused and their cost low.
+
+## Columns and Nested Questions
+
+Each side question opens as a column next to the main conversation. You can select text in an answer and ask again, as deep as you like. When the columns no longer fit, older levels fold into narrow strips at the side.
+
+- **Back** (`Esc`) closes the current column.
+- **Main conversation** closes all of them.
+- The path at the top of each column shows where you are; click any level to return to it.
+
+A dot in the margin marks passages with comments or questions. Hover it to preview them and choose **View**. **All annotations** in the top bar lists every comment and question in the workspace.
+
+## Mentions and Klecx Notes
+
+- Type `@` and a name to mention a member. They get a notification, and the comment becomes visible to the whole workspace so they can read it.
+- Type `@klecx` to have Klecx remember a correction, for example *"@klecx we use PostgreSQL, not MongoDB"*. Klecx doesn't answer right away; it takes the note into account in every later answer in this workspace. Manage notes from **Klecx notes** in the workspace header.
+
+## Keeping a Good Answer
+
+A side-question answer can be promoted:
+
+- **Add to timeline** adds it to the main conversation, with a link back to the question it came from.
+- **New workspace** starts a new workspace from it, in a project you choose or standalone.
+
+Text you are editing must be saved before you can comment on it or ask about it.

@@ -1,28 +1,70 @@
 ---
 title: "Credits & Plans"
 category: "billing-account"
-description: "How Klecx credits work, cost transparency, and plan tiers."
-keywords: ["credits", "plans", "pricing", "billing", "token cost", "subscription"]
-version: 1
+description: "How credits work, what things typically cost, daily limits and what each plan includes."
+keywords: ["credits", "plans", "pricing", "cost", "daily limit", "free plan", "subscription"]
+version: 2
 ---
 
 # Credits & Plans
 
-Klecx uses a fair, transparent **credit ledger system**. Unlike flat-rate services that quietly degrade response quality or throttle active users, Klecx ties credits directly to the compute cost of the models you choose.
+Everything Klecx does with AI uses **credits**: answers, side questions, document reviews, images, web searches and voice transcription. Each model option shows its typical cost before you send.
 
-## Plan Tiers
+## How Credits Work
 
-- **Free Tier**: Includes 100 free monthly credits to explore features and test models. Perfect for light questions and occasional tasks.
-- **Pro Plan ($19/month)**: Includes 2,500 credits per billing period, access to Standard models, increased file attachments, and full project collaboration.
-- **Max Plan ($49/month)**: Includes 7,500 credits per billing period, priority model capacity, high-resolution media generation, and dedicated email support.
+- When you send a message, Klecx sets aside enough credits for the answer. When the answer is finished, only what it really used is taken, and the rest is returned.
+- If an answer fails before any text is written, nothing is charged. If you stop an answer, or it fails part-way, only the text already written is charged.
+- In a shared workspace, the **workspace owner's** credits pay for everything, except voice input, which uses the speaker's own credits.
 
-## How Credits are Deducted
+## Typical Costs
 
-Credits are deducted based on actual input and output tokens consumed during generation:
-- **Fast & Efficient**: Costs 1 credit per ~10k tokens. Extremely cost-effective for everyday chat, summarization, and quick code snippets.
-- **Standard Reasoning**: Costs 1 credit per ~2k tokens. Designed for complex logic, multi-step math, and extensive source documents.
-- **Failed Generations**: If a network failure occurs or a generation is interrupted before producing output, reserved credits are immediately released back to your balance.
+| What | Typical cost |
+|---|---|
+| A message with **Fast & Efficient** | ≈ {{credits.fast}} credits |
+| A message with **Standard Reasoning** | ≈ {{credits.standard}} credits |
+| An image (**Create Image**) | ≈ {{credits.image}} credits |
+| Each web search Klecx runs | + {{credits.search}} credits |
 
-## Credit Expiry & Refills
+Long prompts, long answers and large attachments cost more; short ones cost less. A document review shows the most it can cost before you start.
 
-Monthly plan credits refresh at the start of each billing period. Subscription credits do not roll over to subsequent months. If you need extra capacity mid-month, you can top up your balance with non-expiring credit packs from your **Settings → Billing** page.
+## Daily Limits
+
+To protect your balance from a runaway day, each plan has a daily spending cap, and a limit on how many answers can be written at the same time. The daily cap resets at midnight UTC.
+
+| Plan | Daily cap | Answers at once |
+|---|---|---|
+| Free | {{plan.FREE.dailyCap}} credits | {{plan.FREE.concurrent}} |
+| Lite | {{plan.LITE.dailyCap}} credits | {{plan.LITE.concurrent}} |
+| Standard | {{plan.STANDARD.dailyCap}} credits | {{plan.STANDARD.concurrent}} |
+| Pro | {{plan.PRO.dailyCap}} credits | {{plan.PRO.concurrent}} |
+
+## Plans
+
+{{#billing}}
+| | Free | Lite | Standard | Pro |
+|---|---|---|---|---|
+| Price per month | {{plan.FREE.price}} | {{plan.LITE.price}} | {{plan.STANDARD.price}} | {{plan.PRO.price}} |
+| Credits per month | {{plan.FREE.credits}} | {{plan.LITE.credits}} | {{plan.STANDARD.credits}} | {{plan.PRO.credits}} |
+| Models | Fast & Efficient | + Standard Reasoning, images | + Standard Reasoning, images | + Standard Reasoning, images |
+| People you can invite | {{plan.FREE.members}} | {{plan.LITE.members}} | {{plan.STANDARD.members}} | {{plan.PRO.members}} |
+| Attachments per workspace | {{plan.FREE.attachments}} ({{plan.FREE.maxFileMB}} MB each) | {{plan.LITE.attachments}} ({{plan.LITE.maxFileMB}} MB each) | {{plan.STANDARD.attachments}} ({{plan.STANDARD.maxFileMB}} MB each) | {{plan.PRO.attachments}} ({{plan.PRO.maxFileMB}} MB each) |
+| Downloads | Markdown | Markdown, PDF, Word | Markdown, PDF, Word | Markdown, PDF, Word |
+
+Plan credits are renewed at the start of each billing period. Unused credits don't carry over to the next period, and extra credits can't be bought separately. See [Billing & Cancellation](/help/billing-and-cancellation).
+{{/billing}}
+{{^billing}}
+Every account starts on the **Free** plan with {{plan.FREE.credits}} credits:
+
+| | Free |
+|---|---|
+| Models | Fast & Efficient |
+| Web search | Included |
+| Attachments per workspace | {{plan.FREE.attachments}} ({{plan.FREE.maxFileMB}} MB each) |
+| Downloads | Markdown |
+
+Paid plans (Lite, Standard and Pro) are launching soon. They add more credits, the Standard Reasoning model, image creation, PDF and Word downloads, and collaboration. See the [pricing page](/pricing) for what each plan will include.
+{{/billing}}
+
+## Running Out of Credits
+
+When the balance is too low for an answer, Klecx tells you before sending and nothing is charged. Switch to **Fast & Efficient** to use fewer credits. In someone else's workspace, the message says when the **owner** is out of credits, or when you have reached the monthly limit the owner set for you.

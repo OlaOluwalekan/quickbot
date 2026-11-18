@@ -1,0 +1,44 @@
+---
+title: "Documents de l'espace de travail"
+category: "features-workflows"
+description: "Ajoutez des documents à un espace de travail, demandez à Klecx de les réviser, acceptez les corrections et téléchargez le résultat."
+keywords: ["documents", "importer", "révision", "correction rapide", "docx", "markdown", "csv", "télécharger"]
+sourceVersion: 1
+---
+
+# Documents de l'espace de travail
+
+Un document de l'espace de travail est un fichier sur lequel vous travaillez avec Klecx : Klecx le lit avec chaque message, vous pouvez le commenter et poser des questions dessus, demander à Klecx de le réviser, le corriger et télécharger la version corrigée.
+
+## Ajouter un document
+
+Déposez un fichier sur le compositeur, ou joignez-le, et choisissez **Ajouter à l'espace de travail comme document**. Choisissez plutôt **Joindre au message** si vous voulez seulement que Klecx le lise pour un message.
+
+- **Types de fichiers** : Markdown, texte brut, Word (`.docx`) et CSV. Un PDF peut être joint à un message mais pas ajouté comme document, car seul son texte peut être lu et il ne peut pas être retéléchargé sous forme de PDF corrigé.
+- **Jusqu'à {{documents.max}} documents par espace de travail.** Chacun est envoyé avec chaque message ; la limite garde les réponses rapides et leur coût prévisible.
+- Klecx conserve le texte du document pour la lecture, le surlignage et les modifications, et garde le fichier d'origine pour le téléchargement.
+
+## Demander à Klecx de réviser
+
+Choisissez **Demander à Klecx de réviser** sur le document. Choisissez un angle ou décrivez ce qu'il faut chercher, et qui voit les commentaires. Klecx lit le texte enregistré et laisse des commentaires sur des passages précis, soulignés d'une vague. Le panneau indique le coût maximal de la révision avant de commencer, et les crédits du propriétaire de l'espace sont utilisés une seule fois pour toute la révision.
+
+## Accepter les corrections
+
+Beaucoup de commentaires de révision proposent une modification :
+
+1. Survolez un passage souligné pour voir le problème et la modification (avant → après).
+2. Choisissez **Accepter** ou **Ignorer** pour cette modification, ou **Accepter toutes les corrections** sur le document pour les appliquer toutes en une fois.
+3. Accepter modifie votre brouillon non enregistré. Choisissez **Enregistrer** pour garder les modifications ; d'ici là, vous pouvez encore les abandonner.
+
+Si le passage a changé entre-temps, la correction ne peut plus être appliquée et Klecx l'indique. Tant qu'un document a des modifications non enregistrées, vous ne pouvez pas y ajouter de commentaires ni de questions ; enregistrez d'abord.
+
+## Modifier et télécharger
+
+Choisissez **Modifier** pour changer le texte vous-même, puis **Enregistrer**. **Télécharger** propose :
+
+- **Fichier d'origine** : le fichier tel qu'il a été importé.
+- **Version modifiée** : le texte enregistré en Markdown, PDF ou Word, selon le forfait du propriétaire de l'espace (voir [Exporter](/help/exporting)).
+
+## Documents générés
+
+Quand vous demandez à Klecx de rédiger un document (un plan, une lettre, un rapport), il s'ouvre dans un panneau à côté de la conversation. Vous pouvez le modifier, le commenter, poser des questions dessus et le télécharger comme n'importe quel document.

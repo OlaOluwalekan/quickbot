@@ -1,36 +1,44 @@
 ---
 title: "Workspaces vs Projects"
 category: "getting-started"
-description: "Understand the hierarchy between Workspaces and Projects and how to structure your work."
-keywords: ["workspace", "project", "organization", "hierarchy", "structure"]
-version: 1
+description: "How workspaces and projects fit together, and when to use each."
+keywords: ["workspace", "project", "organization", "structure", "project page"]
+version: 2
 ---
 
 # Workspaces vs Projects
 
-Klecx uses a two-level organizational structure designed to help you stay focused without drowning in infinite sidebar lists: **Workspaces** and **Projects**.
+Klecx has two levels of organization: **workspaces** hold the work, and **projects** group related workspaces.
 
 ## What is a Workspace?
 
-A **Workspace** is an active conversation thread and thinking canvas. Each workspace has:
-- A specific focus or topic.
-- A linear progression of prompts and responses with version branches.
-- Dedicated context memory that is sent to the AI model during generations.
-- Independent privacy and sharing controls.
+A workspace is one conversation about one topic. It holds:
 
-You can think of a workspace as an open notebook dedicated to solving one task.
+- Your prompts and Klecx's answers, with every version of each answer.
+- Comments and side questions on passages of those answers.
+- Up to {{documents.max}} workspace documents, which Klecx reads with every prompt.
+- Klecx notes: corrections you asked Klecx to remember in this workspace.
+- Its own members and public links.
+
+Workspaces don't have to belong to a project. Start one for a quick question and move it into a project later.
 
 ## What is a Project?
 
-A **Project** is a collection or container of related Workspaces. For example:
-- **Project: Website Redesign 2026** contains workspaces like *Copywriting*, *Brand Palette Discussion*, and *SEO Strategy*.
-- **Project: Python Backend** contains *API Architecture*, *Database Schema*, and *Performance Tuning*.
+A project is a folder for related workspaces, for example:
 
-## When to Create a New Project
+- **Café Launch**: *Menu pricing*, *Opening week plan*, *Supplier emails*.
+- **Biology Exam Prep**: *Cell biology*, *Genetics*, *Revision schedule*.
 
-Create a Project when:
-1. You are starting a long-term goal that requires multiple independent conversations.
-2. You want to share an entire cluster of workspaces with a specific team or client.
-3. You want to keep your sidebar tidy by collapsing completed work.
+Click a project in the sidebar to open its page. It lists all of its workspaces, and you can create a new workspace in the project from there.
 
-Workspaces can also live in your **Default Workspaces** root without belonging to any project, giving you the flexibility to take quick scratch notes whenever inspiration strikes.
+## People and Permissions
+
+You can invite people to a single workspace or to a whole project. Someone invited to a project gets the same role in every workspace of that project. A workspace can give a person more rights than the project does, never fewer. See [Collaboration & Roles](/help/collaboration-roles).
+
+## When to Create a Project
+
+Create a project when:
+
+1. A goal needs several separate conversations.
+2. You want to give the same people access to a group of workspaces at once.
+3. You want to keep your sidebar tidy.
