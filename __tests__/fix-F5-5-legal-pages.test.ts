@@ -95,7 +95,7 @@ describe("F5.5 — legal pages", () => {
     expect(privacyEn).toMatch(/90 days/);
     for (const l of Object.keys(LOCALES) as (keyof typeof LOCALES)[]) {
       const names = (legal(l).privacy as { processors: { name: string }[] }).processors.map((p) => p.name);
-      expect(names).toEqual(expect.arrayContaining(["Google (Gemini API)", "Cloudinary", "Resend", "Creem"]));
+      expect(names).toEqual(expect.arrayContaining(["Google (Gemini API)", "Vercel", "Prisma (Prisma Postgres)", "Upstash", "Cloudinary", "Resend", "Creem"]));
     }
   });
 

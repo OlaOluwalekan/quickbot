@@ -1497,6 +1497,10 @@
           "purpose": "Hébergement du site web et de l'application."
         },
         {
+          "name": "Prisma (Prisma Postgres)",
+          "purpose": "Hébergement de la base de données où sont enregistrés votre compte et votre contenu."
+        },
+        {
           "name": "Upstash",
           "purpose": "Limites d'utilisation et données techniques de courte durée."
         },

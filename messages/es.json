@@ -1497,6 +1497,10 @@
           "purpose": "Alojamiento del sitio web y de la aplicación."
         },
         {
+          "name": "Prisma (Prisma Postgres)",
+          "purpose": "Alojamiento de la base de datos donde se guardan tu cuenta y tu contenido."
+        },
+        {
           "name": "Upstash",
           "purpose": "Límites de uso y datos técnicos de corta duración."
         },

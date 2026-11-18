@@ -1497,6 +1497,10 @@
           "purpose": "Hosting of the website and application."
         },
         {
+          "name": "Prisma (Prisma Postgres)",
+          "purpose": "Hosting of the database that stores your account and your content."
+        },
+        {
           "name": "Upstash",
           "purpose": "Rate limiting and short-lived technical data."
         },
