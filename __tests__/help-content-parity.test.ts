@@ -15,8 +15,8 @@ describe("Help Content Parity & Internationalization", () => {
     .readdirSync(enDir)
     .filter((f) => f.endsWith(".mdx") || f.endsWith(".md"));
 
-  it("has exactly 12 source English articles", () => {
-    expect(enFiles.length).toBe(12);
+  it("has exactly 14 source English articles", () => {
+    expect(enFiles.length).toBe(14);
   });
 
   it("has matching files in French and Spanish for all English articles", () => {

@@ -1,29 +1,37 @@
 ---
 title: "Account & Security"
 category: "billing-account"
-description: "Manage your credentials, active login sessions, and data protection settings."
-keywords: ["security", "password", "sessions", "2fa", "privacy", "revoke"]
-version: 1
+description: "Passwords, signed-in devices, sign-in alerts, and deleting your data."
+keywords: ["security", "password", "sessions", "devices", "sign-in alert", "account deletion", "privacy"]
+version: 2
 ---
 
 # Account & Security
 
-Protecting your conversations and account access is foundational to Klecx.
+## Signing In and Passwords
 
-## Password & Reset Protocol
+- You can sign in with an email address and password, or with one of the other accounts offered on the sign-in page.
+- Passwords must be at least 10 characters long. A longer passphrase is the safest choice.
+- To change a forgotten password, choose **Forgot password?** on the sign-in page and follow the link in the email. Resetting your password signs you out on every other device.
+- Password reset emails are limited to 3 requests per hour.
 
-- **Strong Password Requirement**: Klecx requires passwords to be at least 10 characters long, containing a combination of uppercase letters, lowercase letters, numbers, and symbols.
-- **Session Revocation on Reset**: Whenever you successfully reset your password via email recovery, **all other active sessions across all devices are immediately revoked** to protect you against unauthorized access.
+Your email address can't be changed from Settings. Your username can be chosen once and then stays the same.
 
-## Active Sessions
+## Sessions & Devices
 
-In **Settings → Sessions**, you can review every browser and device currently connected to your account:
-- Device type, operating system, and browser name.
-- Approximate IP address and geographic location.
-- Last active timestamp.
-- **Log out other sessions**: Terminate all remote sessions with one click while staying logged in on your current device.
+**Settings → Sessions & Devices** lists every device signed in to your account, with:
 
-## Data Retention & Deletion
+- The browser and operating system.
+- A partly hidden IP address and the country, when known.
+- When it was last active.
 
-- **Soft-Deleted Conversations**: When you delete a workspace, it is placed in your trash bin for 30 days, after which all database records and attached assets are permanently erased.
-- **Complete Account Deletion**: You can request full account deletion from **Settings → Profile**. All personal information, attachments in Cloudinary, credit records, and workspaces will be purged in compliance with GDPR and CCPA standards.
+You can sign out a single device, or all other devices at once. Signing out all other devices asks for your password if you haven't signed in recently.
+
+## Sign-in Alerts
+
+When your account is used from a new browser, operating system or country, Klecx sends you a notification and an email. If it wasn't you, sign out that device in **Sessions & Devices** and reset your password. You can change which alerts you receive in **Settings → Notifications**.
+
+## Deleting Your Data
+
+- **Workspaces**: archive a workspace to hide it, or delete it. Deleting asks you to confirm and can't be undone.
+- **Your account**: account deletion isn't available in Settings yet. To delete your account or to get a copy of your data, write to %%PRIVACY_EMAIL%% from the email address of your account.

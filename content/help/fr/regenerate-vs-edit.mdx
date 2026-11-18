@@ -1,31 +1,31 @@
 ---
-title: "Régénérer vs Modifier"
+title: "Régénérer ou modifier"
 category: "features-workflows"
-description: "Découvrez la différence entre régénérer une nouvelle réponse d'IA et modifier une réponse existante."
-keywords: ["régénérer", "modifier", "versions", "branches", "carte de réponse"]
-sourceVersion: 1
+description: "Quand demander une nouvelle version d'une réponse, et quand la corriger vous-même."
+keywords: ["régénérer", "modifier", "versions", "original", "carte de réponse"]
+sourceVersion: 2
 ---
 
-# Régénérer vs Modifier
+# Régénérer ou modifier
 
-Lorsqu'une réponse d'IA ne convient pas parfaitement ou que vous souhaitez explorer une formulation différente, Klecx propose deux méthodes complémentaires : la **Régénération** et la **Modification en ligne**.
+Quand une réponse ne convient pas tout à fait, vous pouvez demander à Klecx une nouvelle version (**Régénérer**) ou la corriger vous-même (**Modifier**). Aucune des deux ne supprime quoi que ce soit.
 
 ## 1. Régénérer une réponse
 
-Cliquer sur le bouton **Régénérer** au bas d'une carte de réponse déclenche une nouvelle génération complète par le modèle d'IA tout en conservant le prompt d'origine et le contexte.
+**Régénérer**, en bas d'une réponse, demande une nouvelle réponse au même message. Cela utilise des crédits comme un nouveau message.
 
-- **Gestion non destructive des versions** : Klecx ne supprime jamais vos générations antérieures. Lorsque vous régénérez, un indicateur de version s'affiche (par exemple, `2 / 2`).
-- **Navigation entre versions** : Utilisez les boutons `Préc` et `Suiv` (ou les flèches du clavier `←` et `→`) pour passer d'une version à l'autre en toute fluidité.
-- **Changement de modèle** : Vous pouvez sélectionner un modèle différent (passer de Économique à Standard) lors de la régénération pour comparer les résultats côte à côte.
+- **Toutes les versions sont conservées** : un compteur comme `2 / 2` indique la version que vous lisez.
+- **Changer de version** : utilisez les flèches à côté du compteur, ou les touches `←` et `→` quand le compteur a le focus.
+- La nouvelle version est écrite avec le modèle **Rapide et Efficace**.
 
-## 2. Modifier une réponse existante
+## 2. Modifier une réponse
 
-Parfois, l'IA répond correctement à 95 %, mais un léger ajustement ou un extrait de code personnalisé est nécessaire. Plutôt que de dépenser des crédits pour une régénération complète, cliquez sur **Modifier la réponse**.
+Si une réponse est presque juste, cliquez sur **Modifier** et corrigez-la vous-même. Modifier n'utilise pas de crédits.
 
-- **Éditeur Markdown intégré** : Modifiez le texte directement avec un aperçu en temps réel.
-- **Historique d'audit** : Les réponses modifiées affichent un badge « Modifié » pour informer votre équipe des révisions effectuées.
-- **Afficher l'original** : Vous pouvez basculer entre vos modifications personnalisées et le texte brut d'origine de l'IA à tout moment.
+- **Éditeur et aperçu** : changez le texte dans l'éditeur et vérifiez le résultat dans l'aperçu.
+- **Mention « modifiée »** : les réponses modifiées sont signalées, pour que les autres sachent que le texte a changé.
+- **Voir l'original** : passez à tout moment de votre texte modifié à la réponse d'origine, ou choisissez **Revenir à l'original**.
 
-## 3. Modifier les prompts précédents
+Les exports et les liens publics peuvent afficher le texte modifié ou l'original (voir [Exporter](/help/exporting) et [Partager](/help/sharing)).
 
-Si vous désirez corriger ce que vous avez demandé plus haut dans le fil de discussion, vous pouvez éditer votre prompt initial. Klecx crée alors une nouvelle branche de conversation à partir de ce point, vous permettant d'explorer des pistes alternatives sans perdre la branche précédente.
+Un message ne peut plus être modifié une fois envoyé. Pour demander autrement, envoyez un nouveau message, ou créez un nouvel espace de travail à partir d'une question annexe.

@@ -1,28 +1,70 @@
 ---
 title: "Crédits et forfaits"
 category: "billing-account"
-description: "Comment fonctionnent les crédits Klecx, la transparence des coûts et les différents forfaits."
-keywords: ["crédits", "forfaits", "tarification", "facturation", "coût des jetons", "abonnement"]
-sourceVersion: 1
+description: "Fonctionnement des crédits, coûts habituels, limites quotidiennes et contenu de chaque forfait."
+keywords: ["crédits", "forfaits", "tarifs", "coût", "limite quotidienne", "forfait gratuit", "abonnement"]
+sourceVersion: 2
 ---
 
 # Crédits et forfaits
 
-Klecx s'appuie sur un système de **registre de crédits** équitable et transparent. Contrairement aux services à prix fixe qui dégradent discrètement la qualité des réponses ou limitent les utilisateurs actifs, Klecx relie directement les crédits au coût de calcul réel des modèles que vous choisissez.
+Tout ce que Klecx fait avec l'IA utilise des **crédits** : réponses, questions annexes, révisions de documents, images, recherches web et transcription vocale. Chaque option de modèle affiche son coût habituel avant l'envoi.
 
-## Niveaux de forfaits
+## Fonctionnement des crédits
 
-- **Forfait Gratuit** : Comprend 100 crédits mensuels gratuits pour découvrir les fonctionnalités et tester les modèles. Idéal pour des questions légères et un usage occasionnel.
-- **Forfait Pro (19 $/mois)** : Comprend 2 500 crédits par cycle de facturation, l'accès aux modèles Standard, une capacité accrue pour les pièces jointes et la collaboration complète sur les projets.
-- **Forfait Max (49 $/mois)** : Comprend 7 500 crédits par cycle de facturation, une priorité de calcul sur les modèles, la génération de médias en haute résolution et une assistance dédiée par e-mail.
+- Quand vous envoyez un message, Klecx met de côté assez de crédits pour la réponse. Une fois la réponse terminée, seul ce qui a vraiment été utilisé est prélevé, et le reste est rendu.
+- Si une réponse échoue avant d'écrire du texte, rien n'est facturé. Si vous arrêtez une réponse, ou si elle échoue en cours de route, seul le texte déjà écrit est facturé.
+- Dans un espace partagé, les crédits du **propriétaire de l'espace** paient tout, sauf la saisie vocale, qui utilise les crédits de la personne qui parle.
 
-## Comment les crédits sont débités
+## Coûts habituels
 
-Les crédits sont déduits sur la base des jetons réels consommés en entrée et en sortie lors de la génération :
-- **Rapide et Efficace** : Coûtent 1 crédit pour environ 10 000 jetons. Particulièrement avantageux pour les échanges quotidiens, les synthèses et les courts extraits de code.
-- **Raisonnement Standard** : Coûtent 1 crédit pour environ 2 000 jetons. Conçus pour les raisonnements complexes, les calculs en plusieurs étapes et les documents sources volumineux.
-- **Générations échouées** : En cas de coupure réseau ou d'interruption avant la production d'un résultat, les crédits réservés sont immédiatement recrédités sur votre solde.
+| Quoi | Coût habituel |
+|---|---|
+| Un message avec **Rapide et Efficace** | ≈ {{credits.fast}} crédits |
+| Un message avec **Raisonnement Standard** | ≈ {{credits.standard}} crédits |
+| Une image (**Créer une image**) | ≈ {{credits.image}} crédits |
+| Chaque recherche web effectuée par Klecx | + {{credits.search}} crédits |
 
-## Expiration et recharges de crédits
+Les messages longs, les réponses longues et les pièces jointes volumineuses coûtent plus ; les courts, moins. Une révision de document affiche son coût maximal avant de commencer.
 
-Les crédits mensuels inclus se renouvellent au début de chaque période de facturation. Les crédits d'abonnement ne sont pas reportés d'un mois sur l'autre. Si vous avez besoin de crédits supplémentaires en cours de mois, vous pouvez recharger votre solde avec des packs de crédits sans date d'expiration depuis votre page **Paramètres → Facturation**.
+## Limites quotidiennes
+
+Pour protéger votre solde d'une journée qui s'emballe, chaque forfait a un plafond de dépense quotidien et une limite du nombre de réponses écrites en même temps. Le plafond quotidien est remis à zéro à minuit UTC.
+
+| Forfait | Plafond quotidien | Réponses simultanées |
+|---|---|---|
+| Free | {{plan.FREE.dailyCap}} crédits | {{plan.FREE.concurrent}} |
+| Lite | {{plan.LITE.dailyCap}} crédits | {{plan.LITE.concurrent}} |
+| Standard | {{plan.STANDARD.dailyCap}} crédits | {{plan.STANDARD.concurrent}} |
+| Pro | {{plan.PRO.dailyCap}} crédits | {{plan.PRO.concurrent}} |
+
+## Forfaits
+
+{{#billing}}
+| | Free | Lite | Standard | Pro |
+|---|---|---|---|---|
+| Prix par mois | {{plan.FREE.price}} | {{plan.LITE.price}} | {{plan.STANDARD.price}} | {{plan.PRO.price}} |
+| Crédits par mois | {{plan.FREE.credits}} | {{plan.LITE.credits}} | {{plan.STANDARD.credits}} | {{plan.PRO.credits}} |
+| Modèles | Rapide et Efficace | + Raisonnement Standard, images | + Raisonnement Standard, images | + Raisonnement Standard, images |
+| Personnes que vous pouvez inviter | {{plan.FREE.members}} | {{plan.LITE.members}} | {{plan.STANDARD.members}} | {{plan.PRO.members}} |
+| Pièces jointes par espace | {{plan.FREE.attachments}} ({{plan.FREE.maxFileMB}} Mo chacune) | {{plan.LITE.attachments}} ({{plan.LITE.maxFileMB}} Mo chacune) | {{plan.STANDARD.attachments}} ({{plan.STANDARD.maxFileMB}} Mo chacune) | {{plan.PRO.attachments}} ({{plan.PRO.maxFileMB}} Mo chacune) |
+| Téléchargements | Markdown | Markdown, PDF, Word | Markdown, PDF, Word | Markdown, PDF, Word |
+
+Les crédits du forfait sont renouvelés au début de chaque période de facturation. Les crédits non utilisés ne sont pas reportés, et il n'est pas possible d'acheter des crédits à l'unité. Voir [Facturation et résiliation](/help/billing-and-cancellation).
+{{/billing}}
+{{^billing}}
+Chaque compte démarre avec le forfait **Free** et {{plan.FREE.credits}} crédits :
+
+| | Free |
+|---|---|
+| Modèles | Rapide et Efficace |
+| Recherche web | Incluse |
+| Pièces jointes par espace | {{plan.FREE.attachments}} ({{plan.FREE.maxFileMB}} Mo chacune) |
+| Téléchargements | Markdown |
+
+Les forfaits payants (Lite, Standard et Pro) arrivent bientôt. Ils ajoutent plus de crédits, le modèle Raisonnement Standard, la création d'images, les téléchargements PDF et Word, et la collaboration. Consultez la [page des tarifs](/pricing) pour voir ce que comprendra chaque forfait.
+{{/billing}}
+
+## Quand les crédits sont épuisés
+
+Quand le solde ne suffit pas pour une réponse, Klecx vous prévient avant l'envoi et rien n'est facturé. Passez à **Rapide et Efficace** pour utiliser moins de crédits. Dans l'espace de quelqu'un d'autre, le message indique si le **propriétaire** n'a plus de crédits, ou si vous avez atteint la limite mensuelle que le propriétaire a fixée pour vous.

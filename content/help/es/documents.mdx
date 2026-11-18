@@ -1,0 +1,44 @@
+---
+title: "Documentos del espacio de trabajo"
+category: "features-workflows"
+description: "Añade documentos a un espacio de trabajo, pide a Klecx que los revise, acepta correcciones y descarga el resultado."
+keywords: ["documentos", "subir", "revisión", "corrección rápida", "docx", "markdown", "csv", "descargar"]
+sourceVersion: 1
+---
+
+# Documentos del espacio de trabajo
+
+Un documento del espacio de trabajo es un archivo en el que trabajas junto con Klecx: Klecx lo lee con cada mensaje, puedes comentarlo y preguntar sobre él, pedir a Klecx que lo revise, corregirlo y descargar la versión corregida.
+
+## Añadir un documento
+
+Suelta un archivo en el compositor, o adjúntalo, y elige **Añadir al espacio de trabajo como documento**. Elige **Adjuntar al mensaje** si solo quieres que Klecx lo lea para un mensaje.
+
+- **Tipos de archivo**: Markdown, texto sin formato, Word (`.docx`) y CSV. Un PDF se puede adjuntar a un mensaje pero no añadir como documento, porque solo se puede leer su texto y no se puede volver a descargar como PDF corregido.
+- **Hasta {{documents.max}} documentos por espacio de trabajo.** Cada uno se envía con cada mensaje, así que el límite mantiene las respuestas rápidas y su coste previsible.
+- Klecx guarda el texto del documento para leerlo, resaltarlo y editarlo, y conserva el archivo original para descargarlo.
+
+## Pedir a Klecx que revise
+
+Elige **Pedir a Klecx que revise** en el documento. Escoge un enfoque o describe qué buscar, y elige quién ve los comentarios. Klecx lee el texto guardado y deja comentarios sobre pasajes exactos, marcados con un subrayado ondulado. El panel muestra el coste máximo de la revisión antes de empezar, y los créditos del propietario del espacio se usan una sola vez para toda la revisión.
+
+## Aceptar correcciones
+
+Muchos comentarios de la revisión incluyen un cambio sugerido:
+
+1. Pasa el cursor sobre un pasaje subrayado para ver qué falla y el cambio (antes → después).
+2. Elige **Aceptar** o **Descartar** para ese cambio, o **Aceptar todas las correcciones** en el documento para aplicar todas las pendientes de una vez.
+3. Aceptar cambia tu borrador sin guardar. Elige **Guardar** para conservar los cambios; hasta entonces aún puedes descartarlos.
+
+Si el pasaje cambió mientras tanto, la corrección ya no se puede aplicar y Klecx lo indica. Mientras un documento tiene cambios sin guardar no puedes añadirle comentarios ni preguntas; guarda primero.
+
+## Editar y descargar
+
+Elige **Editar** para cambiar el texto tú mismo y luego **Guardar**. **Descargar** ofrece:
+
+- **Archivo original**: el archivo tal como se subió.
+- **Versión editada**: el texto guardado en Markdown, PDF o Word, según el plan del propietario del espacio (consulta [Exportar](/help/exporting)).
+
+## Documentos generados
+
+Cuando pides a Klecx que escriba un documento (un plan, una carta, un informe), se abre en un panel junto a la conversación. Puedes editarlo, comentarlo, preguntar sobre él y descargarlo como cualquier otro documento.

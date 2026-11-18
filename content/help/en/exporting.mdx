@@ -1,29 +1,34 @@
 ---
-title: "Exporting Workspaces"
+title: "Exporting"
 category: "features-workflows"
-description: "Export conversations to Markdown, PDF, or JSON for archival and reporting."
-keywords: ["export", "download", "markdown", "pdf", "json", "backup"]
-version: 1
+description: "Download answers and documents as Markdown, PDF or Word."
+keywords: ["export", "download", "markdown", "pdf", "word", "docx"]
+version: 2
 ---
 
-# Exporting Workspaces
+# Exporting
 
-Your research and writing in Klecx belong to you. We provide several clean export formats so you can move your work into knowledge bases, documentation repositories, or client presentations.
+You can download answers and documents to use them elsewhere.
 
-## Available Export Formats
+## Formats
 
-1. **Markdown (`.md`)**:
-   - Preserves all headers, lists, syntax-highlighted code fences, KaTeX mathematical formulas, and blockquotes.
-   - Ideal for pasting into Obsidian, Notion, GitHub wikis, or static site generators.
+1. **Markdown (`.md`)**, on every plan. Keeps headings, lists, tables, code blocks and formulas. Works well in note-taking apps and documentation tools.
+2. **PDF (`.pdf`)**, on paid plans. A formatted document, ready to send or print.
+3. **Word (`.docx`)**, on paid plans. An editable document.
 
-2. **Portable Document Format (`.pdf`)**:
-   - Generates a styled, print-ready document featuring your active response versions, formatted tables, and diagrams.
-   - Perfect for formal client deliverables and executive summaries.
+In a shared workspace, downloading needs the Editor role or above, and the formats you can use follow the **workspace owner's** plan. A format that isn't included is greyed out with an explanation.
 
-3. **Structured Data (`.json`)**:
-   - Full serialization of your workspace turns, version branches, timestamps, model parameters, and thinking stage logs.
-   - Ideal for programmatic archival, automated workflows, and personal data backups.
+## Downloading an Answer
 
-## How to Export
+Open **Export** at the bottom of an answer and choose a format. You get the version you are currently viewing: the edited text, or the original if you switched to it.
 
-Click the **... (More Options)** menu in the upper-right corner of any workspace and choose **Export Workspace**, then select your desired format.
+## Downloading a Document
+
+Open **Download** on a document:
+
+- **Original file**: the file exactly as it was uploaded.
+- **Edited version**: the saved text, as Markdown, PDF or Word. Unsaved changes are not included; save first.
+
+Generated documents (documents Klecx writes for you) download the same way. See [Workspace documents](/help/documents).
+
+Downloads are limited to a number per day, which depends on the plan.

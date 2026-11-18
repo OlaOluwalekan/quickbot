@@ -134,3 +134,20 @@ Known gap: the credit hold before an answer covers the base cost only (decided 2
 | C | Switch, stateful mode | The provider keeps the conversation; smaller requests, but user content is stored with the provider (privacy policy update needed) and Klecx's own history becomes a second copy. |
 
 **If nothing is decided:** stays at A until after launch, then B.
+
+## 6. Which model "Regenerate" uses
+
+**The situation.** Found in F5.7 (help center). The **Regenerate** button on an answer sends no model, and the server defaults to `text-economy` (`regenerateResponseSchema` in `lib/schemas/response.ts`). So regenerating an answer written with **Standard Reasoning** produces a **Fast & Efficient** version, even on a plan that includes Standard. There is no model choice in the regenerate control.
+
+**Today.** Every regenerated version uses Fast & Efficient. The help article `regenerate-vs-edit` says so.
+
+**Options.**
+
+| | Option | Effect |
+|---|---|---|
+| A | Same model as the version being regenerated (recommended) | "Give me another take" keeps the quality the person chose. Falls back to Fast & Efficient if the owner's plan no longer includes that model. |
+| B | The model currently selected in the composer | One place to choose the model; regenerating can switch model on purpose. Needs the composer selection passed to the response card. |
+| C | A model menu on the Regenerate button | Most flexible; shows each model's typical cost, gated by plan with `<Gated>`. More UI. |
+| D | Keep Fast & Efficient (today) | Cheapest for the owner, but silently lowers quality. |
+
+**If nothing is decided:** stays at D. When it changes, update the help article (`regenerate-vs-edit`, all three locales).
