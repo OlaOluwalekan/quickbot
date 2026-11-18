@@ -1,29 +1,37 @@
 ---
 title: "Compte et sécurité"
 category: "billing-account"
-description: "Gérez vos identifiants, vos sessions actives de connexion et vos paramètres de protection des données."
-keywords: ["sécurité", "mot de passe", "sessions", "2fa", "confidentialité", "révoquer"]
-sourceVersion: 1
+description: "Mots de passe, appareils connectés, alertes de connexion et suppression de vos données."
+keywords: ["sécurité", "mot de passe", "sessions", "appareils", "alerte de connexion", "suppression du compte", "confidentialité"]
+sourceVersion: 2
 ---
 
 # Compte et sécurité
 
-La protection de vos conversations et de l'accès à votre compte est un principe fondamental chez Klecx.
+## Connexion et mots de passe
 
-## Protocole de mot de passe et réinitialisation
+- Vous pouvez vous connecter avec une adresse e-mail et un mot de passe, ou avec l'un des autres comptes proposés sur la page de connexion.
+- Les mots de passe doivent contenir au moins 10 caractères. Une longue phrase de passe est le choix le plus sûr.
+- En cas d'oubli, choisissez **Mot de passe oublié ?** sur la page de connexion et suivez le lien reçu par e-mail. Réinitialiser votre mot de passe vous déconnecte de tous les autres appareils.
+- Les e-mails de réinitialisation sont limités à 3 demandes par heure.
 
-- **Exigence de mot de passe robuste** : Klecx exige des mots de passe d'au moins 10 caractères, comportant une combinaison de majuscules, minuscules, chiffres et symboles.
-- **Révocation des sessions lors d'une réinitialisation** : Chaque fois que vous réinitialisez avec succès votre mot de passe par e-mail, **toutes les autres sessions actives sur tous vos appareils sont immédiatement révoquées** afin de prévenir tout accès non autorisé.
+Votre adresse e-mail ne peut pas être modifiée depuis les Paramètres. Votre nom d'utilisateur se choisit une fois et ne change plus ensuite.
 
-## Sessions actives
+## Sessions et appareils
 
-Dans **Paramètres → Sessions**, vous pouvez consulter l'ensemble des navigateurs et appareils actuellement connectés à votre compte :
-- Type d'appareil, système d'exploitation et navigateur.
-- Adresse IP approximative et localisation géographique.
-- Horodatage de dernière activité.
-- **Déconnecter les autres sessions** : Mettez fin à toutes les sessions distantes d'un simple clic tout en restant connecté sur votre appareil actuel.
+**Paramètres → Sessions et appareils** liste tous les appareils connectés à votre compte, avec :
 
-## Rétention et suppression des données
+- Le navigateur et le système d'exploitation.
+- Une adresse IP partiellement masquée et le pays, quand il est connu.
+- La dernière activité.
 
-- **Espaces supprimés temporairement** : Lorsque vous supprimez un espace de travail, celui-ci est placé dans la corbeille pendant 30 jours, après quoi tous les enregistrements en base de données et pièces jointes sont définitivement purgés.
-- **Suppression définitive du compte** : Vous pouvez demander la suppression intégrale de votre compte depuis **Paramètres → Profil**. Toutes les informations personnelles, fichiers Cloudinary, historiques de crédits et espaces de travail seront supprimés conformément aux exigences du RGPD et du CCPA.
+Vous pouvez déconnecter un seul appareil, ou tous les autres à la fois. Déconnecter tous les autres appareils demande votre mot de passe si vous ne vous êtes pas connecté récemment.
+
+## Alertes de connexion
+
+Quand votre compte est utilisé depuis un nouveau navigateur, système d'exploitation ou pays, Klecx vous envoie une notification et un e-mail. Si ce n'était pas vous, déconnectez cet appareil dans **Sessions et appareils** et réinitialisez votre mot de passe. Vous pouvez choisir les alertes que vous recevez dans **Paramètres → Notifications**.
+
+## Supprimer vos données
+
+- **Espaces de travail** : archivez un espace pour le masquer, ou supprimez-le. La suppression demande une confirmation et ne peut pas être annulée.
+- **Votre compte** : la suppression du compte n'est pas encore disponible dans les Paramètres. Pour supprimer votre compte ou obtenir une copie de vos données, écrivez à %%PRIVACY_EMAIL%% depuis l'adresse e-mail de votre compte.

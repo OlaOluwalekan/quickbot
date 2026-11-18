@@ -1,32 +1,46 @@
 ---
 title: "Collaboration & Roles"
 category: "collaboration-sharing"
-description: "Understand team permissions: Owner, Admin, Editor, Commenter, and Viewer roles."
-keywords: ["roles", "collaboration", "permissions", "team", "invites", "admin"]
-version: 1
+description: "Invite people, understand roles and permissions, and who pays for what in a shared workspace."
+keywords: ["roles", "collaboration", "permissions", "team", "invite", "admin", "owner", "transfer"]
+version: 2
 ---
 
 # Collaboration & Roles
 
-When working together in Projects or Workspaces, Klecx provides role-based access control (RBAC) to ensure everyone has the exact permissions they need without risking unintended changes.
+You can invite people to a workspace or to a whole project and choose what each person can do.
 
-## Role Breakdown
+## Roles
 
-| Role | Can View | Can Comment | Can Prompt (Generate) | Can Manage Members | Billing Owner |
-|---|:---:|:---:|:---:|:---:|:---:|
-| **Viewer** | ✅ | ❌ | ❌ | ❌ | ❌ |
-| **Commenter** | ✅ | ✅ | ❌ | ❌ | ❌ |
-| **Editor** | ✅ | ✅ | ✅ | ❌ | ❌ |
-| **Admin** | ✅ | ✅ | ✅ | ✅ | ❌ |
-| **Owner** | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Action | Viewer | Commenter | Editor | Admin | Owner |
+|---|:-:|:-:|:-:|:-:|:-:|
+| Read the workspace, its documents and shared comments | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Comment, reply and @mention people | ⚙️ off | ⚙️ on | ⚙️ on | ✅ | ✅ |
+| Ask Klecx about passages, run the queue, record Klecx notes, request reviews | ⚙️ off | ⚙️ off | ⚙️ on | ✅ | ✅ |
+| Send prompts and regenerate answers | ❌ | ❌ | ✅ | ✅ | ✅ |
+| Edit answers and documents, upload files, download | ❌ | ❌ | ✅ | ✅ | ✅ |
+| Rename, archive and create public links | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Invite people and manage members | ❌ | ❌ | ❌ | ✅ | ✅ |
+| Transfer ownership, delete the workspace | ❌ | ❌ | ❌ | ❌ | ✅ |
 
-## How Credits are Billed During Team Collaboration
+⚙️ marks a per-member switch: in **Share → People**, the owner or an admin can turn **Can comment** and **Can ask Klecx** on or off for each Viewer, Commenter and Editor. "On" and "off" are the defaults for that role.
 
-To avoid complex per-seat billing surprises, **all generations within a workspace consume the Owner's credit balance**. Invited collaborators (Editors and Admins) do not need to purchase separate credit packs to collaborate on the project.
+## Projects and Workspaces
 
-## Inviting Team Members
+A role given in a project applies to every workspace in that project. A workspace can give someone more rights than the project does, but never fewer: to lower someone's access, change it on the project.
 
-1. Open the project or workspace settings.
-2. Enter the email address of your collaborator.
-3. Select their initial role.
-4. They will receive an invitation email with a secure link to join your workspace.
+## Who Pays
+
+Everything Klecx does in a workspace (answers, side questions, reviews, web searches) uses the **workspace owner's** credits. Collaborators don't need credits of their own, except for voice input, which uses the speaker's own credits. In **Share → People**, the owner can set a monthly credit cap for each member.
+
+## Inviting People
+
+1. Open **Share** and enter an email address or a `@username`.
+2. Choose a role and click **Invite**.
+3. The person receives a single-use invitation link, valid for 7 days. You can resend or revoke pending invitations in the **Invitations** tab.
+
+The number of people you can invite to a workspace or project depends on your plan: {{plan.FREE.members}} on Free, {{plan.LITE.members}} on Lite, {{plan.STANDARD.members}} on Standard and {{plan.PRO.members}} on Pro. If an owner is over the limit (for example after a plan change), they have 14 days to fix it; after that, the most recently added members become read-only until there is room again. Nothing is deleted.
+
+## Transferring Ownership
+
+The owner can ask another member to take over a workspace or project. The new owner must accept, because their credits will pay for the work from then on, and the transfer must fit their plan's member limit.

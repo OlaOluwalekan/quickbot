@@ -1,28 +1,70 @@
 ---
 title: "Créditos y planes"
 category: "billing-account"
-description: "Cómo funcionan los créditos de Klecx, la transparencia en los costos y los niveles de planes."
-keywords: ["créditos", "planes", "precios", "facturación", "costo de tokens", "suscripción"]
-sourceVersion: 1
+description: "Cómo funcionan los créditos, cuánto cuestan las cosas normalmente, límites diarios y qué incluye cada plan."
+keywords: ["créditos", "planes", "precios", "coste", "límite diario", "plan gratuito", "suscripción"]
+sourceVersion: 2
 ---
 
 # Créditos y planes
 
-Klecx utiliza un sistema de **registro de créditos** equitativo y transparente. A diferencia de los servicios de tarifa fija que reducen silenciosamente la calidad de las respuestas o limitan la velocidad a los usuarios activos, Klecx vincula los créditos directamente al costo de computación de los modelos que usted seleccione.
+Todo lo que hace Klecx con IA usa **créditos**: respuestas, preguntas al margen, revisiones de documentos, imágenes, búsquedas web y transcripción de voz. Cada opción de modelo muestra su coste típico antes de enviar.
 
-## Niveles de planes
+## Cómo funcionan los créditos
 
-- **Plan Gratuito**: Incluye 100 créditos mensuales gratuitos para explorar las funciones y probar modelos. Ideal para consultas breves y tareas ocasionales.
-- **Plan Pro ($19/mes)**: Incluye 2,500 créditos por ciclo de facturación, acceso a los modelos Estándar, mayor capacidad para archivos adjuntos y colaboración completa en proyectos.
-- **Plan Max ($49/mes)**: Incluye 7,500 créditos por ciclo de facturación, prioridad de capacidad de procesamiento, generación de contenido multimedia en alta resolución y soporte dedicado por correo electrónico.
+- Al enviar un mensaje, Klecx aparta créditos suficientes para la respuesta. Cuando la respuesta termina, solo se descuenta lo que realmente usó, y el resto se devuelve.
+- Si una respuesta falla antes de escribir texto, no se cobra nada. Si detienes una respuesta, o falla a medias, solo se cobra el texto ya escrito.
+- En un espacio compartido, los créditos del **propietario del espacio** pagan todo, salvo la entrada de voz, que usa los créditos de quien habla.
 
-## Cómo se deducen los créditos
+## Costes típicos
 
-Los créditos se descuentan según los tokens reales de entrada y salida consumidos durante la generación:
-- **Rápido y Eficiente**: Cuestan 1 crédito por cada ~10k tokens. Extremadamente rentables para conversaciones cotidianas, resúmenes y fragmentos rápidos de código.
-- **Razonamiento Estándar**: Cuestan 1 crédito por cada ~2k tokens. Diseñados para lógica compleja, matemáticas de varios pasos y documentos fuente extensos.
-- **Generaciones fallidas**: Si ocurre un error de red o la generación se interrumpe antes de producir resultados, los créditos reservados se reembolsan de inmediato a su saldo.
+| Qué | Coste típico |
+|---|---|
+| Un mensaje con **Rápido y Eficiente** | ≈ {{credits.fast}} créditos |
+| Un mensaje con **Razonamiento Estándar** | ≈ {{credits.standard}} créditos |
+| Una imagen (**Crear Imagen**) | ≈ {{credits.image}} créditos |
+| Cada búsqueda web que hace Klecx | + {{credits.search}} créditos |
 
-## Vencimiento y recargas de créditos
+Los mensajes largos, las respuestas largas y los adjuntos grandes cuestan más; los cortos, menos. Una revisión de documento muestra su coste máximo antes de empezar.
 
-Los créditos mensuales del plan se renuevan al comienzo de cada ciclo de facturación. Los créditos de suscripción no se acumulan para meses posteriores. Si necesita capacidad adicional a mitad de mes, puede recargar su saldo con paquetes de créditos sin vencimiento desde su página de **Configuración → Facturación**.
+## Límites diarios
+
+Para proteger tu saldo de un día descontrolado, cada plan tiene un tope de gasto diario y un límite de respuestas que se pueden escribir a la vez. El tope diario se reinicia a medianoche UTC.
+
+| Plan | Tope diario | Respuestas a la vez |
+|---|---|---|
+| Free | {{plan.FREE.dailyCap}} créditos | {{plan.FREE.concurrent}} |
+| Lite | {{plan.LITE.dailyCap}} créditos | {{plan.LITE.concurrent}} |
+| Standard | {{plan.STANDARD.dailyCap}} créditos | {{plan.STANDARD.concurrent}} |
+| Pro | {{plan.PRO.dailyCap}} créditos | {{plan.PRO.concurrent}} |
+
+## Planes
+
+{{#billing}}
+| | Free | Lite | Standard | Pro |
+|---|---|---|---|---|
+| Precio al mes | {{plan.FREE.price}} | {{plan.LITE.price}} | {{plan.STANDARD.price}} | {{plan.PRO.price}} |
+| Créditos al mes | {{plan.FREE.credits}} | {{plan.LITE.credits}} | {{plan.STANDARD.credits}} | {{plan.PRO.credits}} |
+| Modelos | Rápido y Eficiente | + Razonamiento Estándar, imágenes | + Razonamiento Estándar, imágenes | + Razonamiento Estándar, imágenes |
+| Personas que puedes invitar | {{plan.FREE.members}} | {{plan.LITE.members}} | {{plan.STANDARD.members}} | {{plan.PRO.members}} |
+| Adjuntos por espacio | {{plan.FREE.attachments}} ({{plan.FREE.maxFileMB}} MB cada uno) | {{plan.LITE.attachments}} ({{plan.LITE.maxFileMB}} MB cada uno) | {{plan.STANDARD.attachments}} ({{plan.STANDARD.maxFileMB}} MB cada uno) | {{plan.PRO.attachments}} ({{plan.PRO.maxFileMB}} MB cada uno) |
+| Descargas | Markdown | Markdown, PDF, Word | Markdown, PDF, Word | Markdown, PDF, Word |
+
+Los créditos del plan se renuevan al inicio de cada periodo de facturación. Los créditos no usados no pasan al periodo siguiente, y no se pueden comprar créditos sueltos. Consulta [Facturación y cancelación](/help/billing-and-cancellation).
+{{/billing}}
+{{^billing}}
+Todas las cuentas empiezan en el plan **Free** con {{plan.FREE.credits}} créditos:
+
+| | Free |
+|---|---|
+| Modelos | Rápido y Eficiente |
+| Búsqueda web | Incluida |
+| Adjuntos por espacio | {{plan.FREE.attachments}} ({{plan.FREE.maxFileMB}} MB cada uno) |
+| Descargas | Markdown |
+
+Los planes de pago (Lite, Standard y Pro) llegarán pronto. Añaden más créditos, el modelo Razonamiento Estándar, la creación de imágenes, las descargas en PDF y Word, y la colaboración. Consulta la [página de precios](/pricing) para ver qué incluirá cada plan.
+{{/billing}}
+
+## Quedarse sin créditos
+
+Cuando el saldo no alcanza para una respuesta, Klecx te avisa antes de enviar y no se cobra nada. Cambia a **Rápido y Eficiente** para usar menos créditos. En el espacio de otra persona, el aviso indica si el **propietario** se ha quedado sin créditos o si has alcanzado el límite mensual que el propietario fijó para ti.

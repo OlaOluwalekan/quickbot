@@ -1,34 +1,37 @@
 ---
 title: "Getting Started with Klecx"
 category: "getting-started"
-description: "Learn how to create your first workspace, ask questions, and make the most of AI models in Klecx."
-keywords: ["getting started", "basics", "quick start", "composer", "workspace"]
-version: 1
+description: "Create your first workspace, choose a model, and find your way around Klecx."
+keywords: ["getting started", "basics", "quick start", "composer", "workspace", "model"]
+version: 2
 ---
 
 # Getting Started with Klecx
 
-Welcome to **Klecx**, a fast, private, and flexible workspace for collaborating with modern AI models. Whether you are drafting documents, analyzing data, researching complex topics, or exploring creative ideas, Klecx provides a clean and distraction-free environment.
+Klecx is a workspace for working with AI on research, planning, writing and everyday projects. Each topic gets its own workspace, and every answer stays where you can read it, edit it, question it and share it.
 
-## 1. Creating Your First Workspace
+## 1. Your First Workspace
 
-When you log into Klecx, you land on the **Workspace Home** (`/workspaces`). Here you can immediately begin typing in the composer at the bottom of the screen.
+After you sign in, you land on the home page. Type what you want to work on in the composer and press `Enter` (`Shift` + `Enter` adds a new line). Klecx creates a workspace for it and opens it.
 
-- **Prompt Input**: Type any question, code request, or writing task into the composer.
-- **Model Selector**: Switch between Economy (**Fast & Efficient**) for quick iterations or Standard (**Standard Reasoning**) for deep analysis and nuanced tasks.
-- **Submitting**: Press `Enter` (or `Cmd` + `Enter` / `Ctrl` + `Enter`) to start your conversation.
+In the composer you can:
 
-Your prompt is smoothly preserved as the application transitions into your dedicated workspace URL (`/workspaces/:id`).
+- **Choose a model**: **Fast & Efficient** (≈ {{credits.fast}} credits for a typical message) for everyday questions, or **Standard Reasoning** (≈ {{credits.standard}} credits) for complex research and multi-step work. Each option shows its typical cost before you send. Standard Reasoning is available from the Lite plan.
+- **Create images**: switch the composer to **Create Image** (≈ {{credits.image}} credits per image, from the Lite plan).
+- **Attach files**: add images, PDFs and documents to a message. You can also add a document to the workspace itself (see [Workspace documents](/help/documents)).
+- **Use your voice**: record a message instead of typing it (see [Voice input and web search](/help/voice-and-web-search)).
 
-## 2. Navigating the Conversation
+Klecx searches the web on its own when a question needs current information. You can turn this off in **Settings → AI preferences**.
 
-Each AI response in Klecx is presented as an interactive response card:
+## 2. Working with Answers
 
-- **Thinking Panel**: If the model reasons through a complex prompt, you can see its live thinking summary collapsible accordion.
-- **Copy & Actions**: Copy markdown or rendered output with one click using the clipboard button.
-- **Regenerate & Versioning**: Request alternate takes or model perspectives without losing previous responses.
-- **In-place Edits**: Edit your prompts or responses directly to explore branches and refine outcomes.
+Each answer appears as a card under your prompt:
 
-## 3. Organizing with Projects
+- **Thought process**: when the model reasons before answering, you can open a short summary of its thinking.
+- **Copy, Edit, Regenerate**: copy the text, correct the answer yourself, or ask for a new version. Earlier versions are kept (see [Regenerate vs Edit](/help/regenerate-vs-edit)).
+- **Comment and Ask**: select any passage to leave a comment or ask a side question about it (see [Highlight & Ask](/help/highlight-and-ask)).
+- **Export and Share**: download an answer, or create a public link to it.
 
-As your workspaces grow, group them into **Projects** to keep your client work, coding experiments, and personal research organized. Use the sidebar to switch workspaces, pin favorites, or search across conversations.
+## 3. Organizing Your Work
+
+The sidebar lists your projects and workspaces. Group related workspaces into a **project**: each project has its own page with all its workspaces, and the people you invite to a project can work in every workspace inside it (see [Workspaces vs Projects](/help/workspaces-vs-projects)). Use **Search** (`Ctrl` + `K`, or `⌘` + `K` on Mac) to jump to any workspace.

@@ -1,0 +1,44 @@
+---
+title: "Workspace Documents"
+category: "features-workflows"
+description: "Add documents to a workspace, ask Klecx to review them, accept fixes and download the result."
+keywords: ["documents", "upload", "review", "quick fix", "docx", "markdown", "csv", "download"]
+version: 1
+---
+
+# Workspace Documents
+
+A workspace document is a file you work on together with Klecx: Klecx reads it with every prompt, you can comment on it and ask about it, ask Klecx to review it, correct it, and download the corrected version.
+
+## Adding a Document
+
+Drop a file on the composer, or attach it, and choose **Add to workspace as a document**. Choose **Attach to message** instead if you only want Klecx to read it for one message.
+
+- **File types**: Markdown, plain text, Word (`.docx`) and CSV. A PDF can be attached to a message but can't be added as a document, because only its text can be read and it can't be downloaded again as a corrected PDF.
+- **Up to {{documents.max}} documents per workspace.** Each one is sent with every prompt, so the limit keeps answers fast and their cost predictable.
+- Klecx keeps the text of the document for reading, highlighting and editing, and keeps the original file for download.
+
+## Asking Klecx to Review
+
+Choose **Ask Klecx to review** on the document. Pick a focus or describe what to look for, and choose who sees the comments. Klecx reads the saved text and leaves comments on exact passages, shown with a wavy underline. The popover shows the most the review can cost before you start, and the workspace owner's credits are used once for the whole review.
+
+## Accepting Fixes
+
+Many review comments come with a suggested change:
+
+1. Hover an underlined passage to see what is wrong and the change (old → new).
+2. Choose **Accept** or **Dismiss** for that change, or **Accept all fixes** on the document to take every open fix at once.
+3. Accepting changes your unsaved draft. Choose **Save** to keep the changes; until then you can still discard them.
+
+If the passage changed in the meantime, the fix can no longer be applied and Klecx says so. While a document has unsaved changes you can't add comments or questions to it; save first.
+
+## Editing and Downloading
+
+Choose **Edit** to change the text yourself, then **Save**. **Download** offers:
+
+- **Original file**: the file exactly as uploaded.
+- **Edited version**: the saved text as Markdown, PDF or Word, depending on the workspace owner's plan (see [Exporting](/help/exporting)).
+
+## Generated Documents
+
+When you ask Klecx to write a document (a plan, a letter, a report), it opens in a panel next to the conversation. You can edit it, comment on it and ask about it, and download it like any other document.

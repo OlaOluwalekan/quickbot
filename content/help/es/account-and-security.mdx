@@ -1,29 +1,37 @@
 ---
 title: "Cuenta y seguridad"
 category: "billing-account"
-description: "Gestione sus credenciales, sesiones de inicio activas y ajustes de protección de datos."
-keywords: ["seguridad", "contraseña", "sesiones", "2fa", "privacidad", "revocar"]
-sourceVersion: 1
+description: "Contraseñas, dispositivos con sesión iniciada, alertas de inicio de sesión y eliminación de tus datos."
+keywords: ["seguridad", "contraseña", "sesiones", "dispositivos", "alerta de inicio de sesión", "eliminar cuenta", "privacidad"]
+sourceVersion: 2
 ---
 
 # Cuenta y seguridad
 
-Proteger sus conversaciones y el acceso a su cuenta es un principio fundamental en Klecx.
+## Inicio de sesión y contraseñas
 
-## Protocolo de contraseña y restablecimiento
+- Puedes iniciar sesión con una dirección de correo y una contraseña, o con una de las otras cuentas que se ofrecen en la página de inicio de sesión.
+- Las contraseñas deben tener al menos 10 caracteres. Una frase de contraseña larga es la opción más segura.
+- Si olvidaste tu contraseña, elige **¿Olvidaste tu contraseña?** en la página de inicio de sesión y sigue el enlace del correo. Restablecer la contraseña cierra la sesión en todos los demás dispositivos.
+- Los correos para restablecer la contraseña están limitados a 3 solicitudes por hora.
 
-- **Requisito de contraseña segura**: Klecx requiere contraseñas de al menos 10 caracteres, combinando mayúsculas, minúsculas, números y símbolos.
-- **Revocación de sesiones al restablecer**: Cada vez que restablece con éxito su contraseña mediante recuperación por correo, **todas las demás sesiones activas en cualquier dispositivo se revocan de inmediato** para protegerle frente a accesos no autorizados.
+Tu dirección de correo no se puede cambiar desde la Configuración. Tu nombre de usuario se puede elegir una vez y después no cambia.
 
-## Sesiones activas
+## Sesiones y dispositivos
 
-En **Configuración → Sesiones**, puede consultar cada navegador y dispositivo conectado actualmente a su cuenta:
-- Tipo de dispositivo, sistema operativo y navegador.
-- Dirección IP aproximada y ubicación geográfica.
-- Marca de tiempo de última actividad.
-- **Cerrar otras sesiones**: Cierre todas las sesiones remotas con un solo clic mientras permanece conectado en su dispositivo actual.
+**Configuración → Sesiones y dispositivos** muestra todos los dispositivos con sesión iniciada en tu cuenta, con:
 
-## Retención y eliminación de datos
+- El navegador y el sistema operativo.
+- Una dirección IP parcialmente oculta y el país, cuando se conoce.
+- Cuándo estuvo activo por última vez.
 
-- **Espacios eliminados temporalmente**: Al eliminar un espacio de trabajo, este pasa a la papelera durante 30 días, tras los cuales todos los registros en base de datos y archivos adjuntos se eliminan de manera permanente.
-- **Eliminación total de la cuenta**: Puede solicitar la eliminación completa de su cuenta en **Configuración → Perfil**. Todos los datos personales, archivos adjuntos en Cloudinary, registros de créditos y espacios de trabajo se purgarán conforme a las normas de RGPD y CCPA.
+Puedes cerrar la sesión de un solo dispositivo, o de todos los demás a la vez. Cerrar la sesión en todos los demás dispositivos te pide la contraseña si no has iniciado sesión recientemente.
+
+## Alertas de inicio de sesión
+
+Cuando tu cuenta se usa desde un navegador, sistema operativo o país nuevo, Klecx te envía una notificación y un correo. Si no fuiste tú, cierra la sesión de ese dispositivo en **Sesiones y dispositivos** y restablece tu contraseña. Puedes elegir qué alertas recibes en **Configuración → Notificaciones**.
+
+## Eliminar tus datos
+
+- **Espacios de trabajo**: archiva un espacio para ocultarlo, o elimínalo. Eliminarlo pide confirmación y no se puede deshacer.
+- **Tu cuenta**: la eliminación de la cuenta aún no está disponible en la Configuración. Para eliminar tu cuenta u obtener una copia de tus datos, escribe a %%PRIVACY_EMAIL%% desde la dirección de correo de tu cuenta.

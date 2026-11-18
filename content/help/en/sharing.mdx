@@ -1,32 +1,33 @@
 ---
-title: "Sharing Workspaces"
+title: "Sharing"
 category: "collaboration-sharing"
-description: "How to generate public share links, manage privacy, and revoke shared access."
-keywords: ["share", "public link", "privacy", "revoke", "read-only"]
-version: 1
+description: "Create public links to a workspace or a single answer, choose what visitors see, and revoke links."
+keywords: ["share", "public link", "privacy", "revoke", "read-only", "expiry"]
+version: 2
 ---
 
-# Sharing Workspaces
+# Sharing
 
-Klecx allows you to share valuable AI research, code explanations, and documentation with teammates, clients, or the public via secure read-only links.
+A public link lets anyone read a workspace or a single answer without an account. To work together on a workspace instead, invite people (see [Collaboration & Roles](/help/collaboration-roles)).
 
-## Creating a Share Link
+## Creating a Public Link
 
-1. Open the workspace you want to share.
-2. Click the **Share** button located in the top navigation bar.
-3. Choose your sharing permissions:
-   - **Public Read-Only Link**: Anyone with the link can view the conversation.
-   - **Snapshot vs Live**: Choose whether visitors see the conversation as it exists today (snapshot) or see future responses in real time.
-4. Click **Create Link** and copy the generated URL (`/s/:token`).
+1. Open the workspace and click **Share** in the top bar, or **Share** on an answer.
+2. Open the **Public Link** tab and choose:
+   - **Share scope**: **Entire workspace** or **This response only**.
+   - **Version to display**: **Edited if available** or **Original AI output**.
+   - **Expiration**: none, 7 days or 30 days.
+   - **Show my name on the public page**, if you want visitors to see who shared it.
+3. Click **Create public link**. The link is copied to your clipboard. It is shown only once, so keep it somewhere safe.
 
-## Important Security Information
+Creating public links needs the Admin role or above.
 
-- **URL Access**: Public share links are accessible to anyone who possesses the exact link URL. Avoid pasting confidential credentials or proprietary secrets into conversations before sharing.
-- **Search Engine Indexing**: All public share routes (`/s/*`) explicitly transmit `noindex, nofollow` robot headers to prevent search engines from indexing your shared conversations.
+## What Visitors See
 
-## Revoking a Share Link
+- The prompts and answers you chose, as they are **now**: later edits and new answers in a shared workspace appear on the public page too.
+- **Never included**: comments, side questions, Klecx notes, members and edit history. For documents, only the text is shown; the original file can't be downloaded from a public link.
+- Public pages are not indexed by search engines, but anyone who has the link can open it. Don't share content you need to keep private.
 
-You maintain total control over your shared content. At any time:
-1. Re-open the **Share** dialog.
-2. Click **Revoke Link**.
-3. The URL immediately stops serving content and displays an expiration notice to subsequent visitors.
+## Revoking a Link
+
+Open **Share → Public Link** and click **Revoke** next to the link. It stops working immediately. Revoked and expired links show a "not found" page, the same as a link that never existed.

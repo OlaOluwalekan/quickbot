@@ -1,35 +1,43 @@
 ---
-title: "Dépannage et FAQ"
+title: "Résolution des problèmes"
 category: "troubleshooting"
-description: "Résolutions des problèmes courants : arrêts de génération, erreurs de crédits et connectivité."
-keywords: ["dépannage", "erreurs", "réessayer", "support", "faq", "connexion"]
-sourceVersion: 1
+description: "Que faire quand une réponse échoue, que les crédits sont épuisés, qu'une limite est atteinte ou qu'un e-mail n'arrive pas."
+keywords: ["dépannage", "erreurs", "réessayer", "crédits", "limite", "assistance", "micro"]
+sourceVersion: 2
 ---
 
-# Dépannage et FAQ
+# Résolution des problèmes
 
-Si vous rencontrez un comportement inattendu lors de l'utilisation de Klecx, ce guide détaille les questions les plus fréquentes ainsi que les étapes de diagnostic.
+## Une réponse échoue ou s'arrête
 
-## La génération s'arrête ou « Réflexion » semble bloquée
+Si une réponse s'arrête ou affiche une erreur :
 
-Si une génération affiche un indicateur d'attente mais ne produit aucun jeton au bout de 15 secondes :
-1. **Déconnexion réseau** : Vérifiez votre connexion Internet. Les événements envoyés par le serveur (SSE) nécessitent une connexion continue de flux.
-2. **Cliquez sur Réessayer** : Si une génération échoue ou est interrompue, une bannière intégrée **Réessayer** s'affiche. Cliquer sur **Réessayer** génère une nouvelle clé d'idempotence afin d'éviter tout double débit de crédits.
-3. **Incident de modèle** : Consultez notre tableau de bord public sur [/status](/status) pour vérifier si la génération d'IA ou notre infrastructure rencontrent une latence accrue.
+1. **Vérifiez votre connexion.** Les réponses s'écrivent en direct ; une coupure de connexion les interrompt.
+2. **Cliquez sur Réessayer.** Si la réponse a échoué avant d'écrire du texte, rien n'a été facturé ; si elle s'est arrêtée en cours de route, seul le texte écrit a été facturé.
+3. **Consultez la [page d'état](/status)** si les erreurs se répètent.
 
-## Bannière « Crédits insuffisants »
+## « Crédits épuisés » ou limite quotidienne
 
-Si vous recevez un message 402 Crédits insuffisants :
-- Votre prompt demande davantage de crédits que le solde dont vous disposez actuellement.
-- Basculez vers un modèle Économique (**Rapide et Efficace**) pour réduire le coût en crédits, ou mettez à niveau votre forfait sur [/pricing](/pricing).
+- **Crédits épuisés** : passez à **Rapide et Efficace** pour utiliser moins de crédits par message.
+- **Limite quotidienne atteinte** : le plafond quotidien est remis à zéro à minuit UTC. Voir [Crédits et forfaits](/help/credits-and-plans).
+- **Dans l'espace de quelqu'un d'autre** : les crédits du propriétaire paient les réponses. Le message indique si le propriétaire n'a plus de crédits ou si vous avez atteint la limite mensuelle qu'il a fixée pour vous ; adressez-vous au propriétaire.
 
-## Lien de réinitialisation de mot de passe non reçu
+## « Limite quotidienne de recherches web atteinte »
 
-Si vous avez demandé un e-mail de réinitialisation de mot de passe mais ne l'avez pas reçu :
-1. Vérifiez vos dossiers de courriers indésirables (spams) et promotions.
-2. Assurez-vous d'avoir saisi l'adresse e-mail exacte employée lors de l'inscription.
-3. Notez que les demandes de réinitialisation sont limitées à 3 tentatives par heure afin de protéger les comptes contre les abus automatisés.
+Klecx a répondu sans chercher, car votre nombre quotidien de recherches dans les espaces de ce propriétaire est épuisé. Les réponses fonctionnent toujours ; la recherche redevient disponible le lendemain. Voir [Saisie vocale et recherche web](/help/voice-and-web-search).
 
-## Contacter le support
+## La saisie vocale ne fonctionne pas
 
-Si votre problème persiste, envoyez un ticket via [/support](/support) ou écrivez directement à notre équipe technique à `%%SUPPORT_EMAIL%%`. Nous répondons sous 3 jours ouvrés au maximum.
+- Autorisez le micro pour ce site dans les réglages de votre navigateur, puis rechargez la page.
+- Si le bouton du micro est grisé, votre navigateur ne peut pas enregistrer de son ici ; essayez une version à jour de Chrome, Edge, Firefox ou Safari.
+- Les enregistrements s'arrêtent au bout de 2 minutes, et chaque forfait a un nombre de minutes par jour.
+
+## L'e-mail de réinitialisation n'arrive pas
+
+1. Vérifiez vos dossiers de courrier indésirable et de promotions.
+2. Vérifiez que vous avez saisi l'adresse e-mail de votre compte.
+3. Les e-mails de réinitialisation sont limités à 3 demandes par heure ; patientez avant de réessayer.
+
+## Contacter l'assistance
+
+Si le problème persiste, utilisez le [formulaire d'assistance](/support) (vous pouvez joindre des captures d'écran) ou écrivez à %%SUPPORT_EMAIL%%. Nous répondons sous 3 jours ouvrés.
