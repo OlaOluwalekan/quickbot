@@ -762,7 +762,6 @@
     },
     "hero": {
       "badge": "Espacios de trabajo, no hilos",
-      "title": "Piensa en espacios de trabajo, no en hilos.",
       "titlePart1": "Piensa en espacios de trabajo,",
       "titlePart2": "no en hilos.",
       "subtitle": "Organiza el trabajo con IA en proyectos, guarda las versiones de cada respuesta y haz preguntas sobre cualquier pasaje sin perder el hilo de pensamiento.",
@@ -771,23 +770,159 @@
       "projectsLabel": "Proyectos",
       "workspacesInProject": "Espacios en el proyecto",
       "active": "Activo",
-      "promptExample": "¿Cómo deberíamos estructurar el pooling de conexiones frente a las réplicas de lectura para una API de Node.js de 10.000 req/s con PostgreSQL?",
-      "thoughtPreview": "Pensó durante 1,8 s: evaluó el modo de transacción de PgBouncer, la latencia y la sincronización de réplicas de lectura",
-      "versionInfo": "Versión 2 de 2",
       "regeneratedNote": "(Regenerado con Razonamiento Estándar)",
-      "responseSnippet1": "A 10.000 req/s, el pooling de conexiones debe separarse de los procesos de la aplicación. Implementa",
-      "responseSnippet2": "PgBouncer en modo de transacción",
-      "responseSnippet3": "por delante de tus nodos primarios y de lectura.",
       "askPassage": "Preguntar sobre este pasaje",
-      "sideQuestion": "Pregunta secundaria: ¿Cuál es el retraso de failover entre el primario y la réplica?",
-      "mockPath": "klecx/workspaces/ws_arch_01",
-      "mockProject1": "Arquitectura de base de datos",
-      "mockProject2": "Hoja de ruta del producto 2027",
-      "mockWorkspace1": "Pooling de Postgres vs Réplicas",
-      "mockWorkspace2": "Invalidación de eventos de Redis",
-      "mockWorkspace3": "Auditoría de indexación de Prisma",
-      "mockConfig": "pool_mode = transaction | max_client_conn = 10000 | default_pool_size = 50",
-      "modelBadge": "Razonamiento Estándar"
+      "mockPath": "klecx/workspaces/{slug}",
+      "modelBadge": "Razonamiento Estándar",
+      "scenes": {
+        "software": {
+          "label": "Software",
+          "activeProject": "Arquitectura de base de datos",
+          "otherProjects": [
+            "Hoja de ruta del producto 2027",
+            "Pasarela de API móvil"
+          ],
+          "workspaces": [
+            "Pooling de Postgres vs Réplicas",
+            "Invalidación de eventos de Redis",
+            "Auditoría de indexación de Prisma"
+          ],
+          "prompt": "¿Cómo deberíamos estructurar el pooling de conexiones frente a las réplicas de lectura para una API de Node.js de 10.000 req/s con PostgreSQL?",
+          "thought": "Pensó durante 1,8 s: evaluó el modo de transacción de PgBouncer, la latencia y la sincronización de réplicas de lectura",
+          "versionInfo": "Versión 2 de 2",
+          "responseBefore": "A 10.000 req/s, el pooling de conexiones debe separarse de los procesos de la aplicación. Implementa",
+          "responseHighlight": "PgBouncer en modo de transacción",
+          "responseAfter": "por delante de tus nodos primarios y de lectura para mantener una sobrecarga mínima de conexiones.",
+          "artifact": "pool_mode = transaction | max_client_conn = 10000 | default_pool_size = 50",
+          "sideQuestion": "Pregunta secundaria: ¿Cuál es el retraso de failover entre el primario y la réplica?"
+        },
+        "finance": {
+          "label": "Finanzas",
+          "activeProject": "Presupuesto familiar 2027",
+          "otherProjects": [
+            "Asignación de fondo de emergencia",
+            "Estrategia de deducción fiscal"
+          ],
+          "workspaces": [
+            "50/30/20 y pago de tarjeta",
+            "Auditoría de ahorro de alto rendimiento",
+            "Plan de aportación a la jubilación"
+          ],
+          "prompt": "¿Cómo deberíamos dividir un ingreso mensual de $4.200 en necesidades, deseos y ahorros mientras pagamos una tarjeta de $6.000?",
+          "thought": "Pensó durante 2,1 s: modeló el esquema 50/30/20, amortización de intereses y un calendario de pago en 8 meses",
+          "versionInfo": "Versión 2 de 2",
+          "responseBefore": "Asigna $2.100 a necesidades y $1.260 a gastos flexibles, destinando el excedente íntegro de $840 al",
+          "responseHighlight": "método de avalancha enfocado en la tasa más alta",
+          "responseAfter": "para saldar la tarjeta en menos de 8 meses evitando cargos excesivos por intereses.",
+          "artifact": [
+            ["Necesidades (50%)", "Vivienda, alimentos y servicios", "$2.100 / mes"],
+            ["Deseos (30%)", "Cenas, ocio y suscripciones", "$1.260 / mes"],
+            ["Ahorro y Deuda (20%)", "Pago de tarjeta por avalancha ($6k)", "$840 / mes"]
+          ],
+          "sideQuestion": "Pregunta secundaria: ¿Deberíamos usar avalancha o bola de nieve para mantener la motivación?"
+        },
+        "construction": {
+          "label": "Construcción",
+          "activeProject": "Construcción de dúplex — Fase 1",
+          "otherProjects": [
+            "Estudio de suelo y permisos de zonificación",
+            "Comparativa de ofertas de subcontratistas"
+          ],
+          "workspaces": [
+            "Losa de 120 m² y plan de 6 semanas",
+            "Especificaciones de drenaje de cimientos",
+            "Estimación de madera estructural"
+          ],
+          "prompt": "Estima los materiales principales, inspecciones críticas y un cronograma de 6 semanas para vaciar una losa de 120 m².",
+          "thought": "Pensó durante 1,9 s: calculó 18 m³ de concreto, distribución de malla electrosoldada y plazos de curado",
+          "versionInfo": "Versión 2 de 2",
+          "responseBefore": "Nivela la base y verifica la separación de la malla antes del vertido. Cumple rigurosamente el",
+          "responseHighlight": "tiempo de curado de 7 días antes de la estructura",
+          "responseAfter": "para que la losa alcance la resistencia a compresión requerida antes de recibir cargas.",
+          "artifact": [
+            ["Excavación y base", "Semanas 1–2", "Zanjas, barrera de vapor, prueba de compactación"],
+            ["Vaciado y curado", "Semana 3", "Losa de 120 m² vertida; curado de 7 días sin carga"],
+            ["Estructura e inspecciones", "Semanas 4–6", "Muros de carga, cerchas y aprobación final"]
+          ],
+          "sideQuestion": "Pregunta secundaria: ¿Se puede acelerar de forma segura el curado de concreto en clima frío?"
+        },
+        "hobby": {
+          "label": "Pasatiempos",
+          "activeProject": "Diario de masa madre",
+          "otherProjects": [
+            "Registro de temperatura de fermentación",
+            "Historial de panes con harinas ancestrales"
+          ],
+          "workspaces": [
+            "Miga densa y salud de masa madre",
+            "Control de fermentación en frío",
+            "Pruebas de formación de corteza crujiente"
+          ],
+          "prompt": "¿Por qué mi hogaza de masa madre queda densa con zonas gomosas y cómo debería reajustar los refrescos de mi masa madre?",
+          "thought": "Pensó durante 1,6 s: diagnosticó exceso de acidez, frecuencia de refrescos y ventana de fermentación",
+          "versionInfo": "Versión 2 de 2",
+          "responseBefore": "Una miga densa suele indicar una masa madre sobreacidificada empleada pasada su momento cumbre. Para devolverle fuerza,",
+          "responseHighlight": "refresca en proporción 1:5:5 dos veces al día",
+          "responseAfter": "con harina de trigo blanca de fuerza hasta que triplique su volumen de forma constante en 5 horas.",
+          "artifact": [
+            "Desecha hasta dejar 20 g de masa madre activa antes de refrescar",
+            "Alimenta en proporción 1:5:5 (20 g madre, 100 g harina, 100 g agua) dos veces al día",
+            "Reposa a 24 °C hasta que haga cúpula y triplique su volumen antes del amasado"
+          ],
+          "sideQuestion": "Pregunta secundaria: ¿Cambia la hidratación o la proporción de refresco si se añade harina de centeno?"
+        },
+        "education": {
+          "label": "Educación",
+          "activeProject": "Preparación de examen de biología",
+          "otherProjects": [
+            "Apuntes de química orgánica",
+            "Resumen de prácticas de genética"
+          ],
+          "workspaces": [
+            "Plan de 2 semanas de biología celular",
+            "Tarjetas de cinética enzimática",
+            "Fotosíntesis vs Respiración celular"
+          ],
+          "prompt": "Diseña un plan de repaso de 2 semanas para biología celular que cubra transporte de membrana, bioenergética y división celular.",
+          "thought": "Pensó durante 1,7 s: priorizó temas clave, bloques diarios de problemas y curvas de retención mnemotécnica",
+          "versionInfo": "Versión 2 de 2",
+          "responseBefore": "Estructura los 14 días en bloques conceptuales progresivos. Basa tu retención principal en",
+          "responseHighlight": "recuperación activa con repetición espaciada",
+          "responseAfter": "dibujando rutas de membrana y comprobando funciones enzimáticas sin mirar los apuntes.",
+          "artifact": [
+            "Días 1–4: Práctica de recuperación activa sobre membrana celular y transporte",
+            "Días 5–9: Diagramas esquemáticos del ciclo de Krebs y ATP sintasa",
+            "Días 10–14: Simulacros espaciados sobre puntos de control de mitosis y meiosis"
+          ],
+          "sideQuestion": "Pregunta secundaria: ¿Cuántas fichas de recuperación activa al día son sostenibles sin saturarse?"
+        },
+        "smallBusiness": {
+          "label": "Negocios",
+          "activeProject": "Lanzamiento de cafetería",
+          "otherProjects": [
+            "Condiciones mayoristas con proveedores",
+            "Guía de formación para baristas"
+          ],
+          "workspaces": [
+            "Lanzamiento de 30 días y difusión local",
+            "Pedido de inventario de apertura",
+            "Configuración de caja y punto de venta"
+          ],
+          "prompt": "Redacta un plan de apertura de 30 días y un cronograma de difusión comunitaria para una cafetería de barrio independiente.",
+          "thought": "Pensó durante 2,0 s: coordinó fechas de licencias, calibración de maquinaria, preapertura y contacto con el barrio",
+          "versionInfo": "Versión 2 de 2",
+          "responseBefore": "Enfoca las dos primeras semanas en operatividad y personal. Durante la última semana previa a la apertura, organiza",
+          "responseHighlight": "una semana de preapertura para vecinos",
+          "responseAfter": "con degustaciones gratuitas para generar boca a boca antes de abrir al público general.",
+          "artifact": [
+            "Semana 1: Cerrar precios con el tostador local y definir recetas de la carta",
+            "Semana 2: Organizar 3 jornadas de preapertura exclusiva para vecinos y comercios",
+            "Semana 3: Apertura oficial al público con tarjetas de fidelización de bienvenida"
+          ],
+          "sideQuestion": "Pregunta secundaria: ¿Cómo debemos fijar los precios de la carta inicial para equilibrar margen y prueba?"
+        }
+      },
+      "scenesTablistLabel": "Vistas previas en diferentes campos"
     },
     "features": {
       "badge": "Diseñado para creadores",

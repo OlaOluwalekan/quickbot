@@ -762,7 +762,6 @@
     },
     "hero": {
       "badge": "Des espaces de travail, pas des fils de discussion",
-      "title": "Pensez en espaces de travail, pas en fils.",
       "titlePart1": "Pensez en espaces de travail,",
       "titlePart2": "pas en fils.",
       "subtitle": "Organisez vos recherches d'IA en projets, conservez les versions de chaque réponse et posez des questions sur n'importe quel passage sans perdre le fil.",
@@ -771,23 +770,159 @@
       "projectsLabel": "Projets",
       "workspacesInProject": "Espaces dans le projet",
       "active": "Actif",
-      "promptExample": "Comment structurer le regroupement de connexions par rapport aux répliques en lecture pour une API Node.js à 10 000 requêtes/sec avec PostgreSQL ?",
-      "thoughtPreview": "Réflexion pendant 1,8s : évaluation du mode transaction PgBouncer, latence et synchronisation des répliques",
-      "versionInfo": "Version 2 sur 2",
       "regeneratedNote": "(Régénéré avec Raisonnement Standard)",
-      "responseSnippet1": "À 10 000 req/sec, le pooling de connexions doit être isolé des processus applicatifs. Déployez",
-      "responseSnippet2": "PgBouncer en mode transaction",
-      "responseSnippet3": "en amont de vos nœuds primaires et répliques.",
       "askPassage": "Poser une question sur ce passage",
-      "sideQuestion": "Question secondaire : Quel est le délai de basculement entre primaire et réplique ?",
-      "mockPath": "klecx/workspaces/ws_arch_01",
-      "mockProject1": "Architecture de base de données",
-      "mockProject2": "Feuille de route produit 2027",
-      "mockWorkspace1": "Mutualisation Postgres vs Répliques",
-      "mockWorkspace2": "Invalidation des événements Redis",
-      "mockWorkspace3": "Audit d'indexation Prisma",
-      "mockConfig": "pool_mode = transaction | max_client_conn = 10000 | default_pool_size = 50",
-      "modelBadge": "Raisonnement Standard"
+      "mockPath": "klecx/workspaces/{slug}",
+      "modelBadge": "Raisonnement Standard",
+      "scenes": {
+        "software": {
+          "label": "Logiciel",
+          "activeProject": "Architecture de base de données",
+          "otherProjects": [
+            "Feuille de route produit 2027",
+            "Passerelle API mobile"
+          ],
+          "workspaces": [
+            "Mutualisation Postgres vs Répliques",
+            "Invalidation des événements Redis",
+            "Audit d'indexation Prisma"
+          ],
+          "prompt": "Comment structurer le regroupement de connexions par rapport aux répliques en lecture pour une API Node.js à 10 000 requêtes/sec avec PostgreSQL ?",
+          "thought": "Réflexion pendant 1,8s : évaluation du mode transaction PgBouncer, latence et synchronisation des répliques",
+          "versionInfo": "Version 2 sur 2",
+          "responseBefore": "À 10 000 req/sec, le pooling de connexions doit être isolé des processus applicatifs. Déployez",
+          "responseHighlight": "PgBouncer en mode transaction",
+          "responseAfter": "en amont de vos nœuds primaires et répliques afin de maintenir une charge de connexion minimale.",
+          "artifact": "pool_mode = transaction | max_client_conn = 10000 | default_pool_size = 50",
+          "sideQuestion": "Question secondaire : Quel est le délai de basculement entre primaire et réplique ?"
+        },
+        "finance": {
+          "label": "Finance",
+          "activeProject": "Budget du ménage 2027",
+          "otherProjects": [
+            "Constitution du fonds d'urgence",
+            "Stratégie d'optimisation fiscale"
+          ],
+          "workspaces": [
+            "Règle 50/30/20 et remboursement",
+            "Audit épargne à haut rendement",
+            "Plan d'épargne retraite"
+          ],
+          "prompt": "Comment répartir un revenu net mensuel de 4 200 $ entre besoins, envies et épargne tout en remboursant 6 000 $ de carte de crédit ?",
+          "thought": "Réflexion pendant 2,1s : modélisation de la règle 50/30/20, calcul des intérêts et calendrier de remboursement sur 8 mois",
+          "versionInfo": "Version 2 sur 2",
+          "responseBefore": "Allouez 2 100 $ aux besoins et 1 260 $ aux dépenses flexibles, en orientant la totalité du surplus de 840 $ vers la",
+          "responseHighlight": "méthode de l'avalanche ciblant le taux le plus élevé",
+          "responseAfter": "pour solder la carte en moins de 8 mois tout en évitant l'accumulation de frais financiers.",
+          "artifact": [
+            ["Besoins (50 %)", "Logement, courses et charges", "2 100 $ / mois"],
+            ["Envies (30 %)", "Sorties, loisirs et abonnements", "1 260 $ / mois"],
+            ["Épargne et Dettes (20 %)", "Remboursement avalanche carte (6k)", "840 $ / mois"]
+          ],
+          "sideQuestion": "Question secondaire : Vaut-il mieux privilégier la méthode avalanche ou boule de neige pour la motivation ?"
+        },
+        "construction": {
+          "label": "Construction",
+          "activeProject": "Construction duplex — Phase 1",
+          "otherProjects": [
+            "Étude de sol et permis d'urbanisme",
+            "Comparatif des offres de sous-traitance"
+          ],
+          "workspaces": [
+            "Dalle 120 m² et plan 6 semaines",
+            "Spécifications drainage des fondations",
+            "Estimation bois de charpente"
+          ],
+          "prompt": "Estimez les matériaux principaux, les contrôles critiques et un planning de 6 semaines pour couler une dalle en béton de 120 m².",
+          "thought": "Réflexion pendant 1,9s : calcul du volume de 18 m³ de béton, espacement du treillis et calendrier de cure",
+          "versionInfo": "Version 2 sur 2",
+          "responseBefore": "Nivelez la sous-couche et contrôlez le positionnement du treillis armé avant le coulage. Respectez un",
+          "responseHighlight": "temps de cure strict de 7 jours avant la charpente",
+          "responseAfter": "afin que la dalle atteigne sa résistance à la compression avant d'accueillir les charges structurales.",
+          "artifact": [
+            ["Terrassement et prépa", "Semaines 1–2", "Tranchées, pare-vapeur et test de compactage"],
+            ["Coulage et cure 7 jours", "Semaine 3", "Dalle 120 m² coulée ; cure de 7 jours sous bâche"],
+            ["Charpente et contrôles", "Semaines 4–6", "Murs porteurs, fermettes et validation technique"]
+          ],
+          "sideQuestion": "Question secondaire : Peut-on accélérer la cure du béton par temps froid sans compromettre sa résistance ?"
+        },
+        "hobby": {
+          "label": "Loisirs",
+          "activeProject": "Journal de levain",
+          "otherProjects": [
+            "Suivi des températures de fermentation",
+            "Fiches de cuisson aux farines anciennes"
+          ],
+          "workspaces": [
+            "Mie dense et vitalité du levain",
+            "Gestion de la fermentation au froid",
+            "Essais de croustillance et de grignage"
+          ],
+          "prompt": "Pourquoi mon pain au levain reste-t-il dense avec une mie collante, et comment ajuster les rafraîchis de mon levain ?",
+          "thought": "Réflexion pendant 1,6s : analyse de l'acidité excessive, du rythme des rafraîchis et de la fenêtre de pointage",
+          "versionInfo": "Version 2 sur 2",
+          "responseBefore": "Une mie compacte et collante traduit souvent un levain trop acide utilisé au-delà de son pic. Pour restaurer son tonus,",
+          "responseHighlight": "rafraîchissez au ratio 1:5:5 deux fois par jour",
+          "responseAfter": "avec de la farine de blé non blanchie jusqu'à ce qu'il triple régulièrement de volume en 5 heures.",
+          "artifact": [
+            "Ne conservez que 20 g de levain actif avant chaque rafraîchi",
+            "Nourrissez au ratio 1:5:5 (20 g levain, 100 g farine, 100 g eau) deux fois par jour",
+            "Laissez fermenter à 24 °C jusqu'à ce qu'il bombe et triple de volume avant la pâte"
+          ],
+          "sideQuestion": "Question secondaire : L'incorporation de farine de seigle modifie-t-elle l'hydratation et le ratio de rafraîchi ?"
+        },
+        "education": {
+          "label": "Éducation",
+          "activeProject": "Préparation examen de biologie",
+          "otherProjects": [
+            "Fiches de chimie organique",
+            "Comptes rendus de labo de génétique"
+          ],
+          "workspaces": [
+            "Plan 2 semaines biologie cellulaire",
+            "Flashcards cinétique enzymatique",
+            "Photosynthèse vs Respiration cellulaire"
+          ],
+          "prompt": "Concevez un programme de révision de 2 semaines pour la biologie cellulaire axé sur les membranes, la bioénergétique et la mitose.",
+          "thought": "Réflexion pendant 1,7s : priorisation des notions clés, blocs quotidiens d'exercices et courbes de rétention",
+          "versionInfo": "Version 2 sur 2",
+          "responseBefore": "Structurez les 14 jours en cycles thématiques continus. Fondez votre mémorisation sur",
+          "responseHighlight": "le rappel actif avec répétition espacée",
+          "responseAfter": "en traçant de mémoire les flux membranaires et les cascades enzymatiques sans consulter vos cours.",
+          "artifact": [
+            "Jours 1–4 : Rappel actif sur la mosaïque fluide et les transporteurs membranaires",
+            "Jours 5–9 : Restitution schématique du cycle de Krebs et de l'ATP synthase",
+            "Jours 10–14 : Examens blancs espacés sur les points de contrôle de la mitose"
+          ],
+          "sideQuestion": "Question secondaire : Quel volume quotidien de cartes de rappel actif permet d'éviter la surcharge cognitive ?"
+        },
+        "smallBusiness": {
+          "label": "Commerce",
+          "activeProject": "Lancement de café",
+          "otherProjects": [
+            "Conditions tarifaires grossistes",
+            "Guide de formation des baristas"
+          ],
+          "workspaces": [
+            "Lancement 30 jours et ancrage local",
+            "Commande du stock d'ouverture",
+            "Paramétrage du système d'encaissement"
+          ],
+          "prompt": "Rédigez un plan de lancement sur 30 jours et une stratégie de communication de quartier pour un café indépendant.",
+          "thought": "Réflexion pendant 2,0s : calendrier des démarches administratives, réglage des moulins, pré-ouverture et démarchage local",
+          "versionInfo": "Version 2 sur 2",
+          "responseBefore": "Consacrez les premières semaines à la logistique et au rodage des équipes. En phase finale, mettez en place",
+          "responseHighlight": "une semaine d'ouverture test pour les voisins",
+          "responseAfter": "avec des dégustations offertes pour stimuler le bouche-à-oreille avant l'inauguration officielle.",
+          "artifact": [
+            "Semaine 1 : Fixer les tarifs avec le torréfacteur local et arrêter les recettes signature",
+            "Semaine 2 : Organiser 3 journées d'avant-première pour les riverains et commerçants voisins",
+            "Semaine 3 : Inauguration officielle avec distribution de cartes de fidélité de bienvenue"
+          ],
+          "sideQuestion": "Question secondaire : Comment calibrer la grille tarifaire initiale pour concilier marge et attractivité ?"
+        }
+      },
+      "scenesTablistLabel": "Aperçus dans différents domaines"
     },
     "features": {
       "badge": "Conçu pour les bâtisseurs",

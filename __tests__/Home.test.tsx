@@ -19,7 +19,7 @@ jest.mock("next/navigation", () => ({
 jest.mock("next-intl", () => ({
   useFormatter: () => jest.requireActual("../test-utils/next-intl").createFormatter(),
   useTranslations: (namespace?: string) => {
-    return (key: string, values?: Record<string, any>) => {
+    const fn = (key: string, values?: Record<string, any>) => {
       let resolved: any;
       if (namespace) {
         resolved = getNestedValue(enMessages, `${namespace}.${key}`);
@@ -40,6 +40,13 @@ jest.mock("next-intl", () => ({
       }
       return resolved;
     };
+    fn.raw = (key: string) => {
+      if (namespace) {
+        return getNestedValue(enMessages, `${namespace}.${key}`);
+      }
+      return getNestedValue(enMessages, key);
+    };
+    return fn;
   },
   useLocale: () => "en",
 }));

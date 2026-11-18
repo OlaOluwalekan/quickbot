@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "check:tokens": "node scripts/check-tokens.mjs",
     "check:i18n": "node scripts/check-i18n.mjs",
+    "check:audit": "node scripts/check-audit.mjs",
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "db:migrate": "prisma migrate dev",

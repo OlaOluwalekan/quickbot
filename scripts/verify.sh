@@ -25,7 +25,7 @@ npm run check:i18n
 npm run typecheck
 npm test -- --ci
 npm run build
-npm audit --omit=dev --audit-level=high
+npm run check:audit
 
 docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:latest detect --source /repo -v
 echo "✅ verify passed"

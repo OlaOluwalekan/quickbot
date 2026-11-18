@@ -51,7 +51,7 @@ jobs:
           COMPANY_LEGAL_NAME: Vyraxity
           COMPANY_ADDRESS: Lagos, Nigeria
           COMPANY_COUNTRY: NG
-      - run: npm audit --omit=dev --audit-level=high
+      - run: npm run check:audit
   secrets:
     runs-on: ubuntu-latest
     steps:
