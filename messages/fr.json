@@ -1141,7 +1141,8 @@
           "q": "Klecx effectue-t-il des recherches sur le web ?",
           "a": "Oui. Klecx consulte le web lorsque votre requête nécessite des informations ou sources récentes. La recherche web peut également être désactivée dans les Paramètres."
         }
-      }
+      },
+      "refundTermsLink": "Lire les conditions de remboursement complètes."
     },
     "cta": {
       "badge": "Crédits de bienvenue offerts",
@@ -1196,78 +1197,462 @@
     }
   },
   "Legal": {
-    "lastUpdated": "Dernière mise à jour : Novembre 2026",
-    "englishNotice": "Ce document est rédigé en anglais pour des raisons de précision juridique.",
-    "privacy": {
-      "title": "Politique de Confidentialité",
-      "subtitle": "Pratiques claires concernant vos données personnelles.",
-      "storageHeading": "1. What We Store",
-      "storageBody": "Nous collectons et conservons les informations relatives à votre compte (adresse e-mail, nom d'affichage, photo de profil le cas échéant), les jetons d'authentification, les métadonnées des espaces de travail, les requêtes, les réponses générées, l'historique des versions et les fichiers téléversés.",
-      "processorsHeading": "2. Sous-traitants tiers",
-      "processorsBody": "Nous traitons vos données par le biais de prestataires professionnels dédiés : Google Gemini (modèles d'IA générative et inférence), Cloudinary (hébergement sécurisé des médias et fichiers), Resend (remise des courriels transactionnels) et Creem (traitement des paiements, abonnements et marchand officiel). Nous ne vendons pas vos données personnelles et ne les utilisons pas pour entraîner des modèles publics.",
-      "retentionHeading": "3. Conservation et suppression des données",
-      "retentionBody": "Les espaces de travail et échanges supprimés restent récupérables dans votre corbeille pendant 30 jours, après quoi ils sont définitivement purgés des bases de données et du stockage. Les sauvegardes automatiques expirent selon un cycle glissant de 30 jours.",
-      "rightsHeading": "4. Vos droits (RGPD et CCPA)",
-      "rightsBody": "Vous disposez du droit d'accéder à vos données, de les exporter, de les rectifier ou de supprimer définitivement votre compte et l'ensemble de vos espaces de travail à tout moment depuis les Paramètres du compte. En cas de demande de suppression, toutes les informations personnelles et identifiants associés sont effacés.",
-      "childrenHeading": "5. Age Restrictions",
-      "childrenBody": "Klecx est conçu pour la productivité professionnelle et des adultes. Il n'est pas destiné ni adressé aux personnes de moins de 18 ans (ou 16 ans selon les juridictions européennes applicables). Nous ne collectons pas sciemment de données relatives à des mineurs.",
-      "contactHeading": "6. Contacter notre équipe chargée de la vie privée",
-      "contactBody": "Pour toute question relative à la protection des données ou pour exercer vos droits, contactez {privacyEmail} ou {supportEmail}."
-    },
+    "updatedAt": "2026-11-18",
+    "lastUpdated": "Dernière mise à jour : {date}",
+    "contents": "Sommaire",
+    "languageClause": "Ce document est proposé en plusieurs langues par commodité. En cas de contradiction entre les versions, la version anglaise prévaut.",
     "terms": {
-      "title": "Conditions d'Utilisation",
-      "subtitle": "Conditions régissant l'utilisation de Klecx et abonnements.",
-      "accountHeading": "1. Account Terms",
-      "accountBody": "Vous devez avoir au moins 18 ans pour créer un compte. Vous êtes responsable du maintien de la sécurité de vos identifiants de connexion et de toutes les activités effectuées depuis votre compte.",
-      "creditsHeading": "2. Crédits, abonnements et remboursements",
-      "creditsBody": "Les abonnements fournissent une attribution régulière de crédits pour chaque période de facturation. Les crédits mensuels ne sont pas reportables et expirent à chaque renouvellement de cycle. Les packs de crédits payants restent valables tant que le compte est actif. Un remboursement peut être demandé sous 14 jours si un problème technique a empêché l'utilisation normale du service.",
-      "sharingHeading": "3. Liens publics et partage d'espaces de travail",
-      "sharingBody": "Lorsque vous générez un lien de partage public (/s/:token), la conversation est accessible à toute personne disposant de l'URL. Vous êtes seul responsable de vous assurer que le contenu partagé ne contient aucun secret, identifiant confidentiel ou donnée privée de tiers.",
-      "ownershipHeading": "4. Propriété intellectuelle",
-      "ownershipBody": "Vous conservez l'entière propriété de l'ensemble des textes originaux et contenus que vous soumettez. Conformément aux conditions du modèle et aux lois sur le droit d'auteur, vous détenez les droits relatifs aux résultats produits par les modèles d'IA dans vos espaces de travail.",
-      "disclaimerHeading": "5. Avertissement relatif aux résultats de l'IA",
-      "disclaimerBody": "Les réponses sont produites par des modèles d'apprentissage automatique probabilistes. Klecx ne garantit ni l'exactitude factuelle, ni l'exhaustivité, ni la fiabilité des contenus générés par l'IA. Vous devez vérifier toute suggestion critique sur le plan technique, médical, financier ou juridique avant de vous y fier.",
-      "terminationHeading": "6. Résiliation et droit applicable",
-      "terminationBody": "Nous nous réservons le droit de suspendre ou clôturer tout compte contrevenant à notre Politique d'utilisation acceptable. Les présentes conditions sont régies et interprétées conformément au droit applicable sans égard aux principes de conflit de lois."
+      "title": "Conditions d'utilisation",
+      "subtitle": "L'accord entre vous et {companyName} pour l'utilisation de Klecx.",
+      "sections": [
+        {
+          "id": "acceptance",
+          "heading": "1. Acceptation et qui nous sommes",
+          "paragraphs": [
+            "Les présentes Conditions d'utilisation (les « Conditions ») constituent un accord entre vous et {companyName}, {companyAddress} (« nous »). Klecx est un produit de {companyName}. En créant un compte ou en utilisant Klecx sur {appUrl}, vous acceptez ces Conditions, notre Politique de confidentialité, notre Politique d'utilisation acceptable et notre Politique relative aux cookies.",
+            "Dans ces Conditions : « Klecx » ou le « Service » désigne le site web et l'application Klecx ; un « espace de travail » est une conversation avec ses réponses, commentaires, questions et documents ; un « projet » est un groupe d'espaces de travail ; les « crédits » sont les unités qui servent à payer les fonctions d'IA ; le « contenu » est tout ce que vous mettez dans Klecx (messages, fichiers, commentaires, modifications) ; et le « résultat » est ce que les modèles d'IA produisent pour vous."
+          ]
+        },
+        {
+          "id": "eligibility",
+          "heading": "2. Conditions d'accès",
+          "paragraphs": [
+            "Vous devez avoir au moins 18 ans pour utiliser Klecx. En l'utilisant, vous confirmez que c'est le cas."
+          ]
+        },
+        {
+          "id": "accounts",
+          "heading": "3. Votre compte",
+          "paragraphs": [
+            "Vous devez fournir des informations exactes lors de votre inscription et les tenir à jour. Un compte est destiné à une seule personne ; ne le partagez pas et ne laissez personne d'autre l'utiliser.",
+            "Vous êtes responsable de la sécurité de votre mot de passe et de tout ce qui est fait avec votre compte. Prévenez-nous immédiatement à {supportEmail} si vous pensez que quelqu'un d'autre l'a utilisé."
+          ]
+        },
+        {
+          "id": "service",
+          "heading": "4. Le Service",
+          "paragraphs": [
+            "Klecx est un espace de travail indépendant fondé sur des modèles d'IA tiers. Ces modèles ne nous appartiennent pas, et nous ne sommes ni affiliés à leurs fournisseurs ni approuvés par eux.",
+            "Nous améliorons Klecx en permanence : des fonctions peuvent changer, être ajoutées ou retirées. Certaines fonctions peuvent être signalées comme bêta ; elles peuvent être moins fiables, évoluer ou disparaître. Nous vous préviendrons à l'avance des changements qui réduisent sensiblement ce que comprend un forfait payant."
+          ]
+        },
+        {
+          "id": "credits",
+          "heading": "5. Crédits et forfaits",
+          "paragraphs": [
+            "Les fonctions d'IA utilisent des crédits. Chaque modèle affiche son coût habituel avant l'envoi d'un message, et le coût réel dépend de la longueur de la demande et de la réponse. Chaque forfait a un plafond de dépense quotidien.",
+            "Les crédits inclus dans un forfait sont renouvelés au début de chaque période. Les crédits non utilisés ne sont pas reportés à la période suivante. Les crédits n'ont pas de valeur monétaire, ne peuvent être ni transférés ni échangés contre de l'argent, et ne sont pas remboursés à leur expiration."
+          ]
+        },
+        {
+          "id": "subscriptions",
+          "when": "billingOff",
+          "heading": "6. Forfaits payants",
+          "paragraphs": [
+            "Les forfaits payants ne sont pas encore disponibles. Tous les comptes utilisent actuellement le forfait Free, et nous ne vous facturons rien. Avant le lancement des forfaits payants, nous mettrons à jour ces Conditions avec les règles d'abonnement, de renouvellement, de résiliation et de remboursement."
+          ]
+        },
+        {
+          "id": "subscriptions",
+          "when": "billingOn",
+          "heading": "6. Abonnements, résiliation et remboursements",
+          "paragraphs": [
+            "Les forfaits payants sont vendus par notre partenaire de paiement, Creem, qui agit en tant que vendeur officiel (merchant of record) : Creem est le vendeur de l'abonnement, traite votre paiement et gère les factures et les taxes sur les ventes. Ses conditions s'appliquent aussi à votre achat.",
+            "Les abonnements se renouvellent automatiquement à la fin de chaque période jusqu'à leur résiliation. Vous pouvez résilier à tout moment depuis les Paramètres ; votre forfait reste actif jusqu'à la fin de la période payée.",
+            "Remboursements : les nouveaux abonnés sont intégralement remboursés dans les 14 jours suivant leur premier paiement s'ils ont utilisé moins de 20 % des crédits de cette période. Un renouvellement est remboursé dans les 7 jours si vous n'avez utilisé aucun crédit depuis. Les doubles prélèvements et les erreurs de facturation sont toujours remboursés. Pour demander un remboursement, écrivez à {billingEmail}.",
+            "Nous pouvons modifier nos prix. Nous vous préviendrons au moins 30 jours avant qu'un nouveau prix s'applique à votre abonnement, et vous pourrez résilier avant."
+          ]
+        },
+        {
+          "id": "collaboration",
+          "heading": "7. Collaboration",
+          "paragraphs": [
+            "Vous pouvez inviter d'autres personnes dans vos espaces de travail et projets. En tant que propriétaire, vos crédits paient tout ce qui se passe dans vos espaces, y compris ce que font vos membres, sauf la saisie vocale, payée par la personne qui l'utilise. Vous décidez de ce que chaque membre peut faire et vous pouvez fixer une limite mensuelle de crédits pour chacun.",
+            "La propriété d'un espace ou d'un projet ne passe à une autre personne que si celle-ci accepte le transfert, et seulement s'il respecte la limite de membres de son forfait. Si un propriétaire a plus de membres que son forfait ne le permet, il dispose de 14 jours pour régulariser ; ensuite, les membres ajoutés le plus récemment passent en lecture seule jusqu'à ce qu'il y ait de nouveau de la place. Rien n'est supprimé."
+          ]
+        },
+        {
+          "id": "content",
+          "heading": "8. Votre contenu et le résultat",
+          "paragraphs": [
+            "Vous conservez les droits que vous détenez sur votre contenu. Vous nous accordez une licence mondiale et non exclusive pour héberger, stocker, traiter et afficher votre contenu uniquement dans la mesure nécessaire pour vous fournir Klecx : par exemple pour le montrer aux personnes avec qui vous le partagez, et pour l'envoyer à nos fournisseurs de modèles d'IA afin qu'ils produisent le résultat.",
+            "Dans la mesure permise par la loi, le résultat que Klecx produit pour vous vous appartient. Le résultat est généré automatiquement et peut être semblable ou identique à celui produit pour d'autres personnes.",
+            "Vous êtes responsable de votre contenu et des droits nécessaires pour l'utiliser, y compris pour les fichiers que vous importez."
+          ]
+        },
+        {
+          "id": "acceptable-use",
+          "heading": "9. Utilisation acceptable",
+          "paragraphs": [
+            "Vous devez respecter notre Politique d'utilisation acceptable, qui fait partie de ces Conditions. Nous pouvons bloquer un contenu ou suspendre un compte qui ne la respecte pas."
+          ]
+        },
+        {
+          "id": "share-links",
+          "heading": "10. Liens publics",
+          "paragraphs": [
+            "Quand vous créez un lien public, toute personne qui a le lien peut lire ce qu'il partage, sans compte. Vous êtes responsable de ce que vous partagez. Vous pouvez révoquer un lien à tout moment ; il cesse alors immédiatement de fonctionner."
+          ]
+        },
+        {
+          "id": "ai-output",
+          "heading": "11. Le résultat de l'IA peut être faux",
+          "paragraphs": [
+            "Le résultat de l'IA peut être inexact, incomplet ou dépassé, même s'il paraît sûr. Ce n'est pas un conseil professionnel. Vérifiez-le avant de vous y fier, en particulier pour du code ou des questions médicales, juridiques ou financières."
+          ]
+        },
+        {
+          "id": "third-parties",
+          "heading": "12. Services tiers",
+          "paragraphs": [
+            "Klecx fonctionne avec des services tiers, comme les fournisseurs de connexion que vous pouvez utiliser pour créer un compte et, lorsque les forfaits payants seront disponibles, notre partenaire de paiement. Leurs propres conditions s'appliquent à votre utilisation de ces services, dont nous ne sommes pas responsables."
+          ]
+        },
+        {
+          "id": "ip",
+          "heading": "13. Notre propriété intellectuelle",
+          "paragraphs": [
+            "Klecx, son logiciel, son design et sa marque appartiennent à {companyName} ou à ses concédants. Ces Conditions ne vous donnent aucun droit sur eux, en dehors de l'utilisation du Service. Si vous nous envoyez des commentaires ou des idées, nous pouvons les utiliser sans aucune obligation envers vous."
+          ]
+        },
+        {
+          "id": "copyright",
+          "heading": "14. Réclamations relatives au droit d'auteur",
+          "paragraphs": [
+            "Si vous pensez qu'un contenu de Klecx, y compris un lien public, porte atteinte à vos droits d'auteur, écrivez à {legalEmail} ou {abuseEmail} en indiquant : le contenu ou le lien concerné, l'œuvre que vous estimez contrefaite, vos coordonnées, et une déclaration selon laquelle vous êtes titulaire des droits ou autorisé à agir en son nom. Nous examinerons la demande et retirerons le contenu le cas échéant."
+          ]
+        },
+        {
+          "id": "termination",
+          "heading": "15. Suspension et résiliation",
+          "paragraphs": [
+            "Vous pouvez cesser d'utiliser Klecx à tout moment. La suppression du compte n'est pas encore disponible dans les Paramètres ; pour fermer votre compte, écrivez à {supportEmail}.",
+            "Nous pouvons suspendre ou fermer votre compte si vous enfreignez gravement ou de façon répétée ces Conditions ou la Politique d'utilisation acceptable, si la loi l'exige, ou pour protéger les autres utilisateurs ou le Service. Lorsque c'est raisonnable, nous vous en indiquerons la raison et vous donnerons la possibilité de répondre."
+          ]
+        },
+        {
+          "id": "liability",
+          "heading": "16. Exclusions et limitation de responsabilité",
+          "paragraphs": [
+            "Klecx est fourni « en l'état » et « selon disponibilité ». Dans la mesure permise par la loi, nous ne garantissons pas qu'il sera toujours disponible, exempt d'erreurs ou adapté à un usage particulier.",
+            "Dans la mesure permise par la loi, nous ne sommes pas responsables des pertes indirectes ou consécutives (comme un manque à gagner ou une perte de données), et notre responsabilité totale pour toute réclamation liée à Klecx est limitée au montant que vous nous avez payé au cours des 12 mois précédant la réclamation, ou à 50 dollars américains si vous n'avez rien payé. Rien dans ces Conditions ne limite une responsabilité que la loi ne permet pas de limiter.",
+            "Vous acceptez de nous indemniser des réclamations de tiers résultant de votre contenu ou de votre violation de ces Conditions."
+          ]
+        },
+        {
+          "id": "changes",
+          "heading": "17. Modifications de ces Conditions",
+          "paragraphs": [
+            "Nous pouvons mettre à jour ces Conditions. En cas de modification importante, nous vous préviendrons par e-mail ou dans l'application avant son entrée en vigueur. Si vous continuez à utiliser Klecx ensuite, les nouvelles Conditions s'appliquent ; si vous n'êtes pas d'accord, vous pouvez cesser de l'utiliser."
+          ]
+        },
+        {
+          "id": "law",
+          "heading": "18. Droit applicable et litiges",
+          "paragraphs": [
+            "Ces Conditions sont régies par le droit de la République fédérale du Nigeria, et les tribunaux de l'État de Lagos sont compétents. Si vous êtes un consommateur, vous conservez les protections impératives du droit du pays où vous vivez et pouvez aussi y engager une procédure.",
+            "Avant toute réclamation ou contestation de paiement, écrivez-nous à {legalEmail} et laissez-nous 30 jours pour tenter de trouver une solution à l'amiable."
+          ]
+        },
+        {
+          "id": "contact",
+          "heading": "19. Contact",
+          "paragraphs": [
+            "{companyName}, {companyAddress}. Questions sur ces Conditions : {legalEmail}. Aide pour Klecx : {supportEmail}."
+          ]
+        }
+      ]
+    },
+    "privacy": {
+      "title": "Politique de confidentialité",
+      "subtitle": "Les données personnelles que Klecx collecte, pourquoi, qui les traite, combien de temps nous les gardons et quels sont vos droits.",
+      "sections": [
+        {
+          "id": "controller",
+          "heading": "1. Responsable du traitement",
+          "paragraphs": [
+            "Klecx est un produit de {companyName}, {companyAddress}, responsable du traitement de vos données personnelles. Pour toute question de confidentialité, écrivez à {privacyEmail}.",
+            "Nous traitons les données personnelles conformément à la loi nigériane de 2023 sur la protection des données (Nigeria Data Protection Act 2023). Si vous êtes dans l'Union européenne ou au Royaume-Uni, vous bénéficiez aussi des droits prévus par le RGPD et le RGPD britannique."
+          ]
+        },
+        {
+          "id": "data",
+          "heading": "2. Données collectées",
+          "paragraphs": [
+            "Nous ne collectons que ce dont nous avons besoin pour faire fonctionner Klecx :"
+          ],
+          "bullets": [
+            "Compte : votre nom, votre adresse e-mail, votre nom d'utilisateur, votre photo de profil et, si vous vous connectez via un autre fournisseur, la photo de profil de ce fournisseur.",
+            "Connexion et sécurité : votre adresse IP, les informations sur votre navigateur et votre appareil, le pays d'où provient votre connexion, et les dates de création et de dernière utilisation de chaque session.",
+            "Votre contenu : messages, réponses et leurs versions, vos modifications, commentaires, questions, mentions, notes Klecx, les fichiers que vous importez et le texte qui en est extrait, les documents générés et les liens publics que vous créez.",
+            "Collaboration : appartenance aux espaces de travail et projets, rôles et autorisations, invitations, transferts de propriété et journal d'activité des espaces partagés.",
+            "Utilisation et facturation : votre solde et votre historique de crédits, les modèles utilisés et le coût en crédits de chaque demande, votre forfait et, lorsque les forfaits payants seront disponibles, le statut des paiements transmis par notre partenaire de paiement. Nous ne recevons ni ne conservons jamais de numéro de carte.",
+            "Assistance : les demandes que vous nous envoyez, les diagnostics techniques facultatifs que vous choisissez de joindre et les captures d'écran que vous joignez.",
+            "Préférences : la langue de l'interface, la langue dans laquelle Klecx répond, votre réglage de recherche web et vos réglages de notification.",
+            "Saisie vocale : votre enregistrement est envoyé à notre fournisseur de modèles d'IA pour être transcrit, et seul le texte est conservé. Nous ne gardons pas l'enregistrement.",
+            "Cookies et stockage du navigateur : voir notre Politique relative aux cookies."
+          ]
+        },
+        {
+          "id": "purposes",
+          "heading": "3. Pourquoi nous les utilisons",
+          "paragraphs": [
+            "Nous utilisons vos données :"
+          ],
+          "bullets": [
+            "Pour vous fournir Klecx et les fonctions que vous utilisez, en exécution de notre contrat avec vous (nos Conditions d'utilisation).",
+            "Pour protéger les comptes et le Service, prévenir les abus et faire respecter nos règles, sur la base de notre intérêt légitime.",
+            "Pour vous envoyer les e-mails nécessaires, comme les alertes de connexion et les invitations, et les notifications que vous choisissez dans les Paramètres.",
+            "Pour répondre à vos demandes d'assistance.",
+            "Pour respecter nos obligations légales, par exemple les règles fiscales et comptables lorsque les forfaits payants seront disponibles.",
+            "Lorsque la loi exige votre consentement, nous vous le demandons, et vous pouvez le retirer à tout moment."
+          ]
+        },
+        {
+          "id": "recipients",
+          "heading": "4. Qui traite vos données",
+          "paragraphs": [
+            "Nous ne vendons pas vos données personnelles. Nous les partageons uniquement avec les prestataires qui nous aident à faire fonctionner Klecx, dans le cadre de contrats qui limitent leur utilisation à la fourniture de leur service :"
+          ],
+          "afterTable": [
+            "Quand Klecx fait une recherche sur le web pour une réponse, la requête de recherche est envoyée au service de recherche de notre fournisseur de modèles d'IA.",
+            "Nous pouvons aussi communiquer des données lorsque la loi l'exige, ou pour protéger les droits et la sécurité de nos utilisateurs et du Service."
+          ]
+        },
+        {
+          "id": "ai",
+          "heading": "5. Fonctionnement du traitement par l'IA",
+          "paragraphs": [
+            "Pour produire une réponse, Klecx envoie votre message et le contexte nécessaire (messages précédents, passage sur lequel vous avez posé une question, documents de votre espace de travail et notes Klecx, fichiers joints) à notre fournisseur de modèles d'IA. Le fournisseur utilise ces données uniquement pour produire la réponse, et ses conditions ne l'autorisent pas à utiliser les données envoyées par des applications comme Klecx pour entraîner ses modèles.",
+            "Les demandes d'images sont vérifiées par des règles automatiques avant la création de l'image. Si une demande est bloquée, nous ne gardons qu'une empreinte de celle-ci et le motif, pas son texte."
+          ]
+        },
+        {
+          "id": "transfers",
+          "heading": "6. Transferts internationaux",
+          "paragraphs": [
+            "Nos prestataires traitent des données hors du Nigeria, notamment aux États-Unis et dans l'Union européenne. Lorsque nous transférons des données personnelles à l'étranger, nous nous appuyons sur les garanties prévues par la loi nigériane de 2023 sur la protection des données, comme les décisions d'adéquation ou les garanties contractuelles, et, pour les données de l'UE ou du Royaume-Uni, sur des clauses contractuelles types ou un mécanisme équivalent."
+          ]
+        },
+        {
+          "id": "retention",
+          "heading": "7. Durée de conservation",
+          "bullets": [
+            "Données du compte et votre contenu : tant que votre compte existe.",
+            "Espaces de travail supprimés : masqués immédiatement et supprimés définitivement lors d'un nettoyage programmé.",
+            "Sessions : jusqu'à votre déconnexion, leur révocation, ou 30 jours après leur dernière utilisation.",
+            "Captures d'écran d'assistance : supprimées 90 jours après la demande.",
+            "Demandes d'assistance : le temps nécessaire pour vous aider et garder une trace de la demande.",
+            "Historique des crédits et de la facturation : aussi longtemps que l'exigent les règles comptables et fiscales.",
+            "Sauvegardes : écrasées selon la rotation habituelle de notre hébergeur."
+          ]
+        },
+        {
+          "id": "rights",
+          "heading": "8. Vos droits",
+          "paragraphs": [
+            "Vous pouvez nous demander une copie de vos données personnelles, les rectifier, les supprimer, les recevoir dans un format portable, ou vous opposer à une utilisation ou la limiter. Lorsque nous nous appuyons sur votre consentement, vous pouvez le retirer à tout moment.",
+            "L'export et la suppression du compte ne sont pas encore disponibles dans les Paramètres. Pour exercer l'un de ces droits, écrivez à {privacyEmail} depuis l'adresse e-mail de votre compte ; nous répondrons dans le délai prévu par la loi. Vous pouvez corriger vous-même votre nom et vos réglages dans les Paramètres.",
+            "Vous pouvez déposer une plainte auprès de la Commission nigériane de protection des données (NDPC) ou, dans l'UE ou au Royaume-Uni, auprès de votre autorité de protection des données. Nous apprécierions d'avoir d'abord l'occasion de répondre à votre préoccupation."
+          ]
+        },
+        {
+          "id": "security",
+          "heading": "9. Sécurité",
+          "paragraphs": [
+            "Nous protégeons vos données par des connexions chiffrées (HTTPS), des mots de passe hachés, des contrôles d'accès qui limitent chaque espace de travail aux personnes invitées, un stockage privé des fichiers importés avec des liens de téléchargement à durée limitée, des alertes de connexion et des limites d'utilisation contre les abus. Aucun système n'est parfaitement sûr ; si une violation touche vos données, nous vous en informerons, ainsi que les autorités, comme la loi l'exige."
+          ]
+        },
+        {
+          "id": "children",
+          "heading": "10. Mineurs",
+          "paragraphs": [
+            "Klecx s'adresse aux personnes de 18 ans et plus. Nous ne collectons pas sciemment de données concernant des personnes plus jeunes. Si vous pensez qu'un mineur nous a transmis des données personnelles, écrivez à {privacyEmail} et nous les supprimerons."
+          ]
+        },
+        {
+          "id": "changes",
+          "heading": "11. Modifications de cette politique",
+          "paragraphs": [
+            "Nous pouvons mettre à jour cette politique. En cas de modification importante, nous vous préviendrons par e-mail ou dans l'application avant son entrée en vigueur."
+          ]
+        },
+        {
+          "id": "contact",
+          "heading": "12. Contact",
+          "paragraphs": [
+            "{companyName}, {companyAddress}. Questions et demandes relatives à la confidentialité : {privacyEmail}. Autres questions : {supportEmail}."
+          ]
+        }
+      ],
+      "processorsHeading": "Prestataire",
+      "processorsPurposeHeading": "Ce qu'il fait pour nous",
+      "processors": [
+        {
+          "name": "Google (Gemini API)",
+          "purpose": "Fournisseur de modèles d'IA : produit les réponses, les images et les transcriptions vocales, et effectue les recherches web."
+        },
+        {
+          "name": "Vercel",
+          "purpose": "Hébergement du site web et de l'application."
+        },
+        {
+          "name": "Prisma (Prisma Postgres)",
+          "purpose": "Hébergement de la base de données où sont enregistrés votre compte et votre contenu."
+        },
+        {
+          "name": "Upstash",
+          "purpose": "Limites d'utilisation et données techniques de courte durée."
+        },
+        {
+          "name": "Cloudinary",
+          "purpose": "Stockage des fichiers importés, des images et des avatars."
+        },
+        {
+          "name": "Resend",
+          "purpose": "Envoi des e-mails."
+        },
+        {
+          "name": "Creem",
+          "purpose": "Paiements et facturation en tant que vendeur officiel, lorsque les forfaits payants seront disponibles."
+        }
+      ]
     },
     "acceptableUse": {
-      "title": "Politique d'Utilisation Acceptable",
-      "subtitle": "Normes de sécurité et cas interdits.",
-      "prohibitedHeading": "1. Usages strictement interdits",
-      "prohibitedIntro": "Afin de garantir la sécurité de la plateforme et de respecter les réglementations, les activités suivantes sont formellement interdites sur Klecx :",
-      "prohibitedItems": [
-        "Génération de contenus sexuels explicites, pornographiques ou inappropriés.",
-        "Jeux de rôle d'intimité synthétique ou de compagnie amoureuse avec une IA.",
-        "Harcèlement, propos haineux, diffamation ou incitation à la violence contre des personnes ou groupes.",
-        "Création de logiciels malveillants, développement d'exploits, hameçonnage ou cyberattaques.",
-        "Fraude, usurpation d'identité, tromperie ou manipulation délibérée.",
-        "Échange de visages, trucages vidéo (deepfakes) ou manipulation de l'image de personnes vivantes sans leur consentement exprès.",
-        "Fraude académique, plagiat ou rédaction de devoirs scolaires et universitaires pour autrui.",
-        "Toute activité contrevenant aux lois locales, nationales ou internationales applicables.",
-        "Contournement des quotas d'utilisation, des limites de crédits ou des dispositifs de sécurité."
-      ],
-      "enforcementHeading": "2. Surveillance et sanctions",
-      "enforcementBody": "Nous appliquons des limitations automatisées de débit, des filtres sémantiques et des mécanismes de détection des abus. Tout manquement à ces règles entraînera le blocage immédiat du contenu, l'arrêt de la requête, la suspension temporaire ou la résiliation définitive du compte sans remboursement.",
-      "reportingHeading": "3. Signaler un abus",
-      "reportingBody": "Si vous constatez un contenu abusif, un détournement du service ou une atteinte au droit d'auteur sur Klecx, signalez-le immédiatement à notre adresse dédiée {abuseEmail}. Nous examinons chaque signalement valide sous 24 heures."
+      "title": "Politique d'utilisation acceptable",
+      "subtitle": "Ce que vous ne pouvez pas faire avec Klecx, comment nous l'appliquons et comment signaler un abus.",
+      "sections": [
+        {
+          "id": "scope",
+          "heading": "1. Champ d'application",
+          "paragraphs": [
+            "Cette politique fait partie de nos Conditions d'utilisation. Elle s'applique à tout ce que vous faites dans Klecx : messages, fichiers, commentaires, invitations, liens publics et le résultat que vous créez."
+          ]
+        },
+        {
+          "id": "prohibited",
+          "heading": "2. Ce que vous ne pouvez pas faire",
+          "paragraphs": [
+            "N'utilisez pas Klecx pour :"
+          ],
+          "bullets": [
+            "Créer du contenu sexuellement explicite ou pornographique, ou des jeux de rôle romantiques ou sexuels avec l'IA.",
+            "Harceler, menacer, intimider ou diffamer quiconque, promouvoir la violence ou propager la haine envers des personnes ou des groupes.",
+            "Créer des logiciels malveillants, rechercher ou exploiter des failles dans des systèmes que vous n'êtes pas autorisé à tester, faire de l'hameçonnage ou mener des cyberattaques.",
+            "Commettre une fraude, usurper l'identité d'autrui, voler des identités ou tromper des personnes.",
+            "Enfreindre la loi ou aider d'autres personnes à le faire.",
+            "Envoyer du spam ou des messages de masse non sollicités, y compris via des invitations ou des mentions.",
+            "Utiliser des @mentions, des invitations ou des liens partagés pour harceler des personnes.",
+            "Extraire automatiquement des données, copier ou revendre le Service, ou l'utiliser, ou utiliser son résultat, pour créer un modèle d'IA concurrent.",
+            "Contourner les limites de crédits, de forfait ou d'utilisation ou d'autres protections, ou partager un compte entre plusieurs personnes.",
+            "Importer un contenu que vous n'avez pas le droit d'utiliser ou qui porte atteinte aux droits d'autrui.",
+            "Cacher des instructions dans un contenu que vous partagez pour manipuler l'IA lorsque d'autres personnes l'utilisent (injection d'instructions).",
+            "Présenter le résultat de l'IA comme votre propre travail là où ce n'est pas autorisé, par exemple lors d'examens ou de travaux notés."
+          ]
+        },
+        {
+          "id": "images",
+          "heading": "3. Images",
+          "paragraphs": [
+            "Lorsque vous créez des images, ne demandez ni ne créez jamais :"
+          ],
+          "bullets": [
+            "Aucun contenu sexuel ou sexualisé impliquant des mineurs.",
+            "Des images intimes ou sexuelles de personnes réelles sans leur consentement.",
+            "Des échanges de visages, deepfakes ou autres manipulations du visage ou de l'image de personnes réelles.",
+            "De la violence extrême, ou un contenu qui encourage l'automutilation."
+          ]
+        },
+        {
+          "id": "enforcement",
+          "heading": "4. Comment nous appliquons cette politique",
+          "paragraphs": [
+            "Les demandes d'images sont vérifiées par des règles automatiques avant la création de l'image, et les demandes bloquées sont refusées. Après trois demandes d'images bloquées dans la même journée, la création d'images est désactivée pour ce compte jusqu'au lendemain. Pour les demandes bloquées, nous ne gardons qu'une empreinte et le motif, pas le texte. Notre fournisseur de modèles d'IA applique aussi ses propres filtres de sécurité à toutes les demandes, et des limites d'utilisation protègent le Service contre les abus.",
+            "Selon la gravité de l'infraction, nous pouvons bloquer le contenu, retirer un lien public, limiter des fonctions, ou suspendre ou fermer le compte. Lorsque c'est raisonnable, nous vous en informerons et vous donnerons la possibilité de répondre."
+          ]
+        },
+        {
+          "id": "reporting",
+          "heading": "5. Signaler un abus",
+          "paragraphs": [
+            "Pour signaler un contenu ou un comportement contraire à cette politique, y compris un lien public, écrivez à {abuseEmail} avec un lien ou une description et la raison pour laquelle vous pensez qu'il l'enfreint. Pour les réclamations relatives au droit d'auteur, voir nos Conditions d'utilisation. Nous examinons les signalements rapidement."
+          ]
+        }
+      ]
     },
     "cookies": {
-      "title": "Politique des Cookies",
-      "subtitle": "Nous n'utilisons que des cookies strictement essentiels.",
-      "overviewHeading": "1. Uniquement des cookies essentiels",
-      "overviewBody": "Klecx n'utilise aucun cookie publicitaire tiers, traceur intersite ou pixel marketing. Nous déposons uniquement des cookies internes strictement nécessaires à l'authentification, à la sécurité des sessions et aux préférences de l'utilisateur.",
-      "cookieTableHeading": "2. Cookies We Set",
-      "cookieNameHeader": "Cookie Name",
-      "cookiePurposeHeader": "Purpose",
-      "cookieDurationHeader": "Duration",
-      "cookieAuth": "Jeton de session d'authentification et validation CSRF.",
-      "cookieLocale": "Conserve votre préférence de langue pour l'interface.",
-      "cookieTheme": "Mémorise le thème clair, sombre ou système.",
-      "cookieSidebar": "Mémorise l'état replié ou déployé du panneau latéral.",
-      "durationSession": "30 days (rolling)",
-      "durationYear": "1 year",
-      "durationState": "Préférence locale persistante",
-      "tableType": "Type"
+      "title": "Politique relative aux cookies",
+      "subtitle": "Les cookies et le stockage du navigateur utilisés par Klecx, et pourquoi.",
+      "sections": [
+        {
+          "id": "overview",
+          "heading": "1. En résumé",
+          "paragraphs": [
+            "Klecx utilise quelques cookies et un peu de stockage dans votre navigateur pour garder votre session ouverte et retenir vos préférences. Nous n'utilisons pas de cookies publicitaires ni de traçage, et aucun tiers ne dépose de cookies via Klecx."
+          ]
+        },
+        {
+          "id": "list",
+          "heading": "2. Ce que nous utilisons",
+          "paragraphs": [
+            "Les éléments essentiels sont nécessaires au fonctionnement de Klecx. Les éléments de préférence retiennent vos choix ; Klecx fonctionne sans eux."
+          ]
+        },
+        {
+          "id": "manage",
+          "heading": "3. Gérer les cookies et le stockage",
+          "paragraphs": [
+            "Vous pouvez supprimer les cookies et les données du site à tout moment dans les réglages de votre navigateur. Si vous bloquez les cookies essentiels, vous ne pourrez pas vous connecter. Effacer le stockage du navigateur réinitialise vos préférences et supprime les brouillons non envoyés enregistrés dans ce navigateur."
+          ]
+        },
+        {
+          "id": "changes",
+          "heading": "4. Modifications",
+          "paragraphs": [
+            "Si nous commençons à utiliser des cookies à d'autres fins, comme la mesure d'audience, nous mettrons à jour cette politique et vous demanderons d'abord votre consentement lorsque la loi l'exige."
+          ]
+        },
+        {
+          "id": "contact",
+          "heading": "5. Contact",
+          "paragraphs": [
+            "Questions sur cette politique : {privacyEmail}."
+          ]
+        }
+      ],
+      "table": {
+        "name": "Nom",
+        "type": "Type",
+        "purpose": "Finalité",
+        "duration": "Durée"
+      },
+      "types": {
+        "cookie": "Cookie",
+        "localStorage": "Stockage local",
+        "sessionStorage": "Stockage de session"
+      },
+      "categories": {
+        "essential": "Essentiel",
+        "preference": "Préférence"
+      },
+      "durations": {
+        "sessionRolling": "30 jours, renouvelés tant que vous utilisez Klecx",
+        "oneYear": "1 an",
+        "untilCleared": "Jusqu'à ce que vous l'effaciez",
+        "tab": "Jusqu'à la fermeture de l'onglet"
+      },
+      "purposes": {
+        "session": "Garde votre session ouverte.",
+        "locale": "Retient la langue de l'interface.",
+        "sidebar": "Retient si la barre latérale est ouverte ou réduite.",
+        "theme": "Retient votre thème clair, sombre ou système.",
+        "uiStore": "Retient les réglages du compositeur et de la barre latérale, et garde les brouillons de messages non envoyés.",
+        "columnWidths": "Retient la largeur des colonnes latérales.",
+        "sidebarPinned": "Retient si vous avez épinglé la barre latérale ouverte.",
+        "projectView": "Retient l'affichage en liste ou en grille des pages de projet.",
+        "documentDrafts": "Conserve les modifications de documents non enregistrées si vous rechargez la page.",
+        "usernamePrompt": "Évite d'afficher deux fois dans une même visite la demande de nom d'utilisateur."
+      }
     }
   },
   "Help": {
