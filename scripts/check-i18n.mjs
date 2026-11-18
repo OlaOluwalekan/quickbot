@@ -19,7 +19,18 @@ function logSuccess(msg) {
 }
 
 // 1. Load Messages
-const locales = ["en", "es", "fr"];
+function getRegisteredLocales() {
+  const localesFilePath = path.join(rootDir, "i18n", "locales.ts");
+  if (fs.existsSync(localesFilePath)) {
+    const raw = fs.readFileSync(localesFilePath, "utf8");
+    const matches = [...raw.matchAll(/code:\s*["']([a-z]{2})["']/g)].map((m) => m[1]);
+    if (matches.length > 0) {
+      return [...new Set(matches)];
+    }
+  }
+  return ["en", "es", "fr"];
+}
+const locales = getRegisteredLocales();
 const messages = {};
 for (const loc of locales) {
   const filePath = path.join(messagesDir, `${loc}.json`);

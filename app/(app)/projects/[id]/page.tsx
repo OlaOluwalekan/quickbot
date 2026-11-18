@@ -1,4 +1,6 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { requireActor } from "@/server/auth/session";
 import { ApiError } from "@/server/http/errors";
 import { getProject, getProjectWorkspaces } from "@/server/services/project";
@@ -6,6 +8,18 @@ import { ProjectView } from "@/components/project/project-view";
 import { PROJECT_WORKSPACES_PAGE_SIZE } from "@/components/project/constants";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("Metadata.project");
+  return {
+    title: `${t("title")} · Klecx`,
+    description: t("description"),
+    robots: {
+      index: false,
+      follow: false,
+    },
+  };
+}
 
 export default async function ProjectPage({
   params,

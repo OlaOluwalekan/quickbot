@@ -8,17 +8,18 @@ import {
   MarketingFAQ,
   MarketingCTA,
 } from "@/components/marketing";
+import { buildAlternates } from "@/lib/seo/alternates";
 
 export async function generateMetadata(): Promise<Metadata> {
+  const tMeta = await getTranslations("Metadata.landing");
   const t = await getTranslations("Landing");
+  const title = tMeta("title");
   return {
-    title: "Workspaces, not threads",
+    title,
     description: t("heroDescription"),
-    alternates: {
-      canonical: "/",
-    },
+    alternates: buildAlternates("/"),
     openGraph: {
-      title: "Workspaces, not threads · Klecx",
+      title: `${title} · Klecx`,
       description: t("heroDescription"),
       url: "/",
     },

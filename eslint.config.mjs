@@ -172,6 +172,38 @@ const eslintConfig = [
       ],
     },
   },
+  {
+    files: [
+      "components/marketing/**/*.{ts,tsx}",
+      "components/help/**/*.{ts,tsx}",
+      "app/(marketing)/**/*.{ts,tsx}",
+    ],
+    ignores: [
+      "app/(marketing)/terms/**",
+      "app/(marketing)/privacy/**",
+      "app/(marketing)/acceptable-use/**",
+      "app/(marketing)/cookies/**",
+      "components/legal/**",
+    ],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "next/link",
+              message: "Please import Link from '@/i18n/navigation' instead of 'next/link'.",
+            },
+            {
+              name: "next/navigation",
+              importNames: ["useRouter", "usePathname", "redirect"],
+              message: "Please import navigation helpers from '@/i18n/navigation'.",
+            },
+          ],
+        },
+      ],
+    },
+  },
 ];
 
 export default eslintConfig;

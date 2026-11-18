@@ -1,11 +1,20 @@
 import * as React from "react";
+import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import AuthWrapper from "@/components/auth/AuthWrapper";
 import VerificationForm from "@/components/auth/VerificationForm";
 
-export const metadata = {
-  title: "Verify Email · Klecx",
-  description: "Verify your email address for your Klecx account.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("Metadata.auth");
+  return {
+    title: `${t("verifyEmailTitle")} · Klecx`,
+    description: t("verifyEmailDescription"),
+    robots: {
+      index: false,
+      follow: false,
+    },
+  };
+}
 
 export default function VerifyEmailPage() {
   return (

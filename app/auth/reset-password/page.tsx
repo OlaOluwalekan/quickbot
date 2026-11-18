@@ -1,11 +1,20 @@
 import * as React from "react";
+import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import AuthWrapper from "@/components/auth/AuthWrapper";
 import { ResetPasswordForm } from "@/components/auth/ResetPasswordForm";
 
-export const metadata = {
-  title: "Reset Password · Klecx",
-  description: "Set a new secure password for your Klecx account.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("Metadata.auth");
+  return {
+    title: `${t("resetPasswordTitle")} · Klecx`,
+    description: t("resetPasswordDescription"),
+    robots: {
+      index: false,
+      follow: false,
+    },
+  };
+}
 
 export default function ResetPasswordPage() {
   return (

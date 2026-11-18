@@ -2,7 +2,78 @@
   "Metadata": {
     "title": "Klecx | Tu espacio de trabajo y estudio de colaboración con IA",
     "description": "Obtén respuestas de IA en tiempo real, genera imágenes de calidad de estudio y acelera tu flujo de trabajo con Klecx.",
-    "ogImageAlt": "Vista previa del espacio de trabajo de {appName}"
+    "ogImageAlt": "Vista previa del espacio de trabajo de {appName}",
+    "root": {
+      "title": "Klecx — Espacios de trabajo, no hilos",
+      "titleTemplate": "%s · Klecx",
+      "description": "Espacio de trabajo de IA colaborativo para investigación, redacción y organización del conocimiento. Conserve versiones de respuestas y anote pasajes.",
+      "applicationName": "Klecx",
+      "keywords": "espacio de trabajo IA, IA colaborativa, ingeniería de instrucciones, versiones de respuesta, razonamiento de pasajes"
+    },
+    "landing": {
+      "title": "Espacios de trabajo, no hilos",
+      "description": "Organice el trabajo de IA en proyectos, conserve las versiones de cada respuesta y haga preguntas sobre cualquier pasaje sin perder el hilo de pensamiento."
+    },
+    "og": {
+      "title": "Espacios de trabajo, no hilos.",
+      "tagline": "Organice la investigación de IA en proyectos, conserve versiones de respuestas y razone sobre pasajes sin perder contexto.",
+      "chipReasoning": "Razonamiento multinivel",
+      "chipVersions": "Historial de versiones",
+      "chipPrivate": "100% Privado"
+    },
+    "manifest": {
+      "name": "Klecx — Espacio de trabajo IA",
+      "shortName": "Klecx",
+      "description": "Espacio de trabajo de IA colaborativo para investigación, redacción y organización del conocimiento."
+    },
+    "auth": {
+      "loginTitle": "Iniciar sesión",
+      "loginDescription": "Inicie sesión en su espacio de trabajo de Klecx.",
+      "registerTitle": "Comenzar",
+      "registerDescription": "Cree su cuenta de Klecx y comience a organizar su investigación de IA.",
+      "registeredTitle": "Registro pendiente",
+      "registeredDescription": "Verifique su correo electrónico para completar el registro.",
+      "forgotPasswordTitle": "Recuperar contraseña",
+      "forgotPasswordDescription": "Restablezca la contraseña de su cuenta de Klecx.",
+      "resetPasswordTitle": "Restablecer contraseña",
+      "resetPasswordDescription": "Establezca una nueva contraseña segura para su cuenta de Klecx.",
+      "verifyEmailTitle": "Verificar correo electrónico",
+      "verifyEmailDescription": "Verifique su dirección de correo electrónico para su cuenta de Klecx."
+    },
+    "settings": {
+      "title": "Configuración",
+      "description": "Administre su perfil, preferencias y seguridad de la cuenta.",
+      "sessionsTitle": "Sesiones y dispositivos — Configuración",
+      "sessionsDescription": "Revise y administre sus sesiones de navegador y dispositivos activos."
+    },
+    "app": {
+      "title": "Espacio de trabajo",
+      "description": "Espacio de trabajo y lienzo de proyectos con IA colaborativa."
+    },
+    "project": {
+      "title": "Proyecto",
+      "description": "Vista general del proyecto y espacios de trabajo."
+    },
+    "notFound": {
+      "title": "Página no encontrada",
+      "description": "La página que busca no existe o ha sido movida."
+    },
+    "share": {
+      "title": "Compartido en Klecx",
+      "description": "Vista compartida de solo lectura en Klecx."
+    },
+    "offline": {
+      "title": "Sin conexión",
+      "description": "Actualmente no tiene conexión. Verifique su conexión a Internet."
+    },
+    "maintenance": {
+      "title": "En mantenimiento programado",
+      "description": "Klecx está temporalmente en mantenimiento programado."
+    },
+    "invite": {
+      "title": "Invitación al proyecto",
+      "description": "Únase y colabore en este proyecto en Klecx."
+    }
   },
   "Common": {
     "appName": "Klecx",

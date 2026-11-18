@@ -8,6 +8,39 @@ function isValidLocale(val: string | undefined): val is Locale {
   return Boolean(val && locales.includes(val as Locale));
 }
 
+function deepMerge(target: Record<string, any>, source: Record<string, any>): Record<string, any> {
+  const output: Record<string, any> = { ...target };
+  for (const key of Object.keys(source)) {
+    if (
+      source[key] &&
+      typeof source[key] === "object" &&
+      !Array.isArray(source[key]) &&
+      key in target &&
+      target[key] &&
+      typeof target[key] === "object" &&
+      !Array.isArray(target[key])
+    ) {
+      output[key] = deepMerge(target[key], source[key]);
+    } else {
+      output[key] = source[key];
+    }
+  }
+  return output;
+}
+
+export async function loadLocaleMessages(locale: string): Promise<Record<string, any>> {
+  const enMessages = (await import(`../messages/en.json`)).default;
+  if (locale === "en") {
+    return enMessages;
+  }
+  try {
+    const targetMessages = (await import(`../messages/${locale}.json`)).default;
+    return deepMerge(enMessages, targetMessages);
+  } catch {
+    return enMessages;
+  }
+}
+
 export default getRequestConfig(async () => {
   let locale: Locale = defaultLocale;
 
@@ -25,7 +58,7 @@ export default getRequestConfig(async () => {
       if (pref?.uiLocale && isValidLocale(pref.uiLocale)) {
         return {
           locale: pref.uiLocale,
-          messages: (await import(`../messages/${pref.uiLocale}.json`)).default,
+          messages: await loadLocaleMessages(pref.uiLocale),
         };
       }
     }
@@ -55,6 +88,6 @@ export default getRequestConfig(async () => {
 
   return {
     locale,
-    messages: (await import(`../messages/${locale}.json`)).default,
+    messages: await loadLocaleMessages(locale),
   };
 });

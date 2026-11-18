@@ -1,8 +1,22 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import AuthCard from "@/components/auth/AuthCard";
 import AuthWrapper from "@/components/auth/AuthWrapper";
 import LoginForm from "@/components/auth/LoginForm";
 import { useTranslations } from "next-intl";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("Metadata.auth");
+  return {
+    title: `${t("loginTitle")} · Klecx`,
+    description: t("loginDescription"),
+    robots: {
+      index: false,
+      follow: false,
+    },
+  };
+}
 
 const LoginPage = () => {
   const t = useTranslations("Auth");

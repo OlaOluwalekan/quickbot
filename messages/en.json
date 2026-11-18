@@ -2,7 +2,78 @@
   "Metadata": {
     "title": "Klecx | Your AI Workspace & Collaboration Studio",
     "description": "Stream real-time AI answers, generate studio-grade visuals, and accelerate your workflow with Klecx.",
-    "ogImageAlt": "{appName} workspace preview"
+    "ogImageAlt": "{appName} workspace preview",
+    "root": {
+      "title": "Klecx — Workspaces, not threads",
+      "titleTemplate": "%s · Klecx",
+      "description": "Collaborative AI workspace for research, writing, and knowledge organization. Keep response versions, annotate passages, and organize work into projects.",
+      "applicationName": "Klecx",
+      "keywords": "AI workspace, collaborative AI, prompt engineering, response versions, passage reasoning, AI research"
+    },
+    "landing": {
+      "title": "Workspaces, not threads",
+      "description": "Organize AI work into projects, keep every answer's versions, and ask questions about any passage without losing your train of thought."
+    },
+    "og": {
+      "title": "Workspaces, not threads.",
+      "tagline": "Organize AI research into projects, preserve response versions, and reason over passages with zero lost context.",
+      "chipReasoning": "Multi-turn reasoning",
+      "chipVersions": "Version history",
+      "chipPrivate": "100% Private"
+    },
+    "manifest": {
+      "name": "Klecx — AI Workspace",
+      "shortName": "Klecx",
+      "description": "Collaborative AI workspace for research, writing, and knowledge organization."
+    },
+    "auth": {
+      "loginTitle": "Sign In",
+      "loginDescription": "Sign in to your Klecx workspace.",
+      "registerTitle": "Get Started",
+      "registerDescription": "Create your Klecx account and start organizing AI research.",
+      "registeredTitle": "Registration Pending",
+      "registeredDescription": "Verify your email address to complete registration.",
+      "forgotPasswordTitle": "Forgot Password",
+      "forgotPasswordDescription": "Reset your Klecx account password.",
+      "resetPasswordTitle": "Reset Password",
+      "resetPasswordDescription": "Set a new secure password for your Klecx account.",
+      "verifyEmailTitle": "Verify Email",
+      "verifyEmailDescription": "Verify your email address for your Klecx account."
+    },
+    "settings": {
+      "title": "Settings",
+      "description": "Manage your profile, preferences, and account security.",
+      "sessionsTitle": "Sessions & Devices — Settings",
+      "sessionsDescription": "Review and manage active browser sessions and devices."
+    },
+    "app": {
+      "title": "Workspace",
+      "description": "Collaborative AI workspace and project canvas."
+    },
+    "project": {
+      "title": "Project",
+      "description": "Project overview and workspaces."
+    },
+    "notFound": {
+      "title": "Page Not Found",
+      "description": "The page you are looking for does not exist or has been moved."
+    },
+    "share": {
+      "title": "Shared on Klecx",
+      "description": "Read-only shared view on Klecx."
+    },
+    "offline": {
+      "title": "Offline",
+      "description": "You are currently offline. Check your internet connection."
+    },
+    "maintenance": {
+      "title": "Under Scheduled Maintenance",
+      "description": "Klecx is temporarily undergoing scheduled maintenance."
+    },
+    "invite": {
+      "title": "Project Invitation",
+      "description": "Join and collaborate on this project in Klecx."
+    }
   },
   "Common": {
     "appName": "Klecx",

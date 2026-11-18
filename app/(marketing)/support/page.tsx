@@ -1,19 +1,18 @@
 import * as React from "react";
 import type { Metadata } from "next";
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 import { getTranslations } from "next-intl/server";
 import { Mail, Clock, ShieldAlert, BookOpen, ArrowRight } from "lucide-react";
 import { SupportForm } from "@/components/support/support-form";
 import { getSiteConfig } from "@/server/config/site";
+import { buildAlternates } from "@/lib/seo/alternates";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("Support");
   return {
     title: `${t("title")} · Klecx`,
     description: t("headerDesc"),
-    alternates: {
-      canonical: "/support",
-    },
+    alternates: buildAlternates("/support"),
     openGraph: {
       title: `${t("title")} · Klecx`,
       description: t("headerDesc"),

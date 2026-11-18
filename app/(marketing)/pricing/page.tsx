@@ -3,17 +3,17 @@ import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { PricingView } from "@/components/marketing/pricing-view";
 import { PricingFaqJsonLd } from "@/components/seo/json-ld";
+import { buildAlternates } from "@/lib/seo/alternates";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("Marketing.pricingPage");
+  const title = `${t("heading")} · Klecx`;
   return {
-    title: "Pricing & Plans — Transparent AI Compute",
+    title,
     description: t("subheading"),
-    alternates: {
-      canonical: "/pricing",
-    },
+    alternates: buildAlternates("/pricing"),
     openGraph: {
-      title: "Klecx Pricing & Plans — Transparent AI Compute",
+      title,
       description: t("subheading"),
       url: "/pricing",
     },

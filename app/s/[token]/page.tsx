@@ -24,27 +24,32 @@ import { Button } from "@/components/ui/button";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Shared on Klecx",
-  description: "Read-only shared view on Klecx.",
-  robots: {
-    index: false,
-    follow: false,
-    noarchive: true,
-    nocache: true,
-  },
-  referrer: "no-referrer",
-  openGraph: {
-    title: "Shared on Klecx",
-    description: "Read-only shared view on Klecx.",
-    type: "website",
-  },
-  twitter: {
-    card: "summary",
-    title: "Shared on Klecx",
-    description: "Read-only shared view on Klecx.",
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("Metadata.share");
+  const title = `${t("title")} · Klecx`;
+  const description = t("description");
+  return {
+    title,
+    description,
+    robots: {
+      index: false,
+      follow: false,
+      noarchive: true,
+      nocache: true,
+    },
+    referrer: "no-referrer",
+    openGraph: {
+      title,
+      description,
+      type: "website",
+    },
+    twitter: {
+      card: "summary",
+      title,
+      description,
+    },
+  };
+}
 
 const isImageMime = (mime: string) => mime.startsWith("image/");
 

@@ -16,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { checkSystemReadiness } from "@/server/services/system-status";
 import { getSiteConfig } from "@/server/config/site";
+import { buildAlternates } from "@/lib/seo/alternates";
 
 // The page renders per request (the locale comes from a cookie), so the
 // probes are cached instead: at most one database/Redis check a minute.
@@ -28,9 +29,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: t("title"),
     description: t("subtitle"),
-    alternates: {
-      canonical: "/status",
-    },
+    alternates: buildAlternates("/status"),
     openGraph: {
       title: t("title"),
       description: t("subtitle"),

@@ -9,13 +9,17 @@ import Logo from "@/components/logo/Logo";
 import AppName from "@/components/logo/AppName";
 import { getSiteConfig } from "@/server/config/site";
 
-export const metadata: Metadata = {
-  title: "Under Scheduled Maintenance · Klecx",
-  robots: {
-    index: false,
-    follow: false,
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("Metadata.maintenance");
+  return {
+    title: `${t("title")} · Klecx`,
+    description: t("description"),
+    robots: {
+      index: false,
+      follow: false,
+    },
+  };
+}
 
 export default async function MaintenancePage() {
   const t = await getTranslations("Errors");

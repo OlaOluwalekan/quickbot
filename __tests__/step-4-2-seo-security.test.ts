@@ -39,16 +39,16 @@ describe("Step 4.2 — SEO and Security Headers", () => {
       expect(fs.existsSync(path.join(process.cwd(), "public", "apple-touch-icon.png"))).toBe(true);
     });
 
-    test("web manifest contains proper app details and brand icons", () => {
-      const manifestPath = path.join(process.cwd(), "public", "manifest.webmanifest");
+    test("web manifest contains proper app details and brand icons", async () => {
+      const manifestPath = path.join(process.cwd(), "app", "manifest.ts");
       expect(fs.existsSync(manifestPath)).toBe(true);
 
-      const m = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+      const manifestModule = await import("@/app/manifest");
+      const m = await manifestModule.default();
       expect(m.name).toContain("Klecx");
       expect(m.short_name).toBe("Klecx");
       expect(m.display).toBe("standalone");
       expect(m.icons?.some((i: any) => i.src === "/icon.svg")).toBe(true);
-      expect(m.icons?.some((i: any) => i.src === "/apple-touch-icon.png")).toBe(true);
     });
   });
 

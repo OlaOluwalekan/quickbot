@@ -1,11 +1,12 @@
 import * as React from "react";
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 import { ArrowLeft, Clock, Tag, MessageSquare, Info } from "lucide-react";
 import { getArticle } from "@/lib/help/articles";
 import { Markdown } from "@/components/markdown";
 import { Button } from "@/components/ui/button";
+import { buildAlternates } from "@/lib/seo/alternates";
 
 import type { Metadata } from "next";
 
@@ -25,9 +26,7 @@ export async function generateMetadata({ params }: HelpArticlePageProps): Promis
   return {
     title: pageTitle,
     description: article.description,
-    alternates: {
-      canonical: `/help/${slug}`,
-    },
+    alternates: buildAlternates(`/help/${slug}`),
     openGraph: {
       title: `${pageTitle} · Klecx`,
       description: article.description,
