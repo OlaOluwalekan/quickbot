@@ -825,7 +825,8 @@
       "allRightsReserved": "Tous droits réservés.",
       "help": "Centre d'aide",
       "support": "Contacter le support",
-      "productOf": "{appName} est un produit de {companyLegalName} · {companyAddress}."
+      "productOf": "{appName} est un produit de {companyLegalName} · {companyAddress}.",
+      "cookieSettings": "Paramètres des cookies"
     },
     "hero": {
       "badge": "Des espaces de travail, pas des fils de discussion",
@@ -1718,7 +1719,8 @@
         "sidebarPinned": "Retient si vous avez épinglé la barre latérale ouverte.",
         "projectView": "Retient l'affichage en liste ou en grille des pages de projet.",
         "documentDrafts": "Conserve les modifications de documents non enregistrées si vous rechargez la page.",
-        "usernamePrompt": "Évite d'afficher deux fois dans une même visite la demande de nom d'utilisateur."
+        "usernamePrompt": "Évite d'afficher deux fois dans une même visite la demande de nom d'utilisateur.",
+        "cookieNotice": "Mémorise que vous avez vu l'avis sur les cookies."
       }
     }
   },
@@ -3109,5 +3111,12 @@
     "cannotRender": "Ce format de fichier ne peut pas être prévisualisé directement.",
     "downloadOrOpen": "Télécharger / Ouvrir le fichier",
     "openInNewTab": "Ouvrir dans un nouvel onglet"
+  },
+  "CookieNotice": {
+    "label": "Avis sur les cookies",
+    "text": "{appName} utilise des cookies essentiels pour vous garder connecté et mémoriser vos préférences. Nous n'utilisons aucun cookie publicitaire ou de suivi.",
+    "accept": "Accepter",
+    "policy": "Politique de cookies",
+    "close": "Fermer l'avis sur les cookies"
   }
 }
