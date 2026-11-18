@@ -1,34 +1,28 @@
-# AI Provider Data Use & Privacy Compliance
+# AI provider data use: evidence record
 
-**Document Version:** 1.0  
-**Effective Date:** November 8, 2026  
-**Reference:** Product Architecture Specification §2.8, Appendix C #3
+This file backs the "no training on your data" sentence in the FAQ (`Marketing.faq.items.privacy.a`) and the About page (`Marketing.aboutPage.privateText`). Implementation guide interlude, Appendix C #3.
 
----
+Record only what has been checked. Don't add claims here (encryption, certifications, contracts) until there is evidence for them.
 
-## 1. Executive Summary
+## What we say publicly
 
-Klecx is an independent collaborative workspace client that connects to enterprise generative AI model endpoints. This document records the architectural guarantees, technical controls, and commercial vendor terms governing prompt processing and zero model training on customer data.
+> Prompts are sent to our AI model provider only to generate your answers, under terms that don't allow them to train on your data.
 
-## 2. Model Training Exemption
+## Evidence
 
-All inferences performed through Klecx utilize commercial API tiers governed by business and enterprise terms that explicitly prohibit the use of customer inputs and outputs for model training or improvement.
+| Item | Value |
+|---|---|
+| Confirmed by | Owner (Vyraxity) |
+| Date confirmed | 2026-11-08 |
+| What was confirmed | The AI provider does not use data sent by third-party apps through its API to train its models. |
+| Source (provider terms page) | _TODO (owner): add the URL of the terms section, and a screenshot or PDF saved in this folder._ |
+| Account / tier those terms cover | _TODO (owner): name the paid API account/tier that production uses._ |
 
-### Guarantees
-1. **Zero Public Training**: Customer prompts, uploaded documents, conversation history, and model responses are never used to train, retrain, or fine-tune public foundation models.
-2. **Statutory Processing Only**: Prompts sent to model providers are processed transiently for the sole purpose of generating the requested answer and returning streaming tokens.
-3. **No Secondary Data Sharing**: Model providers do not sell, rent, or distribute customer prompt text or attachments to third parties.
+## Conditions
 
-## 3. Data Processing Architecture
+- Production must always run on the account/tier the terms above cover. A free or trial tier can have different data-use terms.
+- Re-check the terms **once a year** (next: 2027-11) and **whenever the AI provider changes**. Update this file and, if the terms change, the FAQ and About copy in `en`, `es` and `fr`.
 
-- **In-Transit Encryption**: All communication between the user's browser, Klecx servers, and third-party model inference endpoints occurs over encrypted TLS 1.3 channels.
-- **Tenant Isolation**: Workspaces, responses, annotations, and uploaded attachments are strictly scoped to the workspace owner and invited collaborators under role-based access control.
-- **Data Minimization**: Prompts are transmitted to model inference endpoints containing only the context required for the turn (including prior messages and relevant workspace attachments requested by the user).
+## Not confirmed (don't claim)
 
-## 4. Sub-Processor Registry
-
-In accordance with statutory privacy obligations (GDPR / NDPA), third-party infrastructure and model providers are disclosed under the statutory sub-processor registry. All providers operate under binding Data Processing Agreements (DPAs).
-
----
-
-*Confirmed and verified for Klecx Compliance on 2026-11-08.*
+- Database **encryption at rest**: not confirmed with the Postgres host (Appendix C #4). The FAQ and About page don't claim it.

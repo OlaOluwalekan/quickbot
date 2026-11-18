@@ -1,12 +1,12 @@
 import * as React from "react";
 import type { Metadata } from "next";
-import { getTranslations } from "next-intl/server";
+import { unstable_cache } from "next/cache";
+import { getFormatter, getTranslations } from "next-intl/server";
 import {
   CheckCircle2,
   AlertTriangle,
   Activity,
   ExternalLink,
-  ShieldCheck,
   Cpu,
   Key,
   Database,
@@ -15,19 +15,24 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { checkSystemReadiness } from "@/server/services/system-status";
+import { getSiteConfig } from "@/server/config/site";
 
-export const revalidate = 60;
+// The page renders per request (the locale comes from a cookie), so the
+// probes are cached instead: at most one database/Redis check a minute.
+const getReadiness = unstable_cache(() => checkSystemReadiness(), ["system-readiness"], {
+  revalidate: 60,
+});
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("Status");
   return {
-    title: `${t("title")} · System Status`,
+    title: t("title"),
     description: t("subtitle"),
     alternates: {
       canonical: "/status",
     },
     openGraph: {
-      title: `${t("title")} · System Status`,
+      title: t("title"),
       description: t("subtitle"),
       url: "/status",
     },
@@ -36,14 +41,16 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function StatusPage() {
   const t = await getTranslations("Status");
-  const readiness = await checkSystemReadiness();
+  const readiness = await getReadiness();
   const isAllOperational = readiness.status === "operational";
-  const externalStatusUrl = process.env.STATUS_PAGE_URL;
+  const externalStatusUrl = getSiteConfig().statusPageUrl;
+  const format = await getFormatter();
 
-  const formattedTime = new Date(readiness.timestamp).toLocaleTimeString("en-US", {
+  // UTC, so the time means the same thing whoever reads the cached page.
+  const formattedTime = format.dateTime(new Date(readiness.timestamp), {
     hour: "2-digit",
     minute: "2-digit",
-    second: "2-digit",
+    timeZone: "UTC",
     timeZoneName: "short",
   });
 
@@ -203,17 +210,6 @@ export default async function StatusPage() {
                 </div>
               );
             })}
-          </div>
-        </div>
-
-        {/* Incident History */}
-        <div className="space-y-3 pt-4">
-          <h3 className="text-sm font-semibold uppercase tracking-wider text-fg">
-            {t("incidentHeading")}
-          </h3>
-          <div className="flex items-center gap-3 rounded-2xl border border-border/70 bg-surface p-6 text-center text-xs text-fg-muted sm:text-left">
-            <ShieldCheck className="h-5 w-5 shrink-0 text-success" />
-            <span>{t("noIncidents")}</span>
           </div>
         </div>
       </div>

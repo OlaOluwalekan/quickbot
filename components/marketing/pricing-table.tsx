@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PLANS, PlanKey } from "@/server/billing/plans";
 import { useSiteConfig } from "@/components/providers/site-config-provider";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 export function MarketingPricingTable({
   isTeaser: _isTeaser = false,
@@ -74,8 +75,7 @@ export function MarketingPricingTable({
         {/* Billing Disabled Notice */}
         {!billingEnabled && (
           <div className="mb-8 rounded-xl border border-accent/20 bg-accent-soft/40 p-4 text-center text-xs text-fg sm:text-sm">
-            <span className="font-semibold">{t("paidPlansNoticeTitle")}: </span>
-            <span className="text-fg-muted">{t("paidPlansNotice")}</span>
+            {t("paidPlansNotice")}
           </div>
         )}
 
@@ -157,15 +157,21 @@ export function MarketingPricingTable({
                 {/* Action CTA */}
                 <div className="pt-6 mt-6 border-t border-border/60">
                   {plan.id !== "FREE" && !billingEnabled ? (
-                    <Button
-                      disabled
-                      aria-disabled="true"
-                      title={t("paidPlansTooltip")}
-                      variant="outline"
-                      className="w-full text-xs font-semibold h-9 opacity-60 cursor-not-allowed border-border text-fg-muted"
-                    >
-                      {t("comingSoon")}
-                    </Button>
+                    // A disabled button gets no pointer events, so the tooltip sits on a focusable wrapper.
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span tabIndex={0} className="block w-full cursor-not-allowed rounded-md">
+                          <Button
+                            disabled
+                            variant="outline"
+                            className="pointer-events-none w-full text-xs font-semibold h-9 border-border text-fg-muted"
+                          >
+                            {t("comingSoon")}
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>{t("paidPlansTooltip")}</TooltipContent>
+                    </Tooltip>
                   ) : (
                     <Button
                       asChild

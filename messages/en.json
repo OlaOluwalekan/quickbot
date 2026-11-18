@@ -958,7 +958,7 @@
         "description": "Chat apps force every train of thought into an endless, fragile thread. In Klecx, group related research, codebases, and strategy into Projects, while keeping one-off tasks in clean standalone Workspaces.",
         "bullet1": "Group dozens of workspaces into focused project folders",
         "bullet2": "Archive completed work without losing conversation history",
-        "bullet3": "Global full-text search across all prompts and responses",
+        "bullet3": "Search your workspaces and projects by title",
         "previewProject": "Project: Infra Scaling",
         "previewCount": "3 workspaces",
         "previewItem1": "01-postgres-connection-pooling",
@@ -967,8 +967,8 @@
         "previewItem2Time": "Updated yesterday",
         "previewItem3": "03-kubernetes-ingress-benchmark",
         "previewItem3Time": "Updated 3d ago",
-        "bullet4": "Voice input: speak your prompt to transcribe and send with one click",
-        "bullet5": "Live web search: ground answers with real-time web citations"
+        "bullet4": "Voice input: speak your prompt, then insert the text or send it right away",
+        "bullet5": "Web search when a question needs current facts, with links to the sources"
       },
       "passage": {
         "badge": "Exploration",
@@ -991,7 +991,7 @@
         "bullet3": "Switch between v1, v2, v3 instantly to review alternative perspectives",
         "previewTitle": "Response Versions",
         "v1Label": "v1 (Quick)",
-        "v2Label": "v2 (Think harder)",
+        "v2Label": "v2 (Standard Reasoning)",
         "activeInfo": "Active: version 2 of 2 · Standard Reasoning · 7 credits"
       },
       "share": {
@@ -1017,9 +1017,9 @@
       "documents": {
         "badge": "Documents",
         "title": "Document review, inline suggestions, and side-panel editing",
-        "description": "Add files to a workspace, ask Klecx to review them, and accept fixes in one click. Generated documents open in an interactive side panel for seamless side-by-side editing.",
-        "bullet1": "Attach PDF, Word, text, and markdown files for in-depth AI review",
-        "bullet2": "Review suggested edits with visual diffs and accept fixes in one click",
+        "description": "Add files to a workspace, ask Klecx to review them, and accept fixes in one click. Generated documents open in a side panel for editing.",
+        "bullet1": "Add Word, Markdown, text or CSV files to a workspace as documents (up to 3)",
+        "bullet2": "Each suggested fix shows the change (old → new): accept it, dismiss it, or accept all at once",
         "bullet3": "Generated documents open in an interactive side panel for editing",
         "previewDoc": "quarterly-report-draft.docx",
         "previewStatus": "Review ready · 3 suggestions",
@@ -1047,10 +1047,10 @@
       "standardTurnTitle": "Standard Text Turn",
       "standardTurnDesc": "≈ 7 credits per standard conversation turn",
       "imageGenTitle": "AI Image Generation",
-      "imageGenDesc": "≈ 35 credits per generated 1K image",
+      "imageGenDesc": "≈ 34 credits per generated 1K image",
       "groundingTitle": "Web Search Grounding",
       "groundingDesc": "+3 credits surcharge per grounded query",
-      "footnoteDisclaimer": "* Monthly plan credits do not roll over to maintain transparent unit costs. You can cancel directly in Account Settings at any time.",
+      "footnoteDisclaimer": "* Plan credits reset each billing period; unused credits don't carry over.",
       "comparison": {
         "title": "Detailed Plan Comparison",
         "subtitle": "Everything included across each plan level at a glance.",
@@ -1073,11 +1073,10 @@
         "turns2": "2 turns",
         "turns3": "3 turns",
         "turns5": "5 turns",
-        "economyOnly": "Economy",
-        "economyStandard": "Economy + Standard",
-        "allModels": "All (incl. Advanced)",
+        "economyOnly": "Fast",
+        "economyStandard": "Fast + Standard",
         "no": "No",
-        "yesApprox": "Yes (~35 credits)",
+        "yesApprox": "Yes (≈ 34 credits)",
         "files3": "3 files (5 MB)",
         "files10": "10 files (15 MB)",
         "files25": "25 files (25 MB)",
@@ -1089,15 +1088,13 @@
         "members5": "5 members",
         "members15": "15 members",
         "unlimited": "Unlimited",
-        "oneClick": "1-click",
-        "cap30": "30 credits",
-        "cap25pct": "25% of balance",
-        "cap20pct": "20% of balance"
+        "capCredits": "{count, plural, one {# credit} other {# credits}}",
+        "notApplicable": "—",
+        "anytime": "Anytime, from Settings"
       },
       "priceFormat": "${price}",
       "creditsCount": "{count, plural, one {# Credit} other {# Credits}}",
       "comingSoon": "Coming soon",
-      "paidPlansNoticeTitle": "Notice",
       "paidPlansNotice": "Paid plans are launching soon. You can explore all core capabilities on our Free plan today with 100 credits per month.",
       "paidPlansTooltip": "Paid plan subscriptions will be enabled shortly."
     },
@@ -1108,7 +1105,7 @@
       "items": {
         "creditDef": {
           "q": "What is a credit and how does it work?",
-          "a": "Credits represent real computational cost: ≈ 2 credits for a typical message with the Fast model, ≈ 7 with the Standard model, and ≈ 35 per image. When Klecx searches the web, each search adds 3 credits."
+          "a": "Credits represent real computational cost: ≈ 2 credits for a typical message with the Fast model, ≈ 7 with the Standard model, and ≈ 34 per image. When Klecx searches the web, each search adds 3 credits."
         },
         "rollover": {
           "q": "Do unused credits roll over to the next month?",
@@ -1377,9 +1374,9 @@
   },
   "Status": {
     "title": "System Status",
-    "subtitle": "Real-time health and operational status of Klecx services and infrastructure.",
+    "subtitle": "Current health of Klecx services, checked automatically.",
     "allOperational": "All Systems Operational",
-    "uptimeNotice": "Real-time service health verified automatically across database, AI endpoints, and file storage.",
+    "uptimeNotice": "Checked automatically about once a minute.",
     "viewMonitor": "External Uptime Monitor",
     "servicesHeading": "Core Services",
     "operational": "Operational",
@@ -1408,8 +1405,6 @@
         "desc": "Delivery for verifications, password resets, and notifications."
       }
     },
-    "incidentHeading": "Recent Incidents",
-    "noIncidents": "All core services are performing normally with zero active service interruptions.",
     "someDegraded": "Service Disruption Detected"
   },
   "Errors": {
@@ -2338,8 +2333,10 @@
         "dailyCap": "Daily spend cap of 30 credits",
         "concurrency": "1 concurrent generation turn",
         "models": "Fast model access",
-        "search": "Web search included",
+        "search": "Web search with sources (10 searches per day)",
         "attachments": "3 attachments per workspace (5 MB max)",
+        "documents": "Workspace documents with AI review and quick fixes",
+        "voice": "Voice input (2 min of recording per day)",
         "exports": "Markdown document export",
         "sharing": "Read-only workspace & response sharing"
       }
@@ -2349,14 +2346,14 @@
       "tagline": "For individual builders and researchers working daily.",
       "features": {
         "credits": "800 credits / month (no rollover)",
-        "dailyCap": "Daily cap: 200 credits (25% of balance)",
+        "dailyCap": "Daily cap: 200 credits",
         "concurrency": "2 concurrent generation turns",
         "models": "Fast & Standard text models",
         "images": "Native AI image generation",
-        "search": "Web search with source citations",
+        "search": "Web search with sources (50 searches per day)",
         "attachments": "10 attachments per workspace (15 MB max)",
-        "documents": "Document review & side-by-side editing",
-        "voice": "Voice input & audio transcription",
+        "documents": "Workspace documents with AI review and quick fixes",
+        "voice": "Voice input (10 min of recording per day)",
         "collaborators": "Up to 2 workspace collaborators",
         "exports": "Markdown, PDF & Word exports"
       }
@@ -2367,17 +2364,16 @@
       "tagline": "Our recommended plan for power users and small teams.",
       "features": {
         "credits": "1,800 credits / month (no rollover)",
-        "dailyCap": "Daily cap: 450 credits (25% of balance)",
+        "dailyCap": "Daily cap: 450 credits",
         "concurrency": "3 concurrent generation turns",
         "models": "Fast & Standard text models",
         "images": "Native AI image generation",
-        "search": "Web search with source citations",
+        "search": "Web search with sources (100 searches per day)",
         "attachments": "25 attachments per workspace (25 MB max)",
-        "documents": "Document review & side-by-side editing",
-        "voice": "Voice input & audio transcription",
+        "documents": "Workspace documents with AI review and quick fixes",
+        "voice": "Voice input (20 min of recording per day)",
         "collaborators": "Up to 5 workspace collaborators",
-        "exports": "Full export suite (MD, PDF, DOCX)",
-        "support": "Faster email support"
+        "exports": "Full export suite (MD, PDF, DOCX)"
       }
     },
     "PRO": {
@@ -2385,17 +2381,16 @@
       "tagline": "Maximum throughput, highest limits, and team collaboration.",
       "features": {
         "credits": "3,500 credits / month (no rollover)",
-        "dailyCap": "Daily cap: 700 credits (20% of balance)",
+        "dailyCap": "Daily cap: 700 credits",
         "concurrency": "5 concurrent generation turns",
-        "models": "All text models & priority capacity",
+        "models": "Fast & Standard text models",
         "images": "Native AI image generation",
-        "search": "Web search with source citations",
+        "search": "Web search with sources (200 searches per day)",
         "attachments": "50 attachments per workspace (50 MB max)",
-        "documents": "Document review & side-by-side editing",
-        "voice": "Voice input & audio transcription",
+        "documents": "Workspace documents with AI review and quick fixes",
+        "voice": "Voice input (40 min of recording per day)",
         "collaborators": "Up to 15 workspace collaborators",
-        "exports": "Full export suite (MD, PDF, DOCX)",
-        "support": "Faster email support"
+        "exports": "Full export suite (MD, PDF, DOCX)"
       }
     }
   },

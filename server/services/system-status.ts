@@ -1,10 +1,12 @@
-import { db as defaultDb } from "@/server/db/client";
+import "server-only";
+import { db } from "@/server/db/client";
 import { env } from "@/server/env";
+import { getRedisClient } from "@/server/http/rate-limit";
 
 export type ServiceStatus = "operational" | "degraded";
 
 export interface SystemReadiness {
-  status: "operational" | "degraded";
+  status: ServiceStatus;
   timestamp: string;
   services: {
     ai: ServiceStatus;
@@ -15,57 +17,84 @@ export interface SystemReadiness {
   };
 }
 
-/**
- * Checks system readiness across core infrastructure dependencies.
- * Strictly outputs service health statuses and timestamps with ZERO secrets.
- */
-export async function checkSystemReadiness(dbOverride?: any): Promise<SystemReadiness> {
-  const activeDb = dbOverride || defaultDb;
+/** What the readiness check probes. Tests pass failing probes; the app uses the real ones. */
+export interface ReadinessProbes {
+  /** Database round trip (`SELECT 1`). */
+  database: () => Promise<unknown>;
+  /** Redis ping, or `null` when Redis isn't configured (dev/test in-memory fallback). */
+  cache: (() => Promise<unknown>) | null;
+}
 
-  let dbStatus: ServiceStatus = "operational";
+/** A probe slower than this counts as down, so a hung connection can't stall /status. */
+const PROBE_TIMEOUT_MS = 3_000;
+
+function defaultProbes(): ReadinessProbes {
+  const redis = getRedisClient();
+  return {
+    database: () => db.$queryRaw`SELECT 1`,
+    cache: redis ? () => redis.ping() : null,
+  };
+}
+
+async function probe(run: () => Promise<unknown>): Promise<ServiceStatus> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    if (activeDb?.$queryRawUnsafe) {
-      await activeDb.$queryRawUnsafe("SELECT 1");
-    } else if (activeDb?.$queryRaw) {
-      await activeDb.$queryRaw`SELECT 1`;
-    }
+    await Promise.race([
+      run(),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error("timeout")), PROBE_TIMEOUT_MS);
+      }),
+    ]);
+    return "operational";
   } catch {
-    dbStatus = "degraded";
+    return "degraded";
+  } finally {
+    if (timer) clearTimeout(timer);
   }
+}
 
-  // Auth requires a healthy database for session storage and verification tokens
-  const authStatus: ServiceStatus = dbStatus === "operational" ? "operational" : "degraded";
+/** Outside production, missing provider keys fall back to mocks, so only production needs them. */
+function configured(...values: (string | undefined)[]): ServiceStatus {
+  if (env.NODE_ENV !== "production") return "operational";
+  return values.every(Boolean) ? "operational" : "degraded";
+}
 
-  // AI model inference endpoint configuration
-  const aiStatus: ServiceStatus =
-    Boolean(env.GEMINI_API_KEY || process.env.NODE_ENV !== "production") ? "operational" : "degraded";
+/**
+ * Readiness of the services behind Klecx, for `/api/ready` and the status page.
+ * The database and Redis are pinged; the AI, storage and email providers are only
+ * checked for configuration (pinging them would cost money or quota).
+ * The result holds statuses and a timestamp only: never hosts, keys or error text.
+ */
+export async function checkSystemReadiness(
+  probes: ReadinessProbes = defaultProbes()
+): Promise<SystemReadiness> {
+  const [database, cache] = await Promise.all([
+    probe(probes.database),
+    probes.cache ? probe(probes.cache) : Promise.resolve<ServiceStatus>("operational"),
+  ]);
 
-  // File storage configuration (Cloudinary in prod, mock in test/dev)
-  const storageStatus: ServiceStatus =
-    Boolean(env.CLOUDINARY_CLOUD_NAME || env.CLOUDINARY_API_KEY || process.env.NODE_ENV !== "production")
-      ? "operational"
-      : "degraded";
+  // The "Database & Cache" row covers both stores (Redis holds the rate limits).
+  const dbStatus: ServiceStatus =
+    database === "operational" && cache === "operational" ? "operational" : "degraded";
 
-  // Email delivery configuration (Resend in prod, mock in test/dev)
-  const emailStatus: ServiceStatus =
-    Boolean(env.RESEND_API_KEY || process.env.NODE_ENV !== "production") ? "operational" : "degraded";
+  const services: SystemReadiness["services"] = {
+    ai: configured(env.GEMINI_API_KEY),
+    // Sessions and verification tokens live in the database.
+    auth: database,
+    db: dbStatus,
+    storage: configured(
+      env.CLOUDINARY_CLOUD_NAME,
+      env.CLOUDINARY_API_KEY,
+      env.CLOUDINARY_API_SECRET
+    ),
+    email: configured(env.RESEND_API_KEY),
+  };
 
-  const isDegraded =
-    dbStatus === "degraded" ||
-    authStatus === "degraded" ||
-    aiStatus === "degraded" ||
-    storageStatus === "degraded" ||
-    emailStatus === "degraded";
+  const degraded = Object.values(services).some((s) => s === "degraded");
 
   return {
-    status: isDegraded ? "degraded" : "operational",
+    status: degraded ? "degraded" : "operational",
     timestamp: new Date().toISOString(),
-    services: {
-      ai: aiStatus,
-      auth: authStatus,
-      db: dbStatus,
-      storage: storageStatus,
-      email: emailStatus,
-    },
+    services,
   };
 }

@@ -958,7 +958,7 @@
         "description": "Les applications de chat enferment vos réflexions dans des fils sans fin. Dans Klecx, regroupez vos recherches, code et stratégies en Projets, tout en gardant vos tâches ponctuelles dans des Espaces épurés.",
         "bullet1": "Regroupez des dizaines d'espaces dans des dossiers de projets ciblés",
         "bullet2": "Archivez les travaux terminés sans perdre l'historique",
-        "bullet3": "Recherche textuelle globale instantanée dans tous vos échanges",
+        "bullet3": "Recherchez vos espaces et projets par titre",
         "previewProject": "Projet : Mise à l'échelle Infra",
         "previewCount": "3 espaces",
         "previewItem1": "01-postgres-connection-pooling",
@@ -967,8 +967,8 @@
         "previewItem2Time": "Mis à jour hier",
         "previewItem3": "03-kubernetes-ingress-benchmark",
         "previewItem3Time": "Mis à jour il y a 3j",
-        "bullet4": "Saisie vocale : enregistrez votre voix, transcrivez en un clic et envoyez",
-        "bullet5": "Recherche web en direct : enrichissez vos réponses avec des sources vérifiées"
+        "bullet4": "Saisie vocale : dictez votre message, puis insérez le texte ou envoyez-le directement",
+        "bullet5": "Recherche web quand une question demande des informations récentes, avec des liens vers les sources"
       },
       "passage": {
         "badge": "Exploration",
@@ -991,7 +991,7 @@
         "bullet3": "Basculez entre v1, v2 et v3 instantanément pour comparer les approches",
         "previewTitle": "Versions de réponse",
         "v1Label": "v1 (Rapide)",
-        "v2Label": "v2 (Réflexion approfondie)",
+        "v2Label": "v2 (Raisonnement Standard)",
         "activeInfo": "Actif : version 2 sur 2 · Raisonnement Standard · 7 crédits"
       },
       "share": {
@@ -1017,9 +1017,9 @@
       "documents": {
         "badge": "Documents",
         "title": "Révision de documents, suggestions intégrées et édition en volet latéral",
-        "description": "Ajoutez des fichiers à un espace, demandez à Klecx de les réviser et acceptez les corrections en un clic. Les documents générés s'ouvrent dans un volet latéral pour une édition fluide côte à côte.",
-        "bullet1": "Joignez des documents PDF, Word, texte et markdown pour une révision approfondie par IA",
-        "bullet2": "Examinez les suggestions avec visualisation des écarts et acceptez les modifications en un clic",
+        "description": "Ajoutez des fichiers à un espace, demandez à Klecx de les réviser et acceptez les corrections en un clic. Les documents générés s'ouvrent dans un volet latéral pour être modifiés.",
+        "bullet1": "Ajoutez des fichiers Word, Markdown, texte ou CSV à un espace comme documents (3 au maximum)",
+        "bullet2": "Chaque correction suggérée montre la modification (avant → après) : acceptez-la, ignorez-la ou acceptez tout d'un coup",
         "bullet3": "Les documents générés s'ouvrent dans un volet latéral interactif pour révision",
         "previewDoc": "rapport-trimestriel-brouillon.docx",
         "previewStatus": "Révision prête · 3 suggestions",
@@ -1047,10 +1047,10 @@
       "standardTurnTitle": "Échange textuel standard",
       "standardTurnDesc": "≈ 7 crédits par échange conversationnel classique",
       "imageGenTitle": "Génération d'images IA",
-      "imageGenDesc": "≈ 35 crédits par image 1K générée",
+      "imageGenDesc": "≈ 34 crédits par image 1K générée",
       "groundingTitle": "Recherche web connectée",
       "groundingDesc": "+3 crédits par requête enrichie par recherche web",
-      "footnoteDisclaimer": "* Les crédits mensuels ne sont pas reportables afin de garantir des coûts unitaires transparents. Annulation directe dans vos paramètres à tout moment.",
+      "footnoteDisclaimer": "* Les crédits du forfait sont réinitialisés à chaque période de facturation ; les crédits inutilisés ne sont pas reportés.",
       "comparison": {
         "title": "Comparatif détaillé des forfaits",
         "subtitle": "Toutes les capacités incluses en un coup d'œil.",
@@ -1073,11 +1073,10 @@
         "turns2": "2 échanges",
         "turns3": "3 échanges",
         "turns5": "5 échanges",
-        "economyOnly": "Economy",
-        "economyStandard": "Economy + Standard",
-        "allModels": "Tous (dont Avancé)",
+        "economyOnly": "Rapide",
+        "economyStandard": "Rapide + Standard",
         "no": "Non",
-        "yesApprox": "Oui (~35 crédits)",
+        "yesApprox": "Oui (≈ 34 crédits)",
         "files3": "3 fichiers (5 Mo)",
         "files10": "10 fichiers (15 Mo)",
         "files25": "25 fichiers (25 Mo)",
@@ -1089,15 +1088,13 @@
         "members5": "5 membres",
         "members15": "15 membres",
         "unlimited": "Illimitées",
-        "oneClick": "1 clic",
-        "cap30": "30 crédits",
-        "cap25pct": "25% du solde",
-        "cap20pct": "20% du solde"
+        "capCredits": "{count, plural, one {# crédit} other {# crédits}}",
+        "notApplicable": "—",
+        "anytime": "À tout moment, depuis les Paramètres"
       },
       "priceFormat": "${price}",
       "creditsCount": "{count, plural, one {# crédit} other {# crédits}}",
       "comingSoon": "Bientôt disponible",
-      "paidPlansNoticeTitle": "Information",
       "paidPlansNotice": "Les forfaits payants seront lancés prochainement. Vous pouvez dès aujourd'hui découvrir les fonctionnalités essentielles avec le forfait Gratuit de 100 crédits par mois.",
       "paidPlansTooltip": "Les souscriptions aux forfaits payants seront activées très prochainement."
     },
@@ -1108,7 +1105,7 @@
       "items": {
         "creditDef": {
           "q": "Qu'est-ce qu'un crédit et comment fonctionne-t-il ?",
-          "a": "Les crédits reflètent le coût de calcul réel : ≈ 2 crédits pour un message classique avec le modèle Rapide, ≈ 7 avec le modèle Standard et ≈ 35 par image. Lorsque Klecx effectue une recherche web, chaque recherche ajoute 3 crédits."
+          "a": "Les crédits reflètent le coût de calcul réel : ≈ 2 crédits pour un message classique avec le modèle Rapide, ≈ 7 avec le modèle Standard et ≈ 34 par image. Lorsque Klecx effectue une recherche web, chaque recherche ajoute 3 crédits."
         },
         "rollover": {
           "q": "Les crédits non utilisés sont-ils reportés au mois suivant ?",
@@ -1377,9 +1374,9 @@
   },
   "Status": {
     "title": "État du Système",
-    "subtitle": "Disponibilité et état opérationnel en temps réel des services Klecx.",
+    "subtitle": "État actuel des services Klecx, vérifié automatiquement.",
     "allOperational": "Tous les systèmes sont opérationnels",
-    "uptimeNotice": "État des services vérifié automatiquement sur la base de données, les points d'accès IA et le stockage.",
+    "uptimeNotice": "Vérifié automatiquement environ une fois par minute.",
     "viewMonitor": "Moniteur Externe de Disponibilité",
     "servicesHeading": "Services Principaux",
     "operational": "Opérationnel",
@@ -1408,8 +1405,6 @@
         "desc": "Distribution d'e-mails pour les vérifications, réinitialisations de mot de passe et alertes."
       }
     },
-    "incidentHeading": "Incidents Récents",
-    "noIncidents": "Tous les services essentiels fonctionnent normalement sans interruption en cours.",
     "someDegraded": "Perturbation de service détectée"
   },
   "Errors": {
@@ -2338,8 +2333,10 @@
         "dailyCap": "Plafond quotidien de 30 crédits",
         "concurrency": "1 tour de génération simultané",
         "models": "Accès au modèle Rapide",
-        "search": "Recherche web incluse",
+        "search": "Recherche web avec sources (10 recherches par jour)",
         "attachments": "3 pièces jointes par espace (5 Mo max)",
+        "documents": "Documents d'espace avec révision par IA et corrections rapides",
+        "voice": "Saisie vocale (2 min d'enregistrement par jour)",
         "exports": "Export de document au format Markdown",
         "sharing": "Partage d'espaces en lecture seule"
       }
@@ -2349,14 +2346,14 @@
       "tagline": "Pour les créateurs et chercheurs travaillant au quotidien.",
       "features": {
         "credits": "800 crédits / mois (sans report)",
-        "dailyCap": "Plafond quotidien : 200 crédits (25 % du solde)",
+        "dailyCap": "Plafond quotidien : 200 crédits",
         "concurrency": "2 tours de génération simultanés",
         "models": "Modèles de texte Rapide et Standard",
         "images": "Génération native d'images par IA",
-        "search": "Recherche web avec citations des sources",
+        "search": "Recherche web avec sources (50 recherches par jour)",
         "attachments": "10 pièces jointes par espace (15 Mo max)",
-        "documents": "Révision de documents et édition latérale",
-        "voice": "Saisie vocale et transcription audio",
+        "documents": "Documents d'espace avec révision par IA et corrections rapides",
+        "voice": "Saisie vocale (10 min d'enregistrement par jour)",
         "collaborators": "Jusqu'à 2 collaborateurs par espace",
         "exports": "Exports Markdown, PDF et Word"
       }
@@ -2367,17 +2364,16 @@
       "tagline": "Notre forfait recommandé pour les utilisateurs intensifs et équipes.",
       "features": {
         "credits": "1 800 crédits / mois (sans report)",
-        "dailyCap": "Plafond quotidien : 450 crédits (25 % du solde)",
+        "dailyCap": "Plafond quotidien : 450 crédits",
         "concurrency": "3 tours de génération simultanés",
         "models": "Modèles de texte Rapide et Standard",
         "images": "Génération native d'images par IA",
-        "search": "Recherche web avec citations des sources",
+        "search": "Recherche web avec sources (100 recherches par jour)",
         "attachments": "25 pièces jointes par espace (25 Mo max)",
-        "documents": "Révision de documents et édition latérale",
-        "voice": "Saisie vocale et transcription audio",
+        "documents": "Documents d'espace avec révision par IA et corrections rapides",
+        "voice": "Saisie vocale (20 min d'enregistrement par jour)",
         "collaborators": "Jusqu'à 5 collaborateurs par espace",
-        "exports": "Suite complète d'export (MD, PDF, DOCX)",
-        "support": "Assistance par e-mail accélérée"
+        "exports": "Suite complète d'export (MD, PDF, DOCX)"
       }
     },
     "PRO": {
@@ -2385,17 +2381,16 @@
       "tagline": "Débit maximal, plafonds les plus élevés et collaboration d'équipe.",
       "features": {
         "credits": "3 500 crédits / mois (sans report)",
-        "dailyCap": "Plafond quotidien : 700 crédits (20 % du solde)",
+        "dailyCap": "Plafond quotidien : 700 crédits",
         "concurrency": "5 tours de génération simultanés",
-        "models": "Tous les modèles de texte et capacité prioritaire",
+        "models": "Modèles de texte Rapide et Standard",
         "images": "Génération native d'images par IA",
-        "search": "Recherche web avec citations des sources",
+        "search": "Recherche web avec sources (200 recherches par jour)",
         "attachments": "50 pièces jointes par espace (50 Mo max)",
-        "documents": "Révision de documents et édition latérale",
-        "voice": "Saisie vocale et transcription audio",
+        "documents": "Documents d'espace avec révision par IA et corrections rapides",
+        "voice": "Saisie vocale (40 min d'enregistrement par jour)",
         "collaborators": "Jusqu'à 15 collaborateurs par espace",
-        "exports": "Suite complète d'export (MD, PDF, DOCX)",
-        "support": "Assistance par e-mail accélérée"
+        "exports": "Suite complète d'export (MD, PDF, DOCX)"
       }
     }
   },

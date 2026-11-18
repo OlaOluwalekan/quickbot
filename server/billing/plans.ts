@@ -59,6 +59,8 @@ export const PLANS: Record<"FREE" | "LITE" | "STANDARD" | "PRO", PlanDefinition>
       "Plans.FREE.features.models",
       "Plans.FREE.features.search",
       "Plans.FREE.features.attachments",
+      "Plans.FREE.features.documents",
+      "Plans.FREE.features.voice",
       "Plans.FREE.features.exports",
       "Plans.FREE.features.sharing",
     ],
@@ -131,7 +133,6 @@ export const PLANS: Record<"FREE" | "LITE" | "STANDARD" | "PRO", PlanDefinition>
       "Plans.STANDARD.features.voice",
       "Plans.STANDARD.features.collaborators",
       "Plans.STANDARD.features.exports",
-      "Plans.STANDARD.features.support",
     ],
   },
   PRO: {
@@ -166,7 +167,6 @@ export const PLANS: Record<"FREE" | "LITE" | "STANDARD" | "PRO", PlanDefinition>
       "Plans.PRO.features.voice",
       "Plans.PRO.features.collaborators",
       "Plans.PRO.features.exports",
-      "Plans.PRO.features.support",
     ],
   },
 } as const;

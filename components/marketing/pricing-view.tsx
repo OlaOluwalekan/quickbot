@@ -7,10 +7,13 @@ import {
   MarketingFAQ,
   MarketingCTA,
 } from "@/components/marketing";
+import { useSiteConfig } from "@/components/providers/site-config-provider";
+import { getDailyCapForPlan } from "@/server/billing/plans";
 
 export function PricingView() {
   const t = useTranslations("Marketing.pricingPage");
   const tc = useTranslations("Marketing.pricing.comparison");
+  const { billingEnabled } = useSiteConfig();
 
   return (
     <div className="flex flex-col w-full py-6">
@@ -59,10 +62,10 @@ export function PricingView() {
                 </tr>
                 <tr>
                   <td className="p-4 font-medium text-fg">{tc("dailyCap")}</td>
-                  <td className="p-4">{tc("cap30")}</td>
-                  <td className="p-4">{tc("cap25pct")}</td>
-                  <td className="p-4">{tc("cap25pct")}</td>
-                  <td className="p-4">{tc("cap20pct")}</td>
+                  <td className="p-4">{tc("capCredits", { count: getDailyCapForPlan("FREE") })}</td>
+                  <td className="p-4">{tc("capCredits", { count: getDailyCapForPlan("LITE") })}</td>
+                  <td className="p-4">{tc("capCredits", { count: getDailyCapForPlan("STANDARD") })}</td>
+                  <td className="p-4">{tc("capCredits", { count: getDailyCapForPlan("PRO") })}</td>
                 </tr>
                 <tr>
                   <td className="p-4 font-medium text-fg">{tc("concurrentTurns")}</td>
@@ -76,7 +79,7 @@ export function PricingView() {
                   <td className="p-4">{tc("economyOnly")}</td>
                   <td className="p-4">{tc("economyStandard")}</td>
                   <td className="p-4">{tc("economyStandard")}</td>
-                  <td className="p-4">{tc("allModels")}</td>
+                  <td className="p-4">{tc("economyStandard")}</td>
                 </tr>
                 <tr>
                   <td className="p-4 font-medium text-fg">{tc("imageSynthesis")}</td>
@@ -113,13 +116,16 @@ export function PricingView() {
                   <td className="p-4 text-success">{tc("unlimited")}</td>
                   <td className="p-4 text-success">{tc("unlimited")}</td>
                 </tr>
-                <tr>
-                  <td className="p-4 font-medium text-fg">{tc("inAppCancel")}</td>
-                  <td className="p-4 text-success">{tc("oneClick")}</td>
-                  <td className="p-4 text-success">{tc("oneClick")}</td>
-                  <td className="p-4 text-success">{tc("oneClick")}</td>
-                  <td className="p-4 text-success">{tc("oneClick")}</td>
-                </tr>
+                {/* Cancellation exists only once billing is live (rule 9). */}
+                {billingEnabled && (
+                  <tr>
+                    <td className="p-4 font-medium text-fg">{tc("inAppCancel")}</td>
+                    <td className="p-4 text-fg-subtle">{tc("notApplicable")}</td>
+                    <td className="p-4 text-success">{tc("anytime")}</td>
+                    <td className="p-4 text-success">{tc("anytime")}</td>
+                    <td className="p-4 text-success">{tc("anytime")}</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
