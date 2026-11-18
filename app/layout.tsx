@@ -7,6 +7,7 @@ import { SiteConfigProvider } from "@/components/providers/site-config-provider"
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
 import { OfflineBanner } from "@/components/offline/offline-banner";
+import { CookieNotice } from "@/components/legal/cookie-notice";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import { getSiteConfig } from "@/server/config/site";
@@ -104,6 +105,7 @@ export default async function RootLayout({
               >
                 <OfflineBanner />
                 {children}
+                <CookieNotice />
                 <Toaster position="bottom-right" />
               </ThemeProvider>
             </QueryProvider>

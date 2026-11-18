@@ -825,7 +825,8 @@
       "allRightsReserved": "All rights reserved.",
       "help": "Help Center",
       "support": "Contact Support",
-      "productOf": "{appName} is a product of {companyLegalName} · {companyAddress}."
+      "productOf": "{appName} is a product of {companyLegalName} · {companyAddress}.",
+      "cookieSettings": "Cookie settings"
     },
     "hero": {
       "badge": "Workspaces, not threads",
@@ -1718,7 +1719,8 @@
         "sidebarPinned": "Remembers whether you pinned the sidebar open.",
         "projectView": "Remembers the list or grid view on project pages.",
         "documentDrafts": "Keeps unsaved document edits if you reload the page.",
-        "usernamePrompt": "Avoids showing the username prompt twice in one visit."
+        "usernamePrompt": "Avoids showing the username prompt twice in one visit.",
+        "cookieNotice": "Remembers that you have seen the cookie notice."
       }
     }
   },
@@ -3109,5 +3111,12 @@
     "cannotRender": "This file format cannot be rendered directly in the preview.",
     "downloadOrOpen": "Download / Open File",
     "openInNewTab": "Open in new tab"
+  },
+  "CookieNotice": {
+    "label": "Cookie notice",
+    "text": "{appName} uses essential cookies to keep you signed in and remember your preferences. We don't use advertising or tracking cookies.",
+    "accept": "Accept",
+    "policy": "Cookie policy",
+    "close": "Close the cookie notice"
   }
 }

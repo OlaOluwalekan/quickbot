@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import Logo from "@/components/logo/Logo";
 import AppName from "@/components/logo/AppName";
 import { useSiteConfig } from "@/components/providers/site-config-provider";
+import { openCookieNotice } from "@/lib/cookie-notice";
 
 export function MarketingFooter() {
   const t = useTranslations("Marketing.footer");
@@ -97,6 +98,15 @@ export function MarketingFooter() {
                 <Link href="/cookies" className="hover:text-fg transition-colors">
                   {t("cookies")}
                 </Link>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={openCookieNotice}
+                  className="cursor-pointer hover:text-fg transition-colors"
+                >
+                  {t("cookieSettings")}
+                </button>
               </li>
             </ul>
           </div>

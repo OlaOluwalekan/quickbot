@@ -1,6 +1,6 @@
 /**
  * Every cookie and browser-storage item Klecx sets (F5.5). The Cookie Policy
- * renders its table from this list, and the cookie notice (F5.6) reads it too.
+ * renders its table from this list.
  * A test checks that each name is still used in the code, so the policy can't
  * list something that no longer exists.
  *
@@ -32,6 +32,8 @@ export const STORAGE_ITEMS: StorageItem[] = [
     purpose: "session",
     duration: "sessionRolling",
   },
+  // F5.6: set by Accept on the cookie notice (lib/cookie-notice.ts).
+  { names: ["klecx_cookie_notice"], kind: "cookie", category: "essential", purpose: "cookieNotice", duration: "oneYear" },
   { names: ["NEXT_LOCALE"], kind: "cookie", category: "preference", purpose: "locale", duration: "oneYear" },
   { names: ["sidebar"], kind: "cookie", category: "preference", purpose: "sidebar", duration: "oneYear" },
   // next-themes keeps the theme in localStorage under its default key.
