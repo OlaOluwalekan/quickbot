@@ -374,8 +374,9 @@ describe("Step 5.4 — Image Generation: Store in Cloudinary, Not Postgres", () 
           kind: "IMAGE",
         })
       ).rejects.toMatchObject({
-        status: 402,
-        code: "insufficient_credits",
+        // Step 8.1: checked with the reservation, for every kind of call.
+        status: 429,
+        code: "daily_cap_reached",
       });
     });
   });

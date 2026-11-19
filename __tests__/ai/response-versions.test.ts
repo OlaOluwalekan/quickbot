@@ -14,6 +14,7 @@ import {
   clearActiveGenerationsForTesting,
 } from "@/server/services/generation";
 import { createAccountWithFreeGrant } from "@/server/services/credits";
+import { setUserPlanOverride } from "@/server/billing/plans";
 import type { Actor } from "@/server/auth/session";
 import type { AiProvider, GenerateRequest, ImageRequest, ImageResult, StreamEvent } from "@/server/ai";
 import { ApiError } from "@/server/http/errors";
@@ -180,7 +181,9 @@ describe("Step 2.6 — Response versions (regenerate)", () => {
     ];
     setCustomProvider(new FakeAiProvider(fakeEvents, 10));
 
-    // Launch 3 concurrent regenerations at the same moment
+    // Launch 3 concurrent regenerations at the same moment (PRO allows 5
+    // concurrent calls; Free allows 1 since Step 8.1).
+    setUserPlanOverride(userA.id, "PRO");
     const regenKeys = [
       `regen_conc_1_${Date.now()}`,
       `regen_conc_2_${Date.now()}`,
@@ -216,6 +219,7 @@ describe("Step 2.6 — Response versions (regenerate)", () => {
     const reloadedV1 = allVersions.find((v) => v.number === 1);
     expect(reloadedV1?.content).toBe(originalContent);
     expect(reloadedV1?.id).toBe(v1.id);
+    setUserPlanOverride(userA.id, null);
   });
 
   it("3. Switching active version works via setActiveVersion", async () => {

@@ -8,7 +8,8 @@ import {
   MarketingCTA,
 } from "@/components/marketing";
 import { useSiteConfig } from "@/components/providers/site-config-provider";
-import { getDailyCapForPlan } from "@/server/billing/plans";
+import { PLANS, getDailyCapForPlan } from "@/server/billing/plans";
+import { PLAN_ORDER } from "@/lib/entitlements/shared";
 
 export function PricingView() {
   const t = useTranslations("Marketing.pricingPage");
@@ -104,10 +105,11 @@ export function PricingView() {
                 </tr>
                 <tr>
                   <td className="p-4 font-medium text-fg">{tc("teamMembers")}</td>
-                  <td className="p-4">{tc("members0")}</td>
-                  <td className="p-4">{tc("members2")}</td>
-                  <td className="p-4">{tc("members5")}</td>
-                  <td className="p-4">{tc("members15")}</td>
+                  {PLAN_ORDER.map((plan) => (
+                    <td key={plan} className="p-4">
+                      {tc("collaborators", { count: PLANS[plan].limits.members })}
+                    </td>
+                  ))}
                 </tr>
                 <tr>
                   <td className="p-4 font-medium text-fg">{tc("responseVersions")}</td>

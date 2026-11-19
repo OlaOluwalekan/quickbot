@@ -12,49 +12,134 @@ import type { Prisma } from "../db/generated/client";
 // TODO(8.3/8.4): call startOverLimitGrace on downgrade/expiry, enforceMemberLimit
 // when the grace period ends, and restoreWithinLimit on (re-)subscription.
 //
-// The member limit is per resource (as `assertMemberCapacity` in invitation.ts
-// and `checkTransferFits` count it): each of the owner's workspaces and projects
-// may have at most `limit` active members.
+// The member limit counts **distinct people across all of the owner's
+// workspaces and projects** (owner decided 2026-11-14, Step 8.1): someone who
+// collaborates in three of the owner's workspaces is one collaborator. Pending,
+// unexpired invitations hold a seat for the invitee. The invite check
+// (`assertMemberCapacity` in invitation.ts), the dialog's gate and
+// `checkTransferFits` all count with `getOwnerCollaborators`.
 
-export type MemberLimitTarget = { workspaceId: string } | { projectId: string };
+type DbClient = Prisma.TransactionClient | typeof db;
+
+export interface OwnerCollaborators {
+  /** One key per person: `u:<userId>`, or `e:<email>` for an invitee without an account. */
+  keys: Set<string>;
+  /** Lower-cased emails and usernames of the counted people (owner-only UI hint). */
+  handles: Set<string>;
+}
+
+/**
+ * The people who count toward `ownerId`'s collaborator limit: active
+ * (non-suspended) members of the owner's non-deleted workspaces and projects,
+ * plus invitees of live pending invitations to them. The owner is never counted.
+ */
+export async function getOwnerCollaborators(
+  ownerId: string,
+  opts: { client?: DbClient; excludeInvitationId?: string } = {}
+): Promise<OwnerCollaborators> {
+  const client = opts.client ?? db;
+  const now = new Date();
+  const userSelect = { select: { id: true, email: true, username: true } } as const;
+  const [wsMembers, projMembers, invites] = await Promise.all([
+    client.workspaceMember.findMany({
+      where: { workspace: { ownerId, deletedAt: null }, userId: { not: ownerId }, suspendedAt: null },
+      select: { user: userSelect },
+    }),
+    client.projectMember.findMany({
+      where: { project: { ownerId, deletedAt: null }, userId: { not: ownerId }, suspendedAt: null },
+      select: { user: userSelect },
+    }),
+    client.invitation.findMany({
+      where: {
+        status: "PENDING",
+        expiresAt: { gt: now },
+        OR: [
+          { workspace: { ownerId, deletedAt: null } },
+          { project: { ownerId, deletedAt: null } },
+        ],
+        ...(opts.excludeInvitationId ? { id: { not: opts.excludeInvitationId } } : {}),
+      },
+      select: { email: true, invitedUserId: true },
+    }),
+  ]);
+
+  const keys = new Set<string>();
+  const handles = new Set<string>();
+  const addUser = (u: { id: string; email: string; username: string | null }) => {
+    if (u.id === ownerId) return;
+    keys.add(`u:${u.id}`);
+    handles.add(u.email.toLowerCase());
+    if (u.username) handles.add(u.username.toLowerCase());
+  };
+  for (const m of [...wsMembers, ...projMembers]) addUser(m.user);
+
+  // An invitation may predate the invitee's account: match those by email.
+  const unknownEmails = [
+    ...new Set(
+      invites.filter((i) => !i.invitedUserId).map((i) => i.email.toLowerCase())
+    ),
+  ];
+  const usersByEmail = new Map<string, { id: string; email: string; username: string | null }>();
+  if (unknownEmails.length > 0) {
+    const users = await client.user.findMany({
+      where: { email: { in: unknownEmails, mode: "insensitive" } },
+      select: { id: true, email: true, username: true },
+    });
+    for (const u of users) usersByEmail.set(u.email.toLowerCase(), u);
+  }
+  for (const inv of invites) {
+    const email = inv.email.toLowerCase();
+    const userId = inv.invitedUserId ?? usersByEmail.get(email)?.id;
+    if (userId === ownerId) continue;
+    if (userId) keys.add(`u:${userId}`);
+    else keys.add(`e:${email}`);
+    handles.add(email);
+    const u = usersByEmail.get(email);
+    if (u?.username) handles.add(u.username.toLowerCase());
+  }
+  return { keys, handles };
+}
+
+/** Does `invitee` already hold one of the owner's collaborator seats? */
+export function isCountedCollaborator(
+  collaborators: OwnerCollaborators,
+  invitee: { userId?: string | null; email: string }
+): boolean {
+  return (
+    (invitee.userId ? collaborators.keys.has(`u:${invitee.userId}`) : false) ||
+    collaborators.keys.has(`e:${invitee.email.toLowerCase()}`)
+  );
+}
 
 export interface InviteCapacity {
-  /** Members allowed by the owner's plan in this resource. */
+  /** Collaborators allowed by the owner's plan, across all their workspaces and projects. */
   limit: number;
-  /** Explicit members + live pending invitations of this resource. */
+  /** Distinct people counted now (members + live pending invitations). */
   used: number;
   /** The owner is over their limit: no new invitations until it ends. */
   inGrace: boolean;
 }
 
 /**
- * How many people can still be invited to one workspace or project. The one
- * source for the invite check (`assertMemberCapacity`) and the dialog's gate
- * (F4.4), so both count the same rows.
+ * The owner's collaborator seats. The one source for the invite check
+ * (`assertMemberCapacity`) and the dialog's gate (F4.4), so both count the
+ * same people. Inviting someone who already holds a seat is always allowed.
  */
 export async function getInviteCapacity(
-  target: MemberLimitTarget,
   ownerId: string,
-  opts: { client?: Prisma.TransactionClient; excludeInvitationId?: string } = {}
-): Promise<InviteCapacity> {
-  const client = opts.client ?? db;
-  const now = new Date();
-  const [inGrace, entitlements, members, pendingInvites] = await Promise.all([
+  opts: { client?: DbClient; excludeInvitationId?: string } = {}
+): Promise<InviteCapacity & { collaborators: OwnerCollaborators }> {
+  const [inGrace, entitlements, collaborators] = await Promise.all([
     isOwnerInGrace(ownerId),
     getEntitlements(ownerId),
-    "workspaceId" in target
-      ? client.workspaceMember.count({ where: { workspaceId: target.workspaceId } })
-      : client.projectMember.count({ where: { projectId: target.projectId } }),
-    client.invitation.count({
-      where: {
-        ...target,
-        status: "PENDING",
-        expiresAt: { gt: now },
-        ...(opts.excludeInvitationId ? { id: { not: opts.excludeInvitationId } } : {}),
-      },
-    }),
+    getOwnerCollaborators(ownerId, opts),
   ]);
-  return { limit: entitlements.limits.members, used: members + pendingInvites, inGrace };
+  return {
+    limit: entitlements.limits.members,
+    used: collaborators.keys.size,
+    inGrace,
+    collaborators,
+  };
 }
 
 const GRACE_MS = 14 * 24 * 60 * 60 * 1000;
@@ -155,17 +240,6 @@ async function ownerMemberships(ownerId: string, suspended: boolean): Promise<Me
   ];
 }
 
-function groupByResource(rows: MembershipRow[]) {
-  const map = new Map<string, MembershipRow[]>();
-  for (const r of rows) {
-    const key = `${r.kind}:${r.resourceId}`;
-    const list = map.get(key) ?? [];
-    list.push(r);
-    map.set(key, list);
-  }
-  return map;
-}
-
 async function setSuspended(row: MembershipRow, suspendedAt: Date | null) {
   const data = { suspendedAt, suspendedReason: suspendedAt ? "PLAN_LIMIT" : null };
   if (row.kind === "workspace") {
@@ -203,10 +277,22 @@ export async function startOverLimitGrace(ownerId: string, newLimit: number) {
   return grace;
 }
 
+/** Groups membership rows by person. */
+function groupByPerson(rows: MembershipRow[]) {
+  const map = new Map<string, MembershipRow[]>();
+  for (const r of rows) {
+    const list = map.get(r.userId) ?? [];
+    list.push(r);
+    map.set(r.userId, list);
+  }
+  return map;
+}
+
 /**
- * After the grace period: in each of the owner's workspaces/projects, suspends
- * the most recently added active members beyond the limit (read-only, nothing
- * is deleted). Members the owner marked "Keep active" are suspended last.
+ * After the grace period: keeps `limit` people active across all the owner's
+ * workspaces and projects and suspends every membership of the others
+ * (read-only, nothing is deleted). People the owner marked "Keep active" (on
+ * any of their memberships) stay first, then the earliest added.
  * Does nothing while the grace period is still running.
  */
 export async function enforceMemberLimit(ownerId: string) {
@@ -216,17 +302,21 @@ export async function enforceMemberLimit(ownerId: string) {
   }
   const limit = grace ? grace.limit : (await getEntitlements(ownerId)).limits.members;
 
+  const people = [...groupByPerson(await ownerMemberships(ownerId, false)).values()].map(
+    (rows) => ({
+      rows,
+      keepActive: rows.some((r) => r.keepActive),
+      firstAdded: Math.min(...rows.map((r) => r.createdAt.getTime())),
+    })
+  );
+  people.sort(
+    (a, b) => Number(b.keepActive) - Number(a.keepActive) || a.firstAdded - b.firstAdded
+  );
+
   const now = new Date();
   const suspended: MembershipRow[] = [];
-  for (const rows of groupByResource(await ownerMemberships(ownerId, false)).values()) {
-    if (rows.length <= limit) continue;
-    // Keep: keepActive first, then oldest. Everything after `limit` is suspended.
-    const ordered = [...rows].sort(
-      (a, b) =>
-        Number(b.keepActive) - Number(a.keepActive) ||
-        a.createdAt.getTime() - b.createdAt.getTime()
-    );
-    for (const row of ordered.slice(limit)) {
+  for (const person of people.slice(Math.max(0, limit))) {
+    for (const row of person.rows) {
       await setSuspended(row, now);
       suspended.push(row);
     }
@@ -244,8 +334,10 @@ export async function enforceMemberLimit(ownerId: string) {
 }
 
 /**
- * Un-suspends plan-limit suspensions oldest-first, up to the owner's current
- * plan limit in each resource. Clears the grace record.
+ * Un-suspends plan-limit suspensions person by person, earliest added first,
+ * while the owner's distinct active collaborators stay within the limit. A
+ * person who is already active elsewhere takes no new seat, so all their
+ * suspended memberships come back. Clears the grace record.
  */
 export async function restoreWithinLimit(ownerId: string, limitOverride?: number) {
   const limit = limitOverride ?? (await getEntitlements(ownerId)).limits.members;
@@ -254,13 +346,27 @@ export async function restoreWithinLimit(ownerId: string, limitOverride?: number
     ownerMemberships(ownerId, false),
     ownerMemberships(ownerId, true),
   ]);
-  const activeByResource = groupByResource(active);
+  const activePeople = new Set(active.map((r) => r.userId));
+
+  const candidates = [...groupByPerson(suspended).entries()]
+    .map(([userId, rows]) => ({
+      userId,
+      rows,
+      firstAdded: Math.min(...rows.map((r) => r.createdAt.getTime())),
+    }))
+    .sort(
+      (a, b) =>
+        Number(activePeople.has(b.userId)) - Number(activePeople.has(a.userId)) ||
+        a.firstAdded - b.firstAdded
+    );
 
   const restored: MembershipRow[] = [];
-  for (const [key, rows] of groupByResource(suspended)) {
-    const slots = Math.max(0, limit - (activeByResource.get(key)?.length ?? 0));
-    const ordered = [...rows].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
-    for (const row of ordered.slice(0, slots)) {
+  for (const person of candidates) {
+    if (!activePeople.has(person.userId)) {
+      if (activePeople.size >= limit) continue;
+      activePeople.add(person.userId);
+    }
+    for (const row of person.rows) {
       await setSuspended(row, null);
       restored.push(row);
     }

@@ -78,7 +78,7 @@ export const PLANS: Record<"FREE" | "LITE" | "STANDARD" | "PRO", PlanDefinition>
     limits: {
       attachmentsPerWorkspace: 10,
       maxFileMB: 15,
-      members: 2,
+      members: 0,
       exportFormats: ["md", "pdf", "docx"],
       grounding: true,
       images: true,
@@ -95,7 +95,6 @@ export const PLANS: Record<"FREE" | "LITE" | "STANDARD" | "PRO", PlanDefinition>
       "Plans.LITE.features.attachments",
       "Plans.LITE.features.documents",
       "Plans.LITE.features.voice",
-      "Plans.LITE.features.collaborators",
       "Plans.LITE.features.exports",
     ],
   },
@@ -114,7 +113,7 @@ export const PLANS: Record<"FREE" | "LITE" | "STANDARD" | "PRO", PlanDefinition>
     limits: {
       attachmentsPerWorkspace: 25,
       maxFileMB: 25,
-      members: 5,
+      members: 1,
       exportFormats: ["md", "pdf", "docx"],
       grounding: true,
       images: true,
@@ -148,7 +147,7 @@ export const PLANS: Record<"FREE" | "LITE" | "STANDARD" | "PRO", PlanDefinition>
     limits: {
       attachmentsPerWorkspace: 50,
       maxFileMB: 50,
-      members: 15,
+      members: 3,
       exportFormats: ["md", "pdf", "docx"],
       grounding: true,
       images: true,

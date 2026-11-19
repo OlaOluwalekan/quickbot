@@ -196,7 +196,7 @@ describe("Step 3.6 — Composer and Smooth Blank -> Workspace Transition", () =>
       render(
         <Composer
           workspaceId="ws-123"
-          credits={{ plan: "Free", balance: 0 }}
+          credits={{ plan: "FREE", balance: 0 }}
         />
       );
 

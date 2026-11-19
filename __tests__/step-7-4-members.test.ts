@@ -5,7 +5,8 @@
 import { NextRequest } from "next/server";
 import { db } from "@/server/db/client";
 import type { Actor } from "@/server/auth/session";
-import { setUserPlanOverride, clearUserPlanOverrides } from "@/server/billing/plans";
+import { PLANS, setUserPlanOverride, clearUserPlanOverrides } from "@/server/billing/plans";
+import { getInviteCapacity } from "@/server/services/member-limits";
 import {
   createInvitation,
   listInvitations,
@@ -80,7 +81,18 @@ describe("Step 7.4 — Members and invitations", () => {
     await db.user.deleteMany({ where: { id: { in: allIds } } });
   }
 
+  // This suite tests invitations, not plan sizes: the owner (on PRO) invites
+  // more distinct people than PRO's 3 collaborators, so give PRO room here.
+  // The limit tests below set exact limits themselves.
+  const realMemberLimits = Object.fromEntries(
+    Object.entries(PLANS).map(([k, p]) => [k, p.limits.members])
+  ) as Record<keyof typeof PLANS, number>;
+  const setMemberLimit = (plan: keyof typeof PLANS, n: number) => {
+    PLANS[plan].limits.members = n;
+  };
+
   beforeAll(async () => {
+    setMemberLimit("PRO", 50);
     await cleanup();
     await db.user.createMany({
       data: (Object.keys(ids) as Array<keyof typeof ids>).map((k) => ({
@@ -123,6 +135,9 @@ describe("Step 7.4 — Members and invitations", () => {
 
   afterAll(async () => {
     clearUserPlanOverrides();
+    for (const [plan, n] of Object.entries(realMemberLimits)) {
+      setMemberLimit(plan as keyof typeof PLANS, n);
+    }
     await cleanup();
   });
 
@@ -224,19 +239,42 @@ describe("Step 7.4 — Members and invitations", () => {
       expect((await getInvitationInfoByToken(secondToken)).valid).toBe(false);
     });
 
-    it("enforces the owner's plan member limit (Free = 0, Lite = 2)", async () => {
-      setUserPlanOverride(ids.owner, "FREE");
-      await expect(
-        createInvitation(actorFor("owner"), { projectId, emailOrUsername: `lim_${sfx}@example.com`, role: "VIEWER" })
-      ).rejects.toMatchObject({ status: 403, code: "member_limit_reached" });
+    it("enforces the owner's plan collaborator limit (Free and Lite = 0, distinct people across all workspaces)", async () => {
+      for (const plan of ["FREE", "LITE"] as const) {
+        setUserPlanOverride(ids.owner, plan);
+        await expect(
+          createInvitation(actorFor("owner"), { projectId, emailOrUsername: `lim_${sfx}@example.com`, role: "VIEWER" })
+        ).rejects.toMatchObject({ status: 403, code: "member_limit_reached" });
+      }
 
-      setUserPlanOverride(ids.owner, "LITE");
-      await createInvitation(actorFor("owner"), { projectId, emailOrUsername: `lim1_${sfx}@example.com`, role: "VIEWER" });
-      await createInvitation(actorFor("owner"), { projectId, emailOrUsername: `lim2_${sfx}@example.com`, role: "VIEWER" });
-      await expect(
-        createInvitation(actorFor("owner"), { projectId, emailOrUsername: `lim3_${sfx}@example.com`, role: "VIEWER" })
-      ).rejects.toMatchObject({ status: 403 });
+      // Every seat is used: someone new is refused, but a person who already
+      // collaborates in another of the owner's workspaces takes no new seat.
+      setUserPlanOverride(ids.owner, "STANDARD");
+      const { used } = await getInviteCapacity(ids.owner);
+      setMemberLimit("STANDARD", used);
+      try {
+        await expect(
+          createInvitation(actorFor("owner"), { projectId, emailOrUsername: `lim1_${sfx}@example.com`, role: "VIEWER" })
+        ).rejects.toMatchObject({ status: 403, code: "member_limit_reached" });
+        await createInvitation(actorFor("owner"), { projectId, emailOrUsername: email("editor"), role: "VIEWER" });
+        expect(
+          await db.invitation.count({ where: { projectId, email: email("editor"), status: "PENDING" } })
+        ).toBe(1);
+        // A pending invitation holds a seat in every workspace of the owner.
+        setMemberLimit("STANDARD", used + 1);
+        await createInvitation(actorFor("owner"), { projectId, emailOrUsername: `lim2_${sfx}@example.com`, role: "VIEWER" });
+        await expect(
+          createInvitation(actorFor("owner"), { workspaceId, emailOrUsername: `lim3_${sfx}@example.com`, role: "VIEWER" })
+        ).rejects.toMatchObject({ status: 403, code: "member_limit_reached" });
+        await createInvitation(actorFor("owner"), { workspaceId, emailOrUsername: `lim2_${sfx}@example.com`, role: "VIEWER" });
+      } finally {
+        setMemberLimit("STANDARD", realMemberLimits.STANDARD);
+      }
       await db.invitation.updateMany({ where: { projectId }, data: { status: "REVOKED" } });
+      await db.invitation.updateMany({
+        where: { workspaceId, email: `lim2_${sfx}@example.com` },
+        data: { status: "REVOKED" },
+      });
     });
   });
 
@@ -469,9 +507,8 @@ describe("Step 7.4 — Members and invitations", () => {
     });
 
     it("an expired invitation can be resent, but only within the plan limit", async () => {
-      setUserPlanOverride(ids.owner, "LITE"); // 2 seats
-      const before = await db.workspaceMember.count({ where: { workspaceId: hWs } });
-      expect(before).toBe(2); // admin + viewer -> plan full
+      setUserPlanOverride(ids.owner, "STANDARD"); // 1 seat, already used
+      expect((await getInviteCapacity(ids.owner)).used).toBeGreaterThanOrEqual(1);
 
       await db.invitation.create({
         data: {
@@ -494,9 +531,10 @@ describe("Step 7.4 — Members and invitations", () => {
     });
 
     it("concurrent invites cannot exceed the plan member limit", async () => {
-      setUserPlanOverride(ids.owner, "LITE"); // 2 seats
+      setUserPlanOverride(ids.owner, "STANDARD");
       await db.projectMember.deleteMany({ where: { projectId: hProj, userId: ids.editor } });
-      // 1 member (admin) -> exactly 1 seat left
+      // Exactly 1 seat left, counted across all of the owner's workspaces and projects.
+      setMemberLimit("STANDARD", (await getInviteCapacity(ids.owner)).used + 1);
       const results = await Promise.allSettled(
         [1, 2, 3, 4].map((n) =>
           createInvitation(actorFor("owner"), {
@@ -507,6 +545,7 @@ describe("Step 7.4 — Members and invitations", () => {
         )
       );
       expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+      setMemberLimit("STANDARD", realMemberLimits.STANDARD);
       expect(
         await db.invitation.count({ where: { projectId: hProj, status: "PENDING", email: { startsWith: "race" } } })
       ).toBe(1);

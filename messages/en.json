@@ -516,9 +516,9 @@
       "subject": "Action needed: you're over your plan's collaborator limit",
       "heading": "Collaborator limit exceeded",
       "greeting": "Hi,",
-      "body": "Your plan allows {limit} collaborators per workspace or project, and some of yours have more. Until {graceEndsAt}, choose who stays active in Share & people, remove members or change your plan.",
+      "body": "Your plan allows {limit} collaborators across all your workspaces and projects, and you have more. Until {graceEndsAt}, choose who stays active in Share & people, remove members or change your plan.",
       "button": "Manage collaborators",
-      "disclaimer": "After that date, the most recently added members beyond the limit become read-only. Nothing is deleted."
+      "disclaimer": "After that date, the most recently added people beyond the limit become read-only. Nothing is deleted."
     },
     "memberSuspended": {
       "subject": "Your access to \"{resourceName}\" is now read-only",
@@ -1134,7 +1134,7 @@
         "imageSynthesis": "Image Synthesis",
         "attachments": "File Attachments",
         "documentExports": "Document Exports",
-        "teamMembers": "Team Collaborators",
+        "teamMembers": "Collaborators (across all your workspaces)",
         "responseVersions": "Response Versions",
         "inAppCancel": "In-App Cancellation",
         "turn1": "1 turn",
@@ -1151,10 +1151,7 @@
         "files50": "50 files (50 MB)",
         "markdownOnly": "Markdown",
         "allExportFormats": "MD, PDF, DOCX",
-        "members0": "0",
-        "members2": "2 members",
-        "members5": "5 members",
-        "members15": "15 members",
+        "collaborators": "{count, plural, =0 {None} one {# person} other {# people}}",
         "unlimited": "Unlimited",
         "capCredits": "{count, plural, one {# credit} other {# credits}}",
         "notApplicable": "—",
@@ -1199,7 +1196,7 @@
         },
         "free": {
           "q": "Can I use Klecx for free?",
-          "a": "Yes. Every account starts with 100 free credits per month, access to our Fast model, and web search included. Team collaboration and higher daily limits are available on paid plans."
+          "a": "Yes. Every account starts with 100 free credits per month, access to our Fast model, and web search included. Collaboration is available on the Standard and Pro plans, and paid plans have higher daily limits."
         },
         "collaboration": {
           "q": "Who pays when collaborators use a workspace?",
@@ -1923,7 +1920,8 @@
       "content_blocked": "This prompt was blocked by safety guidelines.",
       "rate_limited": "Too many requests. Please wait a moment before retrying.",
       "daily_cap_reached": "You have reached your daily credit cap.",
-      "member_limit_reached": "Workspace member limit reached.",
+      "too_many_concurrent": "Too many requests are running at once for this plan. Wait for one to finish and try again.",
+      "member_limit_reached": "Your plan's collaborator limit is reached.",
       "upload_failed": "Failed to upload file. Please try again.",
       "file_too_large": "The file is too large for your plan.",
       "invalid_file_type": "The selected file type is not supported.",
@@ -1932,6 +1930,7 @@
       "INVALID_PASSWORD": "Incorrect password.",
       "admin_toggles_not_allowed": "Admins always can comment and ask; these settings can't be changed for them.",
       "answer_in_progress": "An answer is already being written. Please wait for it to finish.",
+      "billing_frozen": "Generation is paused for this account while a payment issue is being resolved. Please contact support.",
       "collaborator_cap_exceeded": "You've reached your monthly credit limit for this owner's workspaces.",
       "daily_voice_limit": "You've reached today's voice input limit for your plan.",
       "document_empty": "No text was found in this file.",
@@ -1999,7 +1998,7 @@
   },
   "Gates": {
     "requires_plan": "Available on the {plan} plan and above",
-    "member_limit": "{limit, plural, =0 {This plan doesn't include collaborators} one {This plan allows up to # collaborator} other {This plan allows up to # collaborators}}",
+    "member_limit": "{limit, plural, =0 {This plan doesn't include collaborators} one {This plan allows # collaborator across all your workspaces and projects} other {This plan allows up to # collaborators across all your workspaces and projects}}",
     "attachment_limit": "This workspace has reached its limit of {limit} attachments",
     "daily_cap": "You have reached your daily limit for this feature",
     "no_permission": "You do not have permission to {capability}",
@@ -2087,7 +2086,7 @@
     "stayAdmin": "Stay as administrator",
     "leave": "Leave",
     "checking": "Checking the recipient's plan…",
-    "planFits": "Fits the recipient's plan: {collaboratorsAfter} of {limit} collaborators.",
+    "planFits": "Fits the recipient's plan: {collaboratorsAfter} of {limit} collaborators across all their workspaces and projects.",
     "confirmPrompt": "To confirm, type TRANSFER or the exact name.",
     "confirmPlaceholder": "TRANSFER",
     "cancel": "Cancel",
@@ -2105,7 +2104,7 @@
     "cancelled": "Transfer request cancelled.",
     "someone": "Someone",
     "errors": {
-      "memberLimit": "The recipient's plan allows {limit} collaborators, but {collaboratorsAfter} would remain. Choose Leave, remove members, or ask them to change plan.",
+      "memberLimit": "The recipient's plan allows {limit} collaborators across all their workspaces and projects, but they would have {collaboratorsAfter}. Choose Leave, remove members, or ask them to change plan.",
       "busy": "A response is being generated. Try again when it's finished.",
       "movedOutOfProject": "You're now the owner. The workspace left its project because you don't own that project.",
       "alreadyPending": "A transfer request is already pending.",
@@ -2119,7 +2118,7 @@
   },
   "MemberLimits": {
     "graceTitle": "Over your plan's collaborator limit",
-    "graceBanner": "Your plan allows {limit} collaborators — choose who stays active ({daysRemaining, plural, one {# day} other {# days}} left). After that, the most recently added members become read-only.",
+    "graceBanner": "Your plan allows {limit} collaborators across all your workspaces and projects — choose who stays active ({daysRemaining, plural, one {# day} other {# days}} left). After that, the most recently added people become read-only.",
     "keepActive": "Keep active",
     "keepActiveHint": "Members you keep active are the last to become read-only.",
     "keepActiveUpdated": "Saved.",
@@ -2418,7 +2417,7 @@
         "title": "Collaborator limit exceeded",
         "description": "The owner's plan no longer covers all collaborators. Some members may become read-only soon.",
         "descriptionOwner": "Your plan allows fewer collaborators. Choose who stays active in Share & people.",
-        "descriptionOwnerLimit": "Your plan allows {limit} collaborators. Choose who stays active in Share & people."
+        "descriptionOwnerLimit": "Your plan allows {limit} collaborators across all your workspaces and projects. Choose who stays active in Share & people."
       },
       "MEMBER_SUSPENDED": {
         "title": "Access changed to read-only",
@@ -2809,14 +2808,13 @@
         "attachments": "10 attachments per workspace (15 MB max)",
         "documents": "Workspace documents with AI review and quick fixes",
         "voice": "Voice input (10 min of recording per day)",
-        "collaborators": "Up to 2 workspace collaborators",
         "exports": "Markdown, PDF & Word exports"
       }
     },
     "STANDARD": {
       "name": "Standard",
       "badge": "Most Popular",
-      "tagline": "Our recommended plan for power users and small teams.",
+      "tagline": "Our recommended plan for power users who work with a partner.",
       "features": {
         "credits": "1,800 credits / month (no rollover)",
         "dailyCap": "Daily cap: 450 credits",
@@ -2827,13 +2825,13 @@
         "attachments": "25 attachments per workspace (25 MB max)",
         "documents": "Workspace documents with AI review and quick fixes",
         "voice": "Voice input (20 min of recording per day)",
-        "collaborators": "Up to 5 workspace collaborators",
+        "collaborators": "1 collaborator across all your workspaces",
         "exports": "Full export suite (MD, PDF, DOCX)"
       }
     },
     "PRO": {
       "name": "Pro",
-      "tagline": "Maximum throughput, highest limits, and team collaboration.",
+      "tagline": "Maximum throughput, highest limits, and collaboration with up to 3 people.",
       "features": {
         "credits": "3,500 credits / month (no rollover)",
         "dailyCap": "Daily cap: 700 credits",
@@ -2844,7 +2842,7 @@
         "attachments": "50 attachments per workspace (50 MB max)",
         "documents": "Workspace documents with AI review and quick fixes",
         "voice": "Voice input (40 min of recording per day)",
-        "collaborators": "Up to 15 workspace collaborators",
+        "collaborators": "Up to 3 collaborators across all your workspaces",
         "exports": "Full export suite (MD, PDF, DOCX)"
       }
     }

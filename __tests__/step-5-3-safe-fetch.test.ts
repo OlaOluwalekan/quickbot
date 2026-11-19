@@ -39,6 +39,8 @@ jest.mock("../server/http/rate-limit", () => ({
 }));
 
 const mockDb = {
+  // Step 8.1: entitlements read the owner's subscription (none = Free).
+  subscription: { findUnique: () => Promise.resolve(null) },
   user: {
     findUnique: jest.fn(),
   },

@@ -15,7 +15,7 @@ import { sendEmail, maskEmail } from "@/server/email/send";
 import { env } from "@/server/env";
 import { PLAN_LOG_NAMES, type PlanKey } from "@/server/billing/plans";
 import { getEntitlements } from "@/server/billing/entitlements";
-import { getInviteCapacity } from "./member-limits";
+import { getInviteCapacity, isCountedCollaborator } from "./member-limits";
 import type { WorkspaceRole, ProjectRole, Prisma } from "../db/generated/client";
 
 export type CreateInvitationOptions = {
@@ -106,22 +106,28 @@ async function deliverInvitation(opts: {
 }
 
 /**
- * Serializes invitation writes per resource for the rest of the transaction so
- * concurrent invites can't both pass the member-limit check.
+ * Serializes invitation writes per owner for the rest of the transaction:
+ * the collaborator limit spans all of the owner's workspaces and projects, so
+ * concurrent invites to any of them can't both pass the limit check.
  */
-async function lockInviteTarget(tx: Prisma.TransactionClient, target: InviteTarget) {
-  const key = "workspaceId" in target ? `ws:${target.workspaceId}` : `proj:${target.projectId}`;
+async function lockOwnerInvites(tx: Prisma.TransactionClient, ownerId: string) {
+  const key = `invites-owner:${ownerId}`;
   await tx.$queryRaw`SELECT 1 FROM pg_advisory_xact_lock(hashtext(${key}))`;
 }
 
-/** Throws `member_limit_reached` when members + live pending invites would exceed the owner's plan. */
+/**
+ * Throws `member_limit_reached` when inviting `invitee` would take the owner
+ * past their plan's collaborator limit (distinct people across all their
+ * workspaces and projects). Someone who already holds a seat can always be
+ * invited to another of the owner's workspaces or projects.
+ */
 async function assertMemberCapacity(
   tx: Prisma.TransactionClient,
-  target: InviteTarget,
   ownerId: string,
+  invitee: { userId?: string | null; email: string },
   opts: { excludeInvitationId?: string } = {}
 ) {
-  const { limit: maxMembers, used, inGrace } = await getInviteCapacity(target, ownerId, {
+  const { limit: maxMembers, used, inGrace, collaborators } = await getInviteCapacity(ownerId, {
     client: tx,
     excludeInvitationId: opts.excludeInvitationId,
   });
@@ -131,11 +137,12 @@ async function assertMemberCapacity(
       "member_limit_exceeded"
     );
   }
-  const ownerPlanKey = await resolveOwnerPlan(ownerId);
+  if (isCountedCollaborator(collaborators, invitee)) return;
 
   if (used >= maxMembers) {
+    const ownerPlanKey = await resolveOwnerPlan(ownerId);
     throw Errors.forbidden(
-      `Plan member limit reached (${maxMembers} members max on ${PLAN_LOG_NAMES[ownerPlanKey] ?? "Free"} plan). Upgrade to invite more members.`,
+      `Plan collaborator limit reached (${maxMembers} max on ${PLAN_LOG_NAMES[ownerPlanKey] ?? "Free"} plan). Upgrade to invite more people.`,
       "member_limit_reached"
     );
   }
@@ -262,7 +269,7 @@ export async function createInvitation(
   const expiresAt = new Date(Date.now() + INVITE_TTL_MS);
 
   const invitation = await db.$transaction(async (tx) => {
-    await lockInviteTarget(tx, target);
+    await lockOwnerInvites(tx, ownerId);
 
     // 3. Invalidate any existing PENDING invitation for this email on this resource
     //    (before the limit check, so re-inviting the same person doesn't count twice)
@@ -272,7 +279,7 @@ export async function createInvitation(
     });
 
     // 4. Check plan member limit (§4.4) on the owner's plan
-    await assertMemberCapacity(tx, target, ownerId);
+    await assertMemberCapacity(tx, ownerId, { userId: targetUserId, email: targetEmail });
 
     return tx.invitation.create({
       data: {
@@ -457,14 +464,18 @@ export async function resendInvitation(
   const rawToken = generateInviteToken();
   const tokenHash = hashInviteToken(rawToken);
   const expiresAt = new Date(Date.now() + INVITE_TTL_MS);
-  const target: InviteTarget = workspaceId ? { workspaceId } : { projectId: projectId! };
 
   await db.$transaction(async (tx) => {
-    await lockInviteTarget(tx, target);
+    await lockOwnerInvites(tx, ownerId);
 
     // A lapsed invite no longer holds a seat, so reviving it must fit the plan again
     if (isLapsed) {
-      await assertMemberCapacity(tx, target, ownerId, { excludeInvitationId: invitationId });
+      await assertMemberCapacity(
+        tx,
+        ownerId,
+        { userId: invitation.invitedUserId, email: invitation.email },
+        { excludeInvitationId: invitationId }
+      );
     }
 
     // Guard against a concurrent revoke/accept between the read above and this write

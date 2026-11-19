@@ -6,6 +6,7 @@ import { NextRequest } from "next/server";
 import { db } from "@/server/db/client";
 import type { Actor } from "@/server/auth/session";
 import {
+  PLANS,
   setUserPlanOverride,
   clearUserPlanOverrides,
 } from "@/server/billing/plans";
@@ -83,6 +84,19 @@ describe("Step 7.5 — Billing-owner resolution and collaborator spend controls"
     await db.project.deleteMany({ where: { ownerId: { in: allIds } } });
     await db.user.deleteMany({ where: { id: { in: allIds } } });
   }
+
+  // This suite tests the collaborator caps and allowance alerts on a FREE
+  // owner (100 credits). The plan's daily cap and concurrency limit (Step 8.1,
+  // tested in step-8-1-plan-entitlements) would get in the way: lift them here.
+  const realFree = { daily: PLANS.FREE.dailyCapCredits, concurrent: PLANS.FREE.maxConcurrent };
+  beforeAll(() => {
+    PLANS.FREE.dailyCapCredits = 10_000;
+    PLANS.FREE.maxConcurrent = 10;
+  });
+  afterAll(() => {
+    PLANS.FREE.dailyCapCredits = realFree.daily;
+    PLANS.FREE.maxConcurrent = realFree.concurrent;
+  });
 
   beforeAll(async () => {
     await cleanup();

@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { PLANS } from "@/server/billing/plans";
+import { useSiteConfig } from "@/components/providers/site-config-provider";
+import { PLAN_UPGRADE_HREF } from "@/lib/billing/links";
 import type { GateReason } from "@/lib/entitlements/shared";
 import {
   Tooltip,
@@ -79,6 +81,7 @@ export function Gated({
 }: GatedProps) {
   const t = useTranslations("Gates");
   const tPlans = useTranslations();
+  const { billingEnabled } = useSiteConfig();
   const [open, setOpen] = React.useState(false);
   const closeTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -123,8 +126,11 @@ export function Gated({
     }
   );
 
+  // Rule 9: with billing off there is nothing to buy, so keep the reason text
+  // ("Available on the Lite plan and above") and drop the Upgrade link.
   const isUpgradable =
-    reason.code === "requires_plan" || reason.code === "out_of_credits";
+    billingEnabled &&
+    (reason.code === "requires_plan" || reason.code === "out_of_credits");
   const ariaLabel = isUpgradable
     ? `${message} · ${upgradeLabel}`
     : `${message}\u200B`;
@@ -168,7 +174,7 @@ export function Gated({
         <span>{message}</span>
         {isUpgradable && (
           <Link
-            href="/pricing"
+            href={PLAN_UPGRADE_HREF}
             className="font-semibold text-accent underline underline-offset-2 hover:opacity-80"
           >
             {upgradeLabel}

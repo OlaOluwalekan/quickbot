@@ -288,13 +288,23 @@ export function ShareAndPeopleDialog({
 
   // F4.4: from the members list, counted on the server with the owner's plan
   // (the same count as the invite check). Unknown = allowed; the server re-checks.
+  // Step 8.1: the limit counts distinct people across all the owner's
+  // workspaces and projects; someone in `seatHolders` (owner only) already
+  // holds a seat, so they can still be invited when every seat is used.
   const [inviteCapacity, setInviteCapacity] = React.useState<{
     limit: number;
     used: number;
     inGrace: boolean;
+    seatHolders?: string[];
   } | null>(null);
+  const inviteeHoldsSeat = React.useMemo(() => {
+    const handle = emailOrUsername.trim().replace(/^@/, "").toLowerCase();
+    return Boolean(handle && inviteCapacity?.seatHolders?.includes(handle));
+  }, [emailOrUsername, inviteCapacity]);
   const isMemberLimitReached = Boolean(
-    inviteCapacity && (inviteCapacity.inGrace || inviteCapacity.used >= inviteCapacity.limit)
+    inviteCapacity &&
+      (inviteCapacity.inGrace ||
+        (inviteCapacity.used >= inviteCapacity.limit && !inviteeHoldsSeat))
   );
   const inviteGateReason: GateReason | null =
     inviteCapacity && isMemberLimitReached
