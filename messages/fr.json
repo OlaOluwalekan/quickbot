@@ -516,9 +516,9 @@
       "subject": "Action requise : vous dépassez la limite de collaborateurs de votre forfait",
       "heading": "Limite de collaborateurs dépassée",
       "greeting": "Bonjour,",
-      "body": "Votre forfait autorise {limit} collaborateurs par espace de travail ou projet, et certains des vôtres en ont davantage. Jusqu'au {graceEndsAt}, choisissez qui reste actif dans Partage et personnes, retirez des membres ou changez de forfait.",
+      "body": "Votre forfait autorise {limit} collaborateurs sur l'ensemble de vos espaces de travail et projets, et vous en avez davantage. Jusqu'au {graceEndsAt}, choisissez qui reste actif dans Partage et personnes, retirez des membres ou changez de forfait.",
       "button": "Gérer les collaborateurs",
-      "disclaimer": "Après cette date, les membres ajoutés le plus récemment au-delà de la limite passent en lecture seule. Rien n'est supprimé."
+      "disclaimer": "Après cette date, les personnes ajoutées le plus récemment au-delà de la limite passent en lecture seule. Rien n'est supprimé."
     },
     "memberSuspended": {
       "subject": "Votre accès à « {resourceName} » est désormais en lecture seule",
@@ -1134,7 +1134,7 @@
         "imageSynthesis": "Génération d'images",
         "attachments": "Fichiers joints",
         "documentExports": "Exportation de documents",
-        "teamMembers": "Collaborateurs d'équipe",
+        "teamMembers": "Collaborateurs (tous espaces confondus)",
         "responseVersions": "Versions de réponses",
         "inAppCancel": "Résiliation dans l'application",
         "turn1": "1 échange",
@@ -1151,10 +1151,7 @@
         "files50": "50 fichiers (50 Mo)",
         "markdownOnly": "Markdown",
         "allExportFormats": "MD, PDF, DOCX",
-        "members0": "0",
-        "members2": "2 membres",
-        "members5": "5 membres",
-        "members15": "15 membres",
+        "collaborators": "{count, plural, =0 {Aucun} one {# personne} other {# personnes}}",
         "unlimited": "Illimitées",
         "capCredits": "{count, plural, one {# crédit} other {# crédits}}",
         "notApplicable": "—",
@@ -1199,7 +1196,7 @@
         },
         "free": {
           "q": "Puis-je utiliser Klecx gratuitement ?",
-          "a": "Oui. Chaque compte débute avec 100 crédits gratuits par mois, l'accès au modèle Rapide et la recherche web incluse. La collaboration d'équipe et des plafonds quotidiens accrus sont disponibles sur les forfaits payants."
+          "a": "Oui. Chaque compte débute avec 100 crédits gratuits par mois, l'accès au modèle Rapide et la recherche web incluse. La collaboration est disponible avec les forfaits Standard et Pro, et les forfaits payants offrent des plafonds quotidiens plus élevés."
         },
         "collaboration": {
           "q": "Qui paie lorsque des collaborateurs utilisent un espace ?",
@@ -1923,7 +1920,8 @@
       "content_blocked": "Cette consigne a été bloquée par les règles de sécurité.",
       "rate_limited": "Trop de requêtes. Veuillez patienter avant de réessayer.",
       "daily_cap_reached": "Vous avez atteint votre plafond quotidien de crédits.",
-      "member_limit_reached": "Limite de membres de l'espace de travail atteinte.",
+      "too_many_concurrent": "Trop de requêtes sont en cours pour ce forfait. Attendez qu'une se termine, puis réessayez.",
+      "member_limit_reached": "La limite de collaborateurs de votre forfait est atteinte.",
       "upload_failed": "Échec du téléversement du fichier. Veuillez réessayer.",
       "file_too_large": "Le fichier est trop volumineux pour votre forfait.",
       "invalid_file_type": "Le type de fichier sélectionné n'est pas pris en charge.",
@@ -1932,6 +1930,7 @@
       "INVALID_PASSWORD": "Mot de passe incorrect.",
       "admin_toggles_not_allowed": "Les administrateurs peuvent toujours commenter et poser des questions ; ces réglages ne peuvent pas être modifiés pour eux.",
       "answer_in_progress": "Une réponse est déjà en cours de rédaction. Attendez qu'elle se termine.",
+      "billing_frozen": "La génération est suspendue pour ce compte pendant la résolution d'un problème de paiement. Veuillez contacter le support.",
       "collaborator_cap_exceeded": "Vous avez atteint votre limite mensuelle de crédits pour les espaces de travail de ce propriétaire.",
       "daily_voice_limit": "Vous avez atteint la limite quotidienne de saisie vocale de votre forfait.",
       "document_empty": "Aucun texte n'a été trouvé dans ce fichier.",
@@ -1999,7 +1998,7 @@
   },
   "Gates": {
     "requires_plan": "Disponible à partir du forfait {plan}",
-    "member_limit": "{limit, plural, =0 {Ce forfait n'inclut pas de collaborateurs} one {Ce forfait permet jusqu'à # collaborateur} other {Ce forfait permet jusqu'à # collaborateurs}}",
+    "member_limit": "{limit, plural, =0 {Ce forfait n'inclut pas de collaborateurs} one {Ce forfait permet # collaborateur sur l'ensemble de vos espaces et projets} other {Ce forfait permet jusqu'à # collaborateurs sur l'ensemble de vos espaces et projets}}",
     "attachment_limit": "Cet espace de travail a atteint sa limite de {limit} pièces jointes",
     "daily_cap": "Vous avez atteint votre limite quotidienne pour cette fonctionnalité",
     "no_permission": "Vous n'avez pas la permission pour {capability}",
@@ -2087,7 +2086,7 @@
     "stayAdmin": "Rester administrateur",
     "leave": "Partir",
     "checking": "Vérification du forfait du destinataire…",
-    "planFits": "Compatible avec le forfait du destinataire : {collaboratorsAfter} collaborateurs sur {limit}.",
+    "planFits": "Compatible avec le forfait du destinataire : {collaboratorsAfter} collaborateurs sur {limit}, tous ses espaces et projets confondus.",
     "confirmPrompt": "Pour confirmer, saisissez TRANSFER ou le nom exact.",
     "confirmPlaceholder": "TRANSFER",
     "cancel": "Annuler",
@@ -2105,7 +2104,7 @@
     "cancelled": "Demande de transfert annulée.",
     "someone": "Quelqu'un",
     "errors": {
-      "memberLimit": "Le forfait du destinataire autorise {limit} collaborateurs, mais il en resterait {collaboratorsAfter}. Choisissez Partir, retirez des membres ou demandez-lui de changer de forfait.",
+      "memberLimit": "Le forfait du destinataire autorise {limit} collaborateurs sur l'ensemble de ses espaces et projets, mais il en aurait {collaboratorsAfter}. Choisissez Partir, retirez des membres ou demandez-lui de changer de forfait.",
       "busy": "Une réponse est en cours de génération. Réessayez une fois terminée.",
       "movedOutOfProject": "Vous êtes désormais propriétaire. L'espace de travail a quitté son projet, car ce projet ne vous appartient pas.",
       "alreadyPending": "Une demande de transfert est déjà en attente.",
@@ -2119,7 +2118,7 @@
   },
   "MemberLimits": {
     "graceTitle": "Limite de collaborateurs de votre forfait dépassée",
-    "graceBanner": "Votre forfait autorise {limit} collaborateurs : choisissez qui reste actif ({daysRemaining, plural, one {# jour restant} other {# jours restants}}). Ensuite, les membres ajoutés le plus récemment passent en lecture seule.",
+    "graceBanner": "Votre forfait autorise {limit} collaborateurs sur l'ensemble de vos espaces et projets : choisissez qui reste actif ({daysRemaining, plural, one {# jour restant} other {# jours restants}}). Ensuite, les personnes ajoutées le plus récemment passent en lecture seule.",
     "keepActive": "Garder actif",
     "keepActiveHint": "Les membres que vous gardez actifs sont les derniers à passer en lecture seule.",
     "keepActiveUpdated": "Enregistré.",
@@ -2418,7 +2417,7 @@
         "title": "Limite de collaborateurs dépassée",
         "description": "L'offre du propriétaire ne couvre plus tous les collaborateurs. Certains membres pourraient bientôt passer en lecture seule.",
         "descriptionOwner": "Votre offre autorise moins de collaborateurs. Choisissez qui reste actif dans Partage et personnes.",
-        "descriptionOwnerLimit": "Votre offre autorise {limit} collaborateurs. Choisissez qui reste actif dans Partage et personnes."
+        "descriptionOwnerLimit": "Votre forfait autorise {limit} collaborateurs sur l'ensemble de vos espaces et projets. Choisissez qui reste actif dans Partage et personnes."
       },
       "MEMBER_SUSPENDED": {
         "title": "Accès passé en lecture seule",
@@ -2809,14 +2808,13 @@
         "attachments": "10 pièces jointes par espace (15 Mo max)",
         "documents": "Documents d'espace avec révision par IA et corrections rapides",
         "voice": "Saisie vocale (10 min d'enregistrement par jour)",
-        "collaborators": "Jusqu'à 2 collaborateurs par espace",
         "exports": "Exports Markdown, PDF et Word"
       }
     },
     "STANDARD": {
       "name": "Standard",
       "badge": "Le plus populaire",
-      "tagline": "Notre forfait recommandé pour les utilisateurs intensifs et équipes.",
+      "tagline": "Notre forfait recommandé pour les utilisateurs intensifs qui travaillent à deux.",
       "features": {
         "credits": "1 800 crédits / mois (sans report)",
         "dailyCap": "Plafond quotidien : 450 crédits",
@@ -2827,13 +2825,13 @@
         "attachments": "25 pièces jointes par espace (25 Mo max)",
         "documents": "Documents d'espace avec révision par IA et corrections rapides",
         "voice": "Saisie vocale (20 min d'enregistrement par jour)",
-        "collaborators": "Jusqu'à 5 collaborateurs par espace",
+        "collaborators": "1 collaborateur sur l'ensemble de vos espaces",
         "exports": "Suite complète d'export (MD, PDF, DOCX)"
       }
     },
     "PRO": {
       "name": "Pro",
-      "tagline": "Débit maximal, plafonds les plus élevés et collaboration d'équipe.",
+      "tagline": "Débit maximal, plafonds les plus élevés et collaboration avec jusqu'à 3 personnes.",
       "features": {
         "credits": "3 500 crédits / mois (sans report)",
         "dailyCap": "Plafond quotidien : 700 crédits",
@@ -2844,7 +2842,7 @@
         "attachments": "50 pièces jointes par espace (50 Mo max)",
         "documents": "Documents d'espace avec révision par IA et corrections rapides",
         "voice": "Saisie vocale (40 min d'enregistrement par jour)",
-        "collaborators": "Jusqu'à 15 collaborateurs par espace",
+        "collaborators": "Jusqu'à 3 collaborateurs sur l'ensemble de vos espaces",
         "exports": "Suite complète d'export (MD, PDF, DOCX)"
       }
     }

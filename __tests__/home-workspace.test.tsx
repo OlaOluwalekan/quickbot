@@ -12,6 +12,11 @@ import enMessages from "../messages/en.json";
 const mockPush = jest.fn();
 const mockRefresh = jest.fn();
 
+import { CreditsCard } from "@/components/home/credits-card";
+import {
+  DEFAULT_PUBLIC_SITE_CONFIG,
+  SiteConfigProvider,
+} from "@/components/providers/site-config-provider";
 jest.mock("next/navigation", () => ({
   useRouter: () => ({
     push: mockPush,
@@ -24,7 +29,8 @@ jest.mock("next-intl", () => ({
   useFormatter: () => jest.requireActual("../test-utils/next-intl").createFormatter(),
   useTranslations: (namespace: string) => {
     return (key: string, values?: Record<string, unknown>) => {
-      const ns = (enMessages as unknown as Record<string, unknown>)[namespace];
+      const root = enMessages as unknown as Record<string, unknown>;
+      const ns = namespace ? root[namespace] : root;
       // Resolve dotted keys (e.g. "prompts.exec-summary") like next-intl.
       const found = key
         .split(".")
@@ -151,7 +157,7 @@ describe("Step 3.5 — Workspace Home (/workspaces)", () => {
       expect(data.sharedWithMe).toHaveLength(1);
       expect(data.sharedWithMe[0]!.ownerName).toBe("Charles Babbage");
 
-      expect(data.credits.plan).toBe("Free");
+      expect(data.credits.plan).toBe("FREE");
       expect(data.credits.balance).toBe(150);
 
       expect(data.onboarding.emailVerified).toBe(true);
@@ -226,7 +232,7 @@ describe("Step 3.5 — Workspace Home (/workspaces)", () => {
         },
       ],
       credits: {
-        plan: "Free",
+        plan: "FREE",
         balance: 300,
         resetsAt: new Date().toISOString(),
       },
@@ -243,7 +249,7 @@ describe("Step 3.5 — Workspace Home (/workspaces)", () => {
       projects: [],
       sharedWithMe: [],
       credits: {
-        plan: "Free",
+        plan: "FREE",
         balance: 100,
         resetsAt: new Date().toISOString(),
       },
@@ -300,9 +306,27 @@ describe("Step 3.5 — Workspace Home (/workspaces)", () => {
       expect(screen.getByText("Team Sync Notes")).toBeInTheDocument();
       expect(screen.getByText(/Shared by Sarah Connor/i)).toBeInTheDocument();
 
-      // Credits Card
+      // Credits Card: the real (translated) plan; no plan button while billing is off (rule 9).
       expect(screen.getByText("300")).toBeInTheDocument();
-      expect(screen.getByRole("link", { name: /Upgrade/i })).toBeInTheDocument();
+      expect(screen.getByText("Free")).toBeInTheDocument();
+      expect(screen.queryByRole("link", { name: /Upgrade/i })).not.toBeInTheDocument();
+    });
+
+    it("credits card shows the effective plan and, with billing on, the plan button", () => {
+      const { rerender } = render(
+        <SiteConfigProvider value={{ ...DEFAULT_PUBLIC_SITE_CONFIG, billingEnabled: true }}>
+          <CreditsCard credits={{ plan: "FREE", balance: 10, resetsAt: null }} />
+        </SiteConfigProvider>
+      );
+      expect(screen.getByRole("link", { name: /Upgrade/i })).toHaveAttribute("href", "/pricing");
+
+      rerender(
+        <SiteConfigProvider value={{ ...DEFAULT_PUBLIC_SITE_CONFIG, billingEnabled: true }}>
+          <CreditsCard credits={{ plan: "STANDARD", balance: 10, resetsAt: null }} />
+        </SiteConfigProvider>
+      );
+      expect(screen.getByText("Standard")).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: /Manage/i })).toBeInTheDocument();
     });
 
     it("renders brand-new account onboarding checklist and allows dismissing it", () => {

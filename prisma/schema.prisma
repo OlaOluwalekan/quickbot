@@ -72,6 +72,7 @@ model User {
   sentTransfers        OwnershipTransfer[] @relation("TransfersSent")
   receivedTransfers    OwnershipTransfer[] @relation("TransfersReceived")
   memberLimitGrace     MemberLimitGrace?
+  subscription         Subscription?
   annotationMentions   AnnotationMention[]
   workspaceNotes       WorkspaceNote[]     @relation("WorkspaceNoteCreator")
   documentRevisionsEdited DocumentRevision[]
@@ -933,4 +934,62 @@ model MemberLimitGrace {
   owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
   @@map("member_limit_grace")
+}
+
+// Step 8.1: billing. One subscription row per user; webhooks (Step 8.3) write it,
+// `getEntitlements()` reads it to decide the effective plan.
+enum PlanKey {
+  FREE
+  LITE
+  STANDARD
+  PRO
+}
+
+enum SubStatus {
+  ACTIVE
+  TRIALING
+  PAST_DUE
+  PAUSED
+  CANCELED
+  EXPIRED
+  DISPUTED
+}
+
+model Subscription {
+  id                     String    @id @default(uuid(7))
+  userId                 String    @unique @map("user_id")
+  plan                   PlanKey
+  /// "month" | "year"
+  interval               String
+  status                 SubStatus
+  providerCustomerId     String?   @map("provider_customer_id")
+  providerSubscriptionId String?   @unique @map("provider_subscription_id")
+  currentPeriodStart     DateTime? @map("current_period_start")
+  currentPeriodEnd       DateTime? @map("current_period_end")
+  cancelAtPeriodEnd      Boolean   @default(false) @map("cancel_at_period_end")
+  /// Time of the newest provider event applied; older, out-of-order webhooks are ignored.
+  lastEventAt            DateTime? @map("last_event_at")
+  /// "2026-10" style key of the last credit grant (Step 8.4).
+  lastGrantPeriod        String?   @map("last_grant_period")
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
+  user                   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
+
+model BillingEvent {
+  id              String    @id @default(uuid(7))
+  provider        String
+  providerEventId String    @map("provider_event_id")
+  type            String
+  payload         Json
+  /// RECEIVED | PROCESSED | IGNORED | FAILED
+  status          String    @default("RECEIVED")
+  error           String?
+  receivedAt      DateTime  @default(now()) @map("received_at")
+  processedAt     DateTime? @map("processed_at")
+
+  @@unique([provider, providerEventId])
+  @@map("billing_events")
 }

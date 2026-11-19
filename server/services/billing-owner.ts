@@ -2,15 +2,20 @@ import "server-only";
 import { db } from "@/server/db/client";
 import { ApiError, Errors } from "@/server/http/errors";
 import {
+  countOpenReservations,
   createAccountWithFreeGrant,
   getAccountByUserId,
+  getDailyUsage,
   reserve,
   type BalanceResult,
 } from "@/server/services/credits";
 import {
   PLANS,
+  PLAN_LOG_NAMES,
+  getDailyCapForPlan,
   type PlanKey,
 } from "@/server/billing/plans";
+import { ANSWER_STALE_MS } from "@/lib/annotations/limits";
 import { getEntitlements } from "@/server/billing/entitlements";
 import { env } from "@/server/env";
 import { logActivity } from "@/server/services/activity";
@@ -431,7 +436,32 @@ export async function reserveForWorkspaceGeneration(opts: {
     assertWithinCap(await getMemberMonthlySpend(opts.actorId, billedAccountId));
   }
 
-  // 2. Reserve on the OWNER's CreditAccount
+  // 2. The owner's plan limits (Step 8.1): daily credit cap and concurrent AI
+  //    calls, both counted on the owner's account (the owner's plan applies).
+  const plan = alreadyReserved ? null : (await getEntitlements(ownerId)).plan;
+  const assertWithinPlanLimits = async (tx: Prisma.TransactionClient) => {
+    if (!plan) return;
+    const dailyCap = getDailyCapForPlan(plan);
+    if ((await getDailyUsage(billedAccountId, tx)) + opts.amount > dailyCap) {
+      throw new ApiError(
+        429,
+        "daily_cap_reached",
+        `Daily credit cap of ${dailyCap} credits reached on the ${PLAN_LOG_NAMES[plan]} plan.`,
+        { cap: dailyCap }
+      );
+    }
+    const maxConcurrent = PLANS[plan].maxConcurrent;
+    if ((await countOpenReservations(billedAccountId, ANSWER_STALE_MS, tx)) >= maxConcurrent) {
+      throw new ApiError(
+        429,
+        "too_many_concurrent",
+        `At most ${maxConcurrent} AI requests can run at once on the ${PLAN_LOG_NAMES[plan]} plan.`,
+        { limit: maxConcurrent }
+      );
+    }
+  };
+
+  // 3. Reserve on the OWNER's CreditAccount
   let balance: BalanceResult;
   try {
     balance = await reserve(billedAccountId, opts.amount, opts.reservationKey, {
@@ -440,18 +470,19 @@ export async function reserveForWorkspaceGeneration(opts: {
       estimated: opts.estimated ?? true,
       // Authoritative check, made while the owner's account row is locked so
       // concurrent generations can't each pass the pre-check and overspend.
-      guard:
-        cap !== null
-          ? async (tx) =>
-              assertWithinCap(
-                await getMemberMonthlySpend(
-                  opts.actorId,
-                  billedAccountId,
-                  getCurrentBillingPeriodStart(),
-                  tx
-                )
-              )
-          : undefined,
+      guard: async (tx) => {
+        if (cap !== null) {
+          assertWithinCap(
+            await getMemberMonthlySpend(
+              opts.actorId,
+              billedAccountId,
+              getCurrentBillingPeriodStart(),
+              tx
+            )
+          );
+        }
+        await assertWithinPlanLimits(tx);
+      },
     });
   } catch (err: unknown) {
     if (err instanceof ApiError && err.status === 402 && err.code !== "collaborator_cap_exceeded") {
@@ -471,7 +502,7 @@ export async function reserveForWorkspaceGeneration(opts: {
     throw err;
   }
 
-  // 3. Check 80% / 100% allowance thresholds after reservation. Runs in the
+  // 4. Check 80% / 100% allowance thresholds after reservation. Runs in the
   // background: it never affects the generation, so it shouldn't delay it.
   const remainingAfter = balance.planBalance + balance.topupBalance;
   const thresholdCheck = checkAndNotifyOwnerAllowanceThresholds({

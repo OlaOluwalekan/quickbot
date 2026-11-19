@@ -53,6 +53,8 @@ import { getIdleQueryClient, useUserPreferences } from "@/lib/api/hooks/me";
 import { QuestionQueuePopover } from "@/components/workspace/question-queue-popover";
 import { VoiceInput } from "./voice-input";
 import { Gated } from "@/components/ui/gated";
+import { useSiteConfig } from "@/components/providers/site-config-provider";
+import { PLAN_UPGRADE_HREF } from "@/lib/billing/links";
 import {
   Popover,
   PopoverContent,
@@ -166,6 +168,7 @@ export function Composer({
   const imagePlanName =
     tPlans(PLANS[PLAN_ORDER.find((p) => PLANS[p].limits.images) ?? "LITE"].name);
   const [imageLockedNotice, setImageLockedNotice] = React.useState(false);
+  const { billingEnabled } = useSiteConfig();
 
   // Generation stream status for current workspace
   const currentStream = useGenerationStore((s) =>
@@ -906,12 +909,14 @@ export function Composer({
           className="mb-2 flex items-center justify-between gap-2 rounded-xl bg-accent-soft border border-border px-3 py-1.5 text-xs text-accent"
         >
           <span>{t("imagePlanLocked", { plan: imagePlanName })}</span>
-          <Link
-            href="/pricing"
-            className="font-semibold underline hover:text-fg transition-colors"
-          >
-            {tGates("upgrade")}
-          </Link>
+          {billingEnabled && (
+            <Link
+              href={PLAN_UPGRADE_HREF}
+              className="font-semibold underline hover:text-fg transition-colors"
+            >
+              {tGates("upgrade")}
+            </Link>
+          )}
         </div>
       )}
 

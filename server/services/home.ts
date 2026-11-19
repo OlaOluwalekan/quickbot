@@ -2,6 +2,8 @@ import "server-only";
 import { db } from "@/server/db/client";
 import type { Actor } from "@/server/auth/session";
 import { getAccountByUserId } from "@/server/services/credits";
+import { getEntitlements } from "@/server/billing/entitlements";
+import type { PlanKey } from "@/server/billing/plans";
 
 export interface HomeRecentWorkspace {
   id: string;
@@ -31,7 +33,8 @@ export interface HomeSharedWorkspace {
 }
 
 export interface HomeCredits {
-  plan: string;
+  /** Effective plan from the entitlements (Step 8.1); the UI translates `Plans.<plan>.name`. */
+  plan: PlanKey;
   balance: number;
   resetsAt: string | null;
 }
@@ -62,10 +65,11 @@ function nextMonthResetIso(now = new Date()): string {
 }
 
 function toHomeCredits(
-  account: { planBalance: number; topupBalance: number } | null
+  account: { planBalance: number; topupBalance: number } | null,
+  plan: PlanKey
 ): HomeCredits {
   return {
-    plan: "Free",
+    plan,
     balance: (account?.planBalance ?? 0) + (account?.topupBalance ?? 0),
     resetsAt: nextMonthResetIso(),
   };
@@ -73,20 +77,24 @@ function toHomeCredits(
 
 /** Credits summary only (Settings), without the rest of the home dashboard. */
 export async function getHomeCredits(userId: string): Promise<HomeCredits> {
-  const account = await getAccountByUserId(userId).catch(() => null);
-  return toHomeCredits(account);
+  const [account, entitlements] = await Promise.all([
+    getAccountByUserId(userId).catch(() => null),
+    getEntitlements(userId),
+  ]);
+  return toHomeCredits(account, entitlements.plan);
 }
 
 export async function getHomeData(actor: Actor): Promise<HomeData> {
 
   // Run independent database fetches in parallel
-  const [userRecord, creditAccount, recentRows, projectRows, sharedRows, workspaceCount, projectCount] =
+  const [userRecord, creditAccount, entitlements, recentRows, projectRows, sharedRows, workspaceCount, projectCount] =
     await Promise.all([
       db.user.findUnique({
         where: { id: actor.userId },
         select: { name: true, email: true, emailVerified: true },
       }),
       getAccountByUserId(actor.userId).catch(() => null),
+      getEntitlements(actor.userId),
       db.workspace.findMany({
         where: {
           deletedAt: null,
@@ -262,7 +270,7 @@ export async function getHomeData(actor: Actor): Promise<HomeData> {
     recent,
     projects,
     sharedWithMe,
-    credits: toHomeCredits(creditAccount),
+    credits: toHomeCredits(creditAccount, entitlements.plan),
     onboarding: {
       emailVerified: Boolean(userRecord?.emailVerified),
       usernameChosen,

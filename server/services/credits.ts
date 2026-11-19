@@ -22,6 +22,23 @@ export type BalanceResult = {
 };
 
 /**
+ * Throws `billing_frozen` (403) when the account's owner has a DISPUTED
+ * subscription: nothing may spend their credits until the dispute is settled.
+ */
+export async function assertAccountNotFrozen(accountId: string): Promise<void> {
+  const disputed = await db.subscription.findFirst({
+    where: { status: "DISPUTED", user: { creditAccount: { id: accountId } } },
+    select: { id: true },
+  });
+  if (disputed) {
+    throw Errors.forbidden(
+      "Generation is paused for this account while a payment dispute is open",
+      "billing_frozen"
+    );
+  }
+}
+
+/**
  * Atomic hold: one statement, so two concurrent requests cannot both pass the check.
  * If idempotencyKey was already used, returns the existing state without deducting again.
  */
@@ -45,6 +62,9 @@ export async function reserve(
       topupBalance: existing.topupAfter,
     };
   }
+
+  // Step 8.1: a disputed subscription (chargeback) freezes the account's credits.
+  await assertAccountNotFrozen(accountId);
 
   try {
     return await db.$transaction(async (tx) => {
@@ -750,16 +770,47 @@ export async function adjust(
 /**
  * Computes daily credit consumption for an account based on RESERVE and SETTLE deltas.
  */
-export async function getDailyUsage(accountId: string): Promise<number> {
-  const rows = await db.$queryRaw<{ total: bigint | number | null }[]>`
+export async function getDailyUsage(
+  accountId: string,
+  client: Prisma.TransactionClient | typeof db = db
+): Promise<number> {
+  // RELEASE gives back a failed or cancelled reservation, so it counts too.
+  const rows = await client.$queryRaw<{ total: bigint | number | null }[]>`
     SELECT COALESCE(SUM(-(plan_delta + topup_delta)), 0) AS total
     FROM credit_ledger
     WHERE account_id = ${accountId}
-      AND type IN ('RESERVE', 'SETTLE')
+      AND type IN ('RESERVE', 'SETTLE', 'RELEASE')
       AND created_at >= date_trunc('day', now())
   `;
   const row = rows[0];
   return Number(row?.total ?? 0);
+}
+
+/**
+ * Reservations on the account that are still open (no SETTLE or RELEASE yet),
+ * i.e. AI calls running right now. Reservations older than `staleAfterMs` are
+ * ignored: a call that crashed without releasing must not block forever.
+ */
+export async function countOpenReservations(
+  accountId: string,
+  staleAfterMs: number,
+  client: Prisma.TransactionClient | typeof db = db
+): Promise<number> {
+  const since = new Date(Date.now() - staleAfterMs);
+  const rows = await client.$queryRaw<{ open: bigint | number }[]>`
+    SELECT COUNT(*) AS open
+    FROM credit_ledger r
+    WHERE r.account_id = ${accountId}
+      AND r.type = 'RESERVE'
+      AND r.created_at >= ${since}
+      AND NOT EXISTS (
+        SELECT 1 FROM credit_ledger s
+        WHERE s.account_id = r.account_id
+          AND s.generation_id = r.generation_id
+          AND s.type IN ('SETTLE', 'RELEASE')
+      )
+  `;
+  return Number(rows[0]?.open ?? 0);
 }
 
 /**

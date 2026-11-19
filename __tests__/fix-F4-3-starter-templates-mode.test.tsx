@@ -12,6 +12,10 @@ import enMessages from "../messages/en.json";
 import esMessages from "../messages/es.json";
 import frMessages from "../messages/fr.json";
 import type { HomeData } from "@/lib/api/hooks/home";
+import {
+  DEFAULT_PUBLIC_SITE_CONFIG,
+  SiteConfigProvider,
+} from "@/components/providers/site-config-provider";
 
 const mockPush = jest.fn();
 const mockRefresh = jest.fn();
@@ -26,7 +30,7 @@ jest.mock("next/navigation", () => ({
 
 describe("Step F4.3 — Starter templates switch composer mode", () => {
   const mockHomeData: HomeData = {
-    credits: { plan: "Lite", balance: 100, resetsAt: null },
+    credits: { plan: "LITE", balance: 100, resetsAt: null },
     recent: [],
     projects: [],
     sharedWithMe: [],
@@ -264,8 +268,27 @@ describe("Step F4.3 — Starter templates switch composer mode", () => {
         "Image generation is available on the Lite plan and above."
       );
 
+      // Billing is off by default: the reason stays, the Upgrade link doesn't (rule 9).
+      expect(within(notice).queryByRole("link", { name: /Upgrade/i })).toBeNull();
+    });
+
+    it("shows the Upgrade link on the image notice only while billing is on", async () => {
+      const queryClient = createAppQueryClient();
+      queryClient.setQueryData(["me", "entitlements"], entitlementsForPlan("FREE"));
+
+      const { container } = render(
+        <NextIntlClientProvider locale="en" messages={enMessages}>
+          <SiteConfigProvider value={{ ...DEFAULT_PUBLIC_SITE_CONFIG, billingEnabled: true }}>
+            <QueryProvider client={queryClient}>
+              <Composer prefill={{ prompt: "Studio portrait", mode: "image", nonce: 43 }} />
+            </QueryProvider>
+          </SiteConfigProvider>
+        </NextIntlClientProvider>
+      );
+
+      const message = await within(container).findByText(/Image generation is available/);
+      const notice = message.closest<HTMLElement>('[role="status"]')!;
       const upgradeLink = within(notice).getByRole("link", { name: /Upgrade/i });
-      expect(upgradeLink).toBeInTheDocument();
       expect(upgradeLink).toHaveAttribute("href", "/pricing");
     });
   });

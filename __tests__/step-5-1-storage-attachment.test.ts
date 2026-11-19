@@ -34,6 +34,8 @@ const mockDbWorkspace = {
 jest.mock("../server/db/client", () => {
   return {
     db: {
+      // Step 8.1: entitlements read the owner's subscription (none = Free).
+      subscription: { findUnique: () => Promise.resolve(null) },
       attachment: {
         create: (...args: unknown[]) => mockDbAttachment.create(...args),
         findUnique: (...args: unknown[]) => mockDbAttachment.findUnique(...args),

@@ -94,10 +94,10 @@ describe("Step F1.3 — Ownership transfer, member-limit checks, and suspension 
     });
 
     // Default plans
-    setUserPlanOverride(ids.ownerA, "PRO"); // limit 20
+    setUserPlanOverride(ids.ownerA, "PRO"); // 3 collaborators
     setUserPlanOverride(ids.ownerB, "PRO");
     setUserPlanOverride(ids.recipientFree, "FREE"); // limit 0
-    setUserPlanOverride(ids.recipientPaid, "STANDARD"); // limit 5
+    setUserPlanOverride(ids.recipientPaid, "PRO"); // 3 collaborators (Step 8.1)
 
     // Project owned by ownerA
     const proj = await db.project.create({
@@ -317,7 +317,7 @@ describe("Step F1.3 — Ownership transfer, member-limit checks, and suspension 
         { workspaceId: multiWorkspaceId },
         input
       );
-      expect(fit).toMatchObject({ ok: true, limit: 5, collaboratorsAfter: 3 });
+      expect(fit).toMatchObject({ ok: true, limit: 3, collaboratorsAfter: 3 });
     });
 
     it("transfer request: stranger gets 404, a non-owner member gets 403", async () => {
@@ -353,7 +353,7 @@ describe("Step F1.3 — Ownership transfer, member-limit checks, and suspension 
 
   describe("2. Acceptance re-checks fit on downgrade", () => {
     it("re-checks fit on accept and throws 409 transfer_member_limit if recipient was downgraded", async () => {
-      // 1. Recipient is STANDARD (limit 5). Transfer multiWorkspace (has ~3 remaining members).
+      // 1. Recipient is PRO (3 collaborators). Transfer multiWorkspace (has ~3 remaining members).
       const transfer = await requestOwnershipTransfer(
         actorFor("ownerA"),
         { workspaceId: multiWorkspaceId },
@@ -381,7 +381,7 @@ describe("Step F1.3 — Ownership transfer, member-limit checks, and suspension 
       expect(curr?.status).toBe("PENDING");
 
       // Restore plan and cancel request
-      setUserPlanOverride(ids.recipientPaid, "STANDARD");
+      setUserPlanOverride(ids.recipientPaid, "PRO");
       await cancelOwnershipTransfer(actorFor("ownerA"), transfer.id);
     });
   });

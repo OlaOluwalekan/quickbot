@@ -23,6 +23,10 @@ import {
   ENTITLEMENTS_QUERY_KEY,
 } from "@/lib/api/hooks/entitlements";
 import { Gated } from "@/components/ui/gated";
+import {
+  DEFAULT_PUBLIC_SITE_CONFIG,
+  SiteConfigProvider,
+} from "@/components/providers/site-config-provider";
 import { GET as getMeEntitlementsRoute } from "@/app/api/v1/me/entitlements/route";
 import enMessages from "../messages/en.json";
 import type { Actor } from "@/server/auth/session";
@@ -96,7 +100,9 @@ describe("Step F0.1 — Interim entitlements + plan-gating primitives", () => {
 
     it("computes pure entitlements for each plan identically on server and shared client helper", () => {
       for (const plan of ["FREE", "LITE", "STANDARD", "PRO"] as const) {
-        const srv = entitlementsForPlan(plan);
+        // `generationBlocked` is server-only (Step 8.1: a disputed subscription).
+        const { generationBlocked, ...srv } = entitlementsForPlan(plan);
+        expect(generationBlocked).toBe(false);
         const shared = sharedEntitlementsForPlan(plan);
         expect(srv).toEqual(shared);
       }
@@ -119,12 +125,13 @@ describe("Step F0.1 — Interim entitlements + plan-gating primitives", () => {
         "text-standard",
         "image-standard",
       ]);
+      // Step 8.1: Lite has no collaborators (members: 0).
       expect(liteEnt.features).toEqual({
         images: true,
         webSearch: true,
         documentReview: true,
         voiceInput: true,
-        collaboration: true,
+        collaboration: false,
       });
     });
 
@@ -203,7 +210,7 @@ describe("Step F0.1 — Interim entitlements + plan-gating primitives", () => {
 
       const ent = await getEntitlements("user-override");
       expect(ent.plan).toBe("STANDARD");
-      expect(ent.limits.members).toBe(5);
+      expect(ent.limits.members).toBe(1);
     });
   });
 
@@ -273,6 +280,13 @@ describe("Step F0.1 — Interim entitlements + plan-gating primitives", () => {
   });
 
   describe("5. <Gated> component", () => {
+    // The Upgrade link only shows while billing is on (rule 9, Step 8.1).
+    const withBilling = (ui: React.ReactElement) => (
+      <SiteConfigProvider value={{ ...DEFAULT_PUBLIC_SITE_CONFIG, billingEnabled: true }}>
+        {ui}
+      </SiteConfigProvider>
+    );
+
     it("renders child untouched when reason is null", () => {
       const onClick = jest.fn();
       render(
@@ -294,11 +308,13 @@ describe("Step F0.1 — Interim entitlements + plan-gating primitives", () => {
     it("disables child, removes onClick, wraps in focusable span, and displays tooltip + Upgrade link for requires_plan", async () => {
       const onClick = jest.fn();
       render(
-        <Gated reason={{ code: "requires_plan", plan: "LITE" }}>
-          <button type="button" onClick={onClick}>
-            Create image
-          </button>
-        </Gated>
+        withBilling(
+          <Gated reason={{ code: "requires_plan", plan: "LITE" }}>
+            <button type="button" onClick={onClick}>
+              Create image
+            </button>
+          </Gated>
+        )
       );
 
       const btn = screen.getByRole("button", { name: "Create image" });
@@ -323,6 +339,19 @@ describe("Step F0.1 — Interim entitlements + plan-gating primitives", () => {
       expect(upgradeLink).toHaveAttribute("href", "/pricing");
     });
 
+    it("with billing off, keeps the reason text but shows no Upgrade link", async () => {
+      render(
+        <Gated reason={{ code: "requires_plan", plan: "LITE" }}>
+          <button type="button">Create image</button>
+        </Gated>
+      );
+      fireEvent.focus(document.querySelector("span[tabindex='0']") as HTMLElement);
+      await waitFor(() => {
+        expect(screen.getByText("Available on the Lite plan and above")).toBeInTheDocument();
+      });
+      expect(screen.queryByRole("link", { name: "Upgrade" })).not.toBeInTheDocument();
+    });
+
     it("renders localized messages for member_limit, daily_cap, no_permission, and max_depth", async () => {
       const { rerender } = render(
         <Gated reason={{ code: "member_limit", limit: 2 }}>
@@ -336,7 +365,9 @@ describe("Step F0.1 — Interim entitlements + plan-gating primitives", () => {
       fireEvent.mouseEnter(getWrapper());
       await waitFor(() => {
         expect(
-          screen.getByText("This plan allows up to 2 collaborators")
+          screen.getByText(
+            "This plan allows up to 2 collaborators across all your workspaces and projects"
+          )
         ).toBeInTheDocument();
       });
 
@@ -356,9 +387,11 @@ describe("Step F0.1 — Interim entitlements + plan-gating primitives", () => {
       jest.useFakeTimers();
       try {
         render(
-          <Gated reason={{ code: "requires_plan", plan: "LITE" }}>
-            <button type="button">Create image</button>
-          </Gated>
+          withBilling(
+            <Gated reason={{ code: "requires_plan", plan: "LITE" }}>
+              <button type="button">Create image</button>
+            </Gated>
+          )
         );
         const wrapper = document.querySelector(
           "span[tabindex='0']"

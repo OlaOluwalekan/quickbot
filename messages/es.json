@@ -516,9 +516,9 @@
       "subject": "Acción necesaria: superas el límite de colaboradores de tu plan",
       "heading": "Límite de colaboradores superado",
       "greeting": "Hola:",
-      "body": "Tu plan permite {limit} colaboradores por espacio de trabajo o proyecto, y algunos de los tuyos tienen más. Hasta el {graceEndsAt}, elige quién sigue activo en Compartir y personas, elimina miembros o cambia de plan.",
+      "body": "Tu plan permite {limit} colaboradores en todos tus espacios de trabajo y proyectos, y tienes más. Hasta el {graceEndsAt}, elige quién sigue activo en Compartir y personas, elimina miembros o cambia de plan.",
       "button": "Gestionar colaboradores",
-      "disclaimer": "Después de esa fecha, los miembros añadidos más recientemente por encima del límite pasarán a solo lectura. No se elimina nada."
+      "disclaimer": "Después de esa fecha, las personas añadidas más recientemente por encima del límite pasarán a solo lectura. No se elimina nada."
     },
     "memberSuspended": {
       "subject": "Tu acceso a \"{resourceName}\" es ahora de solo lectura",
@@ -1134,7 +1134,7 @@
         "imageSynthesis": "Generación de imágenes",
         "attachments": "Archivos adjuntos",
         "documentExports": "Exportación de documentos",
-        "teamMembers": "Colaboradores de equipo",
+        "teamMembers": "Colaboradores (en todos tus espacios)",
         "responseVersions": "Versiones de respuesta",
         "inAppCancel": "Cancelación en la app",
         "turn1": "1 turno",
@@ -1151,10 +1151,7 @@
         "files50": "50 archivos (50 MB)",
         "markdownOnly": "Markdown",
         "allExportFormats": "MD, PDF, DOCX",
-        "members0": "0",
-        "members2": "2 miembros",
-        "members5": "5 miembros",
-        "members15": "15 miembros",
+        "collaborators": "{count, plural, =0 {Ninguno} one {# persona} other {# personas}}",
         "unlimited": "Ilimitadas",
         "capCredits": "{count, plural, one {# crédito} other {# créditos}}",
         "notApplicable": "—",
@@ -1199,7 +1196,7 @@
         },
         "free": {
           "q": "¿Puedo usar Klecx gratis?",
-          "a": "Sí. Cada cuenta comienza con 100 créditos mensuales gratuitos, acceso a nuestro modelo Rápido y búsqueda web incluida. La colaboración en equipo y límites diarios mayores están disponibles en los planes de pago."
+          "a": "Sí. Cada cuenta comienza con 100 créditos mensuales gratuitos, acceso a nuestro modelo Rápido y búsqueda web incluida. La colaboración está disponible en los planes Standard y Pro, y los planes de pago tienen límites diarios mayores."
         },
         "collaboration": {
           "q": "¿Quién asume el coste cuando colaboran en un espacio?",
@@ -1923,7 +1920,8 @@
       "content_blocked": "Esta instrucción fue bloqueada por las pautas de seguridad.",
       "rate_limited": "Demasiadas solicitudes. Espere un momento antes de volver a intentarlo.",
       "daily_cap_reached": "Ha alcanzado su límite diario de créditos.",
-      "member_limit_reached": "Límite de miembros del espacio de trabajo alcanzado.",
+      "too_many_concurrent": "Hay demasiadas solicitudes en curso para este plan. Espera a que termine una e inténtalo de nuevo.",
+      "member_limit_reached": "Se alcanzó el límite de colaboradores de tu plan.",
       "upload_failed": "Error al subir el archivo. Inténtelo de nuevo.",
       "file_too_large": "El archivo es demasiado grande para su plan.",
       "invalid_file_type": "El tipo de archivo seleccionado no es compatible.",
@@ -1932,6 +1930,7 @@
       "INVALID_PASSWORD": "Contraseña incorrecta.",
       "admin_toggles_not_allowed": "Los administradores siempre pueden comentar y preguntar; estos ajustes no se pueden cambiar para ellos.",
       "answer_in_progress": "Ya se está escribiendo una respuesta. Espera a que termine.",
+      "billing_frozen": "La generación está en pausa para esta cuenta mientras se resuelve un problema con un pago. Ponte en contacto con el soporte.",
       "collaborator_cap_exceeded": "Has alcanzado tu límite mensual de créditos para los espacios de trabajo de este propietario.",
       "daily_voice_limit": "Has alcanzado el límite diario de entrada de voz de tu plan.",
       "document_empty": "No se encontró texto en este archivo.",
@@ -1999,7 +1998,7 @@
   },
   "Gates": {
     "requires_plan": "Disponible en el plan {plan} y superiores",
-    "member_limit": "{limit, plural, =0 {Este plan no incluye colaboradores} one {Este plan permite hasta # colaborador} other {Este plan permite hasta # colaboradores}}",
+    "member_limit": "{limit, plural, =0 {Este plan no incluye colaboradores} one {Este plan permite # colaborador en todos tus espacios y proyectos} other {Este plan permite hasta # colaboradores en todos tus espacios y proyectos}}",
     "attachment_limit": "Este espacio de trabajo alcanzó su límite de {limit} adjuntos",
     "daily_cap": "Has alcanzado tu límite diario para esta función",
     "no_permission": "No tienes permiso para {capability}",
@@ -2087,7 +2086,7 @@
     "stayAdmin": "Seguir como administrador",
     "leave": "Salir",
     "checking": "Comprobando el plan del destinatario…",
-    "planFits": "Cabe en el plan del destinatario: {collaboratorsAfter} de {limit} colaboradores.",
+    "planFits": "Cabe en el plan del destinatario: {collaboratorsAfter} de {limit} colaboradores en todos sus espacios y proyectos.",
     "confirmPrompt": "Para confirmar, escribe TRANSFER o el nombre exacto.",
     "confirmPlaceholder": "TRANSFER",
     "cancel": "Cancelar",
@@ -2105,7 +2104,7 @@
     "cancelled": "Solicitud de transferencia cancelada.",
     "someone": "Alguien",
     "errors": {
-      "memberLimit": "El plan del destinatario permite {limit} colaboradores, pero quedarían {collaboratorsAfter}. Elige Salir, elimina miembros o pídele que cambie de plan.",
+      "memberLimit": "El plan del destinatario permite {limit} colaboradores en todos sus espacios y proyectos, pero tendría {collaboratorsAfter}. Elige Salir, elimina miembros o pídele que cambie de plan.",
       "busy": "Se está generando una respuesta. Inténtalo de nuevo cuando termine.",
       "movedOutOfProject": "Ahora eres el propietario. El espacio de trabajo salió de su proyecto porque ese proyecto no es tuyo.",
       "alreadyPending": "Ya hay una solicitud de transferencia pendiente.",
@@ -2119,7 +2118,7 @@
   },
   "MemberLimits": {
     "graceTitle": "Superas el límite de colaboradores de tu plan",
-    "graceBanner": "Tu plan permite {limit} colaboradores: elige quién sigue activo ({daysRemaining, plural, one {queda # día} other {quedan # días}}). Después, los miembros añadidos más recientemente pasarán a solo lectura.",
+    "graceBanner": "Tu plan permite {limit} colaboradores en todos tus espacios y proyectos: elige quién sigue activo ({daysRemaining, plural, one {queda # día} other {quedan # días}}). Después, las personas añadidas más recientemente pasarán a solo lectura.",
     "keepActive": "Mantener activo",
     "keepActiveHint": "Los miembros que mantengas activos serán los últimos en pasar a solo lectura.",
     "keepActiveUpdated": "Guardado.",
@@ -2418,7 +2417,7 @@
         "title": "Límite de colaboradores superado",
         "description": "El plan del propietario ya no cubre a todos los colaboradores. Algunos miembros podrían pasar pronto a solo lectura.",
         "descriptionOwner": "Tu plan permite menos colaboradores. Elige quién sigue activo en Compartir y personas.",
-        "descriptionOwnerLimit": "Tu plan permite {limit} colaboradores. Elige quién sigue activo en Compartir y personas."
+        "descriptionOwnerLimit": "Tu plan permite {limit} colaboradores en todos tus espacios y proyectos. Elige quién sigue activo en Compartir y personas."
       },
       "MEMBER_SUSPENDED": {
         "title": "Acceso cambiado a solo lectura",
@@ -2809,14 +2808,13 @@
         "attachments": "10 adjuntos por espacio (15 MB máx.)",
         "documents": "Documentos del espacio con revisión por IA y correcciones rápidas",
         "voice": "Entrada de voz (10 min de grabación al día)",
-        "collaborators": "Hasta 2 colaboradores por espacio",
         "exports": "Exportaciones en Markdown, PDF y Word"
       }
     },
     "STANDARD": {
       "name": "Estándar",
       "badge": "Más popular",
-      "tagline": "Nuestro plan recomendado para usuarios avanzados y equipos.",
+      "tagline": "Nuestro plan recomendado para usuarios avanzados que trabajan con un compañero.",
       "features": {
         "credits": "1.800 créditos / mes (sin acumulación)",
         "dailyCap": "Límite diario: 450 créditos",
@@ -2827,13 +2825,13 @@
         "attachments": "25 adjuntos por espacio (25 MB máx.)",
         "documents": "Documentos del espacio con revisión por IA y correcciones rápidas",
         "voice": "Entrada de voz (20 min de grabación al día)",
-        "collaborators": "Hasta 5 colaboradores por espacio",
+        "collaborators": "1 colaborador en todos tus espacios",
         "exports": "Paquete completo de exportación (MD, PDF, DOCX)"
       }
     },
     "PRO": {
       "name": "Pro",
-      "tagline": "Rendimiento máximo, límites superiores y colaboración en equipo.",
+      "tagline": "Rendimiento máximo, límites superiores y colaboración con hasta 3 personas.",
       "features": {
         "credits": "3.500 créditos / mes (sin acumulación)",
         "dailyCap": "Límite diario: 700 créditos",
@@ -2844,7 +2842,7 @@
         "attachments": "50 adjuntos por espacio (50 MB máx.)",
         "documents": "Documentos del espacio con revisión por IA y correcciones rápidas",
         "voice": "Entrada de voz (40 min de grabación al día)",
-        "collaborators": "Hasta 15 colaboradores por espacio",
+        "collaborators": "Hasta 3 colaboradores en todos tus espacios",
         "exports": "Paquete completo de exportación (MD, PDF, DOCX)"
       }
     }

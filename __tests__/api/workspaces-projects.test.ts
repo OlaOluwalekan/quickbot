@@ -59,6 +59,10 @@ jest.mock("../../server/db/client", () => ({
     creditAccount: {
       findUnique: () => Promise.resolve(null),
     },
+    // Step 8.1: entitlements read the owner's subscription (none = Free).
+    subscription: {
+      findUnique: () => Promise.resolve(null),
+    },
   },
 }));
 

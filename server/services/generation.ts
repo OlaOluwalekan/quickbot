@@ -16,11 +16,7 @@ import type { Actor } from "@/server/auth/session";
 import { requireWorkspace } from "@/server/authz/access";
 import { logActivity } from "./activity";
 import { resolveBilledAccount, reserveForWorkspaceGeneration } from "./billing-owner";
-import {
-  settle,
-  release,
-  getDailyUsage,
-} from "@/server/services/credits";
+import { settle, release } from "@/server/services/credits";
 import {
   getModel,
   isModelKey,
@@ -41,12 +37,7 @@ import {
   applyGroundingInlineMarkers,
   CitationItem,
 } from "@/server/ai";
-import {
-  PLANS,
-  PLAN_LOG_NAMES,
-  PlanKey,
-  getDailyCapForPlan,
-} from "@/server/billing/plans";
+import { PLANS, PlanKey } from "@/server/billing/plans";
 import { getEntitlements, entitlementsForPlan } from "@/server/billing/entitlements";
 import { getUserPreferences } from "@/server/services/user-preferences";
 import { buildContext, estimateTokens } from "@/server/ai/context-builder";
@@ -1286,16 +1277,8 @@ export async function createAndStreamGeneration(
           outputTokens: 4096,
         });
 
-  // Daily cap check for image generation (Step 5.4)
-  if (kind === "IMAGE") {
-    const dailyCap = getDailyCapForPlan(userPlan);
-    const spentToday = await getDailyUsage(billedAccountId);
-    if (spentToday + reserveAmount > dailyCap) {
-      throw Errors.paymentRequired(
-        `Daily credit cap of ${dailyCap} credits reached for your ${PLAN_LOG_NAMES[userPlan]} plan.`
-      );
-    }
-  }
+  // The plan's daily credit cap and concurrency limit are checked when the
+  // credits are reserved (`reserveForWorkspaceGeneration`, Step 8.1).
 
   // Pre-generate UUID for generation record to link with reservation
   const generationId = crypto.randomUUID();

@@ -122,8 +122,9 @@ describe("F4.4 — owner limits and credits for plan gates", () => {
   });
 
   it("invite capacity counts members + live invitations against the owner's plan", async () => {
-    const before = await getInviteCapacity({ workspaceId }, ownerId);
-    expect(before).toEqual({ limit: 5, used: 1, inGrace: false });
+    const before = await getInviteCapacity(ownerId);
+    // STANDARD: 1 collaborator across all the owner's workspaces (Step 8.1).
+    expect(before).toMatchObject({ limit: 1, used: 1, inGrace: false });
 
     await db.invitation.create({
       data: {
@@ -135,13 +136,18 @@ describe("F4.4 — owner limits and credits for plan gates", () => {
         expiresAt: new Date(Date.now() + 86_400_000),
       },
     });
-    expect((await getInviteCapacity({ workspaceId }, ownerId)).used).toBe(2);
+    expect((await getInviteCapacity(ownerId)).used).toBe(2);
     await db.invitation.deleteMany({ where: { workspaceId } });
   });
 
   it("members list: the owner gets inviteCapacity; a member who can't invite doesn't", async () => {
     const asOwner = await listWorkspaceMembers(owner, workspaceId);
-    expect(asOwner.inviteCapacity).toEqual({ limit: 5, used: 1, inGrace: false });
+    expect(asOwner.inviteCapacity).toEqual({
+      limit: 1,
+      used: 1,
+      inGrace: false,
+      seatHolders: [`${memberId}@example.com`],
+    });
 
     const asMember = await listWorkspaceMembers(member, workspaceId);
     expect(asMember.canManage).toBe(false);

@@ -5,6 +5,7 @@ import { getEntitlements } from "@/server/billing/entitlements";
 import { requireWorkspace, requireProject } from "@/server/authz/access";
 import { logActivity } from "@/server/services/activity";
 import { notify } from "@/server/services/notify";
+import { getOwnerCollaborators } from "@/server/services/member-limits";
 import type { Actor } from "@/server/auth/session";
 import { Prisma, type TransferStatus } from "@/server/db/generated/client";
 
@@ -98,7 +99,14 @@ export async function checkTransferFits(t: CheckTransferFitsInput) {
     collaboratorUserIds.delete(ownerId);
   }
 
-  const collaboratorsAfter = collaboratorUserIds.size;
+  // 3. The limit counts distinct people across all of the recipient's
+  //    workspaces and projects (Step 8.1): add the people who already
+  //    collaborate with them; someone in both is counted once.
+  const recipientSeats = new Set(
+    (await getOwnerCollaborators(toUserId)).keys
+  );
+  for (const userId of collaboratorUserIds) recipientSeats.add(`u:${userId}`);
+  const collaboratorsAfter = recipientSeats.size;
   const limit = (await getEntitlements(toUserId)).limits.members;
 
   if (collaboratorsAfter > limit) {

@@ -314,7 +314,7 @@ export async function listWorkspaceMembers(actor: Actor, workspaceId: string) {
     ...(await ownerOnlyExtras(actor, workspace.ownerId, { workspaceId })),
     // F4.4: the Invite button's gate (the owner's plan; the server re-checks).
     ...(can(actorRole, "workspace.manage_members")
-      ? { inviteCapacity: await getInviteCapacity({ workspaceId }, workspace.ownerId) }
+      ? { inviteCapacity: await inviteCapacityFor(actor, workspace.ownerId) }
       : {}),
   };
 }
@@ -421,7 +421,7 @@ export async function listProjectMembers(actor: Actor, projectId: string) {
     ...(await ownerOnlyExtras(actor, proj.ownerId, { projectId })),
     // F4.4: the Invite button's gate (the owner's plan; the server re-checks).
     ...(can(actorRole, "workspace.manage_members")
-      ? { inviteCapacity: await getInviteCapacity({ projectId }, proj.ownerId) }
+      ? { inviteCapacity: await inviteCapacityFor(actor, proj.ownerId) }
       : {}),
   };
 }
@@ -430,6 +430,23 @@ export async function listProjectMembers(actor: Actor, projectId: string) {
  * Owner-only data for the Share & people dialog (F1.3): the over-limit grace
  * banner and the owner's own pending outgoing transfer (so it can be cancelled).
  */
+/**
+ * The Invite button's gate (F4.4). The limit counts distinct people across all
+ * the owner's workspaces and projects (Step 8.1), so the owner also gets the
+ * emails / usernames already holding a seat: inviting one of them to another
+ * workspace is allowed even when every seat is used. Admins don't get that
+ * list (it names people from the owner's other workspaces).
+ */
+async function inviteCapacityFor(actor: Actor, ownerId: string) {
+  const { limit, used, inGrace, collaborators } = await getInviteCapacity(ownerId);
+  return {
+    limit,
+    used,
+    inGrace,
+    ...(actor.userId === ownerId ? { seatHolders: [...collaborators.handles] } : {}),
+  };
+}
+
 async function ownerOnlyExtras(
   actor: Actor,
   ownerId: string,
